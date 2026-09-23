@@ -8,5 +8,5 @@ typedef MacroVariableClosure = Variable Function(CompilerContext ctx);
 typedef MacroStatementClosure =
     StatementInfo Function(
       CompilerContext ctx,
-      AlwaysReturnType? expectedReturnType,
+      TypeRef? expectedReturnType,
     );

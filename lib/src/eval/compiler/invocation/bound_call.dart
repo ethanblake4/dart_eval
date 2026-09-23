@@ -74,7 +74,7 @@ final class BoundCall {
   /// The callee's declared return type with call-site generics applied
   /// (declaration-vector paths only — null when the annotation wasn't
   /// generic-dependent or the target has no declaration).
-  final AlwaysReturnType? declaredReturn;
+  final TypeRef? declaredReturn;
 
   /// Whether generic substitution narrowed the language return type without
   /// changing the callee's compiled ABI, forcing the result to stay boxed.

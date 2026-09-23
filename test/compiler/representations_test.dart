@@ -1,7 +1,7 @@
 import 'package:control_flow_graph/control_flow_graph.dart' as cfg;
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
-import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'package:dart_eval/src/eval/compiler/invocation/deferred.dart';
 import 'package:dart_eval/src/eval/ir/alu.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';

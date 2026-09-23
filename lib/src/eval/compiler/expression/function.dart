@@ -1,4 +1,6 @@
 import '../helpers/captures.dart';
+import '../member/call_signature.dart';
+import '../member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import '../helpers/default_value.dart';
 import '../../ir/function.dart' as function_ir;
@@ -47,7 +49,16 @@ Variable compileFunctionExpression(
     for (final name in analysis.unresolved[e] ?? <String>{}) {
       final selfDecl = ctx.types.find(ctx.library, ctx.currentClassName!);
       if (selfDecl != null &&
-          ctx.memberLookup.declaredAccessor(selfDecl, name) != null) {
+          (ctx.memberLookup.tryInterfaceMember(
+                    selfDecl.thisType,
+                    MemberName(name, MemberKind.getter),
+                  ) !=
+                  null ||
+              ctx.memberLookup.tryInterfaceMember(
+                    selfDecl.thisType,
+                    MemberName(name, MemberKind.setter),
+                  ) !=
+                  null)) {
         freeNames.add('#this');
       }
     }
@@ -216,10 +227,7 @@ Variable compileFunctionExpression(
         if (b is BlockFunctionBody) {
           stInfo = compileBlock(
             b.block,
-            AlwaysReturnType(
-              boundReturnType ?? CoreTypes.dynamic.ref(ctx),
-              false,
-            ),
+            boundReturnType ?? CoreTypes.dynamic.ref(ctx),
             ctx,
             name: '(closure)',
           );
@@ -229,7 +237,7 @@ Variable compileFunctionExpression(
           inferredClosureReturnType = V.type;
           stInfo = doReturn(
             ctx,
-            AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
+            CoreTypes.dynamic.ref(ctx),
             V,
             isAsync: b.isAsynchronous,
           );
@@ -418,9 +426,8 @@ Variable compileFunctionExpression(
     closureType,
     callable: CallableValue(
       offset: target,
-      returnType: AlwaysReturnType(
+      signature: CallSignature.returnOnly(
         inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
-        false,
       ),
       convention: CallingConvention.dynamic,
       materialized: true,

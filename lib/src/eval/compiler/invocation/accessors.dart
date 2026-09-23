@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
+import '../member/call_signature.dart';
 import '../member/member.dart';
 import '../member/member_lookup.dart' show hasBridgeSuperclass;
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
@@ -182,7 +183,7 @@ sealed class GetTarget {
     // A method member read produces a tear-off; carry its signature so
     // calls through the result stay typed.
     final TypeRef fieldType;
-    final ReturnType? methodReturnType;
+    final CallSignature? methodSignature;
     if (isDeclaredMethod) {
       // The declaring class's type parameters bind to its instantiated
       // view (`member.$1`) — `b.remove` on `B extends A<int>` sees `T: int`.
@@ -202,22 +203,13 @@ sealed class GetTarget {
             hostParams[i].name.lexeme: hostArgs[i],
         },
       );
-      methodReturnType = AlwaysReturnType.fromInstanceMethod(
-        ctx,
-        resolvedReceiver,
-        name,
-        CoreTypes.dynamic.ref(ctx),
-      );
+      methodSignature = member.signature;
     } else if (isBridgeMethod) {
       fieldType = CoreTypes.function.ref(ctx);
-      methodReturnType = bridgeFunctionReturnType(
-        ctx,
-        bridge.functionDescriptor,
-        specifiedType: resolvedReceiver,
-      );
+      methodSignature = member?.signature;
     } else {
       fieldType = resolvedField ?? CoreTypes.dynamic.ref(ctx);
-      methodReturnType = null;
+      methodSignature = null;
     }
     final boxed = receiver.boxIfNeeded(ctx);
     final exact = receiver.exactType;
@@ -331,7 +323,7 @@ sealed class GetTarget {
       boxed,
       name,
       fieldType: fieldType,
-      methodReturnType: methodReturnType,
+      methodSignature: methodSignature,
       callingConvention: isDeclaredMethod || isBridgeMethod
           ? CallingConvention.dynamic
           : CallingConvention.static,
@@ -589,18 +581,20 @@ final class ExtensionMethodTearOff extends GetTarget {
           file: ext.library,
           name: ext.memberKey(member),
         ),
-        returnType: AlwaysReturnType.fromAnnotation(
-          ctx,
-          ext.library,
-          member.returnType,
-          CoreTypes.dynamic.ref(ctx),
-          typeParameters: {
-            ...typeParameters,
-            for (final param
-                in member.typeParameters?.typeParameters ??
-                    const <TypeParameter>[])
-              param.name.lexeme: TypeRef.unresolved(ext.library, param.name.lexeme),
-          },
+        signature: CallSignature.returnOnly(
+          TypeRef.fromAnnotation(
+            ctx,
+            ext.library,
+            member.returnType!,
+            typeParameters: {
+              ...typeParameters,
+              for (final param
+                  in member.typeParameters?.typeParameters ??
+                      const <TypeParameter>[])
+                param.name.lexeme:
+                    TypeRef.unresolved(ext.library, param.name.lexeme),
+            },
+          ),
         ),
         implicitReceiver: receiver,
       ),
@@ -614,7 +608,7 @@ final class DynamicGet extends GetTarget {
     this.receiver,
     this.name, {
     required this.fieldType,
-    this.methodReturnType,
+    this.methodSignature,
     this.callingConvention = CallingConvention.static,
     this.isSuperReceiver = false,
   });
@@ -626,7 +620,7 @@ final class DynamicGet extends GetTarget {
 
   /// The signature a method read carries so calls through the result stay
   /// typed.
-  final ReturnType? methodReturnType;
+  final CallSignature? methodSignature;
   final CallingConvention callingConvention;
 
   /// `super.name` read: the receiver is a mid-chain link, so the runtime
@@ -646,7 +640,7 @@ final class DynamicGet extends GetTarget {
     fieldType,
     rep: ValueRep.boxed,
     callable: CallableValue(
-      returnType: methodReturnType,
+      signature: methodSignature,
       convention: callingConvention,
     ),
   );

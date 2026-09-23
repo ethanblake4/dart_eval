@@ -27,7 +27,7 @@ StatementInfo markNeverTerminates(CompilerContext ctx) {
 
 StatementInfo doReturn(
   CompilerContext ctx,
-  AlwaysReturnType expectedReturnType,
+  TypeRef expectedReturnType,
   Variable? value, {
   bool isAsync = false,
   bool skipClassBoxing = false,
@@ -37,15 +37,13 @@ StatementInfo doReturn(
   if (value != null && value.type.isSpec(CoreTypes.never)) {
     if (!ctx.blockEndsControlFlow) {
       final isVoid =
-          expectedReturnType.type != null &&
-          expectedReturnType.type!.isSpec(CoreTypes.voidType);
+          expectedReturnType.isSpec(CoreTypes.voidType);
       ctx.pushOp(Return(isVoid ? null : value.boxIfNeeded(ctx).ssa));
     }
     return StatementInfo(willAlwaysThrow: true);
   }
   if (isAsync) return doAsyncReturn(ctx, expectedReturnType, value);
-  if (expectedReturnType.type != null &&
-      expectedReturnType.type!.isSpec(CoreTypes.voidType)) {
+  if (expectedReturnType.isSpec(CoreTypes.voidType)) {
     value = null;
   }
   if (value == null) {
@@ -61,7 +59,7 @@ StatementInfo doReturn(
       ctx.pushOp(Return(null));
     }
   } else {
-    final expected = expectedReturnType.type ?? CoreTypes.dynamic.ref(ctx);
+    final expected = expectedReturnType;
     var value0 = value;
     // Closures declare an `object` result slot in their function signature,
     // so their returns stay boxed even when the type could travel unboxed.

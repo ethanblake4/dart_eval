@@ -7,7 +7,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 StatementInfo compileWhileStatement(
   WhileStatement s,
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   return macroLoop(
     ctx,

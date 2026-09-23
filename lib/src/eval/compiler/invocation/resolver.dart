@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
+import '../member/call_signature.dart';
 import '../member/resolved_member.dart';
 import 'deferred.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -168,7 +169,7 @@ final class CallResolver {
         boundExt.onBindings,
       );
     }
-    AlwaysReturnType? mReturnType;
+    TypeRef? mReturnType;
     final bridgeTypeParameters = <String, TypeRef>{};
 
     ResolvedMember? resolved;
@@ -332,7 +333,7 @@ final class CallResolver {
           return Variable.of(
             ctx,
             s,
-            result.declaredReturn?.type ?? CoreTypes.dynamic.ref(ctx),
+            result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
             rep: ValueRep.boxed,
           );
         }
@@ -480,23 +481,19 @@ final class CallResolver {
         bridgeTypeParameters,
         inferableNames: classGenericNames,
       );
-      mReturnType =
-          bridgeFunctionReturnType(
-            ctx,
-            fd,
-            specifiedType: isStatic ? staticType : L.type,
-            typeParameters: bridgeTypeParameters,
-          ).toAlwaysReturnType(
-            ctx,
-            isStatic ? staticType : L.type,
-            argsPair.positionalValues.map((a) => a.type).toList(),
-            argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
-            typeArgs:
-                e.typeArguments?.arguments
-                    .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
-                    .toList() ??
-                const [],
-          );
+      mReturnType = resolveCallResultType(
+        ctx,
+        signature: CallSignature.bridge(
+          ctx,
+          fd,
+          returnFallback: CoreTypes.dynamic.ref(ctx),
+          owner: isStatic ? staticType : L.type,
+          typeParameters: bridgeTypeParameters,
+        ),
+        targetType: isStatic ? staticType : L.type,
+        argTypes: argsPair.positionalValues.map((a) => a.type).toList(),
+        namedArgTypes: argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
+      );
       // Instance calls that carry no named or explicit type arguments route
       // through the modern invocation path, which preserves intrinsic
       // optimizations for core types. The argument vector stays padded with
@@ -506,7 +503,7 @@ final class CallResolver {
       if (!isStatic && e.typeArguments == null && argsPair.namedValues.isEmpty) {
         final invokeResult =
             invokeOperator(L, e.methodName.name, argsPair.positionalValues).result;
-        final preciseType = mReturnType?.type;
+        final preciseType = mReturnType;
         if (preciseType != null) {
           return invokeResult.copyWith(type: preciseType);
         }
@@ -589,15 +586,16 @@ final class CallResolver {
     final namedArgTypes = argsPair.namedValues.map(
       (key, value) => MapEntry(key, value.type),
     );
-    mReturnType ??= AlwaysReturnType.fromInstanceMethodOrBuiltin(
+    mReturnType ??= memberCallResultType(
       ctx,
       isStatic ? staticType! : L.type,
       staticMemberName,
       argTypes,
       namedArgTypes,
       $static: isStatic,
+      source: e,
     );
-    final returnType = mReturnType?.type ?? CoreTypes.dynamic.ref(ctx);
+    final returnType = mReturnType ?? CoreTypes.dynamic.ref(ctx);
 
     if (isStatic) {
       var result = ctx.svar('method_result');
@@ -810,7 +808,7 @@ final class CallResolver {
     final TypeRef returnType;
     if (isBareCall) {
       returnType =
-          resolveCallResultType(
+          callResultType(
             ctx,
             callee: recv,
             dispatch: null,
@@ -820,13 +818,13 @@ final class CallResolver {
           CoreTypes.dynamic.ref(ctx);
     } else {
       returnType =
-          AlwaysReturnType.fromInstanceMethodOrBuiltin(
+          memberCallResultType(
             ctx,
             recv.type,
             method,
             argTypes,
             namedArgTypes,
-          )?.type ??
+          ) ??
           CoreTypes.dynamic.ref(ctx);
     }
     var boundCall = BoundCall(
@@ -925,14 +923,14 @@ final class CallResolver {
     }
     final target = ctx.svar('call_result');
     final returnType =
-        callee.methodReturnType
-            ?.toAlwaysReturnType(
-              ctx,
-              callee.type,
-              args.map((arg) => arg.type).toList(),
+        callResultType(
+          ctx,
+          callee: callee,
+          dispatch: null,
+          argTypes: args.map((arg) => arg.type).toList(),
+          namedArgTypes:
               namedArgs?.map((key, arg) => MapEntry(key, arg.type)) ?? {},
-            )
-            ?.type ??
+        ) ??
         CoreTypes.dynamic.ref(ctx);
     ctx.pushOp(
       Call(callee.methodOffset!, [
@@ -1010,15 +1008,14 @@ final class CallResolver {
             const [],
       ),
     );
-    final returnType =
-        AlwaysReturnType.fromAnnotation(
-          ctx,
-          ext.library,
-          member.returnType,
-          CoreTypes.dynamic.ref(ctx),
-          typeParameters: typeParams,
-        ).type ??
-        CoreTypes.dynamic.ref(ctx);
+    final returnType = member.returnType == null
+        ? CoreTypes.dynamic.ref(ctx)
+        : TypeRef.fromAnnotation(
+            ctx,
+            ext.library,
+            member.returnType!,
+            typeParameters: typeParams,
+          );
     return (target: receiver, result: Variable.of(ctx, target, returnType, rep: ValueRep.boxed), args: convertedArgs, namedArgs: const {});
   }
 
@@ -1095,8 +1092,8 @@ final class CallResolver {
     MethodInvocation e, {
     TypeRef? bound,
   }) {
-    AlwaysReturnType? mReturnType;
-    ReturnType? sigReturn;
+    TypeRef? mReturnType;
+    TypeRef? sigReturn;
     DeferredOrOffset offset;
     DeclarationOrBridge? dec0;
     TypeRef? aliasType;
@@ -1107,13 +1104,13 @@ final class CallResolver {
         final bridge = target.bridge;
         TypeRef? bridgeType;
         if (bridge is BridgeFunctionDeclaration) {
-          sigReturn = AlwaysReturnType(
-            TypeRef.fromBridgeAnnotation(ctx, bridge.function.returns),
-            false,
+          sigReturn = TypeRef.fromBridgeAnnotation(
+            ctx,
+            bridge.function.returns,
           );
         } else if (bridge is BridgeClassDef) {
           bridgeType = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-          sigReturn = AlwaysReturnType(bridgeType, false);
+          sigReturn = bridgeType;
         } else if (bridge is BridgeEnumDef) {
           bridgeType = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
         }
@@ -1196,17 +1193,12 @@ final class CallResolver {
         }
         dec0 = ctx.topLevelDeclarationsMap[type.file]?[constructorKey];
         offset = DeferredOrOffset(file: type.file, name: constructorKey);
-        sigReturn = AlwaysReturnType(type, false);
+        sigReturn = type;
         if (dec0 == null) {
           // Call to an implicit default constructor.
           final result = ctx.svar('constructor');
-          mReturnType = AlwaysReturnType(type, false);
-          final declaredReturnType = mReturnType.type ?? type;
-          final instantiatedType = instantiateConstructorType(
-            ctx,
-            e,
-            declaredReturnType,
-          );
+          mReturnType = type;
+          final instantiatedType = instantiateConstructorType(ctx, e, type);
           ctx.pushOp(
             Call(offset, [
               pushRuntimeTypeId(ctx, instantiatedType),
@@ -1216,7 +1208,7 @@ final class CallResolver {
             ctx,
             result,
             instantiatedType,
-            rep: Abi.unboxedAcrossCalls(declaredReturnType),
+            rep: Abi.unboxedAcrossCalls(type),
             concreteTypes: [instantiatedType],
             exactType: instantiatedType,
           );
@@ -1227,7 +1219,7 @@ final class CallResolver {
         final dispatch = d.call(ctx, source: e);
         if (dispatch == null) return invokeValue(site, ref: ref);
         offset = dispatch.offset;
-        sigReturn = dispatch.returnType;
+        sigReturn = dispatch.signature.returnType;
         dec0 = switch (d) {
           FunctionDenotation(:final target) => target,
           StaticMemberDenotation(:final file, :final member) =>
@@ -1359,20 +1351,24 @@ final class CallResolver {
               ctx.library]![ctx.currentClassName!];
     }
 
-    mReturnType ??=
-        sigReturn?.toAlwaysReturnType(ctx, thisType, argTypes, namedArgTypes) ??
-        AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-    final returnType = mReturnType.type;
+    mReturnType ??= sigReturn == null
+        ? null
+        : resolveCallResultType(
+            ctx,
+            signature: CallSignature.returnOnly(sigReturn),
+            targetType: thisType,
+            argTypes: argTypes,
+            namedArgTypes: namedArgTypes,
+          ) ??
+          sigReturn;
+    final returnType = mReturnType ?? CoreTypes.dynamic.ref(ctx);
     final resultRep =
         dec0.isBridge ||
             dec0.declaration is! FunctionDeclaration ||
-            (genericReturnBoxed ??
-                Abi.unboxedAcrossCalls(
-                  mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
-                ).isBoxed)
+            (genericReturnBoxed ?? Abi.unboxedAcrossCalls(returnType).isBoxed)
         ? ValueRep.boxed
-        : Abi.unboxedAcrossCalls(mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
-    final instantiatedReturnType = isConstructor && returnType != null
+        : Abi.unboxedAcrossCalls(returnType);
+    final instantiatedReturnType = isConstructor
         ? (aliasType ??
               instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
         : returnType;
@@ -1381,7 +1377,7 @@ final class CallResolver {
     if (isConstructor &&
         declaration is ConstructorDeclaration &&
         declaration.factoryKeyword == null) {
-      effectiveCallArgs.add(pushRuntimeTypeId(ctx, instantiatedReturnType!));
+      effectiveCallArgs.add(pushRuntimeTypeId(ctx, instantiatedReturnType));
     }
 
     var result = ctx.svar('call');
@@ -1422,9 +1418,7 @@ final class CallResolver {
               declaration is ConstructorDeclaration &&
                   declaration.factoryKeyword != null
               ? [
-                  for (final arg
-                      in instantiatedReturnType?.typeArguments ??
-                          const <TypeRef>[])
+                  for (final arg in instantiatedReturnType.typeArguments)
                     ctx.runtimeTypes.idOf(arg),
                 ]
               : isConstructor
@@ -1440,16 +1434,15 @@ final class CallResolver {
         declaration is ConstructorDeclaration &&
         declaration.factoryKeyword == null;
     if (isConstructor && e.inConstantContext) {
-      result = pushInternConst(ctx, result, instantiatedReturnType!);
+      result = pushInternConst(ctx, result, instantiatedReturnType);
     }
     final v = Variable.of(
       ctx,
       result,
-      instantiatedReturnType ?? CoreTypes.dynamic.ref(ctx),
+      instantiatedReturnType,
       rep: resultRep,
       concreteTypes: [
-        if (isConstructor && instantiatedReturnType != null)
-          instantiatedReturnType,
+        if (isConstructor) instantiatedReturnType,
       ],
       // A factory may return any subtype — the result is not exactly the
       // declared class.
@@ -1520,4 +1513,3 @@ void _inferBridgeTypeParameters(
     infer(function.params[index].type.type, arguments[index].type);
   }
 }
-

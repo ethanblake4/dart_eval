@@ -313,7 +313,7 @@ void compileConstructorDeclaration(
     if (b is BlockFunctionBody) {
       stInfo = compileBlock(
         b.block,
-        AlwaysReturnType(clsType, false),
+        clsType,
         ctx,
         name: '$n()',
       );
@@ -322,7 +322,7 @@ void compileConstructorDeclaration(
       final V = compileExpression(b.expression, ctx);
       stInfo = doReturn(
         ctx,
-        AlwaysReturnType(clsType, false),
+        clsType,
         V,
         isAsync: b.isAsynchronous,
       );
@@ -382,7 +382,7 @@ void compileConstructorDeclaration(
       ], result: ctx.svar('redirected')),
       clsType,
     );
-    doReturn(ctx, AlwaysReturnType(clsType, false), V);
+    doReturn(ctx, clsType, V);
     ctx.endScope();
     return;
   }
@@ -519,13 +519,13 @@ void compileConstructorDeclaration(
     if (body is BlockFunctionBody) {
       compileBlock(
         body.block,
-        AlwaysReturnType(CoreTypes.voidType.ref(ctx), false),
+        CoreTypes.voidType.ref(ctx),
         ctx,
         name: '$n()',
       );
     } else if (body is ExpressionFunctionBody) {
       final V = compileExpression(body.expression, ctx);
-      doReturn(ctx, AlwaysReturnType(CoreTypes.voidType.ref(ctx), false), V);
+      doReturn(ctx, CoreTypes.voidType.ref(ctx), V);
     }
     ctx.endScope();
   }
@@ -999,13 +999,11 @@ Variable _invokeSuperConstructor(
   );
 
   // A `super(...)` call produces the superclass's instance.
-  final mReturnType = AlwaysReturnType(extendsType, true);
-
   final superRuntimeType = pushRuntimeTypeId(ctx, extendsType);
   return Variable.ssa(
     ctx,
     Call(methodOffset, [...ssa, superRuntimeType], result: ctx.svar('super')),
-    mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
+    extendsType,
   );
 }
 

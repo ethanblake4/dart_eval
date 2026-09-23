@@ -518,7 +518,6 @@ expect_fail:
   - path: 'list/is_test.dart'
   - path: 'list/list_test.dart'
   - path: 'list/mixin_test.dart'
-  - path: 'list/tracer_call_last_test.dart'
   - path: 'loop/for_in_side_effects_test.dart'
   - path: 'loop/for_in_test.dart'
   - path: 'main/no_main_test.dart'

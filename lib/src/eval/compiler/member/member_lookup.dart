@@ -4,6 +4,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/member/resolved_member.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -262,7 +263,46 @@ final class MemberLookup {
     MemberKind kind,
   ) {
     final decl = type.decl ?? ctx.types.find(type.file, type.name);
-    return decl?.staticMember(name, kind);
+    if (decl != null) return decl.staticMember(name, kind);
+    // Extensions have no TypeDecl; `E.name` keys live in the static
+    // namespace — resolve against the extension's own member list.
+    final ext = extensionForType(ctx, type);
+    if (ext == null) return null;
+    for (final member in ext.members) {
+      if (member is MethodDeclaration &&
+          member.name.lexeme == name &&
+          switch (kind) {
+            // `E.m` and `E.g` both register under `E.name` for calls —
+            // a getter is a valid call target (`E.g(args)` reads, then
+            // invokes the result), mirroring resolveStaticMethod's
+            // `'$name*g'` fallback.
+            MemberKind.method => !member.isSetter,
+            MemberKind.getter => member.isGetter,
+            MemberKind.setter => member.isSetter,
+            _ => false,
+          }) {
+        return SourceMember(
+          owner: ExtensionDecl(ctx, ext),
+          name: MemberName(name, kind),
+          node: member,
+          library: ext.library,
+        );
+      }
+      if (member is FieldDeclaration && kind != MemberKind.constructor) {
+        for (final v in member.fields.variables) {
+          if (v.name.lexeme == name) {
+            return SourceMember(
+              owner: ExtensionDecl(ctx, ext),
+              name: MemberName(name, kind),
+              node: member,
+              library: ext.library,
+              variable: v,
+            );
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /// The class at-or-above [type] (in superclass order) that supplies the

@@ -28,7 +28,7 @@ import 'block.dart';
 
 StatementInfo compileStatement(
   Statement s,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
   CompilerContext ctx, {
   bool skipClassBoxing = false,
 }) {

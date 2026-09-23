@@ -37,7 +37,7 @@ Variable compileNonNullCondition(CompilerContext ctx, Variable value) {
 
 StatementInfo macroBranch(
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType, {
+  TypeRef? expectedReturnType, {
   MacroVariableClosure? condition,
   Expression? conditionExpression,
   required MacroStatementClosure thenBranch,

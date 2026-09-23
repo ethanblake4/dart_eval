@@ -239,7 +239,7 @@ Variable invokeExtensionMethod(
   return Variable.of(
     ctx,
     s,
-    result.declaredReturn?.type ?? CoreTypes.dynamic.ref(ctx),
+    result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
     rep: ValueRep.boxed,
   );
 }

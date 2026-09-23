@@ -11,7 +11,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 StatementInfo compileAssertStatement(
   AssertStatement s,
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   final cond = compileExpression(s.condition, ctx);
   final msg = s.message != null

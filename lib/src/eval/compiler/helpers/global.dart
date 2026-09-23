@@ -3,6 +3,7 @@ import '../variable.dart';
 import '../errors.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import '../invocation/binder.dart';
 import 'conversion.dart';
 import '../context.dart';
 import '../type.dart';
@@ -267,7 +268,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     final receiver = _infer(ctx, library, expression.target!);
     if (!receiver.isSpec(CoreTypes.dynamic)) {
       try {
-        return AlwaysReturnType.fromInstanceMethodOrBuiltin(
+        return memberCallResultType(
               ctx,
               receiver,
               expression.methodName.name,
@@ -285,7 +286,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
                       arg.argumentExpression,
                     ),
               },
-            )?.type ??
+            ) ??
             CoreTypes.dynamic.ref(ctx);
       } on Object {
         return CoreTypes.dynamic.ref(ctx);

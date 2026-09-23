@@ -13,6 +13,9 @@ import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import '../builtins.dart';
 import '../errors.dart';
+import '../member/call_signature.dart';
+import '../member/member.dart';
+import '../member/member_name.dart';
 import '../helpers/argument_list.dart';
 import '../model/function_type.dart';
 import '../../ir/bridge.dart' show PrepareBridgeArgument;
@@ -93,7 +96,7 @@ final class ArgumentBinder {
       for (final e in namedArgs) e.$1: e.$2.value.type,
     };
     final resultType =
-        resolveCallResultType(
+        callResultType(
           ctx,
           callee: callee,
           dispatch: dispatch,
@@ -1176,17 +1179,13 @@ BoundCall bindDeclaration(
     }
   }
 
-  AlwaysReturnType? returnType;
+  TypeRef? returnType;
   if (returnAnnotation != null && resolveGenerics.isNotEmpty) {
-    final resolvedReturn = TypeRef.fromAnnotation(
+    returnType = TypeRef.fromAnnotation(
       ctx,
       sourceLib,
       returnAnnotation,
       typeParameters: resolveGenerics,
-    );
-    returnType = AlwaysReturnType(
-      resolvedReturn,
-      returnAnnotation.question != null,
     );
   }
   // Inferred type arguments materialize into the emitted call's runtime
@@ -1210,7 +1209,7 @@ BoundCall bindDeclaration(
     positional: argsPair.positional,
     named: argsPair.named,
     vectorOverride: argsPair.vector(),
-    returnType: returnType?.type ?? CoreTypes.dynamic.ref(ctx),
+    returnType: returnType ?? CoreTypes.dynamic.ref(ctx),
     declaredReturn: returnType,
     typeArguments: resolveGenerics,
     runtimeTypeArguments: inferredRuntimeTypeArguments,
@@ -1224,12 +1223,12 @@ BoundCall bindDeclaration(
 /// given argument types, or null when it can't be determined.
 ///
 /// A statically dispatched [dispatch] signature wins over the [callee]'s
-/// own callable metadata (tear-off `methodReturnType`), and both win over
+/// own callable metadata (tear-off `methodSignature`), and both win over
 /// the callee's declared function type. A resolved `void` result is
 /// unusable as a value, so null is returned and callers fall back to
 /// dynamic — preserving the permissive semantics of consuming the runtime
 /// result anyway.
-TypeRef? resolveCallResultType(
+TypeRef? callResultType(
   CompilerContext ctx, {
   required Variable? callee,
   required DirectCall? dispatch,
@@ -1237,20 +1236,50 @@ TypeRef? resolveCallResultType(
   required Map<String, TypeRef> namedArgTypes,
 }) {
   final voidType = CoreTypes.voidType.ref(ctx);
-  final signature = dispatch?.returnType ?? callee?.methodReturnType;
+  final signature = dispatch?.signature ?? callee?.methodSignature;
   if (signature != null) {
-    final resolved = signature.toAlwaysReturnType(
+    final resolved = resolveCallResultType(
       ctx,
-      dispatch == null ? callee?.type : null,
-      argTypes,
-      namedArgTypes,
+      signature: signature,
+      targetType: dispatch == null ? callee?.type : null,
+      argTypes: argTypes,
+      namedArgTypes: namedArgTypes,
     );
-    if (resolved != null && resolved.type != voidType) return resolved.type;
+    if (resolved != null) return resolved;
   }
   final calleeType = callee?.type;
   final declared =
       calleeType is FunctionTypeRef ? calleeType.signature.returnType : null;
   return declared == voidType ? null : declared;
+}
+
+/// Resolves a call's result type from [signature]: applies
+/// [CallSignature.returnOverride] when the dependency's watched argument
+/// type matches a case, otherwise substitutes [targetType]'s applied
+/// arguments into the declared return type and lowers any remaining
+/// (never-bound) callee type parameters to their bounds. A `void` result
+/// is unusable as a value — null is returned so callers fall back.
+TypeRef? resolveCallResultType(
+  CompilerContext ctx, {
+  required CallSignature signature,
+  required TypeRef? targetType,
+  required List<TypeRef> argTypes,
+  required Map<String, TypeRef> namedArgTypes,
+}) {
+  final voidType = CoreTypes.voidType.ref(ctx);
+  final overridden = signature.returnOverride?.call(argTypes, namedArgTypes);
+  if (overridden != null) {
+    return overridden == voidType ? null : overridden;
+  }
+  var resolved = signature.returnType;
+  final targetSubs = targetType == null
+      ? null
+      : ctx.typeSystem.appliedArguments(targetType);
+  if (targetSubs != null && targetSubs.isNotEmpty) {
+    resolved = resolved.substituteTypeParameters(targetSubs);
+  }
+  resolved = resolved.lowerTypeParameters(ctx);
+  return resolved == voidType ? null : resolved;
 }
 
 /// Whether the runtime can skip per-argument checks for a closure
@@ -1284,4 +1313,88 @@ bool _closureArgumentsProven(
     }
   }
   return true;
+}
+
+/// The result type of calling [method] on a receiver typed [type] — the
+/// resolved member's signature with the receiver's type arguments applied —
+/// or null when the member is a field or bridge without a function shape.
+/// Callers fall back to `dynamic` on null, matching the permissive legacy
+/// semantics for unresolvable returns.
+TypeRef? memberCallResultType(
+  CompilerContext ctx,
+  TypeRef type,
+  String method,
+  List<TypeRef> argTypes,
+  Map<String, TypeRef> namedArgTypes, {
+  bool $static = false,
+  AstNode? source,
+}) {
+  final lookupType = ctx.typeSystem.throughTypeParameters(type);
+  if (lookupType.isSpec(CoreTypes.dynamic)) {
+    return CoreTypes.dynamic.ref(ctx);
+  }
+  if ($static) {
+    final member =
+        ctx.memberLookup.staticMember(lookupType, method, MemberKind.method) ??
+        (throw CompileError('Cannot find static method $lookupType.$method'));
+    if (member is BridgeMember) {
+      final fd = switch (member.def) {
+        BridgeMethodDef(:final functionDescriptor) => functionDescriptor,
+        BridgeConstructorDef(:final functionDescriptor) => functionDescriptor,
+        _ => null,
+      };
+      if (fd == null) return CoreTypes.dynamic.ref(ctx);
+      return resolveCallResultType(
+        ctx,
+        signature: CallSignature.bridge(
+          ctx,
+          fd,
+          returnFallback: CoreTypes.dynamic.ref(ctx),
+          owner: lookupType,
+        ),
+        targetType: lookupType,
+        argTypes: argTypes,
+        namedArgTypes: namedArgTypes,
+      );
+    }
+    final node = (member as SourceMember).node;
+    if (node is ConstructorDeclaration) return lookupType;
+    return member.signature.returnType;
+  }
+  if (method == 'noSuchMethod') {
+    // `Object.noSuchMethod` is implicit — absent from declaration metadata.
+    return CoreTypes.dynamic.ref(ctx);
+  }
+  final resolved = ctx.memberLookup.interfaceMember(
+    lookupType,
+    ctx.memberNameOf(method, MemberKind.method),
+    source: source,
+    superclassFirst: true,
+  );
+  if (resolved.member is BridgeMember) {
+    final fd = switch ((resolved.member as BridgeMember).def) {
+      BridgeMethodDef(:final functionDescriptor) => functionDescriptor,
+      BridgeConstructorDef(:final functionDescriptor) => functionDescriptor,
+      _ => null,
+    };
+    if (fd == null) return CoreTypes.dynamic.ref(ctx);
+    return resolveCallResultType(
+      ctx,
+      signature: CallSignature.bridge(
+        ctx,
+        fd,
+        returnFallback: CoreTypes.dynamic.ref(ctx),
+        owner: lookupType,
+      ),
+      targetType: lookupType,
+      argTypes: argTypes,
+      namedArgTypes: namedArgTypes,
+    );
+  }
+  final node = (resolved.member as SourceMember).node;
+  if (node is! MethodDeclaration) {
+    // A field holding a callable — its call signature isn't modelled here.
+    return CoreTypes.dynamic.ref(ctx);
+  }
+  return resolved.signature.returnType;
 }

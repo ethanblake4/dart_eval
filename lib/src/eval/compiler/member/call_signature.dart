@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
@@ -179,9 +180,14 @@ final class CallSignature {
     BridgeFunctionDef def, {
     required TypeRef returnFallback,
     TypeRef? owner,
+    Map<String, TypeRef> typeParameters = const {},
   }) {
-    TypeRef resolve(BridgeTypeAnnotation t) =>
-        TypeRef.fromBridgeAnnotation(ctx, t, specifiedType: owner);
+    TypeRef resolve(BridgeTypeAnnotation t) => TypeRef.fromBridgeAnnotation(
+      ctx,
+      t,
+      specifiedType: owner,
+      typeParameters: typeParameters,
+    );
     final dependency = def.returnTypeDependency;
     return CallSignature(
       positional: [
@@ -242,6 +248,14 @@ final class CallSignature {
     );
   }
 
+  /// A signature carrying only a return type — enough for a callable whose
+  /// parameters aren't modeled (dynamic `Function`-typed member reads).
+  factory CallSignature.returnOnly(TypeRef returnType) => CallSignature(
+    positional: const [],
+    requiredPositional: 0,
+    returnType: returnType,
+  );
+
   /// This signature as a [FunctionTypeRef] — parameter names are not part
   /// of the type, but arity/requiredness and types are.
   FunctionTypeRef toFunctionType(CompilerContext ctx) => FunctionTypeRef(
@@ -259,5 +273,29 @@ final class CallSignature {
       returnType: returnType,
     ),
     decl: ctx.types.bySpec(CoreTypes.function),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is CallSignature &&
+      const ListEquality<TypeParameterDef>().equals(
+        other.typeParameters,
+        typeParameters,
+      ) &&
+      const ListEquality<ParameterSpec>().equals(
+        other.positional,
+        positional,
+      ) &&
+      other.requiredPositional == requiredPositional &&
+      const ListEquality<ParameterSpec>().equals(other.named, named) &&
+      other.returnType == returnType;
+
+  @override
+  int get hashCode => Object.hash(
+    Object.hashAll(typeParameters),
+    Object.hashAll(positional),
+    requiredPositional,
+    Object.hashAll(named),
+    returnType,
   );
 }

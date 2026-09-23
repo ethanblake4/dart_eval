@@ -19,7 +19,7 @@ import '../invocation/resolver.dart';
 StatementInfo compileForStatement(
   ForStatement s,
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   final parts = s.forLoopParts;
 
@@ -110,8 +110,8 @@ StatementInfo compileForEachLoop(
   CompilerContext ctx,
   ForEachParts parts,
   Variable iterable,
-  AlwaysReturnType? expectedReturnType, {
-  required StatementInfo Function(CompilerContext, AlwaysReturnType?) body,
+  TypeRef? expectedReturnType, {
+  required StatementInfo Function(CompilerContext, TypeRef?) body,
   List<AstNode> assignedNamesScan = const [],
 }) {
   final itype = iterable.type;
@@ -212,8 +212,8 @@ StatementInfo compileAwaitForLoop(
   AstNode node,
   ForEachParts parts,
   Variable stream,
-  AlwaysReturnType? expectedReturnType,
-  StatementInfo Function(CompilerContext, AlwaysReturnType?) body,
+  TypeRef? expectedReturnType,
+  StatementInfo Function(CompilerContext, TypeRef?) body,
 ) {
   AstNode? enclosing = node;
   while (enclosing is! FunctionBody) {

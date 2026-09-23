@@ -11,7 +11,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 
 StatementInfo macroLoop(
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType, {
+  TypeRef? expectedReturnType, {
   required MacroStatementClosure body,
   MacroClosure? initialization,
   MacroVariableClosure? condition,

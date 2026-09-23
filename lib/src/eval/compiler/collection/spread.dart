@@ -52,7 +52,7 @@ List<TypeRef> compileCollectionSpread(
       );
     }
   }
-  StatementInfo append(CompilerContext ctx, AlwaysReturnType? _) {
+  StatementInfo append(CompilerContext ctx, TypeRef? _) {
     final nonNull = collection
         .copyWith(type: collection.type.copyWith(nullable: false))
         .boxIfNeeded(ctx);

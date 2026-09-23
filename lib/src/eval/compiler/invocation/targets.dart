@@ -480,7 +480,7 @@ final class MemberValueCall extends CallTarget {
     final result = ClosureCall(callee: callee).emit(ctx, call);
     // The bound call was computed without knowing the callee; the freshly
     // read value may carry callable metadata that refines the result type.
-    final refined = resolveCallResultType(
+    final refined = callResultType(
       ctx,
       callee: callee,
       dispatch: null,
@@ -550,7 +550,7 @@ final class NoSuchMethodCall extends CallTarget {
     if (getterShaped) {
       final getterValue = emitGetterValue(ctx);
       final result = ClosureCall(callee: getterValue).emit(ctx, call);
-      final refined = resolveCallResultType(
+      final refined = callResultType(
         ctx,
         callee: getterValue,
         dispatch: null,

@@ -126,21 +126,16 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
         );
       }
 
-      final expectedReturnType = AlwaysReturnType.fromAnnotation(
-        ctx,
-        ctx.library,
-        d.returnType,
-        CoreTypes.dynamic.ref(ctx),
-      );
-      final returnType = expectedReturnType.type;
+      final expectedReturnType = d.returnType == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!);
+      final returnType = expectedReturnType;
       ctx.functionSignatures[pos] = MachineFunctionSignature(
         parameterRepresentations,
-        returnType != null &&
-                returnType.isSpec(CoreTypes.voidType) &&
-                !b.isAsynchronous
+        returnType.isSpec(CoreTypes.voidType) && !b.isAsynchronous
             ? null
             : Abi.result(
-                returnType ?? CoreTypes.dynamic.ref(ctx),
+                returnType,
                 CallableKind.function,
                 isAsync: b.isAsynchronous,
               ).bank,
@@ -162,9 +157,9 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
             b.expression,
             ctx,
             // An async body's context type is the *flattened* return type.
-            b.isAsynchronous && expectedReturnType.type != null
-                ? ctx.typeSystem.flatten(expectedReturnType.type!)
-                : expectedReturnType.type,
+            b.isAsynchronous
+                ? ctx.typeSystem.flatten(expectedReturnType)
+                : expectedReturnType,
           ),
           isAsync: b.isAsynchronous,
         );

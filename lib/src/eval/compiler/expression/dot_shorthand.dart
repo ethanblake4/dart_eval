@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import '../invocation/binder.dart';
+import '../member/call_signature.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import '../invocation/deferred.dart';
@@ -179,7 +180,7 @@ Variable _invokeShorthandMember(
     return Variable.of(
       ctx,
       s,
-      result.declaredReturn?.type ?? CoreTypes.dynamic.ref(ctx),
+      result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
       rep: ValueRep.boxed,
     );
   }
@@ -199,19 +200,20 @@ Variable _invokeShorthandMember(
       ),
     );
     final returnType =
-        bridgeFunctionReturnType(ctx, fd, specifiedType: type)
-            .toAlwaysReturnType(
-              ctx,
-              type,
+        resolveCallResultType(
+          ctx,
+          signature: CallSignature.bridge(
+            ctx,
+            fd,
+            returnFallback: CoreTypes.dynamic.ref(ctx),
+            owner: type,
+          ),
+          targetType: type,
+          argTypes:
               arguments.positionalValues.map((a) => a.type).toList(),
+          namedArgTypes:
               arguments.namedValues.map((k, v) => MapEntry(k, v.type)),
-              typeArgs:
-                  typeArguments?.arguments
-                      .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
-                      .toList() ??
-                  const [],
-            )
-            ?.type ??
+        ) ??
         CoreTypes.dynamic.ref(ctx);
     return Variable.of(ctx, result, returnType, rep: ValueRep.boxed);
   }

@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
 import 'helpers/tearoff.dart';
 import 'model/function_type.dart';
+import 'member/call_signature.dart';
 import 'member/member.dart';
 import 'member/member_name.dart';
 import 'member/resolved_member.dart';
@@ -148,11 +149,10 @@ Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
     InvokeExternal(ctx.svar('loadLibrary'), idx, []),
     CoreTypes.function.ref(ctx),
     callable: CallableValue(
-      returnType: AlwaysReturnType(
+      signature: CallSignature.returnOnly(
         CoreTypes.future
             .ref(ctx)
             .copyWith(typeArguments: [CoreTypes.nullType.ref(ctx)]),
-        false,
       ),
     ),
   );
@@ -448,7 +448,7 @@ Variable _declarationToVariable(
         CoreTypes.function.ref(ctx),
         callable: CallableValue(
           offset: DeferredOrOffset(file: decOrBridge.sourceLib, name: name),
-          returnType: AlwaysReturnType(returnType, false),
+          signature: CallSignature.returnOnly(returnType),
         ),
       );
     }
@@ -490,7 +490,6 @@ Variable _declarationToVariable(
   }
 
   TypeRef? returnType;
-  var nullable = true;
   if (decl is FunctionDeclaration && decl.returnType != null) {
     returnType = ctx.withTypeParameters<TypeRef>(
       decOrBridge.sourceLib,
@@ -499,7 +498,6 @@ Variable _declarationToVariable(
       () =>
           TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!),
     );
-    nullable = decl.returnType!.question != null;
   } else if (decl is ConstructorDeclaration) {
     returnType = TypeRef.lookupDeclaration(
       ctx,
@@ -531,7 +529,7 @@ Variable _declarationToVariable(
     concreteTypes: [returnType],
     callable: CallableValue(
       offset: offset,
-      returnType: AlwaysReturnType(returnType, nullable),
+      signature: CallSignature.returnOnly(returnType),
     ),
   );
 
@@ -566,16 +564,12 @@ DirectCall? _declarationToDirectCall(
       name: '$name.',
     );
 
-    final rt = AlwaysReturnType(
-      TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl),
-      false,
-    );
+    final rt = TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
 
-    return DirectCall(offset, rt);
+    return DirectCall(offset, CallSignature.returnOnly(rt));
   }
 
   TypeRef? returnType;
-  var nullable = true;
   if (decl is FunctionDeclaration && decl.returnType != null) {
     returnType = ctx.withTypeParameters<TypeRef>(
       decOrBridge.sourceLib,
@@ -587,7 +581,6 @@ DirectCall? _declarationToDirectCall(
         decl.returnType!,
       ),
     );
-    nullable = decl.returnType!.question != null;
   } else if (decl is ConstructorDeclaration) {
     returnType = TypeRef.lookupDeclaration(
       ctx,
@@ -612,7 +605,10 @@ DirectCall? _declarationToDirectCall(
         : name,
   );
 
-  return DirectCall(offset, AlwaysReturnType(returnType, nullable));
+  return DirectCall(
+    offset,
+    CallSignature.returnOnly(returnType),
+  );
 }
 
 /// Loads a top-level (or static field) global by its qualified [globalName],
@@ -653,7 +649,7 @@ Variable _typeLiteral(
     concreteTypes: [type],
     callable: CallableValue(
       offset: DeferredOrOffset(file: type.file, name: constructorKey),
-      returnType: AlwaysReturnType(type, false),
+      signature: CallSignature.returnOnly(type),
     ),
   );
 }

@@ -39,9 +39,34 @@ final class TypeDeclMemberOwner extends MemberOwner {
 /// A member declared on an [EvalExtension] — the extension namespace
 /// keeps its own lookup, but extension members still get signatures.
 final class ExtensionDecl extends MemberOwner {
-  const ExtensionDecl(this.extension);
+  ExtensionDecl(this.ctx, this.extension);
 
+  final CompilerContext ctx;
   final EvalExtension extension;
+
+  /// The extension's type parameters keyed by name — instance members
+  /// resolve `T` against these; static members can't see them.
+  late final Map<String, TypeRef> ownTypeParams = () {
+    final nodes = extension.declaration.typeParameters?.typeParameters ??
+        const <TypeParameter>[];
+    final scope = <String, TypeRef>{};
+    declareTypeParameters(
+      TypeParameterOwner(
+        TypeParameterOwnerKind.extension,
+        extension.library,
+        extension.name,
+      ),
+      nodes,
+      scope,
+      (bound) => TypeRef.fromAnnotation(
+        ctx,
+        extension.library,
+        bound,
+        typeParameters: scope,
+      ),
+    );
+    return scope;
+  }();
 
   @override
   bool operator ==(Object other) =>
@@ -124,6 +149,27 @@ final class SourceMember extends Member {
 
   TypeDecl get _decl => (owner as TypeDeclMemberOwner).decl;
 
+  CompilerContext get _ctx => switch (owner) {
+    TypeDeclMemberOwner o => o.decl.ctx,
+    ExtensionDecl o => o.ctx,
+  };
+
+  String get _ownerName => switch (owner) {
+    TypeDeclMemberOwner o => o.decl.name,
+    ExtensionDecl o => o.extension.name,
+  };
+
+  Map<String, TypeRef> get _ownTypeParams => switch (owner) {
+    TypeDeclMemberOwner o => o.decl.ownTypeParams,
+    ExtensionDecl o => o.ownTypeParams,
+  };
+
+  Declaration? get _parameterHost => switch (owner) {
+    TypeDeclMemberOwner o =>
+      o.decl is SourceTypeDecl ? (o.decl as SourceTypeDecl).node : null,
+    ExtensionDecl o => o.extension.declaration,
+  };
+
   @override
   bool get isStatic => switch (node) {
     MethodDeclaration m => m.isStatic,
@@ -145,11 +191,11 @@ final class SourceMember extends Member {
   late final CallSignature signature = _buildSignature();
 
   CallSignature _buildSignature() {
-    final ctx = _decl.ctx;
-    final ownerParams = _decl.ownTypeParams;
+    final ctx = _ctx;
+    final ownerParams = _ownTypeParams;
     switch (node) {
       case MethodDeclaration m:
-        final methodName = '${_decl.name}.${m.name.lexeme}';
+        final methodName = '$_ownerName.${m.name.lexeme}';
         return CallSignature.source(
           ctx,
           library,
@@ -167,9 +213,7 @@ final class SourceMember extends Member {
             _ => CoreTypes.dynamic.ref(ctx),
           },
           typeParameters: ownerParams,
-          parameterHost: _decl is SourceTypeDecl
-              ? (_decl as SourceTypeDecl).node
-              : null,
+          parameterHost: _parameterHost,
         );
       case FieldDeclaration f:
         final fieldName = variable?.name.lexeme ?? name.name;
@@ -200,9 +244,7 @@ final class SourceMember extends Member {
           returnType: _decl.thisType,
         );
       case ConstructorDeclaration c:
-        final cls = _decl is SourceTypeDecl
-            ? (_decl as SourceTypeDecl).node
-            : null;
+        final cls = _parameterHost;
         return CallSignature.source(
           ctx,
           library,
@@ -211,7 +253,7 @@ final class SourceMember extends Member {
           owner: TypeParameterOwner(
             TypeParameterOwnerKind.method,
             library,
-            '${_decl.name}.${c.name?.lexeme ?? ''}',
+            '$_ownerName.${c.name?.lexeme ?? ''}',
             c.offset,
           ),
           returnAnnotation: null,
@@ -233,7 +275,7 @@ final class SourceMember extends Member {
   TypeRef? get fieldType {
     final f = node;
     if (f is! FieldDeclaration || variable == null) return null;
-    return _fieldType(_decl.ctx, f);
+    return _fieldType(_ctx, f);
   }
 
   TypeRef? _fieldType(CompilerContext ctx, FieldDeclaration f) {
@@ -243,7 +285,7 @@ final class SourceMember extends Member {
       // with neither an annotation nor an inferred entry is left
       // unresolved (callers degrade to dynamic themselves).
       final inferred =
-          ctx.inferredFieldTypes[library]?[_decl.name]?[name.name];
+          ctx.inferredFieldTypes[library]?[_ownerName]?[name.name];
       if (inferred == null) return null;
       return inferred;
     }
@@ -251,13 +293,13 @@ final class SourceMember extends Member {
       ctx,
       library,
       annotation,
-      typeParameters: _decl.ownTypeParams,
+      typeParameters: _ownTypeParams,
     );
   }
 
   @override
   DeferredOrOffset? get body {
-    final ctx = _decl.ctx;
+    final ctx = _ctx;
     switch (node) {
       case ClassDeclaration _:
         return null;
@@ -266,12 +308,12 @@ final class SourceMember extends Member {
         return DeferredOrOffset.lookupStatic(
           ctx,
           library,
-          _decl.name,
+          _ownerName,
           ctorName,
         );
       case FieldDeclaration _:
         final key = ctx.memberNameKey(name.name);
-        final table = ctx.instanceDeclarationPositions[library]?[_decl.name];
+        final table = ctx.instanceDeclarationPositions[library]?[_ownerName];
         final pos = table == null
             ? null
             : (table[name.kind.positionIndex] as Map?)?[key] as int?;
@@ -279,8 +321,8 @@ final class SourceMember extends Member {
             ? DeferredOrOffset(offset: pos, file: library)
             : DeferredOrOffset(
                 file: library,
-                name: '${_decl.name}.$key',
-                className: _decl.name,
+                name: '$_ownerName.$key',
+                className: _ownerName,
                 methodType: name.kind,
               );
       case MethodDeclaration m:
@@ -289,11 +331,11 @@ final class SourceMember extends Member {
           return DeferredOrOffset.lookupStatic(
             ctx,
             library,
-            _decl.name,
+            _ownerName,
             memberName.key,
           );
         }
-        final table = ctx.instanceDeclarationPositions[library]?[_decl.name];
+        final table = ctx.instanceDeclarationPositions[library]?[_ownerName];
         final pos = table == null
             ? null
             : (table[memberName.kind.positionIndex] as Map?)?[memberName.nameKey]
@@ -302,8 +344,8 @@ final class SourceMember extends Member {
             ? DeferredOrOffset(offset: pos, file: library)
             : DeferredOrOffset(
                 file: library,
-                name: '${_decl.name}.${memberName.key}',
-                className: _decl.name,
+                name: '$_ownerName.${memberName.key}',
+                className: _ownerName,
                 methodType: memberName.kind,
               );
       default:
@@ -490,11 +532,17 @@ extension TypeDeclMembers on TypeDecl {
           def: def,
         );
       case MemberKind.getter || MemberKind.setter:
-        final def = (name.kind == MemberKind.getter
+        var def = (name.kind == MemberKind.getter
                 ? classDef?.getters[name.name] ?? enumDef?.getters[name.name]
                 : classDef?.setters[name.name] ?? enumDef?.setters[name.name]) ??
             classDef?.fields[name.name] ??
             enumDef?.fields[name.name];
+        if (def == null && name.kind == MemberKind.getter) {
+          // A getter probe covers method reads too — `x.m` on a bridged
+          // method is a bound tear-off, matching the source map where a
+          // method entry sits at the bare `name` key.
+          def = classDef?.methods[name.name] ?? enumDef?.methods[name.name];
+        }
         if (def == null) return null;
         if ((def is BridgeMethodDef && def.isStatic) ||
             (def is BridgeFieldDef && def.isStatic)) {

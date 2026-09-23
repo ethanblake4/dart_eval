@@ -432,15 +432,14 @@ Variable invokeExtensionGetter(
                 const [],
     ),
   );
-  final returnType =
-      AlwaysReturnType.fromAnnotation(
-        ctx,
-        ext.library,
-        member.returnType,
-        CoreTypes.dynamic.ref(ctx),
-        typeParameters: memberExtParams(ctx, ext, receiver.type),
-      ).type ??
-      CoreTypes.dynamic.ref(ctx);
+  final returnType = member.returnType == null
+      ? CoreTypes.dynamic.ref(ctx)
+      : TypeRef.fromAnnotation(
+          ctx,
+          ext.library,
+          member.returnType!,
+          typeParameters: memberExtParams(ctx, ext, receiver.type),
+        );
   return Variable.of(ctx, s, returnType, rep: ValueRep.boxed);
 }
 

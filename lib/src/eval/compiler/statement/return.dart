@@ -15,7 +15,7 @@ import 'statement.dart';
 StatementInfo compileReturn(
   CompilerContext ctx,
   ReturnStatement s,
-  AlwaysReturnType? expectedReturnType, {
+  TypeRef? expectedReturnType, {
   bool skipClassBoxing = false,
 }) {
   AstNode? e = s;
@@ -40,9 +40,9 @@ StatementInfo compileReturn(
   // `Future<List<int>> f() async => []` the literal sees `List<int>`.
   final boundType =
       anonymousReturn?.boundType ??
-      (e is FunctionBody && e.isAsynchronous && expectedReturnType?.type != null
-          ? ctx.typeSystem.flatten(expectedReturnType!.type!)
-          : expectedReturnType?.type);
+      (e is FunctionBody && e.isAsynchronous && expectedReturnType != null
+          ? ctx.typeSystem.flatten(expectedReturnType)
+          : expectedReturnType);
   final value = expression == null
       ? null
       : compileExpression(s.expression!, ctx, boundType);
@@ -76,7 +76,7 @@ StatementInfo compileReturn(
   }
   return doReturn(
     ctx,
-    expectedReturnType ?? AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
+    expectedReturnType ?? CoreTypes.dynamic.ref(ctx),
     value,
     isAsync: body.isAsynchronous,
     skipClassBoxing: skipClassBoxing,

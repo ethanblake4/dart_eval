@@ -16,7 +16,7 @@ import '../invocation/resolver.dart';
 StatementInfo compileSwitchStatement(
   SwitchStatement s,
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   final expression = compileExpression(s.expression, ctx);
   // Evaluate once. Cases may change their operand representation without
@@ -60,7 +60,7 @@ StatementInfo _compileSwitchCases(
   Variable switchExpr,
   List<SwitchMember> cases,
   int index,
-  AlwaysReturnType? expectedReturnType, {
+  TypeRef? expectedReturnType, {
   AstNode? source,
 }) {
   if (index >= cases.length) {
@@ -130,7 +130,7 @@ StatementInfo _executeMatchingCases(
   CompilerContext ctx,
   List<SwitchMember> cases,
   int startIndex,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;
@@ -168,7 +168,7 @@ StatementInfo _executeMatchingCases(
 StatementInfo _executeSwitchBlock(
   CompilerContext ctx,
   List<Statement> statements,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   var willAlwaysReturn = false;
   var willAlwaysThrow = false;

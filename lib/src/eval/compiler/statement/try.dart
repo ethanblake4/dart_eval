@@ -18,7 +18,7 @@ import '../values/value_rep.dart';
 StatementInfo compileTryStatement(
   TryStatement s,
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   final catchBlock = s.catchClauses.isEmpty
       ? null
@@ -158,7 +158,7 @@ StatementInfo _compileCatchClause(
   List<CatchClause> clauses,
   int index,
   Variable exceptionVar,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   final catchClause = clauses[index];
   final exceptionType = catchClause.exceptionType;

@@ -11,7 +11,7 @@ import '../invocation/resolver.dart';
 StatementInfo compileIfStatement(
   IfStatement s,
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   final caseClause = s.caseClause;
   final elseStatement = s.elseStatement;
@@ -36,7 +36,7 @@ StatementInfo _compileIfCaseStatement(
   IfStatement s,
   CaseClause caseClause,
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   final elseStatement = s.elseStatement;
   final subject = compileExpression(s.expression, ctx);

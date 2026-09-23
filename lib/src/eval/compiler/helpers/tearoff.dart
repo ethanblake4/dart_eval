@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
+import '../member/call_signature.dart';
 import '../values/abi.dart';
 
 extension TearOff on Variable {
@@ -299,9 +300,9 @@ extension TearOff on Variable {
       materializedType,
       callable: CallableValue(
         offset: offset,
-        returnType:
-            methodReturnType ??
-            AlwaysReturnType(CoreTypes.dynamic.ref(ctx), false),
+        signature:
+            methodSignature ??
+            CallSignature.returnOnly(CoreTypes.dynamic.ref(ctx)),
         convention: CallingConvention.dynamic,
         materialized: true,
       ),

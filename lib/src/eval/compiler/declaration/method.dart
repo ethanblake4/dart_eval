@@ -180,26 +180,21 @@ int compileMethodDeclaration(
         i++;
       }
 
-      final expectedReturnType = AlwaysReturnType.fromAnnotation(
-        ctx,
-        ctx.library,
-        d.returnType,
-        CoreTypes.dynamic.ref(ctx),
-      );
-      final returnType = expectedReturnType.type;
+      final expectedReturnType = d.returnType == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!);
+      final returnType = expectedReturnType;
       final unboxedOperatorReturn =
           b is ExpressionFunctionBody &&
           !b.isAsynchronous &&
           (methodName == '==' || methodName == '!=') &&
-          returnType != null &&
           !Abi.unboxedAcrossCalls(returnType).isBoxed;
       ctx.functionSignatures[pos] = MachineFunctionSignature(
         List.filled(
           resolvedParams.length + (hasReceiver ? 1 : 0),
           MachineRepresentation.object,
         ),
-        returnType != null &&
-                returnType.isSpec(CoreTypes.voidType) &&
+        returnType.isSpec(CoreTypes.voidType) &&
                 !b.isAsynchronous
             ? null
             : unboxedOperatorReturn
@@ -223,7 +218,7 @@ int compileMethodDeclaration(
         ctx.beginScope();
         // An async body's context type is the *flattened* return type: in
         // `Future<List<int>> f() async => []` the literal sees `List<int>`.
-        final bound = b.isAsynchronous && returnType != null
+        final bound = b.isAsynchronous
             ? ctx.typeSystem.flatten(returnType)
             : returnType;
         final V = compileExpression(b.expression, ctx, bound);

@@ -16,7 +16,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 StatementInfo compileLabeledStatement(
   LabeledStatement s,
   CompilerContext ctx,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
 ) {
   final inner = s.statement;
   ctx.pendingLabelNames.addAll(s.labels.map((l) => l.name.lexeme));

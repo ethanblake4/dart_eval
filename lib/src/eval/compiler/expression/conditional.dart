@@ -22,7 +22,7 @@ Variable compileConditionalExpression(
 
   macroBranch(
     ctx,
-    boundType == null ? null : AlwaysReturnType(boundType, false),
+    boundType,
     conditionExpression: e.condition,
     thenBranch: (ctx, rt) {
       final v = compileExpression(e.thenExpression, ctx, boundType);

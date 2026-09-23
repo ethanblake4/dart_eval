@@ -14,14 +14,14 @@ import '../variable.dart';
 /// remains an Await operation and therefore observes errors before finally.
 StatementInfo doAsyncReturn(
   CompilerContext ctx,
-  AlwaysReturnType expectedReturnType,
+  TypeRef expectedReturnType,
   Variable? value,
 ) {
   final completer = ctx.lookupLocal('#completer')!.ssa;
   final boxed = value?.boxIfNeeded(ctx);
   if (boxed != null) {
-    final arguments = expectedReturnType.type?.typeArguments;
-    final expected = arguments == null || arguments.isEmpty
+    final arguments = expectedReturnType.typeArguments;
+    final expected = arguments.isEmpty
         ? CoreTypes.dynamic.ref(ctx)
         : arguments.first;
     var compatible = boxed.type.isAssignableTo(ctx, expected);

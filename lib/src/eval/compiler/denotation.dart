@@ -179,7 +179,7 @@ final class LocalDenotation extends Denotation {
     final current = binding.current;
     if (current.methodOffset != null &&
         current.callingConvention != CallingConvention.dynamic) {
-      return DirectCall(current.methodOffset!, current.methodReturnType!);
+      return DirectCall(current.methodOffset!, current.methodSignature!);
     }
     return null;
   }
@@ -364,10 +364,7 @@ final class StaticMemberDenotation extends Denotation {
             member.typeParameters?.typeParameters,
             () => TypeRef.fromAnnotation(ctx, file, member.returnType!),
           );
-    return DirectCall(
-      _offset(ctx),
-      AlwaysReturnType(rt, member.returnType?.question != null),
-    );
+    return DirectCall(_offset(ctx), CallSignature.returnOnly(rt));
   }
 }
 
@@ -679,12 +676,14 @@ final class InstanceMemberDenotation extends Denotation {
         (object.concreteTypes.length == 1 ? object.concreteTypes[0] : null);
     if (actualType == null) return null;
     // If we know the concrete type of the object, we can easily optimize to a static call
-    final returnType = AlwaysReturnType.fromInstanceMethod(
-      ctx,
-      actualType,
-      name,
-      CoreTypes.dynamic.ref(ctx),
-    );
+    final returnType = ctx.memberLookup
+        .interfaceMember(
+          actualType,
+          MemberName(name, MemberKind.method),
+          source: source,
+        )
+        .signature
+        .returnType;
 
     // The statically-fixed target is the nearest class at-or-above the
     // receiver type declaring the method. An exact allocation type needs
@@ -706,7 +705,7 @@ final class InstanceMemberDenotation extends Denotation {
       }
       return DirectCall(
         DeferredOrOffset(file: link.file, offset: methodsMap![name]),
-        returnType,
+        CallSignature.returnOnly(returnType),
       );
     }
     // An inherited method needs the owner's field view as its receiver.
@@ -740,13 +739,9 @@ final class ExtensionMemberDenotation extends Denotation {
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) {
     if (member.isGetter) {
-      return AlwaysReturnType.fromAnnotation(
-            ctx,
-            ext.library,
-            member.returnType,
-            CoreTypes.dynamic.ref(ctx),
-          ).type ??
-          CoreTypes.dynamic.ref(ctx);
+      return member.returnType == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.fromAnnotation(ctx, ext.library, member.returnType!);
     }
     return CoreTypes.function.ref(ctx);
   }
@@ -776,13 +771,9 @@ final class ExtensionMemberDenotation extends Denotation {
         return Variable.of(
           ctx,
           resvar,
-          (AlwaysReturnType.fromAnnotation(
-                ctx,
-                ext.library,
-                member.returnType,
-                CoreTypes.dynamic.ref(ctx),
-              ).type ??
-              CoreTypes.dynamic.ref(ctx)),
+          member.returnType == null
+              ? CoreTypes.dynamic.ref(ctx)
+              : TypeRef.fromAnnotation(ctx, ext.library, member.returnType!),
           rep: ValueRep.boxed,
         );
       }
@@ -818,11 +809,10 @@ final class ExtensionMemberDenotation extends Denotation {
       CoreTypes.function.ref(ctx),
       callable: CallableValue(
         offset: offset,
-        returnType: AlwaysReturnType.fromAnnotation(
-          ctx,
-          ext.library,
-          member.returnType,
-          CoreTypes.dynamic.ref(ctx),
+        signature: CallSignature.returnOnly(
+          member.returnType == null
+              ? CoreTypes.dynamic.ref(ctx)
+              : TypeRef.fromAnnotation(ctx, ext.library, member.returnType!),
         ),
         implicitReceiver: recv,
       ),
@@ -930,7 +920,7 @@ final class TypeLiteralDenotation extends Denotation {
   DirectCall? call(CompilerContext ctx, {AstNode? source}) =>
       DirectCall(
         DeferredOrOffset(file: type.file, name: constructorKey),
-        AlwaysReturnType(type, false),
+        CallSignature.returnOnly(type),
       );
 }
 

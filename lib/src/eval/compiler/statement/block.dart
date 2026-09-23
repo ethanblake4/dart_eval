@@ -6,7 +6,7 @@ import '../type.dart';
 
 StatementInfo compileBlock(
   Block b,
-  AlwaysReturnType? expectedReturnType,
+  TypeRef? expectedReturnType,
   CompilerContext ctx, {
   String name = '<block>',
   bool skipClassBoxing = false,

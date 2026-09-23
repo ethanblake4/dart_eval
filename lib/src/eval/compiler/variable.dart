@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/ir/primitives.dart';
 
 import 'errors.dart';
 import 'invocation/deferred.dart';
+import 'member/call_signature.dart';
 import 'values/abi.dart';
 
 /// A compiler value with an SSA identity, language type and calling convention.
@@ -24,7 +25,7 @@ import 'values/abi.dart';
 final class CallableValue {
   const CallableValue({
     this.offset,
-    this.returnType,
+    this.signature,
     this.convention = CallingConvention.static,
     this.implicitReceiver,
     this.materialized = false,
@@ -33,7 +34,11 @@ final class CallableValue {
   /// The known function's link target — null when only signature hints are
   /// carried (e.g. a dynamic `Function`-typed member read).
   final DeferredOrOffset? offset;
-  final ReturnType? returnType;
+
+  /// The callee's calling shape — parameter specs drive binding, and
+  /// [CallSignature.returnType]/[CallSignature.returnOverride] resolve the
+  /// call's result type.
+  final CallSignature? signature;
   final CallingConvention convention;
 
   /// The receiver to prepend as the first argument when this reference is
@@ -200,7 +205,7 @@ class Variable {
 
   /// Convenience accessors into [callable] for the sites that only read.
   DeferredOrOffset? get methodOffset => callable?.offset;
-  ReturnType? get methodReturnType => callable?.returnType;
+  CallSignature? get methodSignature => callable?.signature;
   Variable? get implicitReceiver => callable?.implicitReceiver;
 
   /// Non-null when this value is an unmaterialized function reference
@@ -248,7 +253,7 @@ class Variable {
       changed = true;
       merged = merged.join(other.facts);
       if (other.callable?.offset != c?.offset ||
-          other.callable?.returnType != c?.returnType) {
+          other.callable?.signature != c?.signature) {
         c = null;
       }
     }
@@ -583,7 +588,7 @@ class Variable {
   String toString() {
     final varName = name == null ? 'unnamed' : '"$name"';
     return 'Variable{$varName, $type, '
-        '${callable == null ? '' : 'method: ${callable!.returnType} ${callable!.offset}, '}'
+        '${callable == null ? '' : 'method: ${callable!.signature?.returnType} ${callable!.offset}, '}'
         '${boxed ? 'boxed' : 'unboxed'}, F[${binding?.frameIndex}]}';
   }
 }
