@@ -303,7 +303,7 @@ sealed class TypeRef {
     final decl = ref.decl;
     if (decl != null && decl.typeParameters.isNotEmpty) {
       final params = classLikeClauses(currentClass).$4;
-      final refs = classTypeParameterRefs(ref.file, ref.name, params);
+      final refs = classTypeParameterRefs(ctx, ref.file, ref.name, params);
       if (refs.isNotEmpty) {
         return (ref as InterfaceTypeRef).copyWith(
           arguments: refs.values.toList(),
@@ -461,6 +461,7 @@ sealed class TypeRef {
     final lib = library ?? ctx.library;
     final temps = ctx.typeParameterScope(lib);
     declareTypeParameters(
+      ctx,
       owner ?? TypeParameterOwner.scope(ctx.currentFunctionId ?? -1),
       typeParams,
       temps,
@@ -1037,12 +1038,14 @@ extension TypeRefNominal on TypeRef {
 /// to the declaring class `file:name` — the scope in which clause types like
 /// `extends C<T>` and parameter bounds are resolved.
 Map<String, TypeRef> classTypeParameterRefs(
+  CompilerContext ctx,
   int file,
   String name,
   TypeParameterList? typeParameters,
 ) {
   final scope = <String, TypeRef>{};
   declareTypeParameters(
+    ctx,
     TypeParameterOwner(TypeParameterOwnerKind.classLike, file, name),
     typeParameters?.typeParameters ?? const <TypeParameter>[],
     scope,
@@ -1234,7 +1237,7 @@ TypeRef? resolveAppliedTypeArgument(
       );
       if (index >= 0) {
         final bound = classParams![index].bound;
-        final parameter = TypeParameterDef(
+        final parameter = ctx.typeParameterDefs.key(
           TypeParameterOwner(
             TypeParameterOwnerKind.classLike,
             libraryIndex,
@@ -1344,7 +1347,7 @@ Map<String, TypeRef>? findMixinApplication(
           ...substitutions.bindings,
           for (var i = 0; i < mixinParams.length; i++)
             (ref.decl?.typeParameters[i] ??
-                    TypeParameterDef(
+                    ctx.typeParameterDefs.key(
                       TypeParameterOwner(
                         TypeParameterOwnerKind.classLike,
                         ref.file,

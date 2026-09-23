@@ -51,6 +51,7 @@ final class ExtensionDecl extends MemberOwner {
         const <TypeParameter>[];
     final scope = <String, TypeRef>{};
     declareTypeParameters(
+      ctx,
       TypeParameterOwner(
         TypeParameterOwnerKind.extension,
         extension.library,

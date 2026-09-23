@@ -231,6 +231,7 @@ BoundCall bindParameterList(
       parameterHost.parent!.parent! as Declaration,
     );
     declareTypeParameters(
+      ctx,
       TypeParameterOwner(
         TypeParameterOwnerKind.classLike,
         decLibrary,

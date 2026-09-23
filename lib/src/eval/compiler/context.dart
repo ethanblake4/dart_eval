@@ -329,6 +329,10 @@ class CompilerContext with ScopeContext {
   /// the head through [typeParameterScope].
   final Map<int, TypeScope> typeScopes = {};
 
+  /// Interned [TypeParameterDef]s by owner — every owner's parameters are
+  /// created in exactly one place, so bounds resolve on shared defs.
+  final typeParameterDefs = TypeParameterDefs();
+
   /// The mutable entries of [library]'s innermost type-parameter frame,
   /// creating a base frame on first use. Direct seeds (mixin application
   /// arguments, folded member bindings) write here — they live until the

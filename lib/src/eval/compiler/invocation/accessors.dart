@@ -603,27 +603,22 @@ final class ExtensionMethodTearOff extends GetTarget {
             member.returnType!,
             typeParameters: {
               ...typeParameters,
-              for (var i = 0;
-                  i <
-                  (member.typeParameters?.typeParameters.length ?? 0);
-                  i++)
-                member.typeParameters!.typeParameters[i].name.lexeme:
-                    TypeParameterTypeRef(
-                      TypeParameterDef(
-                        TypeParameterOwner(
-                          TypeParameterOwnerKind.method,
-                          ext.library,
-                          '${ext.name}.${member.name.lexeme}',
-                          member.offset,
-                        ),
-                        i,
-                        member
-                            .typeParameters!
-                            .typeParameters[i]
-                            .name
-                            .lexeme,
-                      ),
-                    ),
+              ...() {
+                final scope = <String, TypeRef>{};
+                declareTypeParameters(
+                  ctx,
+                  TypeParameterOwner(
+                    TypeParameterOwnerKind.method,
+                    ext.library,
+                    '${ext.name}.${member.name.lexeme}',
+                    member.offset,
+                  ),
+                  member.typeParameters?.typeParameters ??
+                      const <TypeParameter>[],
+                  scope,
+                );
+                return scope;
+              }(),
             },
           ),
         ),

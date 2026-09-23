@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 
+import '../context.dart';
 import '../type.dart';
 
 /// The kind of declaration that owns a type parameter. Each kind maps to one
@@ -104,6 +105,10 @@ final class TypeParameterDef {
   /// The parameter's declared bound; null means unbounded, as before.
   TypeRef? get bound => _bound;
 
+  /// Whether a bound was ever recorded — interned defs resolve theirs on
+  /// the first bound-carrying declaration pass.
+  bool get boundSet => _boundSet;
+
   set bound(TypeRef? value) {
     assert(!_boundSet, 'bound of $name already set');
     _bound = value;
@@ -121,8 +126,47 @@ final class TypeParameterDef {
   int get hashCode => Object.hash(owner, index);
 }
 
-/// Declares [nodes] as [owner]'s type parameters: creates every
-/// [TypeParameterDef] first, extends [scope] with a
+/// Interned [TypeParameterDef]s, one list per [TypeParameterOwner] — an
+/// owner's parameters exist in exactly one place, so a bound resolved on
+/// the shared def is visible through every reference and every
+/// substitution key, not just the copy that happened to carry it.
+final class TypeParameterDefs {
+  final _owners = <TypeParameterOwner, List<TypeParameterDef>>{};
+
+  /// Registers [defs] as [owner]'s parameters — the first declaration
+  /// wins; later calls return the interned defs unchanged. For
+  /// declarations without AST parameter nodes (bridge generics).
+  List<TypeParameterDef> intern(
+    TypeParameterOwner owner,
+    List<TypeParameterDef> defs,
+  ) => _owners.putIfAbsent(owner, () => defs);
+
+  /// Declares [owner]'s parameters from [nodes] — the first declaration
+  /// wins; later calls return the interned defs unchanged.
+  List<TypeParameterDef> declare(
+    TypeParameterOwner owner,
+    List<TypeParameter> nodes,
+  ) => _owners.putIfAbsent(owner, () => [
+    for (var i = 0; i < nodes.length; i++)
+      TypeParameterDef(owner, i, nodes[i].name.lexeme),
+  ]);
+
+  /// The interned def for (`owner`, `index`) — the shared def when the
+  /// owner was declared, or a fresh unbound key for substitution maps
+  /// whose nominal's declaration has not resolved (or never will).
+  TypeParameterDef key(
+    TypeParameterOwner owner,
+    int index,
+    String name,
+  ) {
+    final defs = _owners[owner];
+    if (defs != null && index < defs.length) return defs[index];
+    return TypeParameterDef(owner, index, name);
+  }
+}
+
+/// Declares [nodes] as [owner]'s type parameters: interns every
+/// [TypeParameterDef] on [ctx], extends [scope] with a
 /// [TypeParameterTypeRef] for each, then resolves bounds through
 /// [resolveBound]. Because defs are shared objects, a bound naming a later
 /// parameter sees that parameter's bound once set — the legacy
@@ -130,24 +174,25 @@ final class TypeParameterDef {
 ///
 /// Returns the defs in declaration order. A null [resolveBound] leaves the
 /// scope seeded but bounds null (the extension `on` pattern intentionally
-/// leaves parameters unbound).
+/// leaves parameters unbound). Re-declaring an already-bound owner only
+/// re-seeds the scope — bounds stay with the first resolution.
 List<TypeParameterDef> declareTypeParameters(
+  CompilerContext ctx,
   TypeParameterOwner owner,
   List<TypeParameter> nodes,
   Map<String, TypeRef> scope, [
   TypeRef Function(TypeAnnotation bound)? resolveBound,
 ]) {
-  final defs = [
-    for (var i = 0; i < nodes.length; i++)
-      TypeParameterDef(owner, i, nodes[i].name.lexeme),
-  ];
+  final defs = ctx.typeParameterDefs.declare(owner, nodes);
   for (final def in defs) {
     scope[def.name] = TypeParameterTypeRef(def);
   }
   if (resolveBound == null) return defs;
-  for (var i = 0; i < nodes.length; i++) {
+  for (var i = 0; i < nodes.length && i < defs.length; i++) {
     final bound = nodes[i].bound;
-    if (bound != null) defs[i].bound = resolveBound(bound);
+    if (bound != null && !defs[i].boundSet) {
+      defs[i].bound = resolveBound(bound);
+    }
   }
   return defs;
 }

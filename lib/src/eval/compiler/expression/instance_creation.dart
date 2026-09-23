@@ -171,7 +171,7 @@ Variable compileInstanceOf(
       final paramRefs = {
         for (var i = 0; i < genericNames.length; i++)
           genericNames[i]: TypeParameterTypeRef(
-            TypeParameterDef(
+            ctx.typeParameterDefs.key(
               TypeParameterOwner(
                 TypeParameterOwnerKind.classLike,
                 staticType.file,

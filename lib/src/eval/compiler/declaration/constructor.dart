@@ -1142,6 +1142,7 @@ void compileAliasForwardingConstructor(
   // types through [calleeTypeParameters] also avoids `temporaryTypes` entries
   // seeded for a same-file mixin's identically-named parameters.
   final calleeTypeParameters = classTypeParameterRefs(
+    ctx,
     target.sourceLib,
     targetType.name,
     classLikeClauses(targetDecl.parent!.parent! as Declaration).$4,

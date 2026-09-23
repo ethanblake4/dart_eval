@@ -112,7 +112,7 @@ final class CallSignature {
     final ownParams =
         typeParameterList?.typeParameters ?? const <TypeParameter>[];
     final allTypeParams = <String, TypeRef>{...typeParameters};
-    final ownDefs = declareTypeParameters(owner, ownParams, allTypeParams, (
+    final ownDefs = declareTypeParameters(ctx, owner, ownParams, allTypeParams, (
       bound,
     ) {
       return TypeRef.fromAnnotation(

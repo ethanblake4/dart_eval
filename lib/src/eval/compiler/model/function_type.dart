@@ -18,15 +18,15 @@ FunctionSignature functionSignatureFromBridgeFunctionDef(
     def.hashCode,
   );
   final genericEntries = def.generics.entries.toList();
-  final ownDefs = <TypeParameterDef>[
+  final ownDefs = ctx.typeParameterDefs.intern(owner, [
     for (final (index, entry) in genericEntries.indexed)
       TypeParameterDef(owner, index, entry.key),
-  ];
+  ]);
   for (final (index, entry) in genericEntries.indexed) {
     final bound = entry.value.$extends;
-    ownDefs[index].bound = bound == null
-        ? null
-        : TypeRef.fromBridgeTypeRef(ctx, bound);
+    if (bound != null && !ownDefs[index].boundSet) {
+      ownDefs[index].bound = TypeRef.fromBridgeTypeRef(ctx, bound);
+    }
   }
   final scope = <String, TypeRef>{
     ...typeParameters,
@@ -107,7 +107,7 @@ FunctionSignature functionSignatureFromParts(
   final ownParams =
       typeParameterList?.typeParameters ?? const <TypeParameter>[];
   final allTypeParams = <String, TypeRef>{...typeParameters};
-  final ownDefs = declareTypeParameters(owner, ownParams, allTypeParams, (
+  final ownDefs = declareTypeParameters(ctx, owner, ownParams, allTypeParams, (
     bound,
   ) {
     return TypeRef.fromAnnotation(

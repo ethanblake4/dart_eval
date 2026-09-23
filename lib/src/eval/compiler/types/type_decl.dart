@@ -180,6 +180,7 @@ sealed class TypeDecl {
       return mixin;
     }
     final mixinParams = classTypeParameterRefs(
+      ctx,
       mixinDeclRef.library,
       mixinDeclRef.name,
       mixinDecl.typeParameters,
@@ -245,6 +246,7 @@ final class SourceTypeDecl extends TypeDecl {
     // them with the class's own parameters already seeded.
     final paramRefs = <String, TypeRef>{};
     final defs = declareTypeParameters(
+      ctx,
       TypeParameterOwner(TypeParameterOwnerKind.classLike, library, name),
       nodes.typeParameters,
       paramRefs,
@@ -255,9 +257,6 @@ final class SourceTypeDecl extends TypeDecl {
         typeParameters: paramRefs,
       ),
     );
-    for (final def in defs) {
-      def.bound ??= CoreTypes.dynamic.ref(ctx);
-    }
     return defs;
   }
 
@@ -323,13 +322,17 @@ final class BridgeTypeDecl extends TypeDecl {
       name,
     );
     var index = 0;
-    return [
-      for (final g in classDef.type.generics.entries)
-        TypeParameterDef(owner, index++, g.key)
-          ..bound = g.value.$extends == null
-              ? CoreTypes.dynamic.ref(ctx)
-              : TypeRef.fromBridgeTypeRef(ctx, g.value.$extends!),
-    ];
+    final defs = ctx.typeParameterDefs.intern(owner, [
+      for (final g in classDef.type.generics.entries) () {
+        final def = TypeParameterDef(owner, index++, g.key);
+        final extends_ = g.value.$extends;
+        if (extends_ != null) {
+          def.bound = TypeRef.fromBridgeTypeRef(ctx, extends_);
+        }
+        return def;
+      }(),
+    ]);
+    return defs;
   }
 
   @override

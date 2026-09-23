@@ -99,6 +99,7 @@ extension TearOff on Variable {
         ...memberExtParams(ctx, memberExt, implicitReceiver!.type)
       else if (memberHost is Declaration)
         ...classTypeParameterRefs(
+          ctx,
           offset.file ?? ctx.library,
           declarationName(memberHost),
           classLikeClauses(memberHost).$4,
@@ -112,21 +113,16 @@ extension TearOff on Variable {
           _ => null,
         })?.typeParameters ??
         const <TypeParameter>[];
-    for (var i = 0; i < ownTypeParams.length; i++) {
-      final param = ownTypeParams[i];
-      memberParams[param.name.lexeme] = TypeParameterTypeRef(
-        TypeParameterDef(
-          TypeParameterOwner(
-            TypeParameterOwnerKind.tearOff,
-            offset.file ?? ctx.library,
-            offset.name ?? '',
-          ),
-          i,
-          param.name.lexeme,
-        ),
-        file: offset.file ?? ctx.library,
-      );
-    }
+    declareTypeParameters(
+      ctx,
+      TypeParameterOwner(
+        TypeParameterOwnerKind.tearOff,
+        offset.file ?? ctx.library,
+        offset.name ?? '',
+      ),
+      ownTypeParams,
+      memberParams,
+    );
 
     TypeRef parameterType(FormalParameter parameter) {
       final compiledType = parameterTypeByNode[parameter];

@@ -248,6 +248,7 @@ List<TypeRef>? matchExtensionOn(
 /// the instantiated type the receiver was matched against, used to order
 /// candidates by specificity.
 TypeRef _instantiateOnType(
+  CompilerContext ctx,
   EvalExtension ext,
   TypeRef onType,
   List<TypeRef> bindings,
@@ -261,7 +262,7 @@ TypeRef _instantiateOnType(
   return onType.substituteTypeParameters(
     Substitution.of({
       for (var i = 0; i < bindings.length; i++)
-        TypeParameterDef(owner, i, ''): bindings[i],
+        ctx.typeParameterDefs.key(owner, i, ''): bindings[i],
     }),
   );
 }
@@ -289,7 +290,7 @@ TypeRef _instantiateOnType(
     if (onType == null) continue;
     final bindings = matchExtensionOn(ctx, receiverType, ext);
     if (bindings == null) continue;
-    final instantiatedOn = _instantiateOnType(ext, onType, bindings);
+    final instantiatedOn = _instantiateOnType(ctx, ext, onType, bindings);
     for (final member in ext.members) {
       if (member is! MethodDeclaration || member.isStatic) continue;
       if (member.name.lexeme != memberName) continue;

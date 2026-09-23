@@ -670,6 +670,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           _ => ('', null),
         };
         final ownParams = classTypeParameterRefs(
+          _ctx,
           libraryIndex,
           name,
           typeParameters,

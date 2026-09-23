@@ -78,6 +78,7 @@ int compileMethodDeclaration(
         memberTypeParameters: {
           ...switch (ctx.currentClass) {
             final host? => classTypeParameterRefs(
+              ctx,
               ctx.library,
               ctx.currentClassName!,
               classLikeClauses(host).$4,
