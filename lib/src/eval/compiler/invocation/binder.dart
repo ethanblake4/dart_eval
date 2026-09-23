@@ -768,78 +768,146 @@ BoundCall bindBridgeVector(
   SuperParams superParams = const (positional: [], named: {}),
   Map<String, TypeRef> typeParameters = const {},
 }) {
-  final ssa = <SSA>[];
   final args = <Variable>[];
   final push = <Variable>[...before];
   final namedArgs = <String, Variable>{};
-  final namedExpr = <String, Expression>{};
 
-  var i = 0;
+  final rawArguments = argumentList.arguments;
+  final positional = function.params;
+  final namedParamByName = {for (final p in function.namedParams) p.name: p};
+
+  // **Match.** Positional arguments fill positional parameters in order,
+  // skipping named arguments; named arguments bind by name and may
+  // precede positional ones.
+  final matchPositional = List<Expression?>.filled(positional.length, null);
+  final matchNamed = <String, Expression>{};
+  final argIndexToPositional = <int, int>{};
+  final argIndexToNamed = <int, String>{};
+  var positionalCursor = 0;
+  for (var a = 0; a < rawArguments.length; a++) {
+    final arg = rawArguments[a];
+    if (arg is NamedArgument) {
+      final name = arg.name.lexeme;
+      if (!namedParamByName.containsKey(name) &&
+          !superParams.named.contains(name)) {
+        throw CompileError('Unknown named argument $name', arg);
+      }
+      matchNamed[name] = arg.argumentExpression;
+      argIndexToNamed[a] = name;
+      continue;
+    }
+    if (positionalCursor >= positional.length) {
+      throw CompileError(
+        'Too many positional arguments: ${positional.length} expected, '
+        'but ${positionalCursor + 1} found.',
+      );
+    }
+    matchPositional[positionalCursor] = arg.argumentExpression;
+    argIndexToPositional[a] = positionalCursor;
+    positionalCursor++;
+  }
+
   Variable? $null;
-  var positionalSuperIndex = 0;
 
-  for (final param in function.params) {
-    if (positionalSuperIndex < superParams.positional.length) {
+  // Resolve the receiver's type arguments for every parameter annotation.
+  // Simple refs (for example E in List.add) need them as much as generic
+  // function types do; dropping them leaves the context type dynamic and
+  // defeats argument conversion and reified checks.
+  Variable compilePositional(BridgeParameter param, Expression expr) {
+    final paramType = TypeRef.fromBridgeAnnotation(
+      ctx,
+      param.type,
+      typeParameters: typeParameters,
+    );
+    var arg0 = compileExpression(expr, ctx, paramType);
+    arg0 = arg0.boxIfNeeded(ctx);
+    if (arg0.type.isFunctionLike && arg0.unmaterializedCallable != null) {
+      arg0 = arg0.tearOff(ctx, boundContext: paramType);
+    }
+    // Bridge argument conversion lives on the runtime side of the typed
+    // boundary (previously the compiler only boxed). Type parameters that
+    // resolved through the receiver, nullable matches, and dynamic argument
+    // shapes can carry distinct [TypeRef] identities for an equivalent
+    // static type, so a failing compile-time [isAssignableTo] here must
+    // defer to the boundary conversion instead of rejecting.
+    return _providedBridgeArgument(ctx, arg0);
+  }
+
+  Variable compileNamedParam(BridgeParameter param, Expression expr) {
+    final paramType = TypeRef.fromBridgeAnnotation(
+      ctx,
+      param.type,
+      typeParameters: typeParameters,
+    );
+    var arg0 = compileExpression(expr, ctx, paramType).boxIfNeeded(ctx);
+    if (arg0.type.isFunctionLike && arg0.unmaterializedCallable != null) {
+      arg0 = arg0.tearOff(ctx, boundContext: paramType);
+    }
+    if (arg0.type.assignmentConversionTo(ctx, paramType) ==
+        AssignmentConversion.invalid) {
+      throw CompileError(
+        'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
+        argumentList,
+      );
+    }
+    arg0 = convertForAssignment(
+      ctx,
+      arg0,
+      paramType,
+      representation: MachineRepresentation.object,
+      source: argumentList,
+    );
+    return _providedBridgeArgument(ctx, arg0);
+  }
+
+  // **Compile** supplied arguments in source order.
+  final compiledPositional = List<Variable?>.filled(positional.length, null);
+  final compiledNamed = <String, Variable>{};
+  for (var a = 0; a < rawArguments.length; a++) {
+    final pi = argIndexToPositional[a];
+    if (pi != null) {
+      compiledPositional[pi] = compilePositional(
+        positional[pi],
+        matchPositional[pi]!,
+      );
+      continue;
+    }
+    final name = argIndexToNamed[a];
+    // Named arguments that reach a forwarded super parameter are dropped:
+    // the parameter binds the constructor's local instead.
+    if (name != null &&
+        namedParamByName.containsKey(name) &&
+        !superParams.named.contains(name)) {
+      compiledNamed[name] = compileNamedParam(
+        namedParamByName[name]!,
+        matchNamed[name]!,
+      );
+    }
+  }
+
+  // **Emit** the flattened vector in declaration order.
+  for (var pi = 0; pi < positional.length; pi++) {
+    final param = positional[pi];
+    if (pi < superParams.positional.length) {
       final V = _providedBridgeArgument(
         ctx,
-        ctx.lookupLocal(superParams.positional[positionalSuperIndex])!,
+        ctx.lookupLocal(superParams.positional[pi])!,
       );
       push.add(V);
       args.add(V);
-
-      i++;
-      positionalSuperIndex++;
       continue;
     }
-    if (param.optional && argumentList.arguments.length <= i) {
-      $null ??= BuiltinValue().push(ctx);
-      push.add($null);
-
+    final compiled = compiledPositional[pi];
+    if (compiled != null) {
+      args.add(compiled);
+      push.add(compiled);
       continue;
     }
-    final arg = argumentList.arguments[i];
-    if (arg is NamedArgument) {
-      if (!param.optional) {
-        throw CompileError('Not enough positional arguments');
-      } else {
-        $null ??= BuiltinValue().push(ctx);
-        push.add($null);
-      }
-    } else {
-      // Resolve the receiver's type arguments for every parameter annotation.
-      // Simple refs (for example E in List.add) need them as much as generic
-      // function types do; dropping them leaves the context type dynamic and
-      // defeats argument conversion and reified checks.
-      var paramType = TypeRef.fromBridgeAnnotation(
-        ctx,
-        param.type,
-        typeParameters: typeParameters,
-      );
-
-      var arg0 = compileExpression(arg.argumentExpression, ctx, paramType);
-      arg0 = arg0.boxIfNeeded(ctx);
-      if (arg0.type.isFunctionLike &&
-          arg0.unmaterializedCallable != null) {
-        arg0 = arg0.tearOff(ctx, boundContext: paramType);
-      }
-      // Bridge argument conversion lives on the runtime side of the typed
-      // boundary (previously the compiler only boxed). Type parameters that
-      // resolved through the receiver, nullable matches, and dynamic argument
-      // shapes can carry distinct [TypeRef] identities for an equivalent
-      // static type, so a failing compile-time [isAssignableTo] here must
-      // defer to the boundary conversion instead of rejecting.
-      arg0 = _providedBridgeArgument(ctx, arg0);
-      args.add(arg0);
-      push.add(arg0);
+    if (!param.optional) {
+      throw CompileError('Not enough positional arguments');
     }
-
-    i++;
-  }
-
-  for (final arg in argumentList.arguments) {
-    if (arg is NamedArgument) {
-      namedExpr[arg.name.lexeme] = arg.argumentExpression;
-    }
+    $null ??= BuiltinValue().push(ctx);
+    push.add($null);
   }
 
   for (final param in function.namedParams) {
@@ -849,51 +917,22 @@ BoundCall bindBridgeVector(
       namedArgs[param.name] = V;
       continue;
     }
-    var paramType = TypeRef.fromBridgeAnnotation(
-      ctx,
-      param.type,
-      typeParameters: typeParameters,
-    );
-    if (namedExpr.containsKey(param.name)) {
-      var arg0 = compileExpression(
-        namedExpr[param.name]!,
-        ctx,
-        paramType,
-      ).boxIfNeeded(ctx);
-      if (arg0.type.isFunctionLike &&
-          arg0.unmaterializedCallable != null) {
-        arg0 = arg0.tearOff(ctx, boundContext: paramType);
-      }
-      if (arg0.type.assignmentConversionTo(ctx, paramType) ==
-          AssignmentConversion.invalid) {
-        throw CompileError(
-          'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
-          argumentList,
-        );
-      }
-      arg0 = convertForAssignment(
-        ctx,
-        arg0,
-        paramType,
-        representation: MachineRepresentation.object,
-        source: argumentList,
-      );
-      arg0 = _providedBridgeArgument(ctx, arg0);
-      push.add(arg0);
-      namedArgs[param.name] = arg0;
-    } else {
-      $null ??= BuiltinValue().push(ctx);
-      push.add($null);
+    final compiled = compiledNamed[param.name];
+    if (compiled != null) {
+      push.add(compiled);
+      namedArgs[param.name] = compiled;
+      continue;
     }
+    $null ??= BuiltinValue().push(ctx);
+    push.add($null);
   }
 
-  ssa.addAll(push.map((argument) => argument.ssa));
   return BoundCall(
       positional: [for (final a in args) BoundArgument(a)],
       named: [
         for (final e in namedArgs.entries) (e.key, BoundArgument(e.value)),
       ],
-      vectorOverride: ssa,
+      vectorOverride: push.map((argument) => argument.ssa).toList(),
       returnType: CoreTypes.dynamic.ref(ctx),
     );
 }

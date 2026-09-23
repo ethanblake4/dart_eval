@@ -295,7 +295,7 @@ class Variable {
         type,
         rep: target,
         callable: callable,
-        facts: facts.copyWith(isConst: false, isConstInt: false),
+        facts: facts.copyWith(isConst: false),
       );
     }
     final dest = into ?? ssa;
@@ -313,7 +313,7 @@ class Variable {
       rep: target,
       declaredType: declaredType,
       callable: callable,
-      facts: facts.copyWith(isConst: false, isConstInt: false),
+      facts: facts.copyWith(isConst: false),
     );
   }
 
@@ -368,11 +368,15 @@ class Variable {
       ValueRep.boxed,
       source: source,
     );
+    // The conversion already recomputed the value-level facts (a boxed
+    // literal int is still a constant int) — keep them rather than
+    // re-deriving through copyWith.
     return copyWithUpdate(
       ctx,
       type: converted.type,
       representation: converted.representation,
       rep: converted.rep,
+      facts: converted.facts,
     );
   }
 
@@ -388,7 +392,7 @@ class Variable {
         type,
         rep: ValueRep.boxed,
         callable: callable,
-        facts: facts.copyWith(isConst: false, isConstInt: false),
+        facts: facts.copyWith(isConst: false),
       );
     }
     if (rep == ValueRep.nativeObject &&
@@ -424,6 +428,7 @@ class Variable {
             type: converted.type,
             representation: converted.representation,
             rep: converted.rep,
+            facts: converted.facts,
           )
         : converted;
   }
