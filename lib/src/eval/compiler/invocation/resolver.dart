@@ -270,7 +270,20 @@ final class CallResolver {
             },
             argIndexOffset: 1,
             source: e,
-          );
+          options: BindingOptions.source,
+);
+
+
+
+
+
+
+
+
+
+
+
+
           final s = ctx.svar('method_result');
           ctx.pushOp(
             Call(
@@ -499,7 +512,19 @@ final class CallResolver {
               ? classTypeArguments(ctx, L.type, dec0.sourceLib, dec)
               : const {},
           returnContext: bound,
-        );
+        options: BindingOptions.source,
+);
+
+
+
+
+
+
+
+
+
+
+
         argsPair = result;
         mReturnType = result.declaredReturn;
       }
@@ -1134,7 +1159,14 @@ final class CallResolver {
         e.argumentList,
         typeArguments: e.typeArguments,
         source: e,
-      );
+      options: BindingOptions.source,
+);
+
+
+
+
+
+
       mReturnType = result.declaredReturn;
       genericReturnBoxed = result.genericReturnBoxed;
       args = result.positionalValues;

@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import '../invocation/bound_call.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -645,7 +646,19 @@ Variable invokeExtensionMethod(
         extParams[i].name.lexeme: bindings[i],
     },
     source: call,
-  );
+  options: BindingOptions.source,
+);
+
+
+
+
+
+
+
+
+
+
+
   final s = ctx.svar('method_result');
   ctx.pushOp(
     Call(

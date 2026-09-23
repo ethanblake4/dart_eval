@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import '../invocation/bound_call.dart';
 import '../invocation/binder.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -154,7 +155,15 @@ Variable _invokeShorthandMember(
       typeArguments: typeArguments,
       source: source,
       returnContext: bound,
-    );
+    options: BindingOptions.source,
+);
+
+
+
+
+
+
+
     final s = ctx.svar('method_result');
     ctx.pushOp(
       Call(

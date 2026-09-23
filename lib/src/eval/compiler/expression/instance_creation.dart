@@ -244,7 +244,15 @@ Variable compileInstanceOf(
       dec,
       source: source,
       resolveGenerics: seedGenerics,
-    );
+    options: BindingOptions.source,
+);
+
+
+
+
+
+
+
     //_args = argsPair.first;
     //_namedArgs = argsPair.second;
   }

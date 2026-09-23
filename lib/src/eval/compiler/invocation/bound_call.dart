@@ -38,6 +38,14 @@ final class BindingOptions {
     inference: InferenceMode.legacy,
   );
 
+  /// Dart's rules: named arguments evaluate and bind in source order and
+  /// may appear before positional ones.
+  static const source = BindingOptions(
+    namedOrder: NamedOrder.source,
+    allowNamedBeforePositional: true,
+    inference: InferenceMode.legacy,
+  );
+
   final NamedOrder namedOrder;
   final bool allowNamedBeforePositional;
   final InferenceMode inference;

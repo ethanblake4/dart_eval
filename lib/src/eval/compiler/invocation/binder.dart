@@ -139,6 +139,7 @@ BoundCall bindParameterList(
   // receiver is compiled separately and passed via [before], so indexing
   // into the argument list starts past it.
   int argIndexOffset = 0,
+  BindingOptions options = BindingOptions.legacy,
 }) {
   // A redirecting factory (`factory F(...) = T.g`) exposes the redirect
   // target's signature to callers: argument binding, conversion, and omitted
@@ -173,7 +174,6 @@ BoundCall bindParameterList(
 
   final positional = <FormalParameter>[];
   final named = <String, FormalParameter>{};
-  final namedExpr = <String, Expression>{};
 
   for (final param in fpl) {
     if (param.isNamed) {
@@ -234,7 +234,131 @@ BoundCall bindParameterList(
 
   final resolveGenericsMap = <String, Set<TypeRef>>{};
 
-  for (final param in positional) {
+
+  // Compiles the supplied argument [expr] for [param]: context-typed
+  // compilation, coercion to the formal, and generic-inference recording.
+  Variable compileMatched(FormalParameter param, Expression expr) {
+    var (paramType, typeAnnotation) = getFormalParameterType(
+      ctx,
+      param,
+      decLibrary,
+      parameterHost,
+      typeParameters: paramTypeParameters,
+    );
+
+    paramType ??= CoreTypes.dynamic.ref(ctx);
+    if (ctorClassParamSubs.isNotEmpty) {
+      paramType = paramType.substituteTypeParameters(ctorClassParamSubs);
+    }
+    final genericParameter =
+        typeAnnotation is NamedType &&
+        (resolveGenerics.containsKey(typeAnnotation.name.lexeme) ||
+            ctorClassParamNames.contains(typeAnnotation.name.lexeme));
+
+    var arg0 = compileExpression(expr, ctx, paramType);
+    arg0 = coerceArgumentForParameter(
+      ctx,
+      arg0,
+      paramType,
+      param,
+      parameterHost,
+      genericParameter: genericParameter,
+      source: source,
+    );
+
+    if (typeAnnotation != null) {
+      final n = typeAnnotation is NamedType
+          ? (typeAnnotation.name.stringValue ?? typeAnnotation.name.lexeme)
+          : null;
+      if (inferGenerics && n != null && resolveGenerics.containsKey(n)) {
+        resolveGenericsMap[n] ??= {};
+        resolveGenericsMap[n]!.add(arg0.type);
+      }
+    }
+    return arg0;
+  }
+
+  // **Match.** Map arguments to formals without emitting. Under `legacy` a
+  // positional parameter consumes the argument at its own index — a named
+  // argument in that slot counts as missing, reproducing today's failure.
+  // Under `allowNamedBeforePositional` named arguments are skipped during
+  // positional matching, as Dart requires.
+  final rawArguments = argumentList.arguments;
+  final matchPositional = List<Expression?>.filled(positional.length, null);
+  final matchNamed = <String, Expression>{};
+  final argIndexToPositional = <int, int>{};
+  final argIndexToNamed = <int, String>{};
+  // Forwarded super parameters occupy the leading positional-param slots.
+  var positionalCursor = superParams.positional.length;
+  for (var a = argIndexOffset; a < rawArguments.length; a++) {
+    final arg = rawArguments[a];
+    if (arg is NamedArgument) {
+      final name = arg.name.lexeme;
+      if (!named.containsKey(name)) {
+        throw CompileError('Unknown named argument $name', arg);
+      }
+      matchNamed[name] = arg.argumentExpression;
+      argIndexToNamed[a] = name;
+      if (!options.allowNamedBeforePositional) {
+        // Legacy: a named argument also occupies a positional-param slot.
+        positionalCursor++;
+      }
+    } else {
+      final p = options.allowNamedBeforePositional
+          ? positionalCursor
+          : a - argIndexOffset;
+      positionalCursor++;
+      if (p >= positional.length) {
+        if (options.allowNamedBeforePositional) {
+          throw CompileError(
+            'Too many positional arguments: ${positional.length} expected, '
+            'but ${p + 1} found.',
+          );
+        }
+        continue;
+      }
+      matchPositional[p] = arg.argumentExpression;
+      argIndexToPositional[a] = p;
+    }
+  }
+
+  // **Compile** supplied arguments — source order under `NamedOrder.source`,
+  // declaration order under `legacy` (positionals, then named).
+  final compiledPositional = List<Variable?>.filled(positional.length, null);
+  final compiledNamed = <String, Variable>{};
+  if (options.namedOrder == NamedOrder.source) {
+    for (var a = argIndexOffset; a < rawArguments.length; a++) {
+      final pi = argIndexToPositional[a];
+      if (pi != null) {
+        compiledPositional[pi] = compileMatched(
+          positional[pi],
+          matchPositional[pi]!,
+        );
+      } else {
+        final name = argIndexToNamed[a];
+        if (name != null) {
+          compiledNamed[name] = compileMatched(named[name]!, matchNamed[name]!);
+        }
+      }
+    }
+  } else {
+    for (var pi = 0; pi < positional.length; pi++) {
+      final expr = matchPositional[pi];
+      if (expr != null) {
+        compiledPositional[pi] = compileMatched(positional[pi], expr);
+      }
+    }
+    for (final n in named.entries) {
+      final expr = matchNamed[n.key];
+      if (expr != null) {
+        compiledNamed[n.key] = compileMatched(n.value, expr);
+      }
+    }
+  }
+
+  // **Emit** the vector in declaration order.
+  for (var pi = 0; pi < positional.length; pi++) {
+    final param = positional[pi];
     // First check super params. Super params do not contain an expression;
     // positional ones bind to the callee's positional parameters in order.
     if (i < superParams.positional.length) {
@@ -257,90 +381,26 @@ BoundCall bindParameterList(
       i++;
       continue;
     }
-    final arg = argumentList.arguments.length <= i + argIndexOffset
-        ? null
-        : argumentList.arguments[i + argIndexOffset];
-    if (arg is NamedArgument) {
-      if (param.isRequired) {
-        throw CompileError('Not enough positional arguments');
-      } else {
-        final value = compileOmittedArgument(
-          ctx,
-          decLibrary,
-          param,
-          parameterHost,
-          typeParameters: paramTypeParameters,
-        );
-        push.add(value);
-        args.add(value);
-      }
-    } else if (arg == null) {
-      if (param.isRequired) {
-        throw CompileError('Not enough positional arguments');
-      } else {
-        final value = compileOmittedArgument(
-          ctx,
-          decLibrary,
-          param,
-          parameterHost,
-          typeParameters: paramTypeParameters,
-        );
-        push.add(value);
-        args.add(value);
-      }
-    } else {
-      var (paramType, typeAnnotation) = getFormalParameterType(
-        ctx,
-        param,
-        decLibrary,
-        parameterHost,
-        typeParameters: paramTypeParameters,
-      );
-
-      paramType ??= CoreTypes.dynamic.ref(ctx);
-      if (ctorClassParamSubs.isNotEmpty) {
-        paramType = paramType.substituteTypeParameters(ctorClassParamSubs);
-      }
-      final genericParameter =
-          typeAnnotation is NamedType &&
-          (resolveGenerics.containsKey(typeAnnotation.name.lexeme) ||
-              ctorClassParamNames.contains(typeAnnotation.name.lexeme));
-
-      var arg0 = compileExpression(arg.argumentExpression, ctx, paramType);
-      arg0 = coerceArgumentForParameter(
-        ctx,
-        arg0,
-        paramType,
-        param,
-        parameterHost,
-        genericParameter: genericParameter,
-        source: source,
-      );
-
-      if (typeAnnotation != null) {
-        final n = typeAnnotation is NamedType
-            ? (typeAnnotation.name.stringValue ?? typeAnnotation.name.lexeme)
-            : null;
-        if (inferGenerics && n != null && resolveGenerics.containsKey(n)) {
-          resolveGenericsMap[n] ??= {};
-          resolveGenericsMap[n]!.add(arg0.type);
-        }
-      }
-
+    final arg0 = compiledPositional[i];
+    if (arg0 != null) {
       args.add(arg0);
       push.add(arg0);
-    }
-
-    i++;
-  }
-
-  for (final arg in argumentList.arguments) {
-    if (arg is NamedArgument) {
-      if (!named.containsKey(arg.name.lexeme)) {
-        throw CompileError('Unknown named argument ${arg.name.lexeme}', arg);
+    } else {
+      if (param.isRequired) {
+        throw CompileError('Not enough positional arguments');
+      } else {
+        final value = compileOmittedArgument(
+          ctx,
+          decLibrary,
+          param,
+          parameterHost,
+          typeParameters: paramTypeParameters,
+        );
+        push.add(value);
+        args.add(value);
       }
-      namedExpr[arg.name.lexeme] = arg.argumentExpression;
     }
+    i++;
   }
 
   for (final n in named.entries) {
@@ -366,45 +426,8 @@ BoundCall bindParameterList(
 
       continue;
     }
-    final param = param0;
-    var (paramType, typeAnnotation) = getFormalParameterType(
-      ctx,
-      param,
-      decLibrary,
-      parameterHost,
-      typeParameters: paramTypeParameters,
-    );
-    paramType ??= CoreTypes.dynamic.ref(ctx);
-    if (ctorClassParamSubs.isNotEmpty) {
-      paramType = paramType.substituteTypeParameters(ctorClassParamSubs);
-    }
-
-    if (namedExpr.containsKey(name)) {
-      final genericParameter =
-          typeAnnotation is NamedType &&
-          (resolveGenerics.containsKey(typeAnnotation.name.lexeme) ||
-              ctorClassParamNames.contains(typeAnnotation.name.lexeme));
-      var arg0 = compileExpression(namedExpr[name]!, ctx, paramType);
-      arg0 = coerceArgumentForParameter(
-        ctx,
-        arg0,
-        paramType,
-        param,
-        parameterHost,
-        genericParameter: genericParameter,
-        source: source,
-      );
-
-      if (typeAnnotation != null) {
-        final n = typeAnnotation is NamedType
-            ? (typeAnnotation.name.stringValue ?? typeAnnotation.name.lexeme)
-            : null;
-        if (inferGenerics && n != null && resolveGenerics.containsKey(n)) {
-          resolveGenericsMap[n] ??= {};
-          resolveGenericsMap[n]!.add(arg0.type);
-        }
-      }
-
+    final arg0 = compiledNamed[name];
+    if (arg0 != null) {
       push.add(arg0);
       namedArgs[name] = arg0;
     } else {
@@ -945,6 +968,7 @@ BoundCall bindDeclaration(
   /// by argument inference are bound from the declared return type matched
   /// against it (`x.cast()` under `C<bool>` binds `U` to `bool`).
   TypeRef? returnContext,
+  BindingOptions options = BindingOptions.legacy,
 }) {
   final (fpl, typeParams, returnAnnotation) = _invocationSignature(dec);
   final isCallableDecl = dec is FunctionDeclaration || dec is MethodDeclaration;
@@ -1011,6 +1035,7 @@ BoundCall bindDeclaration(
     source: source,
     argIndexOffset: argIndexOffset,
     resolveGenerics: resolveGenerics,
+    options: options,
     // Only function/method declarations take explicit type arguments at the
     // call site; constructor calls infer regardless (e.g. List<int>() still
     // infers the constructor's own generics).
