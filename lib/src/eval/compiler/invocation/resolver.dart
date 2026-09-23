@@ -2,7 +2,9 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
@@ -20,6 +22,7 @@ import '../values/abi.dart';
 import 'binder.dart';
 import 'bound_call.dart';
 import 'call.dart';
+import 'devirtualizer.dart';
 import 'targets.dart';
 
 
@@ -102,6 +105,480 @@ final class CallResolver {
     PrefixReceiver() =>
       throw CompileError('Unresolved import prefix'),
   };
+
+  /// `receiver.m(args)` — an instance-target invocation. Member resolution
+  /// consults the receiver's static type (bound extensions, type literals,
+  /// records, interface members, extensions, `dynamic`); emission routes
+  /// through the [CallTarget] pipeline — [VirtualCall] refined by
+  /// [Devirtualizer], [DynamicCall], [MemberValueCall], or a bridge path.
+  Variable invokeMethod(Variable L, MethodInvocation e, {TypeRef? bound}) {
+    CallSite callSite() => CallSite(
+      shape: CallShape.fromArgumentList(
+        e.argumentList,
+        e.typeArguments?.arguments,
+      ),
+      source: e,
+      inConstContext: e.inConstantContext,
+    );
+
+    // `E(x).m(...)` — explicit application pins member resolution to E.
+    if (L.boundExtension case final boundExt?) {
+      final member = extensionMember(boundExt.ext, e.methodName.name);
+      if (member == null) {
+        // `E(x).g(...)`: the getter's result is the call target.
+        final getter = extensionMember(
+          boundExt.ext,
+          e.methodName.name,
+          getter: true,
+        );
+        if (getter != null) {
+          return invokeValue(
+            callSite(),
+            callee: invokeExtensionGetter(
+              ctx,
+              L,
+              boundExt.ext,
+              getter,
+              boundExt.onBindings,
+            ),
+          );
+        }
+        throw CompileError(
+          'Extension ${boundExt.ext.name} has no member ${e.methodName.name}',
+          e,
+        );
+      }
+      return invokeExtensionMethod(
+        ctx,
+        L,
+        e,
+        boundExt.ext,
+        member,
+        boundExt.onBindings,
+      );
+    }
+    AlwaysReturnType? mReturnType;
+    final bridgeTypeParameters = <String, TypeRef>{};
+
+    DeclarationOrBridge<ClassMember, BridgeDeclaration>? dec0;
+    final bool isStatic;
+    TypeRef? staticType;
+
+    ArgumentListResult argsPair;
+
+    // `C.new(...)` invokes the unnamed constructor.
+    final staticMemberName = ctorNameOf(e.methodName.name);
+
+    if (receiverOf(ctx, L) case TypeLiteralReceiver(:final type)) {
+      // Static method
+      staticType = type;
+      if (ctx.topLevelDeclarationsMap[staticType
+                  .file]?['${staticType.name}.$staticMemberName'] ==
+              null &&
+          ctx.topLevelDeclarationsMap[staticType
+                  .file]?['${staticType.name}.${MemberName.getter(staticMemberName).key}'] ==
+              null) {
+        // A member invoked on a `Type` literal may still be an extension
+        // member on `Type` — `C.expectStaticType<Exactly<Type>>()`.
+        final found = resolveExtensionMember(
+          ctx,
+          L.type,
+          e.methodName.name,
+          arity: positionalArity(e),
+        );
+        if (found != null) {
+          return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+        }
+        // Not a static member of the class — it's an instance method of the
+        // `Type` object itself (`Foo.toString()`, `Foo.hashCode`, ...).
+        final args = [
+          for (final arg in e.argumentList.arguments)
+            if (arg is! NamedArgument)
+              compileExpression(arg.argumentExpression, ctx),
+        ];
+        return L.invoke(ctx, e.methodName.name, args).result;
+      }
+      dec0 = resolveStaticMethod(ctx, staticType, staticMemberName);
+      // `C.field(args)` where `field` holds a closure, or `C.x(args)` where
+      // `x` is a static getter, reads the member value and invokes its result
+      // rather than calling a function named `C.field`/`C.x`.
+      final memberDecl0 = dec0.declaration;
+      if (memberDecl0 is FieldDeclaration ||
+          (memberDecl0 is MethodDeclaration && memberDecl0.isGetter)) {
+        // `C.getter(args)` is a function-expression invocation: the member
+        // value is read first, then the arguments evaluate.
+        return invokeValue(
+          callSite(),
+          callee: IdentifierReference(
+            L,
+            staticMemberName,
+          ).getValue(ctx, e),
+        );
+      }
+      isStatic = true;
+      // `E.m(receiver, ...)` — explicit application of an instance extension
+      // member through the namespace. The receiver is the first argument and
+      // binds the extension's `on` type parameters.
+      final memberDecl = dec0.declaration;
+      if (memberDecl is MethodDeclaration &&
+          !memberDecl.isStatic &&
+          !memberDecl.isGetter &&
+          !memberDecl.isSetter) {
+        final memberExt = extensionOfMember(ctx, memberDecl);
+        if (memberExt != null) {
+          final positional = e.argumentList.arguments;
+          if (positional.isEmpty || positional.first is NamedArgument) {
+            throw CompileError(
+              'Extension ${memberExt.name} requires a receiver argument',
+              e,
+            );
+          }
+          final receiver = compileExpression(
+            positional.first.argumentExpression,
+            ctx,
+          );
+          final bindings = matchExtensionOn(ctx, receiver.type, memberExt);
+          if (bindings == null) {
+            throw CompileError(
+              '${receiver.type} is not assignable to the `on` clause of '
+              'extension ${memberExt.name}',
+              e,
+            );
+          }
+          final extParams =
+              memberExt.declaration.typeParameters?.typeParameters ??
+              const <TypeParameter>[];
+          final result = compileNonBridgeArgs(
+            ctx,
+            memberExt.library,
+            memberDecl,
+            e.argumentList,
+            before: [receiver.boxIfNeeded(ctx)],
+            typeArguments: e.typeArguments,
+            seedGenerics: {
+              for (var i = 0; i < bindings.length && i < extParams.length; i++)
+                extParams[i].name.lexeme: bindings[i],
+            },
+            argIndexOffset: 1,
+            source: e,
+          );
+          final s = ctx.svar('method_result');
+          ctx.pushOp(
+            Call(
+              DeferredOrOffset(
+                file: memberExt.library,
+                name: memberExt.memberKey(memberDecl),
+              ),
+              result.args.ssa,
+              result: s,
+              typeArguments:
+                  extensionCallTypeArguments(
+                    ctx,
+                    memberExt,
+                    memberDecl,
+                    bindings,
+                    result.resolveGenerics,
+                  ) ??
+                  runtimeTypeArguments(ctx, e),
+            ),
+          );
+          return Variable.of(
+            ctx,
+            s,
+            result.returnType?.type ?? CoreTypes.dynamic.ref(ctx),
+            rep: ValueRep.boxed,
+          );
+        }
+      }
+    } else if (L.type.isFunctionLike && e.methodName.name == 'call') {
+      // `fn.call(...)`: Function has no declared `call` member; the call is
+      // the invocation itself, typed by the callee's own signature.
+      return invokeValue(callSite(), callee: L);
+    } else if (!L.type.isSpec(CoreTypes.dynamic)) {
+      // `record.field(args)` on a named record field invokes the field's
+      // value — a property read followed by an implicit `.call`, matching
+      // the field/getter path below.
+      final receiverType = L.type;
+      if (receiverType is RecordTypeRef &&
+          receiverType.named.containsKey(e.methodName.name)) {
+        final target = MemberValueCall(
+          read: (ctx) => L.getProperty(ctx, e.methodName.name),
+        );
+        final bound = ArgumentBinder(
+          ctx,
+        ).bindSuppliedOnly(target, callSite(), callee: null);
+        return target.emit(ctx, bound);
+      }
+      try {
+        dec0 = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
+      } on CompileError {
+        // No such instance member: an extension member may apply.
+        final found = resolveExtensionMember(
+          ctx,
+          L.type,
+          e.methodName.name,
+          arity: positionalArity(e),
+        );
+        if (found != null) {
+          return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+        }
+        final foundGetter = resolveExtensionMember(
+          ctx,
+          L.type,
+          e.methodName.name,
+          getter: true,
+        );
+        if (foundGetter == null && e.methodName.name == 'noSuchMethod') {
+          // `Object.noSuchMethod` is implicit — absent from all declaration
+          // metadata. Dispatch dynamically.
+          final (positional, named) = compileCallArgs(ctx, e);
+          return L
+              .invoke(ctx, 'noSuchMethod', positional, namedArgs: named)
+              .result;
+        }
+        if (foundGetter == null) rethrow;
+        // `recv.m(args)` where extension member m is a getter — a
+        // function-expression invocation: the getter's value is read first,
+        // then the arguments evaluate.
+        return invokeValue(
+          callSite(),
+          callee: invokeExtensionGetter(
+            ctx,
+            L,
+            foundGetter.$1,
+            foundGetter.$2,
+            foundGetter.$3,
+          ),
+        );
+      }
+      final member = dec0.declaration;
+      final isFieldOrGetter =
+          member is FieldDeclaration ||
+          (member is MethodDeclaration && member.isGetter);
+      if (isFieldOrGetter) {
+        if (e.target is SuperExpression) {
+          // `super.m(args)` is a function-expression invocation: the member
+          // value is read before the arguments evaluate.
+          return invokeValue(
+            callSite(),
+            callee: L.getProperty(ctx, e.methodName.name),
+          );
+        }
+        // `receiver.field(...)` / `receiver.getter(...)`: the member's
+        // *value* is invoked, not a method — property read then implicit
+        // `.call`. The arguments evaluate before the member read.
+        final target = MemberValueCall(
+          read: (ctx) => L.getProperty(ctx, e.methodName.name),
+        );
+        final bound = ArgumentBinder(
+          ctx,
+        ).bindSuppliedOnly(target, callSite(), callee: null);
+        return target.emit(ctx, bound);
+      }
+      isStatic = false;
+    } else {
+      isStatic = false;
+      // Extension resolution is static, so it still applies to a dynamic
+      // receiver (`on T` binds T=dynamic) — `d.expectStaticType<...>()`.
+      final found = resolveExtensionMember(
+        ctx,
+        L.type,
+        e.methodName.name,
+        arity: positionalArity(e),
+      );
+      if (found != null) {
+        return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+      }
+    }
+
+    if (dec0?.isBridge == true) {
+      final br = dec0!.bridge!;
+      final fd = br is BridgeMethodDef
+          ? br.functionDescriptor
+          : (br as BridgeConstructorDef).functionDescriptor;
+      final receiverTypeParameters = isStatic
+          ? const <String, TypeRef>{}
+          : _bridgeClassTypeArguments(ctx, L.type, dec0.sourceLib);
+      argsPair = compileArgumentListWithBridge(
+        ctx,
+        e.argumentList,
+        fd,
+        before: [],
+        typeParameters: receiverTypeParameters,
+      );
+      // Static calls on generic bridge classes (e.g. `Stream.fromIterable`)
+      // infer the class's own type parameters — `T` in `Iterable<T>` — from
+      // the argument types, which then resolve `returns:` annotations.
+      final classGenericNames = isStatic
+          ? switch (ctx
+                .topLevelDeclarationsMap[staticType!.file]?[staticType.name]
+                ?.bridge) {
+              BridgeClassDef b => b.type.generics.keys.toSet(),
+              _ => const <String>{},
+            }
+          : const <String>{};
+      _inferBridgeTypeParameters(
+        fd,
+        argsPair.args,
+        bridgeTypeParameters,
+        inferableNames: classGenericNames,
+      );
+      mReturnType =
+          bridgeFunctionReturnType(
+            ctx,
+            fd,
+            specifiedType: isStatic ? staticType : L.type,
+            typeParameters: bridgeTypeParameters,
+          ).toAlwaysReturnType(
+            ctx,
+            isStatic ? staticType : L.type,
+            argsPair.args.map((a) => a.type).toList(),
+            argsPair.namedArgs.map((k, v) => MapEntry(k, v.type)),
+            typeArgs:
+                e.typeArguments?.arguments
+                    .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
+                    .toList() ??
+                const [],
+          );
+      // Instance calls that carry no named or explicit type arguments route
+      // through the modern invocation path, which preserves intrinsic
+      // optimizations for core types. The argument vector stays padded with
+      // null placeholders so generated wrappers keep the legacy flattened
+      // ABI. The declared return type (including inferred generics and
+      // parameter-type dependencies) still applies to the result.
+      if (!isStatic && e.typeArguments == null && argsPair.namedArgs.isEmpty) {
+        final invokeResult = L
+            .invoke(ctx, e.methodName.name, argsPair.args)
+            .result;
+        final preciseType = mReturnType?.type;
+        if (preciseType != null) {
+          return invokeResult.copyWith(type: preciseType);
+        }
+        return invokeResult;
+      }
+    } else if (L.type.isSpec(CoreTypes.dynamic)) {
+      argsPair = compileArgumentListWithDynamic(ctx, e.argumentList, before: [L]);
+    } else {
+      final dec = dec0!.declaration!;
+      final result = compileNonBridgeArgs(
+        ctx,
+        dec0.sourceLib,
+        dec,
+        e.argumentList,
+        before: [if (!isStatic) L],
+        typeArguments: e.typeArguments,
+        source: e,
+        seedGenerics: !isStatic && dec is MethodDeclaration
+            ? classTypeArguments(ctx, L.type, dec0.sourceLib, dec)
+            : const {},
+        returnContext: bound,
+      );
+      argsPair = result.args;
+      mReturnType = result.returnType;
+    }
+
+    final argTypes = argsPair.args.map((e) => e.type).toList();
+    final namedArgTypes = argsPair.namedArgs.map(
+      (key, value) => MapEntry(key, value.type),
+    );
+    mReturnType ??= AlwaysReturnType.fromInstanceMethodOrBuiltin(
+      ctx,
+      isStatic ? staticType! : L.type,
+      staticMemberName,
+      argTypes,
+      namedArgTypes,
+      $static: isStatic,
+    );
+    final returnType = mReturnType?.type ?? CoreTypes.dynamic.ref(ctx);
+
+    if (isStatic) {
+      var result = ctx.svar('method_result');
+      if (dec0!.isBridge) {
+        ctx.pushOp(
+          InvokeExternal(
+            result,
+            ctx.bridgeStaticFunctionIndices[staticType!
+                .file]!['${staticType.name}.$staticMemberName']!,
+            argsPair.ssa,
+          ),
+        );
+      } else {
+        final offset = DeferredOrOffset.lookupStatic(
+          ctx,
+          staticType!.file,
+          staticType.name,
+          staticMemberName,
+        );
+        final callArguments = [...argsPair.ssa];
+        final declaration = dec0.declaration;
+        // Enum constructors carry two synthetic leading parameters (index,
+        // name); direct calls — only factories are reachable — bind them null.
+        if (declaration is ConstructorDeclaration &&
+            declaration.parent?.parent is EnumDeclaration) {
+          callArguments.insertAll(0, [
+            BuiltinValue().push(ctx).ssa,
+            BuiltinValue().push(ctx).ssa,
+          ]);
+        }
+        if (declaration is ConstructorDeclaration &&
+            declaration.factoryKeyword == null) {
+          callArguments.add(pushRuntimeTypeId(ctx, staticType));
+        }
+        ctx.pushOp(
+          Call(
+            offset,
+            callArguments,
+            result: result,
+            typeArguments: runtimeTypeArguments(ctx, e),
+          ),
+        );
+        if (declaration is ConstructorDeclaration && e.inConstantContext) {
+          result = pushInternConst(ctx, result, staticType);
+        }
+      }
+      return Variable.of(ctx, result, returnType, rep: ValueRep.boxed);
+    }
+
+    final boundCall = BoundCall(
+      receiver: L,
+      positional: [for (final arg in argsPair.args) BoundArgument(arg)],
+      named: [
+        for (final entry in argsPair.namedArgs.entries)
+          (entry.key, BoundArgument(entry.value)),
+      ],
+      runtimeTypeArguments: runtimeTypeArguments(ctx, e),
+      returnType: returnType,
+      // The dynamic and bridge vectors aren't decomposable into
+      // positional-then-named (source order / padded ABI) — carry the raw
+      // vector.
+      vectorOverride:
+          dec0?.isBridge == true || L.type.isSpec(CoreTypes.dynamic)
+          ? (dec0?.isBridge == true
+                ? argsPair.ssa
+                : argsPair.ssa.skip(1).toList())
+          : null,
+    );
+    if (dec0?.isBridge == true) {
+      return BridgeCall(
+        receiver: L,
+        name: e.methodName.name,
+      ).emit(ctx, boundCall);
+    }
+    if (L.type.isSpec(CoreTypes.dynamic)) {
+      return DynamicCall(
+        receiver: L,
+        name: e.methodName.name,
+      ).emit(ctx, boundCall);
+    }
+    final target = Devirtualizer(ctx).refine(
+      VirtualCall(
+        receiver: L,
+        name: e.methodName.name,
+        isSuperReceiver: e.target is SuperExpression,
+      ),
+    );
+    return target.emit(ctx, boundCall);
+  }
 
   /// `f(args)` / `p.f(args)` — a call whose callee is a bare or
   /// prefix-qualified identifier, resolved through the denotation cascade
@@ -532,3 +1009,65 @@ final class CallResolver {
     return v;
   }
 }
+
+Map<String, TypeRef> _bridgeClassTypeArguments(
+  CompilerContext ctx,
+  TypeRef receiver,
+  int declarationLibrary,
+) {
+  final resolved = receiver;
+  final declaration =
+      ctx.topLevelDeclarationsMap[declarationLibrary]?[resolved.name];
+  final bridge = declaration?.bridge;
+  if (bridge is! BridgeClassDef) return const {};
+  final names = bridge.type.generics.keys.toList();
+  return {
+    for (
+      var index = 0;
+      index < names.length && index < resolved.typeArguments.length;
+      index++
+    )
+      names[index]: resolved.typeArguments[index],
+  };
+}
+
+void _inferBridgeTypeParameters(
+  BridgeFunctionDef function,
+  List<Variable> arguments,
+  Map<String, TypeRef> inferred, {
+  Set<String> inferableNames = const {},
+}) {
+  void infer(BridgeTypeRef formal, TypeRef actual) {
+    final reference = formal.ref;
+    if (reference != null &&
+        (function.generics.containsKey(reference) ||
+            inferableNames.contains(reference))) {
+      inferred[reference] = actual;
+      return;
+    }
+    final genericFunction = formal.gft;
+    final actualFunction = actual is FunctionTypeRef ? actual.signature : null;
+    if (genericFunction != null && actualFunction != null) {
+      infer(genericFunction.returns.type, actualFunction.returnType);
+      return;
+    }
+    final formalArguments = formal.typeArgs;
+    final actualArguments = actual.typeArguments;
+    for (
+      var index = 0;
+      index < formalArguments.length && index < actualArguments.length;
+      index++
+    ) {
+      infer(formalArguments[index].type, actualArguments[index]);
+    }
+  }
+
+  for (
+    var index = 0;
+    index < function.params.length && index < arguments.length;
+    index++
+  ) {
+    infer(function.params[index].type.type, arguments[index].type);
+  }
+}
+

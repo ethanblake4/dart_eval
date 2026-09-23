@@ -67,6 +67,7 @@ final class BoundCall {
     this.runtimeTypeArguments = const [],
     required this.returnType,
     this.trusted = false,
+    this.vectorOverride,
   });
 
   /// The receiver after coercion — compound assignments and indexed
@@ -82,10 +83,17 @@ final class BoundCall {
   /// signature, so the runtime skips per-argument checks.
   final bool trusted;
 
+  /// A precomputed call vector for legacy arg machinery whose ordering
+  /// doesn't decompose into positional-then-named (dynamic source order,
+  /// bridge padded ABI).
+  final List<SSA>? vectorOverride;
+
   /// The flattened call vector: positionals then named values in
   /// declaration order.
-  List<SSA> vector() => [
-    for (final arg in positional) arg.value.ssa,
-    for (final entry in named) entry.$2.value.ssa,
-  ];
+  List<SSA> vector() =>
+      vectorOverride ??
+      [
+        for (final arg in positional) arg.value.ssa,
+        for (final entry in named) entry.$2.value.ssa,
+      ];
 }

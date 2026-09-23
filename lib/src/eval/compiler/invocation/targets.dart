@@ -3,13 +3,15 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
-import 'package:dart_eval/src/eval/compiler/member/resolved_member.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
 import '../values/abi.dart';
+import 'binder.dart';
 import 'bound_call.dart';
 
 /// What is called — the resolver's output. [signature] is null for
@@ -182,11 +184,18 @@ final class ConstructorCall extends CallTarget {
 
 /// An instance member invoked through the receiver's static type.
 final class VirtualCall extends CallTarget {
-  const VirtualCall({required this.receiver, required this.name, this.member});
+  const VirtualCall({
+    required this.receiver,
+    required this.name,
+    this.isSuperReceiver = false,
+  });
 
   final Variable receiver;
   final String name;
-  final ResolvedMember? member;
+
+  /// `super.m(...)`: the receiver's link is positioned above the current
+  /// layer, so devirtualization uses the link rather than `exactType`.
+  final bool isSuperReceiver;
 
   @override
   CallSignature? get signature => null;
@@ -199,14 +208,34 @@ final class VirtualCall extends CallTarget {
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    // Filled in with the instance-call migration (step 3).
-    throw UnimplementedError('VirtualCall.emit');
+    final s = ctx.svar('method_result');
+    ctx.pushOp(
+      InvokeDynamic(
+        s,
+        receiver.boxIfNeeded(ctx).ssa,
+        name,
+        call.vector(),
+        positionalCount: call.positional.length,
+        namedNames: [for (final entry in call.named) entry.$1],
+        callerLibrary: ctx.library,
+        typeArguments: call.runtimeTypeArguments,
+      ),
+    );
+    return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
   }
 }
 
 /// A bridge function, constructor, or member.
 final class BridgeCall extends CallTarget {
-  const BridgeCall();
+  const BridgeCall({this.receiver, this.name = '', this.externalIndex});
+
+  /// The receiver for an instance bridge member; null for statics.
+  final Variable? receiver;
+  final String name;
+
+  /// `bridgeStaticFunctionIndices` index for static calls; null emits an
+  /// `InvokeDynamic` for an instance member instead.
+  final int? externalIndex;
 
   @override
   CallSignature? get signature => null;
@@ -219,8 +248,27 @@ final class BridgeCall extends CallTarget {
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    // Filled in with the bridge migration (step 3/5).
-    throw UnimplementedError('BridgeCall.emit');
+    final s = ctx.svar('method_result');
+    final index = externalIndex;
+    if (index != null) {
+      ctx.pushOp(InvokeExternal(s, index, call.vector()));
+    } else {
+      // Instance bridge members use the legacy padded ABI: named arguments
+      // were flattened into the positional vector in declaration order.
+      ctx.pushOp(
+        InvokeDynamic(
+          s,
+          receiver!.boxIfNeeded(ctx).ssa,
+          name,
+          call.vector(),
+          positionalCount: call.vector().length,
+          namedNames: const [],
+          callerLibrary: ctx.library,
+          typeArguments: call.runtimeTypeArguments,
+        ),
+      );
+    }
+    return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
   }
 }
 
@@ -243,8 +291,20 @@ final class DynamicCall extends CallTarget {
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    // Filled in with the instance-call migration (step 3).
-    throw UnimplementedError('DynamicCall.emit');
+    final s = ctx.svar('method_result');
+    ctx.pushOp(
+      InvokeDynamic(
+        s,
+        receiver.boxIfNeeded(ctx).ssa,
+        name,
+        call.vector(),
+        positionalCount: call.positional.length,
+        namedNames: [for (final entry in call.named) entry.$1],
+        callerLibrary: ctx.library,
+        typeArguments: call.runtimeTypeArguments,
+      ),
+    );
+    return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
   }
 }
 
@@ -292,8 +352,20 @@ final class MemberValueCall extends CallTarget {
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    // Filled in with the member-value migration (step 3).
-    throw UnimplementedError('MemberValueCall.emit');
+    final callee = read(ctx);
+    final result = ClosureCall(callee: callee).emit(ctx, call);
+    // The bound call was computed without knowing the callee; the freshly
+    // read value may carry callable metadata that refines the result type.
+    final refined = resolveCallResultType(
+      ctx,
+      callee: callee,
+      dispatch: null,
+      argTypes: [for (final arg in call.positional) arg.value.type],
+      namedArgTypes: {
+        for (final entry in call.named) entry.$1: entry.$2.value.type,
+      },
+    );
+    return refined == null ? result : result.copyWith(type: refined);
   }
 }
 
