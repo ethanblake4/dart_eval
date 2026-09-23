@@ -227,6 +227,15 @@ final class MemberLookup {
     }
   }
 
+  /// The member [decl] itself declares for [name]'s accessor slot —
+  /// field, getter, setter, or method — or null. `resolveInstanceDeclaration`
+  /// restricted to one link: getter first (its `x*g`/`x` probes cover fields,
+  /// getters, and plain-keyed methods), then setter, then arity-keyed methods.
+  Member? declaredAccessor(TypeDecl decl, String name) =>
+      decl.declaredMember(MemberName(name, MemberKind.getter)) ??
+      decl.declaredMember(MemberName(name, MemberKind.setter)) ??
+      decl.declaredMember(MemberName(name, MemberKind.method));
+
   /// Whether [type] declares or inherits [name] in its interface —
   /// `hasInstanceMethod`'s probe: any resolution failure counts as absent.
   bool hasInstanceMember(TypeRef type, MemberName name) {

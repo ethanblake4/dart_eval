@@ -5,6 +5,7 @@ import 'helpers/tearoff.dart';
 import 'model/function_type.dart';
 import 'member/member.dart';
 import 'member/member_name.dart';
+import 'member/resolved_member.dart';
 import '../ir/closures.dart';
 import '../ir/exception.dart';
 import 'backend/representation.dart' show MachineRepresentation;
@@ -672,16 +673,14 @@ TypeRef? _resolveInstanceFieldType(
   bool forSet = false,
   AstNode? source,
 }) {
-  final instanceDeclaration = resolveInstanceDeclaration(
-    ctx,
-    ctx.library,
-    ctx.currentClassName!,
-    name,
-  );
-  if (instanceDeclaration == null) return null;
+  final selfDecl = ctx.types.find(ctx.library, ctx.currentClassName!);
+  if (selfDecl == null ||
+      ctx.memberLookup.declaredAccessor(selfDecl, name) == null) {
+    return null;
+  }
   return ctx.memberLookup.fieldType(
         
-        instanceDeclaration.$1,
+        selfDecl.thisType,
         name,
         forSet: forSet,
         source: source,
@@ -818,20 +817,20 @@ bool hasInstanceMember(
   String name, {
   bool forSet = false,
 }) {
-  final keys = forSet ? [name, MemberName.setter(name).key] : [name, MemberName.getter(name).key];
-  for (final key in keys) {
-    if (resolveInstanceDeclaration(
-          ctx,
-          type.file,
-          type.name,
-          key,
-          instantiated: type,
-        ) !=
-        null) {
-      return true;
-    }
-  }
-  return false;
+  final member = forSet
+      ? ctx.memberLookup.tryInterfaceMember(
+            type,
+            MemberName(name, MemberKind.setter),
+          ) ??
+          ctx.memberLookup.tryInterfaceMember(
+            type,
+            MemberName(name, MemberKind.getter),
+          )
+      : ctx.memberLookup.tryInterfaceMember(
+          type,
+          MemberName(name, MemberKind.getter),
+        );
+  return member != null;
 }
 
 bool _hasReceiverMember(

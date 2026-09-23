@@ -381,7 +381,7 @@ final class InstanceMemberDenotation extends Denotation {
 
   final Receiver? receiver;
   final String name;
-  final (TypeRef, DeclarationOrBridge)? declared;
+  final ResolvedMember? declared;
 
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) =>
@@ -501,7 +501,9 @@ final class InstanceMemberDenotation extends Denotation {
   /// `receiver.name` where the member is declared on the enclosing class
   /// itself — the bare-identifier-in-class-body path.
   Variable _readDeclared(CompilerContext ctx, AstNode? source) {
-    final ($type, decOrBridge) = declared!;
+    final resolvedMember = declared!;
+    final $type = resolvedMember.viewedAs;
+    final member = resolvedMember.member;
     final $this =
         ctx.lookupLocal('#this') ??
         (throw CompileError(
@@ -509,8 +511,8 @@ final class InstanceMemberDenotation extends Denotation {
         ));
 
     final refName = _refNameOf(name);
-    if (!decOrBridge.isBridge) {
-      final declaration = decOrBridge.declaration;
+    if (member is SourceMember) {
+      final declaration = member.node;
       if (declaration is MethodDeclaration &&
           !declaration.isGetter &&
           !declaration.isSetter) {
@@ -532,66 +534,6 @@ final class InstanceMemberDenotation extends Denotation {
     ctx.pushOp(
       LoadPropertyDynamic(resvar, $this.ssa, name, callerLibrary: ctx.library),
     );
-
-    if (decOrBridge.isBridge) {
-      if (decOrBridge is GetSet) {
-        final getter =
-            decOrBridge.bridge ??
-            (throw CompileError(
-              'Property "$name" has a setter but no getter, so it cannot be accessed',
-              source,
-            ));
-        return Variable.of(
-          ctx,
-          resvar,
-          TypeRef.fromBridgeAnnotation(
-            ctx,
-            getter.functionDescriptor.returns,
-            specifiedType: $type,
-            specifyingType: $this.type,
-          ),
-          rep: ValueRep.boxed,
-          callable: CallableValue(offset: DeferredOrOffset(
-            file: ctx.library,
-            className: ctx.currentClassName!,
-            name: refName,
-          )),
-        );
-      }
-      final bridge = decOrBridge.bridge!;
-      if (bridge is BridgeMethodDef) {
-        return Variable(
-          CoreTypes.function.ref(ctx),
-          callable: CallableValue(offset: DeferredOrOffset(
-            file: ctx.library,
-            className: ctx.currentClassName!,
-            name: name,
-          )),
-        );
-      }
-      if (bridge is BridgeFieldDef) {
-        return Variable.of(
-          ctx,
-          resvar,
-          TypeRef.fromBridgeAnnotation(
-            ctx,
-            bridge.type,
-            specifiedType: $type,
-            specifyingType: $this.type,
-          ),
-          rep: ValueRep.boxed,
-          callable: CallableValue(offset: DeferredOrOffset(
-            file: ctx.library,
-            className: ctx.currentClassName!,
-            name: refName,
-          )),
-        );
-      }
-      throw CompileError(
-        'Ref: cannot resolve bridge declaration "$name" of type ${decOrBridge.runtimeType}',
-        source,
-      );
-    }
 
     return Variable.of(
       ctx,
@@ -1302,17 +1244,19 @@ Denotation resolveIdentifier(
   // enum values of an enclosing enum, then statics of the class and its
   // transitive mixins.
   if (anonymousReceiver == null && ctx.currentClass != null) {
-    final instanceDeclaration = resolveInstanceDeclaration(
-      ctx,
+    final selfDecl = ctx.types.find(
       ctx.enclosingLibrary ?? ctx.library,
       ctx.currentClassName!,
-      name,
     );
-    if (instanceDeclaration != null &&
-        instanceDeclaration.$1.name == ctx.currentClassName &&
-        instanceDeclaration.$1.file ==
-            (ctx.enclosingLibrary ?? ctx.library)) {
-      return InstanceMemberDenotation(null, name, declared: instanceDeclaration);
+    final selfMember = selfDecl == null
+        ? null
+        : ctx.memberLookup.declaredAccessor(selfDecl, name);
+    if (selfDecl != null && selfMember != null) {
+      return InstanceMemberDenotation(
+        null,
+        name,
+        declared: ResolvedMember(selfMember, selfDecl.thisType),
+      );
     }
 
     if (!forSet) {

@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import '../member/member.dart';
 import '../member/member_name.dart';
 
 void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
@@ -541,37 +542,30 @@ DeclarationOrBridge? _superMemberOf(
   MethodDeclaration decl,
   TypeRef superRef,
 ) {
-  final key = decl.isGetter
-      ? MemberName.getter(decl.name.lexeme).key
+  final kind = decl.isGetter
+      ? MemberKind.getter
       : decl.isSetter
-      ? MemberName.setter(decl.name.lexeme).key
-      : decl.name.lexeme;
-  try {
-    final result = resolveInstanceDeclaration(
-      ctx,
-      superRef.file,
-      superRef.name,
-      key,
-      instantiated: superRef,
-    );
-    if (result == null) return null;
-    // $1 is the declaring class's instantiated type — its file is the
-    // member's true declaring library (member.sourceLib is -1).
-    final memberFile = result.$1.file;
-    final member = result.$2;
-    if (member is GetSet) {
-      if (decl.isSetter) return member.setter;
-      final g = member.declaration;
-      return g == null ? null : DeclarationOrBridge(memberFile, declaration: g);
-    }
+      ? MemberKind.setter
+      : MemberKind.method;
+  final resolved = ctx.memberLookup.tryInterfaceMember(
+    superRef,
+    MemberName(decl.name.lexeme, kind),
+  );
+  if (resolved == null) return null;
+  final member = resolved.member;
+  // The declaring class's instantiated type — its file is the member's
+  // true declaring library.
+  final memberFile = resolved.viewedAs.file;
+  if (member is SourceMember) {
     return DeclarationOrBridge(
       memberFile,
-      declaration: member.declaration,
-      bridge: member.bridge,
+      declaration: member.sourceDeclaration,
     );
-  } on CompileError {
-    return null;
   }
+  return DeclarationOrBridge(
+    memberFile,
+    bridge: (member as BridgeMember).def as BridgeDeclaration,
+  );
 }
 
 /// The most-derived concrete member matching [decl]'s name and kind: own

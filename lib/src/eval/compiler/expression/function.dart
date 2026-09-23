@@ -1,4 +1,3 @@
-import 'identifier.dart' show resolveInstanceDeclaration;
 import '../helpers/captures.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import '../helpers/default_value.dart';
@@ -46,13 +45,9 @@ Variable compileFunctionExpression(
   final freeNames = {...?analysis.free[e]};
   if (ctx.currentClass != null && ctx.lookupLocal('#this') != null) {
     for (final name in analysis.unresolved[e] ?? <String>{}) {
-      if (resolveInstanceDeclaration(
-            ctx,
-            ctx.library,
-            ctx.currentClassName!,
-            name,
-          ) !=
-          null) {
+      final selfDecl = ctx.types.find(ctx.library, ctx.currentClassName!);
+      if (selfDecl != null &&
+          ctx.memberLookup.declaredAccessor(selfDecl, name) != null) {
         freeNames.add('#this');
       }
     }

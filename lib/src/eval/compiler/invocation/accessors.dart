@@ -8,12 +8,11 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
-import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
-    show resolveInstanceDeclaration;
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
+import '../member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart'
     show declaredFunctionType, formalParameterAnnotationType;
@@ -129,13 +128,14 @@ sealed class GetTarget {
     );
     final member =
         resolvedField == null && !resolvedReceiver.isSpec(CoreTypes.dynamic)
-        ? resolveInstanceDeclaration(
-            ctx,
-            resolvedReceiver.file,
-            resolvedReceiver.name,
-            name,
-            instantiated: resolvedReceiver,
-          )
+        ? ctx.memberLookup.tryInterfaceMember(
+              resolvedReceiver,
+              MemberName(name, MemberKind.getter),
+            ) ??
+            ctx.memberLookup.tryInterfaceMember(
+              resolvedReceiver,
+              MemberName(name, MemberKind.setter),
+            )
         : null;
     if (resolvedField == null &&
         !resolvedReceiver.isSpec(CoreTypes.dynamic) &&
@@ -165,8 +165,11 @@ sealed class GetTarget {
         source,
       );
     }
-    final method = member?.$2.declaration;
-    final bridge = member?.$2.bridge;
+    final memberNode = member?.member;
+    final method = memberNode is SourceMember
+        ? memberNode.sourceDeclaration
+        : null;
+    final bridge = memberNode is BridgeMember ? memberNode.def : null;
     // Generic method signatures can't be resolved outside their own scope.
     final isDeclaredMethod =
         method is MethodDeclaration &&
@@ -186,7 +189,7 @@ sealed class GetTarget {
       final hostParams = methodHost is Declaration
           ? classLikeClauses(methodHost).$4?.typeParameters ?? const []
           : const <TypeParameter>[];
-      final hostArgs = member!.$1.typeArguments;
+      final hostArgs = member!.viewedAs.typeArguments;
       fieldType = declaredFunctionType(
         ctx,
         resolvedReceiver.file,
@@ -255,13 +258,12 @@ sealed class GetTarget {
         // accessors resolve to [MethodDeclaration]. Field storage is
         // link-relative so it always needs the declaring link; a real
         // accessor needs it only when its body uses `super`.
-        final decl = resolveInstanceDeclaration(
-          ctx,
-          link.file,
-          link.name,
-          name,
-          instantiated: link,
-        )?.$2.declaration;
+        final resolvedDecl = ctx.memberLookup.tryInterfaceMember(
+          link,
+          MemberName(name, MemberKind.getter),
+        );
+        final member = resolvedDecl?.member;
+        final decl = member is SourceMember ? member.sourceDeclaration : null;
         final fieldDecl = decl is VariableDeclaration
             ? decl.parent?.parent
             : null;
@@ -720,13 +722,16 @@ sealed class SetTarget {
       }
       if (depth >= 0) {
         final link = links[depth];
-        final decl = resolveInstanceDeclaration(
-          ctx,
-          link.file,
-          link.name,
-          name,
-          instantiated: link,
-        )?.$2.declaration;
+        final resolvedDecl = ctx.memberLookup.tryInterfaceMember(
+          link,
+          MemberName(name, MemberKind.setter),
+        ) ??
+            ctx.memberLookup.tryInterfaceMember(
+              link,
+              MemberName(name, MemberKind.getter),
+            );
+        final member = resolvedDecl?.member;
+        final decl = member is SourceMember ? member.sourceDeclaration : null;
         // Field storage is link-relative so it always needs the declaring
         // link; a real setter needs it only when its body uses `super`.
         final fieldDecl = decl is VariableDeclaration
