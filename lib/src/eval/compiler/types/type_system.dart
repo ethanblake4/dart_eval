@@ -136,6 +136,26 @@ final class TypeSystem {
       substitutions[(pattern as TypeParameterTypeRef).parameter] = concrete;
       return;
     }
+    if (pattern is FunctionTypeRef && concrete is FunctionTypeRef) {
+      // Signature-shaped unification: positional and named parameters,
+      // then the return type — `void Function(X)` against
+      // `void Function(num)` binds X to num.
+      final ps = pattern.signature;
+      final cs = concrete.signature;
+      for (
+        var i = 0;
+        i < ps.positional.length && i < cs.positional.length;
+        i++
+      ) {
+        unify(ps.positional[i], cs.positional[i], substitutions);
+      }
+      for (final e in ps.named.entries) {
+        final c = cs.named[e.key];
+        if (c != null) unify(e.value.type, c.type, substitutions);
+      }
+      unify(ps.returnType, cs.returnType, substitutions);
+      return;
+    }
     if (!identical(pattern.decl, concrete.decl)) {
       _unifyViaSupertypes(pattern, concrete, substitutions);
       return;

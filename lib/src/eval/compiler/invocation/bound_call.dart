@@ -39,7 +39,7 @@ final class BindingOptions {
   static const source = BindingOptions(
     namedOrder: NamedOrder.source,
     allowNamedBeforePositional: true,
-    inference: InferenceMode.legacy,
+    inference: InferenceMode.unify,
   );
 
   final NamedOrder namedOrder;

@@ -266,7 +266,44 @@ BoundCall bindParameterList(
       source: source,
     );
 
-    if (typeAnnotation != null) {
+    if (inferGenerics && options.inference == InferenceMode.unify) {
+      // Deep inference: unify the parameter's declared shape against the
+      // supplied type — `List<X>` against `List<int>` binds X to int —
+      // recording each bound generic name for the common-base solve.
+      if (typeAnnotation != null && resolveGenerics.isNotEmpty) {
+        var i = 0;
+        final defs = <String, TypeParameterDef>{};
+        final placeholders = <String, TypeRef>{};
+        for (final name in resolveGenerics.keys) {
+          final def = TypeParameterDef(
+            TypeParameterOwner(
+              TypeParameterOwnerKind.callSite,
+              decLibrary,
+              '',
+            ),
+            i++,
+            name,
+          );
+          defs[name] = def;
+          placeholders[name] = TypeParameterTypeRef(def, file: decLibrary);
+        }
+        final pattern = TypeRef.fromAnnotation(
+          ctx,
+          decLibrary,
+          typeAnnotation,
+          typeParameters: {...paramTypeParameters, ...placeholders},
+        );
+        final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
+        ctx.typeSystem.unify(pattern, arg0.type, substitutions);
+        for (final e in defs.entries) {
+          final bound = substitutions[e.value];
+          if (bound != null) {
+            resolveGenericsMap[e.key] ??= {};
+            resolveGenericsMap[e.key]!.add(bound);
+          }
+        }
+      }
+    } else if (typeAnnotation != null) {
       final n = typeAnnotation is NamedType
           ? (typeAnnotation.name.stringValue ?? typeAnnotation.name.lexeme)
           : null;
@@ -1089,6 +1126,23 @@ BoundCall bindDeclaration(
       returnAnnotation.question != null,
     );
   }
+  // Inferred type arguments materialize into the emitted call's runtime
+  // type-argument list, in the callee's declaration order. A parameter
+  // nothing constrained stays a call-site placeholder and degrades to
+  // `dynamic`, as before.
+  final inferredRuntimeTypeArguments = isCallableDecl &&
+          typeArguments == null &&
+          typeParams != null
+      ? [
+          for (final p in typeParams)
+            () {
+              final t = resolveGenerics[p.name.lexeme];
+              return t == null || t.isTypeParameter
+                  ? ctx.runtimeTypes.idOf(CoreTypes.dynamic.ref(ctx))
+                  : ctx.runtimeTypes.idOf(t);
+            }(),
+        ]
+      : const <int>[];
   return BoundCall(
     positional: argsPair.positional,
     named: argsPair.named,
@@ -1096,6 +1150,7 @@ BoundCall bindDeclaration(
     returnType: returnType?.type ?? CoreTypes.dynamic.ref(ctx),
     declaredReturn: returnType,
     typeArguments: resolveGenerics,
+    runtimeTypeArguments: inferredRuntimeTypeArguments,
     genericReturnBoxed: boxedBySubstitution,
     classTypeParameters: classParams,
   );

@@ -583,7 +583,10 @@ final class CallResolver {
             offset,
             callArguments,
             result: result,
-            typeArguments: runtimeTypeArguments(ctx, e),
+            typeArguments:
+                runtimeTypeArguments(ctx, e).isNotEmpty
+                ? runtimeTypeArguments(ctx, e)
+                : argsPair.runtimeTypeArguments,
           ),
         );
         if (declaration is ConstructorDeclaration && e.inConstantContext) {
@@ -600,7 +603,10 @@ final class CallResolver {
         for (final entry in argsPair.namedValues.entries)
           (entry.key, BoundArgument(entry.value)),
       ],
-      runtimeTypeArguments: runtimeTypeArguments(ctx, e),
+      runtimeTypeArguments:
+          runtimeTypeArguments(ctx, e).isNotEmpty
+          ? runtimeTypeArguments(ctx, e)
+          : argsPair.runtimeTypeArguments,
       returnType: returnType,
       // The dynamic and bridge vectors aren't decomposable into
       // positional-then-named (source order / padded ABI) — carry the raw
@@ -1172,6 +1178,7 @@ final class CallResolver {
     final List<Variable> args;
     final Map<String, Variable> namedArgs;
     final List<SSA> callArgs;
+    List<int> inferredTypeArgs = const [];
 
     var isConstructor = false;
     List<TypeRef>? inferredCtorArgs;
@@ -1223,6 +1230,7 @@ final class CallResolver {
       args = result.positionalValues;
       namedArgs = result.namedValues;
       callArgs = result.vector();
+      inferredTypeArgs = result.runtimeTypeArguments;
 
       // Upward inference for constructors: the class type arguments inferred
       // from the argument list (or the parameters' bounds), in declaration
@@ -1357,7 +1365,9 @@ final class CallResolver {
                 ]
               : isConstructor
               ? const []
-              : runtimeTypeArguments(ctx, e),
+              : runtimeTypeArguments(ctx, e).isNotEmpty
+              ? runtimeTypeArguments(ctx, e)
+              : inferredTypeArgs,
         ),
       );
     }
