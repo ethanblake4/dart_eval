@@ -111,7 +111,6 @@ extension TearOff on Variable {
       memberParams[param.name.lexeme] = TypeRef(
         offset.file ?? ctx.library,
         param.name.lexeme,
-        resolved: true,
         typeParameterOwner: 'tearoff:${offset.file}:${offset.name}',
         typeParameterIndex: i,
       );

@@ -76,7 +76,7 @@ class DeferredOrOffset {
 /// ancestors provide members natively, so resolving a call to an evaluated
 /// class on the chain would skip the real (native) implementation.
 bool hasBridgeSuperclass(CompilerContext ctx, TypeRef type) {
-  for (final parent in type.resolveTypeChain(ctx).extendsChain) {
+  for (final parent in ctx.typeSystem.superclassChain(type)) {
     final bridge =
         ctx.topLevelDeclarationsMap[parent.file]?[parent.name]?.bridge;
     if (bridge is BridgeClassDef && bridge.bridge) return true;
@@ -97,8 +97,7 @@ TypeRef? memberOwner(
   if (hasBridgeSuperclass(ctx, type)) {
     return null;
   }
-  final resolved = type.resolveTypeChain(ctx);
-  for (final link in [resolved, ...resolved.extendsChain]) {
+  for (final link in [type, ...ctx.typeSystem.superclassChain(type)]) {
     final positions =
         ctx.instanceDeclarationPositions[link.file]?[link.name]?[kind] as Map?;
     if (positions != null &&
@@ -142,8 +141,7 @@ SSA ownerLinkSsa(
   TypeRef from,
   TypeRef owner,
 ) {
-  final resolved = from.resolveTypeChain(ctx);
-  final links = [resolved, ...resolved.extendsChain];
+  final links = [from, ...ctx.typeSystem.superclassChain(from)];
   var ssa = receiver;
   for (var i = 0; i < links.length; i++) {
     final link = links[i];

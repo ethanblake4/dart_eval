@@ -582,7 +582,7 @@ class Variable {
         );
       }
     }
-    final resolvedReceiver = resolveThroughTypeParameters(ctx, type);
+    final resolvedReceiver = ctx.typeSystem.throughTypeParameters(type);
     if (name == 'runtimeType') {
       // `runtimeType` is overridable like any other getter — only
       // intrinsify it when the receiver's class doesn't declare it and
@@ -736,7 +736,7 @@ class Variable {
       );
     } else {
       fieldType =
-          resolvedField?.resolveTypeChain(ctx) ?? CoreTypes.dynamic.ref(ctx);
+          resolvedField ?? CoreTypes.dynamic.ref(ctx);
       methodReturnType = null;
     }
     final receiver = boxIfNeeded(ctx);
@@ -745,7 +745,7 @@ class Variable {
       // Storage for an inherited field lives on its declaring class's link,
       // reached from the receiver by LoadSuper hops. First locate the owning
       // link, then emit the hops.
-      final links = [exact, ...exact.resolveTypeChain(ctx).extendsChain];
+      final links = [exact, ...ctx.typeSystem.superclassChain(exact)];
       var depth = -1;
       int? fieldIndex;
       for (var i = 0; i < links.length; i++) {
@@ -909,7 +909,6 @@ class Variable {
             param.name.lexeme: TypeRef(
               ext.library,
               param.name.lexeme,
-              resolved: true,
               typeParameterOwner:
                   'tearoff:${ext.library}:${member.name.lexeme}',
             ),

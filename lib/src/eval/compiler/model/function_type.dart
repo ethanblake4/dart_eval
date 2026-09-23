@@ -117,7 +117,6 @@ class EvalFunctionType {
         ownParams[i].name.lexeme: TypeRef(
           library,
           ownParams[i].name.lexeme,
-          resolved: true,
           typeParameterOwner: owner,
           typeParameterIndex: i,
         ),

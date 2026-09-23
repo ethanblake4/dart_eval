@@ -63,7 +63,7 @@ class SuperPropertyReference extends IdentifierReference {
         concreteTypes: [mixinOwner],
       );
     }
-    var type = receiver.type.resolveTypeChain(ctx);
+    var type = receiver.type;
     final kind = forSet ? 1 : 0;
     while (true) {
       // Abstract re-declarations have no body — skip them like runtime
@@ -74,9 +74,9 @@ class SuperPropertyReference extends IdentifierReference {
       if (hit) {
         return receiver;
       }
-      final parent = type.extendsType;
+      final parent = ctx.typeSystem.superclassOf(type);
       if (parent == null) return receiver;
-      type = parent.resolveTypeChain(ctx);
+      type = parent;
       receiver = Variable.ssa(
         ctx,
         LoadSuper(ctx.svar('super'), receiver.ssa),
@@ -223,7 +223,7 @@ class IdentifierReference implements Reference {
           // extension namespace; precise typing isn't needed here.
           return CoreTypes.function.ref(ctx);
         }
-        final concreteType = concrete.resolveTypeChain(ctx);
+        final concreteType = concrete;
         // Static accessors (`C.x*g`/`C.x*s`) report the value type —
         // the getter's return type or the setter's parameter type — so
         // compound-assignment and boxing decisions see the real member.
@@ -466,7 +466,7 @@ class IdentifierReference implements Reference {
     if (object != null) {
       // If the object is a class name, access static fields
       if (object!.type.isSpec(CoreTypes.type)) {
-        final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
+        final classType = object!.concreteTypes[0];
         // A static setter (`C.x*s`) takes precedence over a static field
         // global of the same base name.
         final setter = ctx
@@ -615,7 +615,7 @@ class IdentifierReference implements Reference {
       if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
         // Storage for an inherited field lives on its declaring class's
         // link, reached from the receiver by LoadSuper hops.
-        final links = [exact, ...exact.resolveTypeChain(ctx).extendsChain];
+        final links = [exact, ...ctx.typeSystem.superclassChain(exact)];
         var depth = -1;
         int? fieldIndex;
         for (var i = 0; i < links.length; i++) {
@@ -1074,15 +1074,15 @@ class IdentifierReference implements Reference {
             callingConvention: CallingConvention.static,
           );
         }
-        final classType = object!.concreteTypes[0].resolveTypeChain(ctx);
+        final classType = object!.concreteTypes[0];
         if (classType.isTypeParameter) {
           // `T.member` is an instance access on T's runtime `Type` object,
           // not a static access — dispatch dynamically.
           object = object!.boxIfNeeded(ctx, source);
           return object!.getProperty(ctx, name);
         }
-        if (classType.extendsType != null &&
-            classType.extendsType!.isSpec(CoreTypes.enumType)) {
+        final superclass = ctx.typeSystem.superclassOf(classType);
+        if (superclass != null && superclass.isSpec(CoreTypes.enumType)) {
           final type = classType;
           final gIndex =
               ctx.enumValueIndices[classType.file]?[type.name]?[name];
@@ -1524,7 +1524,7 @@ class IdentifierReference implements Reference {
         // no override check; a merely-declared type does.
         for (final link in [
           actualType,
-          ...actualType.resolveTypeChain(ctx).extendsChain,
+          ...ctx.typeSystem.superclassChain(actualType),
         ]) {
           final methodsMap =
               ctx.instanceDeclarationPositions[link.file]?[link.name]?[2];
@@ -2321,7 +2321,7 @@ bool _hasReceiverMember(
   bool forSet = false,
   AstNode? source,
 }) {
-  final resolvedReceiver = resolveThroughTypeParameters(ctx, receiver.type);
+  final resolvedReceiver = ctx.typeSystem.throughTypeParameters(receiver.type);
   if (resolvedReceiver.isSpec(CoreTypes.dynamic)) return true;
   if (TypeRef.lookupFieldType(
         ctx,

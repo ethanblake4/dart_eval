@@ -293,7 +293,6 @@ ArgumentListResult compileArgumentList(
       ctorClassParamRefs[param.name.lexeme] = TypeRef(
         decLibrary,
         param.name.lexeme,
-        resolved: true,
         typeParameterOwner: 'class:$decLibrary:$hostName',
         typeParameterIndex: i,
       );
@@ -843,7 +842,7 @@ ArgumentListResult compileArgumentListWithBridge(
         arg0 = arg0.tearOff(ctx);
       }
       if (arg0.type
-              .resolveTypeChain(ctx)
+              
               .assignmentConversionTo(ctx, paramType) ==
           AssignmentConversion.invalid) {
         throw CompileError(

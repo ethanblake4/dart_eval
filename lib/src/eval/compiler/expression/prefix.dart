@@ -76,7 +76,7 @@ Variable compilePrefixExpression(
     ctx,
     method == '!' ? CoreTypes.bool.ref(ctx) : bound,
   );
-  final isDynamic = V.type.resolveTypeChain(ctx).isSpec(CoreTypes.dynamic);
+  final isDynamic = V.type.isSpec(CoreTypes.dynamic);
 
   if (method == '!' && !isDynamic && !V.type.isSpec(CoreTypes.bool)) {
     throw CompileError(

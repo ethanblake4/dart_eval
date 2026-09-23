@@ -18,7 +18,7 @@ Variable compilePostfixExpression(
 ]) {
   Variable assertNonNull(Variable v) {
     if (v.type.nullable ||
-        v.type.resolveTypeChain(ctx).isSpec(CoreTypes.dynamic)) {
+        v.type.isSpec(CoreTypes.dynamic)) {
       final boxed = v.boxIfNeeded(ctx, e.operand);
       ctx.pushOp(
         AssertType(boxed.ssa, CoreTypes.object.ref(ctx).runtimeTypeId(ctx)),

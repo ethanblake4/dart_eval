@@ -884,7 +884,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     _ctx.runtimeTypeDescriptors.clear();
     for (var i = 0; i < _ctx.runtimeTypeList.length; i++) {
       final type = _ctx.runtimeTypeList[i];
-      _ctx.typeTypes.add(type.resolveTypeChain(_ctx).getRuntimeIndices(_ctx));
+      _ctx.typeTypes.add(type.getRuntimeIndices(_ctx));
       _ctx.runtimeTypeDescriptors.add(type.runtimeDescriptor(_ctx));
     }
     int relocate(int id) =>
@@ -1117,21 +1117,16 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         return TypeRef.fromBridgeTypeRef(_ctx, type);
       }
       final spec = type.spec!;
-      _ctx.types.register(
-        BridgeTypeDecl(
-          libraryIndex,
-          _ctx.libraryUri(libraryIndex),
-          spec.name,
-          classDef: bridge is BridgeClassDef ? bridge : null,
-          enumDef: bridge is BridgeEnumDef ? bridge : null,
-        ),
-      );
-      return TypeRef.cache(
+      final decl = BridgeTypeDecl(
         _ctx,
         libraryIndex,
+        _ctx.libraryUri(libraryIndex),
         spec.name,
-        fileRef: libraryIndex,
+        classDef: bridge is BridgeClassDef ? bridge : null,
+        enumDef: bridge is BridgeEnumDef ? bridge : null,
       );
+      _ctx.types.register(decl);
+      return _registerTypeRef(libraryIndex, spec.name, decl);
     } else {
       final declaration = declarationOrBridge.declaration!;
       if (declaration is! ClassDeclaration &&
@@ -1141,16 +1136,28 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         return null;
       }
       final name = declarationName(declaration);
-      _ctx.types.register(
-        SourceTypeDecl(
-          libraryIndex,
-          _ctx.libraryUri(libraryIndex),
-          name,
-          declaration,
-        ),
+      final decl = SourceTypeDecl(
+        _ctx,
+        libraryIndex,
+        _ctx.libraryUri(libraryIndex),
+        name,
+        declaration,
       );
-      return TypeRef.cache(_ctx, libraryIndex, name, fileRef: libraryIndex);
+      _ctx.types.register(decl);
+      return _registerTypeRef(libraryIndex, name, decl);
     }
+  }
+
+  /// Registers [decl]'s canonical use-site [TypeRef] in the runtime type
+  /// tables — the same three writes the old `TypeRef.cache` performed, in
+  /// the same order.
+  TypeRef _registerTypeRef(int libraryIndex, String name, TypeDecl decl) {
+    final type = TypeRef(libraryIndex, name, decl: decl);
+    _ctx.typeRefIndexMap[type] = _ctx.typeNames.length;
+    _ctx.runtimeTypeDescriptorIds[type.semanticKey] = _ctx.typeNames.length;
+    _ctx.runtimeTypeList.add(type);
+    _ctx.typeNames.add(name);
+    return type;
   }
 
   /// Allocates a bridge static function index to a member key of the form

@@ -157,7 +157,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
         ctx,
         // An async body's context type is the *flattened* return type.
         b.isAsynchronous && expectedReturnType.type != null
-            ? flattenType(ctx, expectedReturnType.type!)
+            ? ctx.typeSystem.flatten(expectedReturnType.type!)
             : expectedReturnType.type,
       ),
       isAsync: b.isAsynchronous,

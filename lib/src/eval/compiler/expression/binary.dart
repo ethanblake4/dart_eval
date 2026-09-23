@@ -86,7 +86,6 @@ Variable compileBinaryExpression(
     _ => boundType,
   };
   var R = compileExpression(e.rightOperand, ctx, rightBound);
-
   return L.invoke(ctx, method, [R]).result;
 }
 

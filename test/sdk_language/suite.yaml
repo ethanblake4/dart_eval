@@ -744,8 +744,6 @@ expect_fail:
   - path: 'regress/regress61222_test.dart'
   - path: 'regress/regress9949_test.dart'
   - path: 'regression_56129_test.dart'
-  - path: 'set_literals/big_set_literal_test.dart'
-  - path: 'set_literals/const_big_set_literal_test.dart'
   - path: 'set_literals/const_set_literal_test.dart'
   - path: 'set_literals/set_literal_test.dart'
   - path: 'setter/checked2_test.dart'

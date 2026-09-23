@@ -228,7 +228,7 @@ void _checkPrimitiveEquality(
   Variable caseVar,
   AstNode source,
 ) {
-  final t = caseVar.type.resolveTypeChain(ctx);
+  final t = caseVar.type;
   if (t.isTypeParameter) return;
   if (ctx.instanceDeclarationsMap[t.file]?[t.name]?['=='] != null) {
     throw CompileError(

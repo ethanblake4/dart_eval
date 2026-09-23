@@ -169,7 +169,7 @@ TypeRef? resolveCallResultType(
     if (resolved != null && resolved.type != voidType) return resolved.type;
   }
   final declared = callee?.type
-      .resolveTypeChain(ctx)
+      
       .functionType
       ?.returnType
       .type;
@@ -189,7 +189,7 @@ bool _closureArgumentsProven(
   List<Variable> positionalArgs,
   Map<String, Variable> namedArgs,
 ) {
-  final signature = closureType.resolveTypeChain(ctx).functionType;
+  final signature = closureType.functionType;
   if (signature == null) return false;
   final positional = [
     ...signature.normalParameters,
@@ -201,7 +201,7 @@ bool _closureArgumentsProven(
     if (paramType == null ||
         paramType.isSpec(CoreTypes.dynamic) ||
         positionalArgs[i].type
-                .resolveTypeChain(ctx)
+                
                 .assignmentConversionTo(ctx, paramType) !=
             AssignmentConversion.none) {
       return false;
@@ -212,7 +212,7 @@ bool _closureArgumentsProven(
     if (paramType == null ||
         paramType.isSpec(CoreTypes.dynamic) ||
         entry.value.type
-                .resolveTypeChain(ctx)
+                
                 .assignmentConversionTo(ctx, paramType) !=
             AssignmentConversion.none) {
       return false;

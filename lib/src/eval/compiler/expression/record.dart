@@ -65,13 +65,13 @@ Variable compileRecordLiteral(
     if (fieldBound == null || value.type.isAssignableTo(ctx, fieldBound)) {
       return value;
     }
-    final bound0 = fieldBound.resolveTypeChain(ctx);
+    final bound0 = fieldBound;
     if (bound0.functionType == null && !bound0.isSpec(CoreTypes.function)) {
       return value;
     }
     try {
       final call = value.getProperty(ctx, 'call');
-      if (call.type.resolveTypeChain(ctx).functionType == null) {
+      if (call.type.functionType == null) {
         return value;
       }
       return call.boxIfNeeded(ctx);
@@ -107,7 +107,6 @@ Variable compileRecordLiteral(
   final type = TypeRef(
     ctx.library,
     TypeRef.recordTypeName(inferredRecordFields),
-    extendsType: CoreTypes.record.ref(ctx),
     recordFields: inferredRecordFields,
   );
   final constIndex = ctx.constantPool.addOrGet(fieldNames);
@@ -119,7 +118,7 @@ Variable compileRecordLiteral(
       constIndex,
       type.runtimeTypeId(ctx),
       reify: inferredRecordFields.any(
-        (f) => !f.type.resolveTypeChain(ctx).hasFixedRuntimeType(ctx),
+        (f) => !f.type.hasFixedRuntimeType(ctx),
       ),
     ),
     type,

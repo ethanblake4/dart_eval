@@ -27,7 +27,7 @@ Variable convertInitializer(
   String? description,
 }) {
   final conversion = value.type
-      .resolveTypeChain(ctx)
+      
       .assignmentConversionTo(ctx, target);
   switch (conversion) {
     case AssignmentConversion.invalid:
@@ -106,7 +106,7 @@ Variable convertForAssignment(
   String? description,
 }) {
   final conversion = value.type
-      .resolveTypeChain(ctx)
+      
       .assignmentConversionTo(ctx, target);
   // int → double only applies to integer literals and compile-time constant
   // int expressions — never to an int-typed variable (which is a CE in Dart).

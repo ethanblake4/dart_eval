@@ -172,7 +172,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       ctx,
       library,
       expression.expression,
-    ).resolveTypeChain(ctx);
+    );
     if (inner.isAssignableTo(
           ctx,
           CoreTypes.future.ref(ctx),
@@ -202,7 +202,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       ctx,
       library,
       expression.target,
-    ).resolveTypeChain(ctx);
+    );
     final args = target.specifiedTypeArgs;
     if (target.isAssignableTo(
           ctx,
@@ -240,9 +240,9 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       try {
         return TypeRef.lookupFieldType(
               ctx,
-              receiver.resolveTypeChain(ctx),
+              receiver,
               expression.propertyName.name,
-            )?.resolveTypeChain(ctx) ??
+            ) ??
             CoreTypes.dynamic.ref(ctx);
       } on CompileError {
         return CoreTypes.dynamic.ref(ctx);
@@ -276,7 +276,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       ctx,
       library,
       expression.target!,
-    ).resolveTypeChain(ctx);
+    );
     if (!receiver.isSpec(CoreTypes.dynamic)) {
       try {
         return AlwaysReturnType.fromInstanceMethodOrBuiltin(

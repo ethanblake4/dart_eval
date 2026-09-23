@@ -63,7 +63,7 @@ Variable compileInstanceCreation(
   } else if (bound != null) {
     // Downward inference: `Optional.absent()` under `Optional<int>` produces
     // `Optional<int>`.
-    final boundChain = bound.resolveTypeChain(ctx);
+    final boundChain = bound;
     if (boundChain.file == staticType.file &&
         boundChain.name == staticType.name &&
         boundChain.specifiedTypeArgs.isNotEmpty) {
@@ -173,7 +173,6 @@ Variable compileInstanceOf(
           genericNames[i]: TypeRef(
             staticType.file,
             genericNames[i],
-            resolved: true,
             typeParameterOwner: ownerKey,
             typeParameterIndex: i,
           ),
@@ -192,10 +191,12 @@ Variable compileInstanceOf(
           typeParameters: paramRefs,
         );
         final concrete =
-            findSupertypeInstantiation(ctx, pattern, arguments.args[i].type) ??
+            ctx.typeSystem.asInstanceOf(
+              arguments.args[i].type,
+              pattern.decl,
+            ) ??
             arguments.args[i].type;
-        collectTypeParameterSubstitutions(
-          ctx,
+        ctx.typeSystem.unify(
           pattern,
           concrete,
           substitutions,
@@ -222,7 +223,7 @@ Variable compileInstanceOf(
         : null;
     final seedGenerics = <String, TypeRef>{};
     if (classTypeParams != null) {
-      final resolvedChain = instantiatedType.resolveTypeChain(ctx);
+      final resolvedChain = instantiatedType;
       final appliedArgs =
           resolvedChain.file == dec0.sourceLib &&
               ctorDecl != null &&

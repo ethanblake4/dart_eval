@@ -32,7 +32,7 @@ List<TypeRef> compileCollectionSpread(
   }
   final sourceType = collection.type
       .copyWith(nullable: false)
-      .resolveTypeChain(ctx);
+      ;
   final requiredType = (isMap ? CoreTypes.map : CoreTypes.iterable).ref(ctx);
   if (!sourceType.isAssignableTo(ctx, requiredType)) {
     throw CompileError(

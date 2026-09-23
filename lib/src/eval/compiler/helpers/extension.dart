@@ -53,7 +53,6 @@ class EvalExtension {
       temps[param.name.lexeme] = TypeRef(
         library,
         param.name.lexeme,
-        resolved: true,
         typeParameterOwner: 'extension:$library:$name',
         typeParameterIndex: i,
       );
@@ -219,12 +218,7 @@ bool _unifyOnPattern(
   }
   final candidates = [
     actual,
-    ...actual
-        .resolveTypeChain(ctx)
-        .allSupertypes
-        .map(
-          (s) => s.substituteTypeParameters(actual.appliedTypeArguments(ctx)),
-        ),
+    ...ctx.typeSystem.directSupertypes(actual),
   ];
   for (final candidate in candidates) {
     if (candidate.file != pattern.file || candidate.name != pattern.name) {

@@ -369,6 +369,7 @@ class CompilerContext with ScopeContext {
   Map<int, List<EvalExtension>> visibleExtensions = {};
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   late final TypeDeclRegistry types = TypeDeclRegistry(this);
+  late final TypeSystem typeSystem = TypeSystem(this);
   Map<TypeRef, int> typeRefIndexMap = {};
   Map<String, int> runtimeTypeDescriptorIds = {};
   final Map<int, TypeRef> bridgeTypeRefCache = {};

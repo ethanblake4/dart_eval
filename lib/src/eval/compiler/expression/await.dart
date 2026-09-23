@@ -22,13 +22,13 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
   }
 
   final subject = compileExpression(e.expression, ctx).boxIfNeeded(ctx);
-  final type = subject.type.resolveTypeChain(ctx);
+  final type = subject.type;
 
   final completer = ctx.lookupLocal('#completer')!;
   final isFuture = type
       .copyWith(nullable: false)
       .isAssignableTo(ctx, CoreTypes.future.ref(ctx));
-  final resultType = isFuture ? flattenType(ctx, type) : type;
+  final resultType = isFuture ? ctx.typeSystem.flatten(type) : type;
 
   return Variable.ssa(
     ctx,

@@ -41,7 +41,7 @@ StatementInfo compileReturn(
   final boundType =
       anonymousReturn?.boundType ??
       (e is FunctionBody && e.isAsynchronous && expectedReturnType?.type != null
-          ? flattenType(ctx, expectedReturnType!.type!)
+          ? ctx.typeSystem.flatten(expectedReturnType!.type!)
           : expectedReturnType?.type);
   final value = expression == null
       ? null

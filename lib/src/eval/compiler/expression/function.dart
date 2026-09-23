@@ -195,7 +195,7 @@ Variable compileFunctionExpression(
     _ => null,
   };
   final boundReturnType =
-      bound?.resolveTypeChain(ctx).functionType?.returnType.type ??
+      bound?.functionType?.returnType.type ??
       declaredReturnType;
 
   // Block-bodied closures collect the static type of each `return` so the
@@ -264,7 +264,7 @@ Variable compileFunctionExpression(
     inferredClosureReturnType = b.isAsynchronous
         ? CoreTypes.future
               .ref(ctx)
-              .copyWith(specifiedTypeArgs: [flattenType(ctx, inferred)])
+              .copyWith(specifiedTypeArgs: [ctx.typeSystem.flatten(inferred)])
         : inferred;
   }
 

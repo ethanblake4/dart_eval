@@ -216,7 +216,7 @@ Variable compileMethodInvocation(
     // Downward inference: `C<num> x = T(num)` instantiates `T` as `C<num>`,
     // matching alias parameters structurally (`T<X> = C<List<X>>` against
     // `C<List<num>>` binds `X → num`).
-    final boundChain = bound?.resolveTypeChain(ctx);
+    final boundChain = bound;
 
     if (e.typeArguments == null &&
         boundChain != null &&
@@ -230,8 +230,7 @@ Variable compileMethodInvocation(
             i < boundChain.specifiedTypeArgs.length;
         i++
       ) {
-        collectTypeParameterSubstitutions(
-          ctx,
+        ctx.typeSystem.unify(
           resolved.specifiedTypeArgs[i],
           boundChain.specifiedTypeArgs[i],
           substitutions,
@@ -317,7 +316,7 @@ Variable compileMethodInvocation(
     if (isConstructor && result.classTypeParameters != null) {
       // Downward inference wins: a context type naming the constructed
       // class pins its type arguments (`A<int> get g => A(1)`).
-      final boundChain = bound?.resolveTypeChain(ctx);
+      final boundChain = bound;
       final ctorDecl = dec.parent?.parent;
       final ctorClassName = ctorDecl is Declaration
           ? declarationName(ctorDecl)
@@ -346,8 +345,7 @@ Variable compileMethodInvocation(
           i < aliasArgs.length && i < inferredCtorArgs.length;
           i++
         ) {
-          collectTypeParameterSubstitutions(
-            ctx,
+          ctx.typeSystem.unify(
             aliasArgs[i],
             inferredCtorArgs[i],
             substitutions,
@@ -487,7 +485,7 @@ TypeRef _instantiateConstructorType(
     }
     return base.substituteTypeParameters({
       for (var i = 0; i < inferredArgs.length; i++)
-        ('class:${base.resolveTypeChain(ctx).file}:${base.name}', i):
+        ('class:${base.file}:${base.name}', i):
             inferredArgs[i],
     });
   }
@@ -528,7 +526,6 @@ void _resolveInvocationGenerics(
     resolved[name] = TypeRef(
       declarationLibrary,
       name,
-      resolved: true,
       typeParameterOwner: 'call:$declarationLibrary',
       typeParameterIndex: index,
     );
@@ -1162,7 +1159,7 @@ Map<String, TypeRef> _bridgeClassTypeArguments(
   TypeRef receiver,
   int declarationLibrary,
 ) {
-  final resolved = receiver.resolveTypeChain(ctx);
+  final resolved = receiver;
   final declaration =
       ctx.topLevelDeclarationsMap[declarationLibrary]?[resolved.name];
   final bridge = declaration?.bridge;
@@ -1319,7 +1316,7 @@ Map<String, TypeRef> classTypeArguments(
     if (decl == null) continue;
     // Fold the current type's arguments into the substitution map so a
     // `with M<T>` clause resolves `T` to the receiver-provided argument.
-    final levelParams = current.resolveTypeChain(ctx).genericParams;
+    final levelParams = current.decl?.typeParameters ?? const <GenericParam>[];
     final nextSubstitutions = {
       ...substitutions,
       for (var index = 0; index < levelParams.length; index++)
@@ -1347,8 +1344,7 @@ Map<String, TypeRef> classTypeArguments(
         return applied;
       }
     }
-    final resolved = current.resolveTypeChain(ctx);
-    final parent = resolved.extendsType;
+    final parent = ctx.typeSystem.superclassOf(current);
     if (parent != null && !parent.hasSameDeclarationAs(current)) {
       worklist.add((
         parent.substituteTypeParameters(nextSubstitutions),
@@ -1438,7 +1434,7 @@ DeclarationOrBridge<ClassMember, BridgeMethodDef> resolveInstanceMethod(
   if (dec0 == null) {
     // Structural types (records, function types) have no declaration of
     // their own; their members come from the nominal supertype.
-    final extendsType = instanceType.extendsType;
+    final extendsType = ctx.typeSystem.superclassOf(instanceType);
     if (extendsType != null) {
       return resolveInstanceMethod(
         ctx,
@@ -1793,7 +1789,6 @@ ResolvedArgs compileNonBridgeArgs(
         typeParams[i].name.lexeme: TypeRef(
           sourceLib,
           typeParams[i].name.lexeme,
-          resolved: true,
           typeParameterOwner: 'call:$sourceLib',
           typeParameterIndex: i,
         ),
@@ -1805,8 +1800,7 @@ ResolvedArgs compileNonBridgeArgs(
       typeParameters: placeholders,
     );
     final substitutions = <(String, int), TypeRef>{};
-    collectTypeParameterSubstitutions(
-      ctx,
+    ctx.typeSystem.unify(
       pattern,
       returnContext,
       substitutions,
@@ -1897,8 +1891,7 @@ ResolvedArgs compileNonBridgeArgs(
     L = Variable.of(ctx, L.ssa, appType, concreteTypes: [appType]);
     found = true;
   }
-  final superStart = L.type;
-  var owner = superStart.resolveTypeChain(ctx);
+  var owner = L.type;
   // Search the superclass chain for a concrete member without emitting
   // `loadsuper` ops yet — a failed walk must not leave dead loads that
   // execute on a null receiver.
@@ -1938,9 +1931,9 @@ ResolvedArgs compileNonBridgeArgs(
       found = true;
       break;
     }
-    final parent = owner.extendsType;
+    final parent = ctx.typeSystem.superclassOf(owner);
     if (parent == null) break;
-    owner = parent.resolveTypeChain(ctx);
+    owner = parent;
     superTypes.add(owner);
   }
   if (!found) {

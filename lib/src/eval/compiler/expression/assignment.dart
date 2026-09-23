@@ -125,7 +125,7 @@ Variable _assignWithReference(
     // right operand is dynamic. The operator's declared return type alone
     // (for example num from int.+) must not turn that valid runtime check into
     // a static rejection.
-    if (R.type.resolveTypeChain(ctx).isSpec(CoreTypes.dynamic)) {
+    if (R.type.isSpec(CoreTypes.dynamic)) {
       res = res.copyWith(type: CoreTypes.dynamic.ref(ctx));
     }
     final set = res.type != L.resolveType(ctx, forSet: true)

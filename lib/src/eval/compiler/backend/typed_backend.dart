@@ -819,7 +819,7 @@ class TypedBackend {
     if (declaringType != null) {
       try {
         _collectCovariantParameters(
-          declaringType.resolveTypeChain(context),
+          declaringType,
           memberName,
           kind,
           positional,
@@ -914,10 +914,10 @@ class TypedBackend {
         named,
       );
     }
-    for (final supertype in type.allSupertypes) {
+    for (final supertype in context.typeSystem.directSupertypes(type)) {
       try {
         _collectCovariantParameters(
-          supertype.resolveTypeChain(context),
+          supertype,
           memberName,
           kind,
           positional,

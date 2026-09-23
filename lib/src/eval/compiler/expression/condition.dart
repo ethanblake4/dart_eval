@@ -98,7 +98,7 @@ void enforceConditionType(
   AstNode? source,
 ) {
   final conversion = value.type
-      .resolveTypeChain(ctx)
+      
       .assignmentConversionTo(ctx, CoreTypes.bool.ref(ctx));
   if (conversion == AssignmentConversion.invalid ||
       (conversion == AssignmentConversion.runtimeCheck &&

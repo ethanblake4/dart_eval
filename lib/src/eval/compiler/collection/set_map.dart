@@ -24,7 +24,7 @@ Variable compileSetOrMapLiteral(
   TypeRef? bound,
 ]) {
   final annotations = literal.typeArguments?.arguments;
-  final resolvedBound = bound?.resolveTypeChain(ctx);
+  final resolvedBound = bound;
   TypeRef? boundKey, boundValue;
   if (resolvedBound != null) {
     final boundArgs = resolvedBound.specifiedTypeArgs;

@@ -205,7 +205,7 @@ int compileMethodDeclaration(
     // An async body's context type is the *flattened* return type: in
     // `Future<List<int>> f() async => []` the literal sees `List<int>`.
     final bound = b.isAsynchronous && returnType != null
-        ? flattenType(ctx, returnType)
+        ? ctx.typeSystem.flatten(returnType)
         : returnType;
     final V = compileExpression(b.expression, ctx, bound);
     stInfo = doReturn(

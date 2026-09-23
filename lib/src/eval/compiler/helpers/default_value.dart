@@ -129,7 +129,7 @@ superFormalTarget(
   final $class = parameterHost.parent!.parent as ClassDeclaration;
   final type = TypeRef.lookupDeclaration(ctx, decLibrary, $class);
   final $super =
-      type.resolveTypeChain(ctx).extendsType ??
+      ctx.typeSystem.superclassOf(type) ??
       (throw CompileError(
         'Class $type has no super class, so cannot use super formals',
         param,
