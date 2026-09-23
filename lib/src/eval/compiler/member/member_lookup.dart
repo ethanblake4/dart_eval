@@ -227,9 +227,16 @@ final class MemberLookup {
     }
   }
 
-  /// Whether [type] declares or inherits [name] in its interface.
-  bool hasInstanceMember(TypeRef type, MemberName name) =>
-      tryInterfaceMember(type, name) != null;
+  /// Whether [type] declares or inherits [name] in its interface —
+  /// `hasInstanceMethod`'s probe: any resolution failure counts as absent.
+  bool hasInstanceMember(TypeRef type, MemberName name) {
+    try {
+      interfaceMember(type, name);
+      return true;
+    } on CompileError {
+      return false;
+    }
+  }
 
   /// The receiver's view of [decl]'s parameter space — `C<T>.member` seen
   /// through `C<int>` instantiates `T → int` in the member signature.
@@ -240,13 +247,13 @@ final class MemberLookup {
   }
 
   /// A static member of [type] by name. Returns null when absent —
-  /// [resolveStaticMethod]'s callers throw their own error messages.
+  /// `resolveStaticMethod`'s callers throw their own error messages.
   Member? staticMember(
     TypeRef type,
     String name,
     MemberKind kind,
   ) {
-    final decl = type.decl;
+    final decl = type.decl ?? ctx.types.find(type.file, type.name);
     return decl?.staticMember(name, kind);
   }
 

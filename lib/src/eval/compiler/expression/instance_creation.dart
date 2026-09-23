@@ -2,7 +2,8 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -124,12 +125,17 @@ Variable compileInstanceOf(
     );
   }
 
-  final dec0 = resolveStaticMethod(ctx, staticType, name);
+  final resolved = ctx.memberLookup.staticMember(
+        staticType,
+        name,
+        MemberKind.method,
+      ) ??
+      (throw CompileError('Cannot find static method $staticType.$name'));
 
   final BoundCall arguments;
 
-  if (dec0.isBridge) {
-    final bridge = dec0.bridge;
+  if (resolved is BridgeMember) {
+    final bridge = resolved.def;
     // Const factories are also exposed as static methods on some bindings
     // (e.g. `bool.hasEnvironment`); both defs carry a functionDescriptor.
     final fnDescriptor = switch (bridge) {
@@ -202,7 +208,7 @@ Variable compileInstanceOf(
       );
     }
   } else {
-    final dec = dec0.declaration!;
+    final dec = (resolved as SourceMember).node;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
     // Constructor signatures reference the declaring class's type parameters —
@@ -217,7 +223,7 @@ Variable compileInstanceOf(
     if (classTypeParams != null) {
       final resolvedChain = instantiatedType;
       final appliedArgs =
-          resolvedChain.file == dec0.sourceLib &&
+          resolvedChain.file == resolved.library &&
               ctorDecl != null &&
               resolvedChain.name == declarationName(ctorDecl as Declaration)
           ? resolvedChain.typeArguments
@@ -230,7 +236,7 @@ Variable compileInstanceOf(
             ? CoreTypes.dynamic.ref(ctx)
             : TypeRef.fromAnnotation(
                 ctx,
-                dec0.sourceLib,
+                resolved.library,
                 bound,
                 typeParameters: seedGenerics,
               );
@@ -263,7 +269,7 @@ Variable compileInstanceOf(
     staticType: staticType,
     instantiatedType: instantiatedType,
     name: name,
-    offset: dec0.isBridge
+    offset: resolved is BridgeMember
         ? null
         : DeferredOrOffset.lookupStatic(
             ctx,
@@ -271,11 +277,11 @@ Variable compileInstanceOf(
             staticType.name,
             name,
           ),
-    constructor: dec0.isBridge
+    constructor: resolved is BridgeMember
         ? null
-        : dec0.declaration! as ConstructorDeclaration,
+        : (resolved as SourceMember).node as ConstructorDeclaration,
     isConst: isConst,
-    externalIndex: dec0.isBridge
+    externalIndex: resolved is BridgeMember
         ? ctx.bridgeStaticFunctionIndices[staticType
             .file]!['${staticType.name}.$name']!
         : null,

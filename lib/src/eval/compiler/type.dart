@@ -1,7 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 
 import 'context.dart';
@@ -10,6 +9,7 @@ import 'types/function_type.dart';
 import 'types/substitution.dart';
 import 'types/type_decl.dart';
 import 'types/type_parameter.dart';
+import 'member/member.dart';
 import 'member/member_name.dart';
 
 export 'types/substitution.dart';
@@ -1144,15 +1144,21 @@ class AlwaysReturnType implements ReturnType {
     String method,
     TypeRef? fallback,
   ) {
-    final m = resolveInstanceMethod(ctx, type, method);
-    if (m.isBridge) {
+    final member = ctx.memberLookup
+        .interfaceMember(
+          type,
+          ctx.memberNameOf(method, MemberKind.method),
+          superclassFirst: true,
+        )
+        .member;
+    if (member is BridgeMember) {
       return bridgeFunctionReturnType(
         ctx,
-        m.bridge!.functionDescriptor,
+        (member.def as BridgeMethodDef).functionDescriptor,
         specifiedType: type,
       ).toAlwaysReturnType(ctx, type, const [], const {})!;
     }
-    final d = m.declaration!;
+    final d = (member as SourceMember).node;
     if (d is! MethodDeclaration) {
       // A field holding a callable — its call signature isn't modelled here.
       return AlwaysReturnType(fallback ?? CoreTypes.dynamic.ref(ctx), true);
@@ -1162,7 +1168,7 @@ class AlwaysReturnType implements ReturnType {
       type,
       d,
       fallback,
-      declaringFile: m.sourceLib,
+      declaringFile: member.library,
     );
   }
 
@@ -1172,19 +1178,24 @@ class AlwaysReturnType implements ReturnType {
     String method,
     TypeRef? fallback,
   ) {
-    final m = resolveStaticMethod(ctx, type, method);
-    if (m.isBridge) {
-      if (m.bridge is! BridgeMethodDef) {
+    final member = ctx.memberLookup.staticMember(
+          type,
+          method,
+          MemberKind.method,
+        ) ??
+        (throw CompileError('Cannot find static method $type.$method'));
+    if (member is BridgeMember) {
+      if (member.def is! BridgeMethodDef) {
         return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
       }
-      final fn = (m.bridge as BridgeMethodDef).functionDescriptor;
+      final fn = (member.def as BridgeMethodDef).functionDescriptor;
       return bridgeFunctionReturnType(
         ctx,
         fn,
         specifiedType: type,
       ).toAlwaysReturnType(ctx, type, const [], const {})!;
     }
-    final d = m.declaration!;
+    final d = (member as SourceMember).node;
     if (d is ConstructorDeclaration) {
       return AlwaysReturnType(type, false);
     }
@@ -1211,9 +1222,14 @@ class AlwaysReturnType implements ReturnType {
     }
 
     if ($static) {
-      final m = resolveStaticMethod(ctx, lookupType, method);
-      if (m.isBridge) {
-        final bridge = m.bridge!;
+      final member = ctx.memberLookup.staticMember(
+            lookupType,
+            method,
+            MemberKind.method,
+          ) ??
+          (throw CompileError('Cannot find static method $lookupType.$method'));
+      if (member is BridgeMember) {
+        final bridge = member.def;
         final fd = bridge is BridgeMethodDef
             ? bridge.functionDescriptor
             : bridge is BridgeConstructorDef
@@ -1230,7 +1246,7 @@ class AlwaysReturnType implements ReturnType {
           typeArgs: typeArgs,
         );
       }
-      final d = m.declaration!;
+      final d = (member as SourceMember).node;
       if (d is ConstructorDeclaration) {
         return AlwaysReturnType(lookupType, false);
       }
@@ -1246,9 +1262,15 @@ class AlwaysReturnType implements ReturnType {
       // `Object.noSuchMethod` is implicit — absent from declaration metadata.
       return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
     }
-    final m = resolveInstanceMethod(ctx, lookupType, method);
-    if (m.isBridge) {
-      final fd = (m.bridge as BridgeMethodDef).functionDescriptor;
+    final member = ctx.memberLookup
+        .interfaceMember(
+          lookupType,
+          ctx.memberNameOf(method, MemberKind.method),
+          superclassFirst: true,
+        )
+        .member;
+    if (member is BridgeMember) {
+      final fd = (member.def as BridgeMethodDef).functionDescriptor;
       return bridgeFunctionReturnType(
         ctx,
         fd,
@@ -1261,7 +1283,7 @@ class AlwaysReturnType implements ReturnType {
         typeArgs: typeArgs,
       );
     }
-    final d = m.declaration!;
+    final d = (member as SourceMember).node;
     if (d is! MethodDeclaration) {
       // A field holding a callable — its call signature isn't modelled here.
       return AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
@@ -1271,7 +1293,7 @@ class AlwaysReturnType implements ReturnType {
       lookupType,
       d,
       CoreTypes.dynamic.ref(ctx),
-      declaringFile: m.sourceLib,
+      declaringFile: member.library,
     );
   }
 

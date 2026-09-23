@@ -3,6 +3,8 @@ import '../invocation/bound_call.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
+import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
@@ -10,7 +12,6 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import '../invocation/binder.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
@@ -345,8 +346,13 @@ void compileConstructorDeclaration(
   // Handle redirecting constructor
   if ($redirectingInitializer != null) {
     final name = ctorNameOf($redirectingInitializer.constructorName?.name);
-    final dec0 = resolveStaticMethod(ctx, clsType, name);
-    final dec = dec0.declaration!;
+    final member = ctx.memberLookup.staticMember(
+          clsType,
+          name,
+          MemberKind.method,
+        ) ??
+        (throw CompileError('Cannot find static method $clsType.$name'));
+    final dec = (member as SourceMember).node;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
     final result = ArgumentBinder(ctx).bindParameterList(

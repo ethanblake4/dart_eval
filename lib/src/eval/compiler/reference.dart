@@ -3,6 +3,8 @@ import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
 import 'helpers/tearoff.dart';
 import 'model/function_type.dart';
+import 'member/member.dart';
+import 'member/member_name.dart';
 import '../ir/closures.dart';
 import '../ir/exception.dart';
 import 'backend/representation.dart' show MachineRepresentation;
@@ -29,7 +31,6 @@ import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'values/abi.dart';
-import 'member/member_name.dart';
 import 'invocation/accessors.dart';
 import 'invocation/resolver.dart';
 
@@ -253,21 +254,28 @@ class IndexedReference implements Reference {
   /// null when it cannot be resolved (dynamic receivers, missing member).
   TypeRef? _setterValueType(CompilerContext ctx, [AstNode? source]) {
     try {
-      final decl0 = resolveInstanceMethod(ctx, _variable.type, '[]=', source);
-      final decl = decl0.declaration;
-      if (decl is MethodDeclaration) {
+      final resolved = ctx.memberLookup
+          .interfaceMember(
+            _variable.type,
+            MemberName.method('[]='),
+            source: source,
+            superclassFirst: true,
+          )
+          .member;
+      final decl = resolved is SourceMember ? resolved.node : null;
+      if (decl is MethodDeclaration && resolved is SourceMember) {
         final param = decl.parameters?.parameters.elementAtOrNull(1);
         if (param?.type == null) return null;
         // Bind the declaring class's type parameters through the receiver's
         // supertype chain so a `WriteType` annotation resolves concretely.
         return formalParameterAnnotationType(
           ctx,
-          decl0.sourceLib,
+          resolved.library,
           param!,
           typeParameters: classTypeArguments(
             ctx,
             _variable.type,
-            decl0.sourceLib,
+            resolved.library,
             decl,
           ),
         );
