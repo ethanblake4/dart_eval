@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 
@@ -10,8 +11,8 @@ import 'package:dart_eval/src/eval/ir/types.dart';
 Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
   final inner = compileExpression(e.function, ctx);
 
-  if (inner.type.isSpec(CoreTypes.type) && inner.concreteTypes.isNotEmpty) {
-    final baseType = inner.concreteTypes[0];
+  if (receiverOf(ctx, inner) case TypeLiteralReceiver(:final type)) {
+    final baseType = type;
     final typeArgs = e.typeArguments;
     if (typeArgs != null && typeArgs.arguments.isNotEmpty) {
       final parameterized = baseType.copyWith(

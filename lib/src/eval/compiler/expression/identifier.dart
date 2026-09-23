@@ -17,12 +17,14 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
   if (id is SimpleIdentifier) {
     return IdentifierReference(null, id.name);
   } else if (id is PrefixedIdentifier) {
-    try {
-      final L = compileIdentifier(id.prefix, ctx);
-      return IdentifierReference(L, id.identifier.name);
-    } on PrefixError {
+    // A prefix denotation composes `p.C` into the prefix's child rather
+    // than compiling `p` as a receiver — no exceptions for control flow.
+    final prefixRef = IdentifierReference(null, id.prefix.name);
+    if (prefixRef.denotation(ctx, source: id) case PrefixDenotation()) {
       return IdentifierReference(null, '${id.prefix}.${id.identifier.name}');
     }
+    final L = prefixRef.getValue(ctx, id);
+    return IdentifierReference(L, id.identifier.name);
   }
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }

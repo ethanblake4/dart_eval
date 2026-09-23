@@ -9,6 +9,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
@@ -30,6 +31,8 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'values/abi.dart';
 import 'member/member_name.dart';
+
+part 'denotation.dart';
 
 /// A compile-time datum that can be - at the very least - converted to a [Variable] in the
 /// future if needed. May also contain information about how to modify its value.
@@ -54,116 +57,13 @@ abstract class Reference {
 class SuperPropertyReference extends IdentifierReference {
   SuperPropertyReference(Variable super.object, super.name);
 
-  Variable _owner(CompilerContext ctx, bool forSet) {
-    var receiver = object!;
-    final mixinOwner = superMixinMemberOwner(ctx, name);
-    if (mixinOwner != null) {
-      return Variable.of(
-        ctx,
-        receiver.ssa,
-        mixinOwner,
-        concreteTypes: [mixinOwner],
-      );
-    }
-    var type = receiver.type;
-    final kind = forSet ? 1 : 0;
-    while (true) {
-      // Abstract re-declarations have no body — skip them like runtime
-      // dispatch does; the concrete implementation lives deeper.
-      final hit =
-          concreteMemberDecl(ctx, type, name, kind: 2) != null ||
-          concreteMemberDecl(ctx, type, name, kind: kind) != null;
-      if (hit) {
-        return receiver;
-      }
-      final parent = ctx.typeSystem.superclassOf(type);
-      if (parent == null) return receiver;
-      type = parent;
-      receiver = Variable.ssa(
-        ctx,
-        LoadSuper(ctx.svar('super'), receiver.ssa),
-        type,
-      );
-    }
-  }
-
   @override
-  Variable getValue(CompilerContext ctx, [AstNode? source]) {
-    final receiver = _owner(ctx, false);
-    // A method member read is a tear-off bound to the super receiver.
-    final memberDecl =
-        ctx.instanceDeclarationsMap[receiver.type.file]?[receiver
-            .type
-            .name]?[name];
-    if (memberDecl is MethodDeclaration &&
-        !memberDecl.isGetter &&
-        !memberDecl.isSetter) {
-      return Variable(
-        CoreTypes.function.ref(ctx),
-        methodOffset: DeferredOrOffset(
-          file: receiver.type.file,
-          className: receiver.type.name,
-          name: name,
-          targetName: receiver.ssa.name,
-        ),
-        callingConvention: CallingConvention.static,
-      ).tearOff(ctx);
-    }
-    if (ctx
-            .topLevelDeclarationsMap[receiver.type.file]?[receiver.type.name]
-            ?.isBridge ??
-        false) {
-      return receiver.getProperty(ctx, name, source: source);
-    }
-    return Variable.ssa(
-      ctx,
-      Call(
-        DeferredOrOffset(
-          file: receiver.type.file,
-          className: receiver.type.name,
-          name: name,
-          methodType: 0,
-        ),
-        [receiver.ssa],
-        result: ctx.svar(name),
-      ),
-      resolveType(ctx, source: source),
-      rep: ValueRep.boxed,
-    );
-  }
+  Denotation denotation(
+    CompilerContext ctx, {
+    bool forSet = false,
+    AstNode? source,
+  }) => InstanceMemberDenotation(SuperReceiver(object!), name);
 
-  @override
-  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
-    final receiver = _owner(ctx, true);
-    if (ctx
-            .topLevelDeclarationsMap[receiver.type.file]?[receiver.type.name]
-            ?.isBridge ??
-        false) {
-      return IdentifierReference(receiver, name).setValue(ctx, value, source);
-    }
-    final type = resolveType(ctx, forSet: true, source: source);
-    final boxed = convertForAssignment(
-      ctx,
-      value,
-      type,
-      representation: MachineRepresentation.object,
-      source: source,
-      description: 'Cannot assign ${value.type} to super.$name of type $type',
-    );
-    ctx.pushOp(
-      Call(
-        DeferredOrOffset(
-          file: receiver.type.file,
-          className: receiver.type.name,
-          name: name,
-          methodType: 1,
-        ),
-        [receiver.ssa, boxed.ssa],
-        result: ctx.svar('super_set'),
-      ),
-    );
-    return boxed;
-  }
 
   @override
   StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) =>
@@ -211,8 +111,57 @@ class IdentifierReference implements Reference {
           );
   }
 
+  /// The denotation this reference resolves to — computed per call since
+  /// resolution depends on the scope at the use site (the plan's
+  /// `late final` is approximated: References are per-site and denotation
+  /// resolution is cheap).
+  Denotation denotation(
+    CompilerContext ctx, {
+    bool forSet = false,
+    AstNode? source,
+  }) {
+    final object = this.object;
+    if (object != null) {
+      return resolveMemberAccess(
+        ctx,
+        receiverOf(ctx, object),
+        name,
+        forSet: forSet,
+        source: source,
+      );
+    }
+    return resolveIdentifier(ctx, name, forSet: forSet, source: source);
+  }
+
   @override
   TypeRef resolveType(
+    CompilerContext ctx, {
+    bool forSet = false,
+    AstNode? source,
+  }) {
+    final d = denotation(ctx, forSet: forSet, source: source);
+    final now = forSet
+        ? d.writeType(ctx, source: source)
+        : d.readType(ctx, source: source);
+    assert(() {
+      final legacy = _legacyResolveType(ctx, forSet: forSet, source: source);
+      if (legacy != now) {
+        // Shadow report (Phase D.4): the unified cascade picks a different
+        // type than the legacy resolveType. Expected where the cascades
+        // disagreed; each instance is reviewed under the incidental-fix
+        // policy.
+        // ignore: avoid_print
+        print(
+          'DENOTATION-DIVERGE resolveType $name forSet=$forSet: '
+          'now=$now legacy=$legacy',
+        );
+      }
+      return true;
+    }());
+    return now;
+  }
+
+  TypeRef _legacyResolveType(
     CompilerContext ctx, {
     bool forSet = false,
     AstNode? source,
@@ -464,1060 +413,40 @@ class IdentifierReference implements Reference {
   }
 
   @override
-  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
-    if (object != null) {
-      // If the object is a class name, access static fields
-      if (object!.type.isSpec(CoreTypes.type)) {
-        final classType = object!.concreteTypes[0];
-        // A static setter (`C.x*s`) takes precedence over a static field
-        // global of the same base name.
-        final setter = ctx
-            .topLevelDeclarationsMap[classType
-                .file]?['${classType.name}.${MemberName.setter(name).key}']
-            ?.declaration;
-        if (setter is MethodDeclaration && setter.isSetter) {
-          return _invokeSetter(
-            ctx,
-            DeferredOrOffset(
-              file: classType.file,
-              name: '${classType.name}.${MemberName.setter(name).key}',
-            ),
-            value,
-            classType.file,
-            setter.parameters,
-            isMethod: true,
-            source: source,
-          );
-        }
-        final fqName = '${classType.name}.$name';
-        return storeGlobalBinding(ctx, classType.file, fqName, value, source);
-      }
-      object = object!.boxIfNeeded(ctx, source);
-      // Explicit application `E(x).s = v` pins member resolution to E.
-      if (object!.boundExtension case final bound?) {
-        final member = extensionMember(bound.ext, name, setter: true);
-        if (member == null) {
-          throw CompileError(
-            'Extension ${bound.ext.name} has no setter $name',
-            source,
-          );
-        }
-        final paramType =
-            member.parameters?.parameters.firstOrNull?.type == null
-            ? null
-            : formalParameterAnnotationType(
-                ctx,
-                bound.ext.library,
-                member.parameters!.parameters.first,
-                typeParameters: extBindingsMap(bound.ext, bound.onBindings),
-              );
-        final arg = paramType == null
-            ? value.boxIfNeeded(ctx)
-            : convertForAssignment(
-                ctx,
-                value,
-                paramType,
-                representation: MachineRepresentation.object,
-                source: source,
-              );
-        ctx.pushOp(
-          Call(
-            DeferredOrOffset(
-              file: bound.ext.library,
-              name: bound.ext.memberKey(member),
-            ),
-            [object!.ssa, arg.ssa],
-            result: ctx.svar('setter_result'),
-            typeArguments:
-                extensionCallTypeArguments(
-                  ctx,
-                  bound.ext,
-                  member,
-                  bound.onBindings,
-                  const {},
-                ) ??
-                const [],
-          ),
-        );
-        return arg;
-      }
-      final declaredFieldType = TypeRef.lookupFieldType(
-        ctx,
-        object!.type,
-        name,
-        forSet: true,
-        source: source,
-      );
-      if (declaredFieldType == null &&
-          !_hasInstanceMember(ctx, object!.type, name, forSet: true)) {
-        // No instance member by this name: an extension setter may apply
-        // (`e.name = v` where `set name` lives in `extension on T`).
-        final extSetter = resolveExtensionMember(
-          ctx,
-          object!.type,
-          name,
-          setter: true,
-        );
-        if (extSetter != null) {
-          final (ext, member, bindings) = extSetter;
-          final paramType =
-              member.parameters?.parameters.firstOrNull?.type == null
-              ? null
-              : formalParameterAnnotationType(
-                  ctx,
-                  ext.library,
-                  member.parameters!.parameters.first,
-                  typeParameters: extBindingsMap(ext, bindings),
-                );
-          final arg = paramType == null
-              ? value.boxIfNeeded(ctx)
-              : convertForAssignment(
-                  ctx,
-                  value,
-                  paramType,
-                  representation: MachineRepresentation.object,
-                  source: source,
-                  description:
-                      'Cannot assign ${value.type} to setter '
-                      '${ext.name}.$name on ${object!.type}',
-                );
-          ctx.pushOp(
-            Call(
-              DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
-              [object!.boxIfNeeded(ctx).ssa, arg.ssa],
-              result: ctx.svar('setter_result'),
-              typeArguments:
-                  extensionCallTypeArguments(
-                    ctx,
-                    ext,
-                    member,
-                    bindings,
-                    const {},
-                  ) ??
-                  const [],
-            ),
-          );
-          // The assignment's value is the value as converted for the
-          // setter's parameter — e.g. an implicit `.call` tear-off.
-          return arg;
-        }
-      }
-      final fieldType = declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
-      final val = convertForAssignment(
-        ctx,
-        value,
-        fieldType,
-        representation: MachineRepresentation.object,
-        source: source,
-        description:
-            'Cannot assign value of type ${value.type} to field "$name" '
-            'of type $fieldType',
-      );
-      final exact = object!.exactType;
-      if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
-        // Storage for an inherited field lives on its declaring class's
-        // link, reached from the receiver by LoadSuper hops.
-        final links = [exact, ...ctx.typeSystem.superclassChain(exact)];
-        var depth = -1;
-        int? fieldIndex;
-        for (var i = 0; i < links.length; i++) {
-          final link = links[i];
-          final key = name.startsWith('_')
-              ? '${ctx.libraryUri(link.file)}::$name'
-              : name;
-          final hasSetter =
-              (ctx.instanceDeclarationPositions[link.file]?[link.name]?[1]
-                          as Map?)
-                      ?.containsKey(key) ==
-                  true &&
-              concreteMemberDecl(ctx, link, name, kind: 1) != null;
-          final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
-          if (hasSetter && index != null) {
-            fieldIndex = index;
-            depth = i;
-            break;
-          }
-          if (hasSetter) {
-            depth = i;
-            break;
-          }
-        }
-        if (depth >= 0) {
-          final link = links[depth];
-          final decl = resolveInstanceDeclaration(
-            ctx,
-            link.file,
-            link.name,
-            name,
-            instantiated: link,
-          )?.$2.declaration;
-          // Field storage is link-relative so it always needs the declaring
-          // link; a real setter needs it only when its body uses `super`.
-          final fieldDecl = decl is VariableDeclaration
-              ? decl.parent?.parent
-              : null;
-          final needsLink =
-              fieldIndex != null ||
-              memberNeedsOwnerLink(ctx, link, name, kind: 1);
-          var linkSsa = object!.ssa;
-          if (needsLink) {
-            for (var i = 0; i < depth; i++) {
-              final parent = links[i + 1];
-              linkSsa = Variable.ssa(
-                ctx,
-                LoadSuper(ctx.svar('super'), linkSsa),
-                parent,
-                concreteTypes: [parent],
-              ).ssa;
-            }
-          }
-          if (fieldIndex != null) {
-            final isLateFinal =
-                fieldDecl is FieldDeclaration &&
-                fieldDecl.fields.isLate &&
-                fieldDecl.fields.variables.any(
-                  (v) => v.name.lexeme == name && (v.isFinal || v.isConst),
-                );
-            ctx.pushOp(
-              SetPropertyStatic(
-                linkSsa,
-                fieldIndex,
-                val.ssa,
-                isLateFinal: isLateFinal,
-              ),
-            );
-            return val;
-          }
-          final key = name.startsWith('_')
-              ? '${ctx.libraryUri(link.file)}::$name'
-              : name;
-          ctx.pushOp(
-            Call(
-              DeferredOrOffset(
-                file: link.file,
-                className: link.name,
-                methodType: 1,
-                name: key,
-              ),
-              [linkSsa, val.ssa],
-              result: ctx.svar(name),
-              typeEnvironmentReceiver: object!.ssa,
-            ),
-          );
-          return val;
-        }
-      }
-      if (exact == null &&
-          object!.concreteTypes.length == 1 &&
-          !hasBridgeSuperclass(ctx, object!.concreteTypes.first)) {
-        // The receiver may hold a subclass: a setter can be called directly
-        // on the dispatch root only when it isn't overridden and its body
-        // never touches `super` (so any link works as `this`).
-        final owner = directMemberOwner(
-          ctx,
-          object!.concreteTypes.first,
-          name,
-          kind: 1,
-        );
-        if (owner != null && !memberNeedsOwnerLink(ctx, owner, name, kind: 1)) {
-          final key = name.startsWith('_')
-              ? '${ctx.libraryUri(owner.file)}::$name'
-              : name;
-          ctx.pushOp(
-            Call(
-              DeferredOrOffset(
-                file: owner.file,
-                className: owner.name,
-                methodType: 1,
-                name: key,
-              ),
-              [object!.ssa, val.ssa],
-              result: ctx.svar(name),
-              typeEnvironmentReceiver: object!.ssa,
-            ),
-          );
-          return val;
-        }
-      }
-      final op = SetPropertyDynamic(
-        object!.ssa,
-        name,
-        val.ssa,
-        callerLibrary: ctx.library,
-      );
-      ctx.pushOp(op);
-      return val;
-    }
-
-    var local = ctx.lookupLocal(name);
-
-    if (local != null) {
-      if (local.isFinal && local.concreteTypes.isNotEmpty) {
-        throw CompileError(
-          'Cannot modify value of final variable $name',
-          source,
-        );
-      }
-
-      value = convertForAssignment(
-        ctx,
-        value,
-        local.declaredType,
-        representation: local.representation,
-        source: source,
-        description:
-            'Cannot assign value of type ${value.type} to variable "$name" '
-            'of type ${local.declaredType}',
-      );
-
-      final stored = local.representation == MachineRepresentation.object
-          ? value.boxIfNeeded(ctx)
-          : value.unboxIfNeeded(ctx, false);
-      final storage = local.binding?.storage;
-      // A binding whose cell is preserved in an exception slot still
-      // receives writes through the cell — only the cell itself is
-      // restore-loaded by the trampoline.
-      if (storage is ExceptionSlotStorage && storage.cell != null) {
-        ctx.pushOp(
-          WriteCaptureCell(storage.cell!, stored.ssa, local.representation),
-        );
-        local.binding?.rebind(local.widened());
-        return stored;
-      }
-      if (storage is ExceptionSlotStorage) {
-        ctx.pushOp(StoreExceptionSlot(storage.slot, stored.ssa));
-        // Slot reads after a handler edge can observe a value written before
-        // the exception — allocation proofs can't be trusted across it.
-        local.binding?.rebind(local.widened());
-        return stored;
-      }
-      final cell = local.binding?.captureCell;
-      if (cell != null) {
-        ctx.pushOp(
-          WriteCaptureCell(cell, stored.ssa, local.representation),
-        );
-        // The cell can also be written by a closure invocation — allocation
-        // proofs can't be trusted across it.
-        local.binding?.rebind(local.widened());
-        return stored;
-      }
-      ctx.pushOp(Assign(local.ssa, stored.ssa));
-      // Assignment keeps the promoted type only when the stored value
-      // still conforms to it; otherwise the variable is demoted to its
-      // declared type (a `dynamic` local stays dynamic).
-      final storedType = stored.type;
-      final localType = local.declaredType.isSpec(CoreTypes.dynamic)
-          ? local.declaredType
-          : storedType.isAssignableTo(ctx, local.type)
-          ? local.type
-          : local.declaredType;
-      local
-              .copyWithUpdate(
-                ctx,
-                type: localType,
-                concreteTypes: stored.concreteTypes,
-              )
-              .exactType =
-          stored.exactType;
-      return stored;
-    }
-
-    // Inside an anonymous-method body, unqualified assignments target
-    // the anonymous receiver — the enclosing class scope does not apply.
-    final anonymousReceiver = ctx.anonymousThisReceiver;
-    final receiverVar = anonymousReceiver == null
-        ? null
-        : ctx.lookupLocal('#this') ?? anonymousReceiver;
-    if (receiverVar != null &&
-        _hasReceiverMember(ctx, receiverVar, name, forSet: true)) {
-      return IdentifierReference(
-        receiverVar,
-        name,
-      ).setValue(ctx, value, source);
-    }
-
-    // Inside an extension body, unqualified assignments first target the
-    // extension's own setters. In either an extension body or an instance
-    // method, remaining names resolve through the implicit receiver —
-    // instance members and other applicable extensions (`this.name = v`).
-    final currentExtension = ctx.currentExtension;
-    if (anonymousReceiver == null &&
-        (currentExtension is ExtensionDeclaration ||
-            ctx.currentClass != null)) {
-      final $this = ctx.lookupLocal('#this');
-      if (currentExtension is ExtensionDeclaration) {
-        final ext = ctx.extensions.firstWhereOrNull(
-          (e) => e.declaration == currentExtension,
-        );
-        if (ext != null) {
-          for (final member in ext.members) {
-            if (member is FieldDeclaration) {
-              if (member.isStatic &&
-                  member.fields.variables.any((v) => v.name.lexeme == name)) {
-                return storeGlobalBinding(
-                  ctx,
-                  ext.library,
-                  '${ext.name}.$name',
-                  value,
-                  source,
-                );
-              }
-              continue;
-            }
-            if (member is! MethodDeclaration || member.name.lexeme != name) {
-              continue;
-            }
-            if (member.isSetter) {
-              // Box into fresh slots: `value` flows on as the assignment
-              // result and must keep its unboxed representation.
-              final boxedValue = value.boxIntoFreshSlot(ctx);
-              // Static members take no receiver argument.
-              final args = member.isStatic || $this == null
-                  ? [boxedValue.ssa]
-                  : [$this.boxIfNeeded(ctx).ssa, boxedValue.ssa];
-              ctx.pushOp(
-                Call(
-                  DeferredOrOffset(
-                    file: ext.library,
-                    name: ext.memberKey(member),
-                  ),
-                  args,
-                  result: ctx.svar('setter_result'),
-                ),
-              );
-              return value;
-            }
-            // A same-named non-setter member shadows the `on` type's members.
-            break;
-          }
-        }
-      }
-    }
-
-    // Instance — declared on the enclosing class only, as for getValue.
-    if (anonymousReceiver == null && ctx.currentClass != null) {
-      final instanceDeclaration = resolveInstanceDeclaration(
-        ctx,
-        ctx.enclosingLibrary ?? ctx.library,
-        ctx.currentClassName!,
-        name,
-      );
-      if (instanceDeclaration != null &&
-          instanceDeclaration.$1.name == ctx.currentClassName &&
-          instanceDeclaration.$1.file ==
-              (ctx.enclosingLibrary ?? ctx.library)) {
-        final fieldType = _resolveInstanceFieldType(
-          ctx,
-          name,
-          forSet: true,
-          source: source,
-        )!;
-        final $this = ctx.lookupLocal('#this')!;
-        final stored = convertForAssignment(
-          ctx,
-          value,
-          fieldType,
-          representation: MachineRepresentation.object,
-          source: source,
-          description:
-              'Cannot assign value of type ${value.type} to field "$name" '
-              'of type $fieldType',
-        );
-        final op = SetPropertyDynamic(
-          $this.ssa,
-          name,
-          stored.ssa,
-          callerLibrary: ctx.library,
-        );
-        ctx.pushOp(op);
-        return stored;
-      }
-    }
-
-    if (ctx.currentClass != null) {
-      final staticDeclaration = resolveScopedStaticDeclaration(
-        ctx,
-        name,
-        forSet: true,
-      );
-      final declaration = staticDeclaration?.$1.declaration;
-      if (declaration is VariableDeclaration) {
-        return storeGlobalBinding(
-          ctx,
-          staticDeclaration!.$2,
-          '${staticDeclaration.$3}.${declaration.name.lexeme}',
-          value,
-          source,
-        );
-      }
-      if (declaration is MethodDeclaration && declaration.isSetter) {
-        return _invokeSetter(
-          ctx,
-          DeferredOrOffset.lookupStatic(
-            ctx,
-            staticDeclaration!.$2,
-            staticDeclaration.$3,
-            MemberName.setter(name).key,
-          ),
-          value,
-          staticDeclaration.$2,
-          declaration.parameters,
-          isMethod: true,
-          source: source,
-        );
-      }
-    }
-
-    // Otherwise a global or import — or, in an extension body/instance
-    // method, an extension member applied through the implicit `this`
-    // (`this.name = v`), which only applies after globals miss.
-    DeclarationOrBridge? declarationValue;
-    try {
-      declarationValue = _lookupVisibleValue(ctx, name, source, forSet: true);
-    } on CompileError {
-      if (anonymousReceiver == null &&
-          (currentExtension is ExtensionDeclaration ||
-              ctx.currentClass != null)) {
-        final $this = ctx.lookupLocal('#this');
-        if ($this != null &&
-            _hasReceiverMember(ctx, $this, name, forSet: true)) {
-          return IdentifierReference($this, name).setValue(ctx, value, source);
-        }
-      }
-      rethrow;
-    }
-    final decl = declarationValue.declaration!;
-
-    if (decl is VariableDeclaration) {
-      return storeGlobalBinding(
-        ctx,
-        declarationValue.sourceLib,
-        decl.name.lexeme,
-        value,
-        source,
-      );
-    }
-
-    if (decl is FunctionDeclaration && decl.isSetter) {
-      return _invokeSetter(
-        ctx,
-        DeferredOrOffset(
-          file: declarationValue.sourceLib,
-          name: MemberName.setter(decl.name.lexeme).key,
-        ),
-        value,
-        declarationValue.sourceLib,
-        decl.functionExpression.parameters,
-        isMethod: false,
-        source: source,
-      );
-    }
-
-    throw CompileError(
-      'Cannot find value to set: ${object != null ? '${object!}.' : ''}$name',
-      source,
-    );
-  }
-
-  String get _refName {
-    final split = name.split('.');
-    if (split.length > 2) {
-      return split.sublist(1).join('.');
-    }
-    return name;
-  }
+  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) =>
+      denotation(ctx, forSet: true, source: source)
+          .write(ctx, value, source: source);
 
   @override
-  Variable getValue(CompilerContext ctx, [AstNode? source]) {
-    if (object != null) {
-      if (object!.type.isSpec(CoreTypes.type) &&
-          object!.concreteTypes.isNotEmpty) {
-        final ext = extensionForType(ctx, object!.concreteTypes[0]);
-        if (ext != null) {
-          // `E.member` through the extension namespace: the function (or
-          // getter) is a static callable registered under its member key.
-          final member = ext.members
-              .whereType<MethodDeclaration>()
-              .firstWhereOrNull((m) => m.name.lexeme == name);
-          if (member == null) {
-            throw CompileError(
-              'Extension member not found: ${ext.name}.$name',
-              source,
-            );
-          }
-          if (member.isGetter || member.isSetter) {
-            // `E.m` where m is a static accessor: evaluating the expression
-            // invokes it (accessors can't be torn off).
-            if (member.isSetter) {
-              throw CompileError(
-                'Cannot read extension setter ${ext.name}.$name',
-                source,
-              );
-            }
-            final s = ctx.svar('getter_result');
-            ctx.pushOp(
-              Call(
-                DeferredOrOffset(
-                  file: ext.library,
-                  name: ext.memberKey(member),
-                ),
-                const [],
-                result: s,
-              ),
-            );
-            final returnType =
-                AlwaysReturnType.fromAnnotation(
-                  ctx,
-                  ext.library,
-                  member.returnType,
-                  CoreTypes.dynamic.ref(ctx),
-                ).type ??
-                CoreTypes.dynamic.ref(ctx);
-            return Variable.of(ctx, s, returnType, rep: ValueRep.boxed);
-          }
-          return Variable(
-            CoreTypes.function.ref(ctx),
-            methodOffset: DeferredOrOffset(
-              file: ext.library,
-              name: ext.memberKey(member),
-            ),
-            callingConvention: CallingConvention.static,
-          );
-        }
-        final classType = object!.concreteTypes[0];
-        if (classType.isTypeParameter) {
-          // `T.member` is an instance access on T's runtime `Type` object,
-          // not a static access — dispatch dynamically.
-          object = object!.boxIfNeeded(ctx, source);
-          return object!.getProperty(ctx, name);
-        }
-        final superclass = ctx.typeSystem.superclassOf(classType);
-        if (superclass != null && superclass.isSpec(CoreTypes.enumType)) {
-          final type = classType;
-          final gIndex =
-              ctx.enumValueIndices[classType.file]?[type.name]?[name];
-          if (gIndex != null) {
-            return Variable.ssa(ctx, LoadGlobal(ctx.svar(name), gIndex), type);
-          }
-        }
-        final decOrBridge =
-            ctx.topLevelDeclarationsMap[classType.file]![classType.name]!;
-        if (decOrBridge.isBridge) {
-          final br = decOrBridge.bridge;
-          if (br is BridgeClassDef) {
-            final getter = br.getters[name];
-            final field = br.fields[name];
-            if (getter != null || field != null) {
-              final type = getter != null
-                  ? TypeRef.fromBridgeAnnotation(
-                      ctx,
-                      getter.functionDescriptor.returns,
-                    )
-                  : TypeRef.fromBridgeAnnotation(ctx, field!.type);
-              return Variable.ssa(
-                ctx,
-                InvokeExternal(
-                  ctx.svar(name),
-                  ctx.bridgeStaticFunctionIndices[classType
-                      .file]!['${classType.name}.${MemberName.getter(name).key}']!,
-                  [],
-                ),
-                type,
-                rep: ValueRep.boxed,
-              );
-            }
-
-            throw CompileError(
-              'Cannot find external getter or field: $name on $classType',
-              source,
-            );
-          }
-        }
-        final fqName = '${classType.name}.${ctorNameOf(name)}';
-        // Static accessors register under `*g`/`*s` keys — a getter
-        // reference invokes it.
-        final getterMember =
-            ctx.topLevelDeclarationsMap[classType.file]?[MemberName.getter(fqName).key];
-        final member =
-            getterMember ??
-            ctx.topLevelDeclarationsMap[classType.file]![fqName];
-        final memberDecl = member?.declaration;
-        if (member != null &&
-            !member.isBridge &&
-            memberDecl is! VariableDeclaration) {
-          if (memberDecl is ConstructorDeclaration) {
-            throw CompileError(
-              'Constructor tear-off "$fqName" is not supported',
-              source,
-            );
-          }
-          final memberOffset = DeferredOrOffset(
-            file: classType.file,
-            name: memberDecl is MethodDeclaration && memberDecl.isGetter
-                ? MemberName.getter(fqName).key
-                : fqName,
-          );
-          final fn = Variable(
-            CoreTypes.function.ref(ctx),
-            methodOffset: memberOffset,
-            callingConvention: CallingConvention.static,
-          );
-          if (memberDecl is MethodDeclaration && memberDecl.isGetter) {
-            return fn.invoke(ctx, null, []).result;
-          }
-          // Static method tear-off.
-          return fn;
-        }
-        return _loadGlobalVariable(ctx, classType.file, fqName, name);
-      }
-      object = object!.boxIfNeeded(ctx, source);
-      return object!.getProperty(ctx, name);
-    }
-
-    // First look at locals
-    final local = ctx.lookupBinding(name);
-    if (local != null) {
-      return local.read(ctx);
-    }
-
-    // Inside an extension body, the extension's own members shadow both
-    // outer scopes and the receiver's members.
-    final currentExtension = ctx.currentExtension;
-    if (currentExtension is ExtensionDeclaration) {
-      final ext = ctx.extensions.firstWhereOrNull(
-        (e) => e.declaration == currentExtension,
-      );
-      final $this = ctx.lookupLocal('#this');
-      if (ext != null) {
-        for (final member in ext.members) {
-          if (member is FieldDeclaration) {
-            if (member.isStatic &&
-                member.fields.variables.any((v) => v.name.lexeme == name)) {
-              return _loadGlobalVariable(ctx, ext.library, '${ext.name}.$name');
-            }
-            continue;
-          }
-          if (member is! MethodDeclaration || member.name.lexeme != name) {
-            continue;
-          }
-          if (member.isStatic) {
-            // Static members resolve through the extension's namespace —
-            // no receiver.
-            final offset = DeferredOrOffset(
-              file: ext.library,
-              name: ext.memberKey(member),
-            );
-            if (member.isGetter) {
-              final resvar = ctx.svar('call_result');
-              ctx.pushOp(Call(offset, const [], result: resvar));
-              return Variable.of(
-                ctx,
-                resvar,
-                (AlwaysReturnType.fromAnnotation(
-                      ctx,
-                      ext.library,
-                      member.returnType,
-                      CoreTypes.dynamic.ref(ctx),
-                    ).type ??
-                    CoreTypes.dynamic.ref(ctx)),
-                rep: ValueRep.boxed,
-              );
-            }
-            if (member.isSetter) break;
-            return Variable(
-              CoreTypes.function.ref(ctx),
-              methodOffset: offset,
-              callingConvention: CallingConvention.static,
-            );
-          }
-          if ($this == null) break;
-          if (member.isGetter) {
-            return invokeExtensionGetter(
-              ctx,
-              $this,
-              ext,
-              member,
-              matchExtensionOn(ctx, $this.type, ext) ?? const [],
-            );
-          }
-          if (member.isSetter) break;
-          return Variable(
-            CoreTypes.function.ref(ctx),
-            methodOffset: DeferredOrOffset(
-              file: ext.library,
-              name: ext.memberKey(member),
-            ),
-            methodReturnType: AlwaysReturnType.fromAnnotation(
-              ctx,
-              ext.library,
-              member.returnType,
-              CoreTypes.dynamic.ref(ctx),
-            ),
-            callingConvention: CallingConvention.static,
-          )..implicitReceiver = $this;
-        }
-      }
-    }
-
-    // Inside an anonymous-method body, unqualified names resolve against
-    // the anonymous receiver — the enclosing class scope does not apply.
-    final anonymousReceiver = ctx.anonymousThisReceiver;
-    final receiverVar = anonymousReceiver == null
-        ? null
-        : ctx.lookupLocal('#this') ?? anonymousReceiver;
-    if (receiverVar != null && _hasReceiverMember(ctx, receiverVar, name)) {
-      return IdentifierReference(receiverVar, name).getValue(ctx, source);
-    }
-
-    // Next, the instance (if available). Unqualified names only reach
-    // members the enclosing class itself declares; inherited members lose
-    // to globals and resolve through `this` after globals miss.
-    if (anonymousReceiver == null && ctx.currentClass != null) {
-      final instanceDeclaration = resolveInstanceDeclaration(
-        ctx,
-        ctx.enclosingLibrary ?? ctx.library,
-        ctx.currentClassName!,
-        name,
-      );
-      if (instanceDeclaration != null &&
-          instanceDeclaration.$1.name == ctx.currentClassName &&
-          instanceDeclaration.$1.file ==
-              (ctx.enclosingLibrary ?? ctx.library)) {
-        final $type = instanceDeclaration.$1;
-        final decOrBridge = instanceDeclaration.$2;
-
-        final $this =
-            ctx.lookupLocal('#this') ??
-            (throw CompileError(
-              'Cannot access instance member $name in a static context',
-            ));
-
-        if (!decOrBridge.isBridge) {
-          final declaration = decOrBridge.declaration;
-          if (declaration is MethodDeclaration &&
-              !declaration.isGetter &&
-              !declaration.isSetter) {
-            return Variable(
-              CoreTypes.function.ref(ctx),
-              methodOffset: DeferredOrOffset(
-                file: ctx.library,
-                className: ctx.currentClassName!,
-                name: _refName,
-                targetName: $this.name,
-              ),
-              callingConvention: CallingConvention.static,
-            );
-          }
-        }
-
-        final resvar = ctx.svar(name);
-        ctx.pushOp(
-          LoadPropertyDynamic(
-            resvar,
-            $this.ssa,
-            name,
-            callerLibrary: ctx.library,
-          ),
-        );
-
-        if (decOrBridge.isBridge) {
-          if (decOrBridge is GetSet) {
-            final getter =
-                decOrBridge.bridge ??
-                (throw CompileError(
-                  'Property "$name" has a setter but no getter, so it cannot be accessed',
-                  source,
-                ));
-            return Variable.of(
-              ctx,
-              resvar,
-              TypeRef.fromBridgeAnnotation(
-                ctx,
-                getter.functionDescriptor.returns,
-                specifiedType: $type,
-                specifyingType: $this.type,
-              ),
-              rep: ValueRep.boxed,
-              methodOffset: DeferredOrOffset(
-                file: ctx.library,
-                className: ctx.currentClassName!,
-                name: _refName,
-              ),
-            );
-          }
-          final bridge = decOrBridge.bridge!;
-          if (bridge is BridgeMethodDef) {
-            return Variable(
-              CoreTypes.function.ref(ctx),
-              methodOffset: DeferredOrOffset(
-                file: ctx.library,
-                className: ctx.currentClassName!,
-                name: name,
-              ),
-            );
-          }
-          if (bridge is BridgeFieldDef) {
-            return Variable.of(
-              ctx,
-              resvar,
-              TypeRef.fromBridgeAnnotation(
-                ctx,
-                bridge.type,
-                specifiedType: $type,
-                specifyingType: $this.type,
-              ),
-              rep: ValueRep.boxed,
-              methodOffset: DeferredOrOffset(
-                file: ctx.library,
-                className: ctx.currentClassName!,
-                name: _refName,
-              ),
-            );
-          }
-          throw CompileError(
-            'Ref: cannot resolve bridge declaration "$name" of type ${decOrBridge.runtimeType}',
-            source,
-          );
-        }
-
-        return Variable.of(
-          ctx,
-          resvar,
-          TypeRef.lookupFieldType(ctx, $type, name, source: source) ??
-              CoreTypes.dynamic.ref(ctx),
-          rep: ValueRep.boxed,
-        );
-      }
-
-      // A bare identifier inside an enum member can name one of the enum's
-      // own values (`static _E get getter => e1`) — they live in
-      // enumValueIndices rather than the declaration maps.
-      final currentDecl = ctx.memberDeclaringClass ?? ctx.currentClass;
-      if (currentDecl is EnumDeclaration) {
-        final enumType = TypeRef.lookupDeclaration(
-          ctx,
-          ctx.library,
-          currentDecl,
-        );
-        final gIndex = ctx.enumValueIndices[ctx.library]?[enumType.name]?[name];
-        if (gIndex != null) {
-          return Variable.ssa(
-            ctx,
-            LoadGlobal(ctx.svar(name), gIndex),
-            enumType,
-            rep: ValueRep.boxed,
-          );
-        }
-      }
-
-      final staticDeclaration = resolveScopedStaticDeclaration(ctx, name);
-
-      if (staticDeclaration != null &&
-          staticDeclaration.$1.declaration != null) {
-        final (staticDecl, scopeFile, scopeName) = staticDeclaration;
-        final staticDec = staticDecl.declaration!;
-        if (staticDec is MethodDeclaration) {
-          // Static accessors live under `*g`/`*s` keys; a getter reference
-          // invokes it (the member's value, not its tear-off).
-          if (staticDec.isGetter) {
-            final fn = Variable(
-              CoreTypes.function.ref(ctx),
-              methodOffset: DeferredOrOffset.lookupStatic(
-                ctx,
-                scopeFile,
-                scopeName,
-                MemberName.getter(name).key,
-              ),
-            );
-            return fn.invoke(ctx, null, []).result;
-          }
-          return Variable(
-            CoreTypes.function.ref(ctx),
-            methodOffset: DeferredOrOffset.lookupStatic(
-              ctx,
-              scopeFile,
-              scopeName,
-              _refName,
-            ),
-          );
-        } else if (staticDec is VariableDeclaration) {
-          final name = '$scopeName.${staticDec.name.lexeme}';
-          return _loadGlobalVariable(
-            ctx,
-            scopeFile,
-            name,
-            staticDec.name.lexeme,
-          );
-        }
-      }
-    }
-
-    // A type parameter in scope evaluates to its bound `Type` object.
-    // (`_` is a wildcard type parameter: non-binding.)
-    final typeParameter = ctx.typeScopes[ctx.library]?[name];
-    if (typeParameter != null && name != '_') {
-      return Variable.ssa(
-        ctx,
-        LoadTypeParameter(
-          ctx.svar('type'),
-          ctx.runtimeTypes.idOf(typeParameter),
-        ),
-        CoreTypes.type.ref(ctx),
-        concreteTypes: [typeParameter],
-      );
-    }
-
-    final declaration =
-        ctx.visibleDeclarations[ctx.library]![name] ??
-        ctx.visibleDeclarations[ctx.library]![MemberName.getter(name).key] ??
-        ctx.visibleDeclarations[ctx.library]![name.split('.')[0]];
-
-    // A bare identifier inside an extension body or instance method can
-    // denote a member of the receiver — lowest precedence, after globals.
-    // `this.m` lookup also applies extension members of the receiver type.
-    if (declaration == null &&
-        (currentExtension != null || ctx.currentClass != null)) {
-      final $this = ctx.lookupLocal('#this');
-      if ($this != null) {
-        try {
-          return $this.getProperty(ctx, name);
-        } on CompileError {
-          // Not a member of the receiver type either.
-        }
-      }
-    }
-
-    final activeDeclaration =
-        declaration ??
-        (throw CompileError('Could not find declaration "$name"', source));
-
-    // Prefix children are keyed by declaration name ('B'), so a prefixed
-    // member reference 'p.B.ctor' resolves 'B' here; [_declarationToVariable]
-    // handles the member suffix via _refName.
-    final split = name.split('.');
-    final children = activeDeclaration.children;
-    final viaPrefix = activeDeclaration.declaration == null;
-    if (viaPrefix && split.length > 1 && split[1] == 'loadLibrary') {
-      final stub = _deferredLoadLibrary(ctx, split[0]);
-      if (stub != null) return stub;
-    }
-    final activeDec =
-        activeDeclaration.declaration ??
-        (split.length > 1 && children != null
-            ? (children[MemberName.getter(split[1]).key] ?? children[split[1]])
-            : null) ??
-        (throw PrefixError());
-
-    return _declarationToVariable(
-      activeDec,
-      viaPrefix ? split.sublist(1).join('.') : _refName,
-      ctx,
-      source,
-    );
-  }
+  Variable getValue(CompilerContext ctx, [AstNode? source]) =>
+      denotation(ctx, source: source).read(ctx, source: source);
 
   @override
   StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
+    final now = denotation(ctx, source: source).staticDispatch(
+      ctx,
+      source: source,
+    );
+    assert(() {
+      final legacy = _legacyGetStaticDispatch(ctx, source);
+      if (!_staticDispatchEquals(now, legacy)) {
+        // Shadow report (Phase D.4): the denotation cascade's dispatch
+        // disagrees with the legacy lookup.
+        // ignore: avoid_print
+        print(
+          'DENOTATION-DIVERGE getStaticDispatch $name: '
+          'now=$now legacy=$legacy',
+        );
+      }
+      return true;
+    }());
+    return now;
+  }
+
+  StaticDispatch? _legacyGetStaticDispatch(
+    CompilerContext ctx, [
+    AstNode? source,
+  ]) {
     if (object != null) {
       final exact = object!.exactType;
       final actualType =
@@ -1626,98 +555,47 @@ class PrefixedIdentifierReference implements Reference {
 
   const PrefixedIdentifierReference(this.prefix, this.identifier);
 
-  @override
-  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
+  Denotation denotation(
+    CompilerContext ctx, {
+    bool forSet = false,
+    AstNode? source,
+  }) {
     final dec =
         ctx.visibleDeclarations[ctx.library]![prefix] ??
         (throw CompileError('Cannot find prefix $prefix', source));
     if (dec.declaration != null) {
       throw CompileError('Cannot use a declaration as a prefix', source);
     }
-    final children = dec.children!;
-    final child =
-        children[MemberName.getter(identifier).key] ??
-        children[identifier] ??
-        (throw CompileError(
-          "'$identifier' isn't defined for the prefix '$prefix'",
-          source,
-        ));
-    return _declarationToStaticDispatch(child, identifier, ctx, source);
+    return PrefixDenotation(prefix, dec.children!).memberAccess(
+      ctx,
+      identifier,
+      forSet: forSet,
+      source: source,
+    );
   }
 
   @override
-  Variable getValue(CompilerContext ctx, [AstNode? source]) {
-    final dec =
-        ctx.visibleDeclarations[ctx.library]![prefix] ??
-        (throw CompileError('Cannot find prefix $prefix', source));
-    if (dec.declaration != null) {
-      throw CompileError('Cannot use a declaration as a prefix', source);
-    }
-    final children = dec.children!;
-    if (identifier == 'loadLibrary') {
-      final stub = _deferredLoadLibrary(ctx, prefix);
-      if (stub != null) return stub;
-    }
-    final child =
-        children[MemberName.getter(identifier).key] ??
-        children[identifier] ??
-        (throw CompileError(
-          "'$identifier' isn't defined for the prefix '$prefix'",
-          source,
-        ));
-    return _declarationToVariable(child, identifier, ctx, source);
-  }
+  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) =>
+      denotation(ctx, source: source).staticDispatch(ctx, source: source);
+
+  @override
+  Variable getValue(CompilerContext ctx, [AstNode? source]) =>
+      denotation(ctx, source: source).read(ctx, source: source);
 
   @override
   TypeRef resolveType(
     CompilerContext ctx, {
     bool forSet = false,
     AstNode? source,
-  }) {
-    return CoreTypes.type.ref(ctx);
-  }
+  }) => denotation(ctx, forSet: forSet, source: source).readType(
+    ctx,
+    source: source,
+  );
 
   @override
-  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
-    final dec =
-        ctx.visibleDeclarations[ctx.library]![prefix] ??
-        (throw CompileError('Cannot find prefix $prefix', source));
-    if (dec.declaration != null) {
-      throw CompileError('Cannot use a declaration as a prefix', source);
-    }
-    final children = dec.children!;
-    // Accessors register under `*s` — writes look there before the plain
-    // name (top-level variables).
-    final child =
-        children[MemberName.setter(identifier).key] ??
-        children[identifier] ??
-        (throw CompileError(
-          "'$identifier' isn't defined for the prefix '$prefix'",
-          source,
-        ));
-    final decl = child.declaration;
-    if (decl is VariableDeclaration) {
-      return storeGlobalBinding(
-        ctx,
-        child.sourceLib,
-        decl.name.lexeme,
-        value,
-        source,
-      );
-    }
-    if (decl is FunctionDeclaration && decl.isSetter) {
-      return _invokeSetter(
-        ctx,
-        DeferredOrOffset(file: child.sourceLib, name: MemberName.setter(decl.name.lexeme).key),
-        value,
-        child.sourceLib,
-        decl.functionExpression.parameters,
-        isMethod: false,
-        source: source,
-      );
-    }
-    throw CompileError('Cannot find value to set: $prefix.$identifier', source);
-  }
+  Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) =>
+      denotation(ctx, forSet: true, source: source)
+          .write(ctx, value, source: source);
 }
 
 /// A [Reference] with a variable that can be indexed into and a variable index. Accessing its value may use [IndexList]

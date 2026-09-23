@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/dot_shorthand.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -41,7 +40,7 @@ Variable compilePropertyAccess(
 
   // `p.C.member` parses as PropertyAccess over the class identifier — static
   // member access lives in IdentifierReference, same as MethodInvocation.
-  if (L.type.isSpec(CoreTypes.type) && L.concreteTypes.length == 1) {
+  if (receiverOf(ctx, L) is TypeLiteralReceiver) {
     return IdentifierReference(L, pa.propertyName.name).getValue(ctx, pa);
   }
 

@@ -83,8 +83,8 @@ Variable compileMethodInvocation(
 
   // `E(receiver)` — explicit extension application: the callee is the
   // extension's namespace type literal, so pin member resolution to `E`.
-  if (method.type.isSpec(CoreTypes.type) && method.concreteTypes.length == 1) {
-    final ext = extensionForType(ctx, method.concreteTypes[0]);
+  if (receiverOf(ctx, method) case TypeLiteralReceiver(:final type)) {
+    final ext = extensionForType(ctx, type);
     if (ext != null) {
       return _applyExtension(ctx, e, ext);
     }
@@ -714,9 +714,9 @@ Variable _invokeWithTarget(
   // `C.new(...)` invokes the unnamed constructor.
   final staticMemberName = ctorNameOf(e.methodName.name);
 
-  if (L.type.isSpec(CoreTypes.type) && L.concreteTypes.length == 1) {
+  if (receiverOf(ctx, L) case TypeLiteralReceiver(:final type)) {
     // Static method
-    staticType = L.concreteTypes[0];
+    staticType = type;
     if (ctx.topLevelDeclarationsMap[staticType
                 .file]?['${staticType.name}.$staticMemberName'] ==
             null &&

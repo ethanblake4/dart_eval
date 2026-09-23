@@ -27,12 +27,13 @@ Variable compileInstanceCreation(
     e.constructorName.name?.name,
   );
   final $resolved = IdentifierReference(null, typeName).getValue(ctx);
+  final receiver = receiverOf(ctx, $resolved);
 
-  if ($resolved.concreteTypes.isEmpty) {
+  if (receiver is! TypeLiteralReceiver) {
     throw CompileError('Cannot create instance of a non-type $typeName');
   }
 
-  var staticType = $resolved.concreteTypes.first;
+  var staticType = receiver.type;
   var instantiatedType = staticType.copyWith(nullable: type.question != null);
   // A typedef instantiation (`P1()` where `P1 = B2<int>`) constructs the
   // aliased type directly — typedefs register no constructors of their own.
