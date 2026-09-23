@@ -66,6 +66,7 @@ final class BoundArgument {
 final class BoundCall {
   const BoundCall({
     this.receiver,
+    this.callee,
     required this.positional,
     required this.named,
     this.typeArguments = const {},
@@ -81,6 +82,11 @@ final class BoundCall {
   /// The receiver after coercion — compound assignments and indexed
   /// references read the post-coercion values from here.
   final Variable? receiver;
+
+  /// [ClosureCall]: the callee materialized into a fresh slot before the
+  /// arguments compiled — an argument may redefine the slot the callee
+  /// expression read (`f(f = g())` invokes the old `f`).
+  final Variable? callee;
   final List<BoundArgument> positional;
   final List<(String, BoundArgument)> named;
   final Map<String, TypeRef> typeArguments;

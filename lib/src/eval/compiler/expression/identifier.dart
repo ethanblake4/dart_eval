@@ -62,7 +62,12 @@ Reference compilePrefixedIdentifierAsReference(
     final owner = result?.$1;
     final decl = result?.$2;
     if (owner == null || decl == null) return true;
-    final probeKind = decl is GetSet || decl is! MethodDeclaration
+    final inner = decl.declaration;
+    final probeKind = decl is GetSet || inner is! MethodDeclaration
+        ? MemberKind.getter
+        : inner.isSetter
+        ? MemberKind.setter
+        : inner.isGetter
         ? MemberKind.getter
         : MemberKind.method;
     final resolved = ctx.memberLookup.tryInterfaceMember(

@@ -2,10 +2,9 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
-// Characterization tests for the three confirmed argument-binding bugs
-// documented in docs/compiler-model-refactor.md ("Confirmed bugs").
-// They assert TODAY'S outcomes on purpose so phases 0-6 flag any drift;
-// phase 7 flips them to the Dart-correct expectations.
+// Characterization tests for the argument-binding bugs documented in
+// docs/compiler-model-refactor.md ("Confirmed bugs"), asserting the
+// Dart-correct outcomes after the phase-7 semantic changes.
 
 const _library = 'package:binding/main.dart';
 
@@ -17,17 +16,16 @@ Runtime _runtime(String source) {
 }
 
 void main() {
-  test('overridden default comes from the static declaration, not the dispatch', () {
-    // Dart: uses x = 2 (B.m). dart_eval today: uses x = 1 (A.m), because
-    // defaults are bound from the static declaration's formals.
-    // Phase 7 item 1 (VirtualCall calleeBinds) fixes this.
+  test('overridden default comes from the dispatch, not the static declaration', () {
+    // Dart: uses x = 2 (B.m) — virtual calls leave defaults to the runtime
+    // and devirtualized calls bind the implementation's formals.
     expect(
       _runtime(r'''
         class A { int m([int x = 1]) => x; }
         class B extends A { @override int m([int x = 2]) => x; }
         int main() { A a = B(); return a.m(); }
       ''').executeLib(_library, 'main'),
-      1,
+      2,
     );
   });
 
@@ -43,9 +41,8 @@ void main() {
     );
   });
 
-  test('named arguments evaluate in declaration order, not source order', () {
-    // Dart: logs 'pba' (source order). dart_eval today: logs 'pab'
-    // (declaration order). Phase 7 item 2 (NamedOrder.source) fixes this.
+  test('named arguments evaluate in source order', () {
+    // Dart: logs 'pba' — arguments evaluate in source order.
     expect(
       _runtime(r'''
         var log = <String>[];
@@ -56,19 +53,24 @@ void main() {
           return log.join('');
         }
       ''').executeLib(_library, 'main'),
-      'pab',
+      'pba',
     );
   });
 
-  test('named argument before a positional argument is a CompileError today', () {
-    // Dart: valid. dart_eval today: CompileError "Not enough positional
-    // arguments". Phase 7 item 2 (allowNamedBeforePositional) fixes this.
+  test('named argument before a positional argument binds', () {
+    // Dart: `f(b: 'b', 'p', a: 'a')` is valid — named arguments may
+    // precede positional ones and bind by name.
     expect(
-      () => _runtime(r'''
-        void f(String p, {String? a, String? b}) {}
-        void main() { f(b: 'b', 'p', a: 'a'); }
-      '''),
-      throwsA(isA<CompileError>()),
+      _runtime(r'''
+        var log = <String>[];
+        String t(String s) { log.add(s); return s; }
+        void f(String p, {String? a, String? b}) { log.add('$p$a$b'); }
+        String main() {
+          f(b: t('b'), t('p'), a: t('a'));
+          return log.join('');
+        }
+      ''').executeLib(_library, 'main'),
+      'bpapab',
     );
   });
 }

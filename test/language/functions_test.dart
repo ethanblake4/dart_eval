@@ -422,7 +422,7 @@ void main() {
       
             void main(Function callback) {
               TestClass.instance.init(callback);
-              TestClass.instance.runFunction(callback);
+              TestClass.instance.runFunction();
               print(fun == fun);
               print(fun == callback);
             }

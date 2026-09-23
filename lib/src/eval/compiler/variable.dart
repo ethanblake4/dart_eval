@@ -386,6 +386,7 @@ class Variable {
         ctx,
         Assign(ctx.svar('box_copy'), ssa),
         type,
+        rep: ValueRep.boxed,
         callable: callable,
         facts: facts.copyWith(isConst: false, isConstInt: false),
       );

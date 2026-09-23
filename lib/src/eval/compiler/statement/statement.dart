@@ -1,4 +1,5 @@
 import '../helpers/captures.dart';
+import '../model/function_type.dart';
 import '../helpers/return.dart';
 import '../builtins.dart';
 import '../reference.dart';
@@ -87,12 +88,19 @@ StatementInfo compileStatement(
       }
       final captured = capturesFor(decl).captured.contains(decl);
       if (captured) {
+        // The self-referencing binding carries the declared signature so
+        // recursive calls resolve the real return type (`sum(n - 1)` in an
+        // `int sum(int n)` body is `int`, not `dynamic`).
+        final signature = declaredFunctionType(
+          ctx,
+          ctx.library,
+          decl.functionExpression.parameters,
+          decl.returnType,
+          decl.functionExpression.typeParameters,
+        );
         final placeholder = BuiltinValue()
             .push(ctx)
-            .copyWith(
-              type: CoreTypes.function.ref(ctx),
-              declaredType: CoreTypes.function.ref(ctx),
-            );
+            .copyWith(type: signature, declaredType: signature);
         ctx.setLocal(decl.name.lexeme, placeholder).captureBinding(ctx, decl);
       }
       final variable = compileFunctionExpression(decl.functionExpression, ctx);

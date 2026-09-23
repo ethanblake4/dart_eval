@@ -47,10 +47,16 @@ final class StaticCall extends CallTarget {
     this.ownerLink,
     this.typeEnvironmentReceiver,
     this.signature,
+    this.declaringLink,
   });
 
   final DeferredOrOffset offset;
   final Member? member;
+
+  /// For devirtualized methods: the chain link declaring the
+  /// implementation — used to bind the implementation's signature
+  /// (defaults, context types) rather than the interface's.
+  final TypeRef? declaringLink;
 
   /// An instance receiver prepended to the argument vector (super calls
   /// and devirtualized methods).
@@ -126,17 +132,23 @@ final class ClosureCall extends CallTarget {
         ),
       );
     } else {
-      // The callee sits in object position at the call boundary — box
-      // unboxed results into a fresh slot; boxing in place would
-      // double-define the SSA.
-      final callableBoxed = callee!.boxed
-          ? callee!
-          : callee!.boxIntoFreshSlot(ctx);
-      final closure = Variable.ssa(
-        ctx,
-        Assign(ctx.svar('closure_target'), callableBoxed.ssa),
-        callableBoxed.type,
-      );
+      // Prefer the callee snapshotted at bind time — the binder copies it
+      // before the arguments evaluate; the path below remains for bound
+      // calls built outside [ArgumentBinder.bindSuppliedOnly]. The callee
+      // sits in object position at the call boundary: boxing in place
+      // would double-define the SSA, so unboxed values box into a fresh
+      // slot.
+      final closure = call.callee ??
+          () {
+            final boxed = callee!.boxed
+                ? callee!
+                : callee!.boxIntoFreshSlot(ctx);
+            return Variable.ssa(
+              ctx,
+              Assign(ctx.svar('closure_target'), boxed.ssa),
+              boxed.type,
+            );
+          }();
       ctx.pushOp(
         InvokeClosure(
           target,

@@ -37,6 +37,20 @@ final class ArgumentBinder {
     required Variable? callee,
     BindingOptions options = BindingOptions.legacy,
   }) {
+    // The callee is materialized before any argument compiles — an
+    // argument may redefine the SSA slot the callee expression read
+    // (`f(f = g())` invokes the old `f`).
+    Variable? materializedCallee;
+    if (callee != null &&
+        !(target is ClosureCall && target.known != null)) {
+      final boxed = callee.boxed ? callee : callee.boxIntoFreshSlot(ctx);
+      materializedCallee = Variable.ssa(
+        ctx,
+        Assign(ctx.svar('closure_target'), boxed.ssa),
+        boxed.type,
+      );
+    }
+
     Variable snapshot(Variable argument) => argument.boxed
         ? argument
         : Variable.ssa(
@@ -91,6 +105,7 @@ final class ArgumentBinder {
     return BoundCall(
       positional: positionalArgs,
       named: namedArgs,
+      callee: materializedCallee,
       runtimeTypeArguments: runtimeTypeArguments,
       returnType: resultType,
       trusted: _closureArgumentsProven(
@@ -141,6 +156,10 @@ BoundCall bindParameterList(
   // into the argument list starts past it.
   int argIndexOffset = 0,
   BindingOptions options = BindingOptions.legacy,
+  /// When false, unsupplied optional positional and named parameters are
+  /// left for the callee to bind (`calleeBinds`) — used for calls that stay
+  /// virtual, where the dispatch target's own defaults apply at runtime.
+  bool fillOmitted = true,
 }) {
   // A redirecting factory (`factory F(...) = T.g`) exposes the redirect
   // target's signature to callers: argument binding, conversion, and omitted
@@ -268,16 +287,9 @@ BoundCall bindParameterList(
         typeAnnotation != null &&
         resolveGenerics.isNotEmpty) {
       var i = 0;
+      final callSiteOwner = _callSiteOwner(decLibrary, parameterHost);
       for (final name in resolveGenerics.keys) {
-        final def = TypeParameterDef(
-          TypeParameterOwner(
-            TypeParameterOwnerKind.callSite,
-            decLibrary,
-            '',
-          ),
-          i++,
-          name,
-        );
+        final def = TypeParameterDef(callSiteOwner, i++, name);
         unifyDefs[name] = def;
         unifyPlaceholders[name] =
             TypeParameterTypeRef(def, file: decLibrary);
@@ -442,7 +454,7 @@ BoundCall bindParameterList(
     } else {
       if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
-      } else {
+      } else if (fillOmitted) {
         final value = compileOmittedArgument(
           ctx,
           decLibrary,
@@ -484,7 +496,7 @@ BoundCall bindParameterList(
     if (arg0 != null) {
       push.add(arg0);
       namedArgs[name] = arg0;
-    } else {
+    } else if (fillOmitted) {
       final value = compileOmittedArgument(
         ctx,
         decLibrary,
@@ -913,24 +925,7 @@ void _resolveInvocationGenerics(
   // self-reference (`f<T extends Foo<T>>(...)`). The owner carries the
   // callee's identity — call-site placeholders for `foo<T>` and `bar<U>`
   // in the same library are distinct parameters.
-  final callOwner = TypeParameterOwner(
-    TypeParameterOwnerKind.callSite,
-    declarationLibrary,
-    switch (dec) {
-      MethodDeclaration() => () {
-        final host = dec.parent?.parent;
-        return host is Declaration
-            ? '${declarationName(host)}.${dec.name.lexeme}'
-            : dec.name.lexeme;
-      }(),
-      _ => (dec as FunctionDeclaration).name.lexeme,
-    },
-    switch (dec) {
-      FunctionDeclaration() => dec.functionExpression.offset,
-      MethodDeclaration() => dec.offset,
-      _ => null,
-    },
-  );
+  final callOwner = _callSiteOwner(declarationLibrary, dec);
   for (var index = 0; index < parameters.length; index++) {
     final name = parameters[index].name.lexeme;
     resolved[name] = TypeParameterTypeRef(
@@ -1018,6 +1013,31 @@ _invocationSignature(Declaration dec) => switch (dec) {
 };
 
 
+TypeParameterOwner _callSiteOwner(int library, Declaration dec) {
+  final host = switch (dec) {
+    MethodDeclaration() => dec.parent?.parent,
+    ConstructorDeclaration() => dec.parent?.parent,
+    _ => null,
+  };
+  final prefix = host is Declaration ? '${declarationName(host)}.' : '';
+  final name = switch (dec) {
+    FunctionDeclaration() => dec.name.lexeme,
+    MethodDeclaration() => dec.name.lexeme,
+    ConstructorDeclaration() => dec.name?.lexeme ?? '',
+    _ => '',
+  };
+  final position = switch (dec) {
+    FunctionDeclaration() => dec.functionExpression.offset,
+    _ => dec.offset,
+  };
+  return TypeParameterOwner(
+    TypeParameterOwnerKind.callSite,
+    library,
+    '$prefix$name',
+    position,
+  );
+}
+
 /// Compiles the argument list for a call to a non-bridge declaration [dec],
 /// resolving generic type parameters at the call site. [seedGenerics] provides
 /// receiver-class type arguments (for instance calls); [typeArguments] are the
@@ -1039,6 +1059,8 @@ BoundCall bindDeclaration(
   /// against it (`x.cast()` under `C<bool>` binds `U` to `bool`).
   TypeRef? returnContext,
   BindingOptions options = BindingOptions.legacy,
+  /// See [bindParameterList.fillOmitted].
+  bool fillOmitted = true,
 }) {
   final (fpl, typeParams, returnAnnotation) = _invocationSignature(dec);
   final isCallableDecl = dec is FunctionDeclaration || dec is MethodDeclaration;
@@ -1111,6 +1133,7 @@ BoundCall bindDeclaration(
     // call site; constructor calls infer regardless (e.g. List<int>() still
     // infers the constructor's own generics).
     inferGenerics: !isCallableDecl || typeArguments == null,
+    fillOmitted: fillOmitted,
   );
 
   // Downward inference: parameters untouched by argument inference bind
@@ -1119,11 +1142,7 @@ BoundCall bindDeclaration(
       typeArguments == null &&
       typeParams != null &&
       returnAnnotation != null) {
-    final callOwner = TypeParameterOwner(
-      TypeParameterOwnerKind.callSite,
-      sourceLib,
-      '',
-    );
+    final callOwner = _callSiteOwner(sourceLib, dec);
     final placeholders = <String, TypeRef>{
       for (var i = 0; i < typeParams.length; i++)
         typeParams[i].name.lexeme: TypeParameterTypeRef(

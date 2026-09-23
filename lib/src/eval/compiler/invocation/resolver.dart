@@ -484,10 +484,10 @@ final class CallResolver {
       argsPair = ArgumentBinder(ctx).bindDynamicVector( e.argumentList, before: [L]);
     } else {
       final dec = dec0!.declaration!;
-      // Instance calls bind supplied arguments only (`calleeBinds`): the
-      // runtime binds names and defaults for evaluated methods. Refinement
-      // runs first — a devirtualized StaticCall still needs the declared
-      // vector.
+      // Instance calls compile supplied arguments against the resolved
+      // signature — context types and coercion apply — but only a call
+      // proven static fills omitted arguments. A call that stays virtual
+      // leaves names and defaults for the runtime to bind (`calleeBinds`).
       final refined = isStatic
           ? null
           : Devirtualizer(ctx).refine(
@@ -497,37 +497,54 @@ final class CallResolver {
                 isSuperReceiver: e.target is SuperExpression,
               ),
             );
-      if (refined is VirtualCall) {
-        argsPair = ArgumentBinder(
-          ctx,
-        ).bindSuppliedOnly(refined, callSite(), callee: null);
-      } else {
-        final result = ArgumentBinder(ctx).bindDeclaration(
+      if (!isStatic && refined is VirtualCall) {
+        // Still virtual: bind against the interface signature resolved on
+        // the receiver's static type — supplied arguments only.
+        argsPair = ArgumentBinder(ctx).bindDeclaration(
           dec0.sourceLib,
           dec,
           e.argumentList,
-          before: [if (!isStatic) L],
           typeArguments: e.typeArguments,
           source: e,
-          seedGenerics: !isStatic && dec is MethodDeclaration
+          seedGenerics: dec is MethodDeclaration
               ? classTypeArguments(ctx, L.type, dec0.sourceLib, dec)
               : const {},
           returnContext: bound,
-        options: BindingOptions.source,
-);
-
-
-
-
-
-
-
-
-
-
-
-        argsPair = result;
-        mReturnType = result.declaredReturn;
+          options: BindingOptions.source,
+          fillOmitted: false,
+        );
+        mReturnType = argsPair.declaredReturn;
+      } else {
+        // Static (and devirtualized) calls bind against the concrete
+        // implementation's signature: [refine] resolved the declaring
+        // owner, which may differ from the static declaration when an
+        // override carries its own defaults.
+        var bindingLib = dec0.sourceLib;
+        Declaration bindingDec = dec;
+        if (refined is StaticCall && refined.declaringLink != null) {
+          final found = concreteMemberDecl(
+            ctx,
+            refined.declaringLink!,
+            e.methodName.name,
+          );
+          if (found != null) {
+            bindingLib = refined.offset.file ?? dec0.sourceLib;
+            bindingDec = found;
+          }
+        }
+        argsPair = ArgumentBinder(ctx).bindDeclaration(
+          bindingLib,
+          bindingDec,
+          e.argumentList,
+          typeArguments: e.typeArguments,
+          source: e,
+          seedGenerics: !isStatic && bindingDec is MethodDeclaration
+              ? classTypeArguments(ctx, L.type, bindingLib, bindingDec)
+              : const {},
+          returnContext: bound,
+          options: BindingOptions.source,
+        );
+        mReturnType = argsPair.declaredReturn;
       }
     }
 

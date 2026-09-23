@@ -433,6 +433,12 @@ final class MemberLookup {
               source,
             );
           }
+          // A setter parameter with no type annotation has no queryable
+          // field type (matching lookupFieldType's null).
+          if (entry is MethodDeclaration &&
+              entry.parameters?.parameters.firstOrNull?.type == null) {
+            return null;
+          }
           memberKind = MemberKind.setter;
         }
         entry ??= map[name];
@@ -442,7 +448,10 @@ final class MemberLookup {
               !entry.isSetter) {
             return CoreTypes.function.ref(ctx);
           }
-          if (entry is! VariableDeclaration) {
+          // Getters and setters are members, not variables — the member
+          // path below resolves their types; only a non-member entry must
+          // be a declared field.
+          if (entry is! VariableDeclaration && entry is! MethodDeclaration) {
             throw CompileError(
               'Cannot query field type of ${decl.name}.$name, '
               'which is not a field',
@@ -450,6 +459,9 @@ final class MemberLookup {
             );
           }
           memberKind = MemberKind.getter;
+          if (entry is MethodDeclaration && entry.isSetter && forSet) {
+            memberKind = MemberKind.setter;
+          }
         }
         if (entry == null && !forFieldFormal) {
           entry = map[MemberName(

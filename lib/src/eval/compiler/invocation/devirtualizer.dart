@@ -56,6 +56,7 @@ final class Devirtualizer {
             ? ownerLinkSsa(ctx, L.ssa, linkType, directOwner)
             : null,
         typeEnvironmentReceiver: L,
+        declaringLink: directOwner,
       );
     }
     return target;
