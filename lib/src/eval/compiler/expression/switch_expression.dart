@@ -4,7 +4,6 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -12,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import '../values/value_rep.dart';
+import '../invocation/resolver.dart';
 
 /// Compiles a `switch (e) { pattern => expr, ... }` expression: evaluates the
 /// subject once, pattern-matches each case in order, and assigns the winning
@@ -59,7 +59,7 @@ Variable compileSwitchExpression(
             ctx,
             CoreTypes.bool.ref(ctx),
           );
-          return matches.invoke(ctx, '&&', [guardExpr]).result;
+          return CallResolver(ctx).invokeOperator(matches, '&&', [guardExpr]).result;
         }
         return matches;
       },

@@ -8,12 +8,12 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/binary.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../values/abi.dart';
 import '../invocation/accessors.dart';
+import '../invocation/resolver.dart';
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
@@ -141,7 +141,7 @@ Variable patternMatchAndBind(
       // The pattern's context type is the matched value's type — this is
       // what lets `case .blue:` resolve the shorthand.
       final constant = compileExpression(pat.expression, ctx, V.type);
-      return V.invoke(ctx, '==', [constant]).result;
+      return CallResolver(ctx).invokeOperator(V, '==', [constant]).result;
     case RecordPattern pat:
       var positionalFields = 1;
       Variable? result;
@@ -156,7 +156,7 @@ Variable patternMatchAndBind(
         if (result == null) {
           result = fieldResult;
         } else {
-          result = result.invoke(ctx, '&&', [fieldResult]).result;
+          result = CallResolver(ctx).invokeOperator(result, '&&', [fieldResult]).result;
         }
       }
       return result ??
@@ -184,7 +184,7 @@ Variable patternMatchAndBind(
         if (result == null) {
           result = elementResult;
         } else {
-          result = result.invoke(ctx, '&&', [elementResult]).result;
+          result = CallResolver(ctx).invokeOperator(result, '&&', [elementResult]).result;
         }
       }
       return result ??
@@ -250,7 +250,7 @@ Variable patternMatchAndBind(
         V,
         patternContext: patternContext,
       );
-      return left.invoke(ctx, '||', [right]).result;
+      return CallResolver(ctx).invokeOperator(left, '||', [right]).result;
     case LogicalAndPattern pat:
       final left = patternMatchAndBind(
         ctx,
@@ -264,7 +264,7 @@ Variable patternMatchAndBind(
         V,
         patternContext: patternContext,
       );
-      return left.invoke(ctx, '&&', [right]).result;
+      return CallResolver(ctx).invokeOperator(left, '&&', [right]).result;
     case ObjectPattern pat:
       var result = _typeTest(ctx, pat.type, V);
       for (final field in pat.fields) {
@@ -284,7 +284,7 @@ Variable patternMatchAndBind(
           fieldValue,
           patternContext: patternContext,
         );
-        result = result.invoke(ctx, '&&', [fieldResult]).result;
+        result = CallResolver(ctx).invokeOperator(result, '&&', [fieldResult]).result;
       }
       return result;
     case CastPattern pat:
@@ -305,7 +305,7 @@ Variable patternMatchAndBind(
           (throw CompileError(
             'Unknown relational operator ${pat.operator.type}',
           ));
-      return V.invoke(ctx, operator, [operand]).result;
+      return CallResolver(ctx).invokeOperator(V, operator, [operand]).result;
     case WildcardPattern pat:
       return _typeTest(ctx, pat.type, V);
     case ParenthesizedPattern pat:

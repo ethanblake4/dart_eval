@@ -3,9 +3,9 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import '../invocation/resolver.dart';
 
 Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
   if (str.strings.every((element) => element is SimpleStringLiteral)) {
@@ -28,9 +28,9 @@ Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
     if (V.type.isSpec(CoreTypes.string)) {
       vStr = V;
     } else {
-      vStr = V.invoke(ctx, 'toString', []).result;
+      vStr = CallResolver(ctx).invokeOperator(V, 'toString', []).result;
     }
-    build = build == null ? vStr : build.invoke(ctx, '+', [vStr]).result;
+    build = build == null ? vStr : CallResolver(ctx).invokeOperator(build, '+', [vStr]).result;
   }
 
   if (build == null) {

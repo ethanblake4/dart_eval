@@ -4,12 +4,12 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import '../invocation/resolver.dart';
 
 Variable compilePostfixExpression(
   PostfixExpression e,
@@ -91,7 +91,7 @@ Variable _postfixOnReference(
 
   V.setValue(
     ctx,
-    L.invoke(ctx, opMap[e.operator.type]!, [
+    CallResolver(ctx).invokeOperator(L, opMap[e.operator.type]!, [
       BuiltinValue(intval: 1).push(ctx),
     ]).result,
   );

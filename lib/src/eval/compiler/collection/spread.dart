@@ -3,7 +3,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
@@ -16,6 +15,7 @@ import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import '../values/value_rep.dart';
 import '../invocation/accessors.dart';
+import '../invocation/resolver.dart';
 
 /// Iterates a spread source once, placing iterator creation inside the null guard.
 List<TypeRef> compileCollectionSpread(
@@ -61,7 +61,7 @@ List<TypeRef> compileCollectionSpread(
     return macroLoop(
       ctx,
       null,
-      condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
+      condition: (ctx) => CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result,
       body: (ctx, _) {
         final current = GetTarget.read(ctx, iterator, 'current');
         if (isMap) {

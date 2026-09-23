@@ -13,7 +13,6 @@ import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -32,6 +31,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'values/abi.dart';
 import 'member/member_name.dart';
 import 'invocation/accessors.dart';
+import 'invocation/resolver.dart';
 
 part 'denotation.dart';
 
@@ -739,7 +739,7 @@ class IndexedReference implements Reference {
       );
     }
 
-    final result = _variable.invoke(ctx, '[]', [_index]);
+    final result = CallResolver(ctx).invokeOperator(_variable, '[]', [_index]);
     _variable = result.target!;
     _index = result.args[0];
 
@@ -776,7 +776,7 @@ class IndexedReference implements Reference {
       // Keep the reified wrapper for writes. A List<num> reference can point
       // at a List<int>; writing directly to its raw backing list would bypass
       // the actual instance's checked element type.
-      final result = _variable.invoke(ctx, '[]=', [_index, formattedValue]);
+      final result = CallResolver(ctx).invokeOperator(_variable, '[]=', [_index, formattedValue]);
       _variable = result.target!;
       _index = result.args[0];
       return result.args[1];
@@ -797,7 +797,7 @@ class IndexedReference implements Reference {
             source: source,
           );
 
-    final result = _variable.invoke(ctx, '[]=', [_index, converted]);
+    final result = CallResolver(ctx).invokeOperator(_variable, '[]=', [_index, converted]);
     _variable = result.target!;
     _index = result.args[0];
     return result.args[1];
@@ -920,7 +920,7 @@ Variable _declarationToVariable(
   );
 
   if (decl is FunctionDeclaration && decl.isGetter) {
-    return fn.invoke(ctx, null, []).result;
+    return CallResolver(ctx).invokeOperator(fn, null, []).result;
   }
   return fn;
 }

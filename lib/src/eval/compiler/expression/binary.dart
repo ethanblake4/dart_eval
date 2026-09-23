@@ -3,7 +3,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
@@ -17,6 +16,7 @@ import 'package:dart_eval/src/eval/ir/logic.dart';
 import '../errors.dart';
 import 'expression.dart';
 import '../values/value_rep.dart';
+import '../invocation/resolver.dart';
 
 final binaryOpMap = {
   TokenType.PLUS: '+',
@@ -86,7 +86,7 @@ Variable compileBinaryExpression(
     _ => boundType,
   };
   var R = compileExpression(e.rightOperand, ctx, rightBound);
-  return L.invoke(ctx, method, [R]).result;
+  return CallResolver(ctx).invokeOperator(L, method, [R]).result;
 }
 
 Variable _compileShortCircuit(

@@ -4,7 +4,6 @@ import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/break.dart';
@@ -12,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
+import '../invocation/resolver.dart';
 
 StatementInfo compileSwitchStatement(
   SwitchStatement s,
@@ -83,7 +83,7 @@ StatementInfo _compileSwitchCases(
       if (currentCase is SwitchCase) {
         final caseVar = compileExpression(currentCase.expression, ctx);
         _checkPrimitiveEquality(ctx, caseVar, currentCase.expression);
-        return subject.invoke(ctx, '==', [caseVar]).result;
+        return CallResolver(ctx).invokeOperator(subject, '==', [caseVar]).result;
       } else if (currentCase is SwitchPatternCase) {
         final matches = patternMatchAndBind(
           ctx,
@@ -98,7 +98,7 @@ StatementInfo _compileSwitchCases(
             ctx,
             CoreTypes.bool.ref(ctx),
           );
-          return matches.invoke(ctx, '&&', [guardExpr]).result;
+          return CallResolver(ctx).invokeOperator(matches, '&&', [guardExpr]).result;
         }
         return matches;
       } else {

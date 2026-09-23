@@ -4,7 +4,6 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -12,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
+import '../invocation/resolver.dart';
 
 Variable compileAssignmentExpression(
   AssignmentExpression e,
@@ -78,7 +78,7 @@ Variable _assignWithReference(
       null,
       condition: (ctx) {
         readValue = L.getValue(ctx);
-        return readValue!.invoke(ctx, '==', [BuiltinValue().push(ctx)]).result;
+        return CallResolver(ctx).invokeOperator(readValue!, '==', [BuiltinValue().push(ctx)]).result;
       },
       thenBranch: (ctx, rt) {
         // The RHS is evaluated only inside the branch — `x ??= e` must not
@@ -120,7 +120,7 @@ Variable _assignWithReference(
     // Dart evaluates the read of L (the getter / index call) before the RHS.
     final V = L.getValue(ctx);
     final R = compileExpression(e.rightHandSide, ctx, setterType());
-    var res = V.invoke(ctx, method, [R]).result;
+    var res = CallResolver(ctx).invokeOperator(V, method, [R]).result;
     // Dart's compound-assignment rules retain the implicit downcast when the
     // right operand is dynamic. The operator's declared return type alone
     // (for example num from int.+) must not turn that valid runtime check into

@@ -564,16 +564,11 @@ class Variable {
   }
 }
 
-class InvokeResult {
-  const InvokeResult(
-    this.target,
-    this.result,
-    this.args, {
-    this.namedArgs = const {},
-  });
-
-  final Variable? target;
-  final Variable result;
-  final List<Variable> args;
-  final Map<String, Variable> namedArgs;
-}
+/// The operator call's reified results: [result], the post-coercion
+/// receiver [target] for writeback, and the prepared operand [args].
+typedef InvokeResult = ({
+  Variable? target,
+  Variable result,
+  List<Variable> args,
+  Map<String, Variable> namedArgs,
+});

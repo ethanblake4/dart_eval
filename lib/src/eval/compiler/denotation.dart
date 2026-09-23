@@ -328,7 +328,7 @@ final class StaticMemberDenotation extends Denotation {
     if (member.isGetter) {
       // A getter reference invokes it (the member's value, not its
       // tear-off).
-      return fn.invoke(ctx, null, []).result;
+      return CallResolver(ctx).invokeOperator(fn, null, []).result;
     }
     return fn;
   }
@@ -1580,7 +1580,7 @@ final class _TypeMemberDenotation extends Denotation {
         callingConvention: CallingConvention.static,
       );
       if (memberDecl is MethodDeclaration && memberDecl.isGetter) {
-        return fn.invoke(ctx, null, []).result;
+        return CallResolver(ctx).invokeOperator(fn, null, []).result;
       }
       // Static method tear-off.
       return fn;

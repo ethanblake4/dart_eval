@@ -4,7 +4,6 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
@@ -14,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 import '../errors.dart';
 import 'expression.dart';
+import '../invocation/resolver.dart';
 
 const _opMap = {
   TokenType.MINUS: '-',
@@ -94,14 +94,14 @@ Variable compilePrefixExpression(
       source: e.operand,
       description: 'Operand of ! must be boolean',
     );
-    return boolean.invoke(ctx, method, []).result;
+    return CallResolver(ctx).invokeOperator(boolean, method, []).result;
   }
 
   // Nullary `operator -` is keyed `unary-` in member tables, matching the
   // analyzer's element name.
   final member = method == '-' ? 'unary-' : method;
 
-  if (isDynamic) return V.invoke(ctx, member, []).result;
+  if (isDynamic) return CallResolver(ctx).invokeOperator(V, member, []).result;
 
   // `~x` and `-x` on user types call the nullary operators `~` and `-`
   // directly; native ints/doubles negate in place (`-(0.0)` is `-0.0`,
@@ -117,10 +117,10 @@ Variable compilePrefixExpression(
     );
   }
   if (method == '~' || method == '-') {
-    return V.invoke(ctx, member, []).result;
+    return CallResolver(ctx).invokeOperator(V, member, []).result;
   }
 
-  return _zeroForType(V.type, ctx).push(ctx).invoke(ctx, method, [V]).result;
+  return CallResolver(ctx).invokeOperator(_zeroForType(V.type, ctx).push(ctx), method, [V]).result;
 }
 
 BuiltinValue _zeroForType(TypeRef type, CompilerContext ctx) =>
@@ -138,7 +138,7 @@ Variable _handleDoubleOperands(
   final L = V.getValue(ctx);
   final l = L.copyIntoFreshSlot(ctx, 'operand');
 
-  final result = l.invoke(ctx, _opMap[e.operator.type]!, [
+  final result = CallResolver(ctx).invokeOperator(l, _opMap[e.operator.type]!, [
     _incrementValue().push(ctx),
   ]).result;
 

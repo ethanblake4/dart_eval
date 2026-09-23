@@ -6,7 +6,6 @@ import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -20,6 +19,7 @@ import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import '../values/abi.dart';
 import 'binder.dart';
+import 'resolver.dart';
 import 'bound_call.dart';
 
 /// What is called — the resolver's output. [signature] is null for
@@ -511,8 +511,8 @@ final class NoSuchMethodCall extends CallTarget {
       ]),
       CoreTypes.invocation.ref(ctx),
     );
-    return ctx.lookupLocal('#this')!
-        .invoke(ctx, 'noSuchMethod', [invocation])
+    return CallResolver(ctx)
+        .invokeOperator(ctx.lookupLocal('#this')!, 'noSuchMethod', [invocation])
         .result;
   }
 
@@ -584,6 +584,8 @@ final class NoSuchMethodCall extends CallTarget {
       InvokeExternal(ctx.svar('inv'), bridge['Invocation.method']!, invArgs),
       CoreTypes.invocation.ref(ctx),
     );
-    return $this.invoke(ctx, 'noSuchMethod', [invocation]).result;
+    return CallResolver(ctx)
+        .invokeOperator($this, 'noSuchMethod', [invocation])
+        .result;
   }
 }

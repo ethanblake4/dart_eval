@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -90,13 +89,12 @@ final class CallResolver {
                 arity: bound.positional.length,
               ) !=
               null) {
-        return callableVar
-            .invoke(
-              ctx,
-              'call',
-              [for (final a in bound.positional) a.value],
-              namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
-            )
+        return invokeOperator(
+          callableVar,
+          'call',
+          [for (final a in bound.positional) a.value],
+          namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
+        )
             .result;
       }
     }
@@ -203,7 +201,7 @@ final class CallResolver {
             if (arg is! NamedArgument)
               compileExpression(arg.argumentExpression, ctx),
         ];
-        return L.invoke(ctx, e.methodName.name, args).result;
+        return invokeOperator(L, e.methodName.name, args).result;
       }
       dec0 = resolveStaticMethod(ctx, staticType, staticMemberName);
       // `C.field(args)` where `field` holds a closure, or `C.x(args)` where
@@ -339,9 +337,12 @@ final class CallResolver {
           // `Object.noSuchMethod` is implicit — absent from all declaration
           // metadata. Dispatch dynamically.
           final (positional, named) = compileCallArgs(ctx, e);
-          return L
-              .invoke(ctx, 'noSuchMethod', positional, namedArgs: named)
-              .result;
+          return invokeOperator(
+            L,
+            'noSuchMethod',
+            positional,
+            namedArgs: named,
+          ).result;
         }
         if (foundGetter == null) rethrow;
         // `recv.m(args)` where extension member m is a getter — a
@@ -454,9 +455,8 @@ final class CallResolver {
       // ABI. The declared return type (including inferred generics and
       // parameter-type dependencies) still applies to the result.
       if (!isStatic && e.typeArguments == null && argsPair.namedArgs.isEmpty) {
-        final invokeResult = L
-            .invoke(ctx, e.methodName.name, argsPair.args)
-            .result;
+        final invokeResult =
+            invokeOperator(L, e.methodName.name, argsPair.args).result;
         final preciseType = mReturnType?.type;
         if (preciseType != null) {
           return invokeResult.copyWith(type: preciseType);
@@ -658,11 +658,7 @@ final class CallResolver {
         values.single.methodOffset != null) {
       // Two unmaterialized references to the same function are identical.
       final equal = recv.methodOffset == values.single.methodOffset;
-      return InvokeResult(
-        recv,
-        BuiltinValue(boolval: method == '!=' ? !equal : equal).push(ctx),
-        values,
-      );
+      return (target: recv, result: BuiltinValue(boolval: method == '!=' ? !equal : equal).push(ctx), args: values, namedArgs: const {});
     }
     if (recv.name == null && recv.methodOffset != null) {
       recv = recv.tearOff(ctx);
@@ -688,7 +684,7 @@ final class CallResolver {
           returnType: CoreTypes.bool.ref(ctx),
         ),
       );
-      return InvokeResult(recv, result, prepared);
+      return (target: recv, result: result, args: prepared, namedArgs: const {});
     }
     final argTypes = prepared.map((arg) => arg.type).toList();
     final namedArgTypes =
@@ -728,12 +724,7 @@ final class CallResolver {
       returnType: returnType,
     );
     final result = VirtualCall(receiver: recv, name: method).emit(ctx, boundCall);
-    return InvokeResult(
-      recv,
-      result,
-      prepared,
-      namedArgs: namedArgs ?? {},
-    );
+    return (target: recv, result: result, args: prepared, namedArgs: namedArgs ?? {});
   }
 
   /// `f(args)` where `f` is a function-typed value — or a non-function
@@ -760,12 +751,7 @@ final class CallResolver {
         CallSite(shape: CallShape.values(args, namedArgs)),
         callee: callee,
       );
-      return InvokeResult(
-        null,
-        result,
-        [for (final a in bound.positional) a.value],
-        namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
-      );
+      return (target: null, result: result, args: [for (final a in bound.positional) a.value], namedArgs: {for (final e in bound.named) e.$1: e.$2.value});
     }
     final target = ctx.svar('call_result');
     final returnType =
@@ -784,17 +770,12 @@ final class CallResolver {
         ...?namedArgs?.values.map((arg) => arg.ssa),
       ], result: target),
     );
-    return InvokeResult(
-      callee,
-      Variable.of(
+    return (target: callee, result: Variable.of(
         ctx,
         target,
         returnType,
         rep: Abi.unboxedAcrossCalls(returnType),
-      ),
-      args,
-      namedArgs: namedArgs ?? {},
-    );
+      ), args: args, namedArgs: namedArgs ?? {});
   }
 
   /// Emits a static `Call` to an extension member resolved on the operator
@@ -868,11 +849,7 @@ final class CallResolver {
           typeParameters: typeParams,
         ).type ??
         CoreTypes.dynamic.ref(ctx);
-    return InvokeResult(
-      receiver,
-      Variable.of(ctx, target, returnType, rep: ValueRep.boxed),
-      convertedArgs,
-    );
+    return (target: receiver, result: Variable.of(ctx, target, returnType, rep: ValueRep.boxed), args: convertedArgs, namedArgs: const {});
   }
 
   /// `f(args)` / `p.f(args)` — a call whose callee is a bare or

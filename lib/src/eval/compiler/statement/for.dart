@@ -2,7 +2,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -15,6 +14,7 @@ import 'package:dart_eval/src/eval/ir/async.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import '../values/value_rep.dart';
 import '../invocation/accessors.dart';
+import '../invocation/resolver.dart';
 
 StatementInfo compileForStatement(
   ForStatement s,
@@ -189,7 +189,7 @@ StatementInfo compileForEachLoop(
         }
       }
     },
-    condition: (ctx) => iterator.invoke(ctx, 'moveNext', []).result,
+    condition: (ctx) => CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result,
     body: body,
     assignedNamesScan: assignedNamesScan,
     update: (ctx) {
@@ -306,7 +306,7 @@ StatementInfo compileAwaitForLoop(
       }
     },
     condition: (ctx) {
-      final moveNext = iterator.invoke(ctx, 'moveNext', []).result;
+      final moveNext = CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result;
       return Variable.ssa(
         ctx,
         Await(
@@ -327,7 +327,7 @@ StatementInfo compileAwaitForLoop(
     },
     updateBeforeBody: true,
     after: (ctx) {
-      iterator.invoke(ctx, 'cancel', []);
+      CallResolver(ctx).invokeOperator(iterator, 'cancel', []);
     },
   );
 }
