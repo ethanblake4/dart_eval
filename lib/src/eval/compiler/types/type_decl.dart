@@ -76,8 +76,7 @@ sealed class TypeDecl {
   /// `C<T0, ..., Tn>` — this declaration instantiated over its own
   /// parameters.
   late final TypeRef thisType = instantiate([
-    for (var i = 0; i < typeParameters.length; i++)
-      ownParameterRef(i),
+    for (var i = 0; i < typeParameters.length; i++) ownParameterRef(i),
   ]);
 
   /// The raw `C` reference for this declaration — no arguments, no
@@ -172,7 +171,8 @@ sealed class TypeDecl {
     TypeRef mixin,
     List<TypeRef> chainSoFar,
   ) {
-    if (clauseName.typeArguments != null || mixin.specifiedTypeArgs.isNotEmpty) {
+    if (clauseName.typeArguments != null ||
+        mixin.specifiedTypeArgs.isNotEmpty) {
       return mixin;
     }
     final mixinDeclRef = mixin.decl;
@@ -208,7 +208,10 @@ sealed class TypeDecl {
     return mixin.copyWith(
       specifiedTypeArgs: [
         for (var i = 0; i < mixinParams2.length; i++)
-          substitutions[('class:${mixinDeclRef.library}:${mixinDeclRef.name}', i)] ??
+          substitutions[(
+                'class:${mixinDeclRef.library}:${mixinDeclRef.name}',
+                i,
+              )] ??
               mixinParams2[i].extendsType?.substituteTypeParameters(
                 substitutions,
               ) ??
@@ -281,9 +284,7 @@ final class SourceTypeDecl extends TypeDecl {
     final mixins = <TypeRef>[];
     for (final withName in withClause) {
       final mixin = resolveClauseType(withName);
-      mixins.add(
-        inferMixinArguments(withName, mixin, [superclass, ...mixins]),
-      );
+      mixins.add(inferMixinArguments(withName, mixin, [superclass, ...mixins]));
     }
 
     return DeclaredSupertypes(superclass, [
@@ -335,7 +336,11 @@ final class BridgeTypeDecl extends TypeDecl {
   @override
   DeclaredSupertypes computeSupertypes() {
     if (enumDef != null) {
-      return DeclaredSupertypes(CoreTypes.enumType.ref(ctx), const [], const []);
+      return DeclaredSupertypes(
+        CoreTypes.enumType.ref(ctx),
+        const [],
+        const [],
+      );
     }
     final type = classDef!.type;
     final ownTypeParams = this.ownTypeParams;
@@ -353,23 +358,27 @@ final class BridgeTypeDecl extends TypeDecl {
         superclass = superclass.copyWith(nullable: true);
       }
     }
-    return DeclaredSupertypes(superclass, [
-      for (final i in type.$implements)
-        TypeRef.fromBridgeTypeRef(
-          ctx,
-          i,
-          specifiedType: thisType,
-          typeParameters: ownTypeParams,
-        ),
-    ], [
-      for (final i in type.$with)
-        TypeRef.fromBridgeTypeRef(
-          ctx,
-          i,
-          specifiedType: thisType,
-          typeParameters: ownTypeParams,
-        ),
-    ]);
+    return DeclaredSupertypes(
+      superclass,
+      [
+        for (final i in type.$implements)
+          TypeRef.fromBridgeTypeRef(
+            ctx,
+            i,
+            specifiedType: thisType,
+            typeParameters: ownTypeParams,
+          ),
+      ],
+      [
+        for (final i in type.$with)
+          TypeRef.fromBridgeTypeRef(
+            ctx,
+            i,
+            specifiedType: thisType,
+            typeParameters: ownTypeParams,
+          ),
+      ],
+    );
   }
 }
 

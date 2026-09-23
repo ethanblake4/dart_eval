@@ -11,6 +11,7 @@ import 'types/type_decl.dart';
 export 'types/type_decl.dart';
 export 'types/type_system.dart';
 export 'types/runtime_types.dart';
+export 'types/type_scope.dart';
 
 /// The action required to assign a value to a typed slot.
 enum AssignmentConversion {
@@ -133,7 +134,7 @@ class TypeRef {
         : '${prefix.name.lexeme}.${typeAnnotation.name.lexeme}';
     final unspecifiedType =
         typeParameters[n] ??
-        ctx.temporaryTypes[library]?[n] ??
+        ctx.typeScopes[library]?[n] ??
         ctx.visibleTypes[library]?[n];
     if (unspecifiedType == null) {
       final alias = ctx.typeAliases[library]?[n];
@@ -397,43 +398,86 @@ class TypeRef {
       final classDecl =
           ctx.topLevelDeclarationsMap[$class.file]![$class.name]!.declaration;
       final typeParams = classLikeClauses(classDecl).$4?.typeParameters;
-      final previousTypes = {...?ctx.temporaryTypes[$class.file]};
-      TypeRef.loadTemporaryTypes(
-        ctx,
+      var memberMatched = true;
+      final resolved = ctx.withTypeParameters(
+        $class.file,
+        'class:${$class.file}:${$class.name}',
         typeParams,
-        library: $class.file,
-        owner: 'class:${$class.file}:${$class.name}',
-      );
-      // A raw type use substitutes the parameter's bound (instantiate to
-      // bounds); otherwise the argument at the same position.
-      TypeRef substituteClassTypeArguments(TypeRef resolved) {
-        final localSubstitutions = <(String, int), TypeRef>{...substitutions};
-        for (var i = 0; i < (typeParams?.length ?? 0); i++) {
-          final bound = ctx
-              .temporaryTypes[$class.file]![typeParams![i].name.lexeme]!
-              .typeParameterBound;
-          final arg = i < $class.specifiedTypeArgs.length
-              ? $class.specifiedTypeArgs[i]
-              : (bound ?? CoreTypes.dynamic.ref(ctx));
-          localSubstitutions[('class:${$class.file}:${$class.name}', i)] = arg
-              .substituteTypeParameters(substitutions);
-        }
-        if (localSubstitutions.isEmpty) return resolved;
-        return resolved.substituteTypeParameters(localSubstitutions);
-      }
+        () {
+          // A raw type use substitutes the parameter's bound (instantiate to
+          // bounds); otherwise the argument at the same position.
+          TypeRef substituteClassTypeArguments(TypeRef resolved) {
+            final localSubstitutions = <(String, int), TypeRef>{
+              ...substitutions,
+            };
+            for (var i = 0; i < (typeParams?.length ?? 0); i++) {
+              final bound = ctx
+                  .typeScopes[$class.file]![typeParams![i].name.lexeme]!
+                  .typeParameterBound;
+              final arg = i < $class.specifiedTypeArgs.length
+                  ? $class.specifiedTypeArgs[i]
+                  : (bound ?? CoreTypes.dynamic.ref(ctx));
+              localSubstitutions[('class:${$class.file}:${$class.name}', i)] =
+                  arg.substituteTypeParameters(substitutions);
+            }
+            if (localSubstitutions.isEmpty) return resolved;
+            return resolved.substituteTypeParameters(localSubstitutions);
+          }
 
-      try {
-        if (forSet) {
-          if ($declarations.containsKey('$field*s')) {
-            final f = $declarations['$field*s'];
-            if (f is! MethodDeclaration) {
+          if (forSet) {
+            if ($declarations.containsKey('$field*s')) {
+              final f = $declarations['$field*s'];
+              if (f is! MethodDeclaration) {
+                throw CompileError(
+                  'Cannot query setter type of F${$class.file}:${$class.name}.$field, which is not a method',
+                  source,
+                );
+              }
+              final parameter = f.parameters!.parameters.first;
+              final annotation = parameter.type;
+              if (annotation == null) {
+                return null;
+              }
+              return substituteClassTypeArguments(
+                TypeRef.fromAnnotation(ctx, $class.file, annotation),
+              );
+            }
+          }
+          if ($declarations.containsKey(field)) {
+            final f = $declarations[field];
+            if (f is MethodDeclaration && !f.isGetter && !f.isSetter) {
+              return CoreTypes.function.ref(ctx);
+            }
+            if (f is! VariableDeclaration) {
               throw CompileError(
-                'Cannot query setter type of F${$class.file}:${$class.name}.$field, which is not a method',
+                'Cannot query field type of ${$class.name}.$field, which is not a field',
                 source,
               );
             }
-            final parameter = f.parameters!.parameters.first;
-            final annotation = parameter.type;
+            final annotation = (f.parent as VariableDeclarationList).type;
+            if (annotation != null) {
+              return substituteClassTypeArguments(
+                TypeRef.fromAnnotation(ctx, $class.file, annotation),
+              );
+            }
+            if (ctx.inferredFieldTypes.containsKey($class.file) &&
+                ctx.inferredFieldTypes[$class.file]!.containsKey($class.name) &&
+                ctx.inferredFieldTypes[$class.file]![$class.name]!.containsKey(
+                  field,
+                )) {
+              return ctx.inferredFieldTypes[$class.file]![$class.name]![field]!;
+            }
+            return null;
+          }
+          if (!forFieldFormal && $declarations.containsKey('$field*g')) {
+            final f = $declarations['$field*g'];
+            if (f is! MethodDeclaration) {
+              throw CompileError(
+                'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method',
+                source,
+              );
+            }
+            final annotation = f.returnType;
             if (annotation == null) {
               return null;
             }
@@ -441,51 +485,11 @@ class TypeRef {
               TypeRef.fromAnnotation(ctx, $class.file, annotation),
             );
           }
-        }
-        if ($declarations.containsKey(field)) {
-          final f = $declarations[field];
-          if (f is MethodDeclaration && !f.isGetter && !f.isSetter) {
-            return CoreTypes.function.ref(ctx);
-          }
-          if (f is! VariableDeclaration) {
-            throw CompileError(
-              'Cannot query field type of ${$class.name}.$field, which is not a field',
-              source,
-            );
-          }
-          final annotation = (f.parent as VariableDeclarationList).type;
-          if (annotation != null) {
-            return substituteClassTypeArguments(
-              TypeRef.fromAnnotation(ctx, $class.file, annotation),
-            );
-          }
-          if (ctx.inferredFieldTypes.containsKey($class.file) &&
-              ctx.inferredFieldTypes[$class.file]!.containsKey($class.name) &&
-              ctx.inferredFieldTypes[$class.file]![$class.name]!.containsKey(
-                field,
-              )) {
-            return ctx.inferredFieldTypes[$class.file]![$class.name]![field]!;
-          }
+          memberMatched = false;
           return null;
-        } else if (!forFieldFormal && $declarations.containsKey('$field*g')) {
-          final f = $declarations['$field*g'];
-          if (f is! MethodDeclaration) {
-            throw CompileError(
-              'Cannot query getter type of F${$class.file}:${$class.name}.$field, which is not a method',
-              source,
-            );
-          }
-          final annotation = f.returnType;
-          if (annotation == null) {
-            return null;
-          }
-          return substituteClassTypeArguments(
-            TypeRef.fromAnnotation(ctx, $class.file, annotation),
-          );
-        }
-      } finally {
-        ctx.temporaryTypes[$class.file] = previousTypes;
-      }
+        },
+      );
+      if (memberMatched) return resolved;
     }
     final dec0 = ctx.topLevelDeclarationsMap[$class.file]?[$class.name];
     if (dec0 == null) {
@@ -923,10 +927,11 @@ class TypeRef {
     List<TypeParameter>? typeParams, {
     int? library,
     String? owner,
+    bool resolveBounds = true,
   }) {
     if (typeParams == null) return;
     final lib = library ?? ctx.library;
-    final temps = ctx.temporaryTypes[lib] ??= {};
+    final temps = ctx.typeParameterScope(lib);
     // First seed every parameter name so F-bounds can self-reference
     // (`T extends Foo<T>`): the bound resolves while `T` is visible.
     for (var index = 0; index < typeParams.length; index++) {
@@ -938,6 +943,7 @@ class TypeRef {
         typeParameterIndex: index,
       );
     }
+    if (!resolveBounds) return;
     for (var index = 0; index < typeParams.length; index++) {
       final param = typeParams[index];
       final bound = param.bound;
@@ -1862,7 +1868,7 @@ TypeRef substitutedParamBound(
 }
 
 /// For [member] folded into [applier] from a mixin or mixin-class (possibly
-/// through a chain of mixin applications), seeds `temporaryTypes` in the
+/// through a chain of mixin applications), seeds [CompilerContext.typeScopes] in the
 /// member's declaring library so its type parameters resolve to the applied
 /// arguments, expressed in [applier]'s own type parameters.
 void seedFoldedMemberTypeParams(
@@ -1886,8 +1892,7 @@ void seedFoldedMemberTypeParams(
     const {},
   );
   if (applied == null) return;
-  ctx.temporaryTypes[memberLibrary] ??= {};
-  ctx.temporaryTypes[memberLibrary]!.addAll(applied);
+  ctx.typeParameterScope(memberLibrary).addAll(applied);
 }
 
 /// Dart's "no declared type" inference widens a `Null`-typed initializer to

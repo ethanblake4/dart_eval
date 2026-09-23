@@ -168,11 +168,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     });
   }
   if (expression is AwaitExpression) {
-    final inner = _infer(
-      ctx,
-      library,
-      expression.expression,
-    );
+    final inner = _infer(ctx, library, expression.expression);
     if (inner.isAssignableTo(
           ctx,
           CoreTypes.future.ref(ctx),
@@ -198,11 +194,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   }
   if (expression is ThrowExpression) return CoreTypes.never.ref(ctx);
   if (expression is IndexExpression) {
-    final target = _infer(
-      ctx,
-      library,
-      expression.target,
-    );
+    final target = _infer(ctx, library, expression.target);
     final args = target.specifiedTypeArgs;
     if (target.isAssignableTo(
           ctx,
@@ -272,11 +264,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   if (expression is MethodInvocation && expression.target != null) {
     // Receiver calls: infer the target, then ask the member signature for the
     // return type. Inference failures must not break compilation.
-    final receiver = _infer(
-      ctx,
-      library,
-      expression.target!,
-    );
+    final receiver = _infer(ctx, library, expression.target!);
     if (!receiver.isSpec(CoreTypes.dynamic)) {
       try {
         return AlwaysReturnType.fromInstanceMethodOrBuiltin(

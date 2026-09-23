@@ -1749,7 +1749,7 @@ Iterable<NamedType> superinterfacesOf(AstNode? declaration) sync* {
   }
 }
 
-/// Seeds the mixin's type parameters into [ctx.temporaryTypes] so signatures
+/// Seeds the mixin's type parameters into [ctx.typeParameterScope] so signatures
 /// of its folded members resolve `T`-style annotations to the application's
 /// type arguments — a concrete type for `M<int>`, or the class's own type
 /// parameter for `M<T>`. Entries resolve in the mixin's library, where the
@@ -1774,7 +1774,7 @@ void _seedMixinTypeParams(
   }
   final classParams = classLikeClauses(dec).$4?.typeParameters;
   final mixinArgs = mixinType.typeArguments?.arguments;
-  final temps = ctx.temporaryTypes[ref.file] ??= {};
+  final temps = ctx.typeParameterScope(ref.file);
   for (var i = 0; i < mixinParams.length; i++) {
     TypeRef? argRef;
     if (mixinArgs != null && i < mixinArgs.length) {

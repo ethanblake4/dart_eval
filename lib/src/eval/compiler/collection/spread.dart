@@ -30,9 +30,7 @@ List<TypeRef> compileCollectionSpread(
   if (element.isNullAware && collection.type.isSpec(CoreTypes.nullType)) {
     return target.type.specifiedTypeArgs;
   }
-  final sourceType = collection.type
-      .copyWith(nullable: false)
-      ;
+  final sourceType = collection.type.copyWith(nullable: false);
   final requiredType = (isMap ? CoreTypes.map : CoreTypes.iterable).ref(ctx);
   if (!sourceType.isAssignableTo(ctx, requiredType)) {
     throw CompileError(

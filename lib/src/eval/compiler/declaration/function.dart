@@ -59,116 +59,115 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   }
 
   ctx.beginScope();
-  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
-  TypeRef.loadTemporaryTypes(
-    ctx,
-    d.functionExpression.typeParameters?.typeParameters,
-    owner: 'function:${ctx.library}:${d.name.lexeme}:$pos',
-  );
   final typeParameters =
       d.functionExpression.typeParameters?.typeParameters ??
       const <TypeParameter>[];
-  ctx.functionTypeParameterBounds[pos] = [
-    for (final parameter in typeParameters)
-      ctx
-              .temporaryTypes[ctx.library]![parameter.name.lexeme]!
-              .typeParameterBound ??
-          CoreTypes.dynamic.ref(ctx),
-  ];
-
-  final resolvedParams = resolveFPLDefaults(
-    ctx,
-    d.functionExpression.parameters,
-    false,
-    allowUnboxed: true,
-  );
-
-  var i = 0;
-  final parameterRepresentations = <MachineRepresentation>[];
-
-  for (final p in resolvedParams) {
-    Variable vRep;
-
-    var type = CoreTypes.dynamic.ref(ctx);
-    if (p.type != null) {
-      type = formalParameterAnnotationType(ctx, ctx.library, p);
-    }
-    vRep = Variable.of(
-      ctx,
-      SSA('arg_$i'),
-      type,
-      rep: Abi.parameter(type, CallableKind.function),
-    );
-
-    // `_` parameters are wildcards: non-binding and repeatable.
-    if (p.name!.lexeme != '_') {
-      ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
-    }
-    parameterRepresentations.add(vRep.rep.bank);
-
-    i++;
-  }
-
   final b = d.functionExpression.body;
-
-  if (b.isAsynchronous) {
-    setupAsyncFunction(
-      ctx,
-      returnType: d.returnType == null
-          ? null
-          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!),
-    );
-  }
-
-  final expectedReturnType = AlwaysReturnType.fromAnnotation(
-    ctx,
+  final stInfo = ctx.withTypeParameters(
     ctx.library,
-    d.returnType,
-    CoreTypes.dynamic.ref(ctx),
-  );
-  final returnType = expectedReturnType.type;
-  ctx.functionSignatures[pos] = MachineFunctionSignature(
-    parameterRepresentations,
-    returnType != null &&
-            returnType.isSpec(CoreTypes.voidType) &&
-            !b.isAsynchronous
-        ? null
-        : Abi.result(
-            returnType ?? CoreTypes.dynamic.ref(ctx),
-            CallableKind.function,
-            isAsync: b.isAsynchronous,
-          ).bank,
-  );
-  StatementInfo? stInfo;
-  if (b is BlockFunctionBody) {
-    stInfo = compileBlock(
-      b.block,
-      expectedReturnType,
-      ctx,
-      name: '${d.name.lexeme}()',
-    );
-  } else if (b is ExpressionFunctionBody) {
-    ctx.beginScope();
-    stInfo = doReturn(
-      ctx,
-      expectedReturnType,
-      compileExpression(
-        b.expression,
-        ctx,
-        // An async body's context type is the *flattened* return type.
-        b.isAsynchronous && expectedReturnType.type != null
-            ? ctx.typeSystem.flatten(expectedReturnType.type!)
-            : expectedReturnType.type,
-      ),
-      isAsync: b.isAsynchronous,
-    );
-    stInfo = StatementInfo(willAlwaysReturn: true);
-    ctx.endScope();
-  } else {
-    throw CompileError('Unsupported function body type: ${b.runtimeType}');
-  }
+    'function:${ctx.library}:${d.name.lexeme}:$pos',
+    typeParameters,
+    () {
+      ctx.functionTypeParameterBounds[pos] = [
+        for (final parameter in typeParameters)
+          ctx
+                  .typeScopes[ctx.library]![parameter.name.lexeme]!
+                  .typeParameterBound ??
+              CoreTypes.dynamic.ref(ctx),
+      ];
 
-  ctx.temporaryTypes[ctx.library] = previousTypes;
+      final resolvedParams = resolveFPLDefaults(
+        ctx,
+        d.functionExpression.parameters,
+        false,
+        allowUnboxed: true,
+      );
+
+      var i = 0;
+      final parameterRepresentations = <MachineRepresentation>[];
+
+      for (final p in resolvedParams) {
+        Variable vRep;
+
+        var type = CoreTypes.dynamic.ref(ctx);
+        if (p.type != null) {
+          type = formalParameterAnnotationType(ctx, ctx.library, p);
+        }
+        vRep = Variable.of(
+          ctx,
+          SSA('arg_$i'),
+          type,
+          rep: Abi.parameter(type, CallableKind.function),
+        );
+
+        // `_` parameters are wildcards: non-binding and repeatable.
+        if (p.name!.lexeme != '_') {
+          ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
+        }
+        parameterRepresentations.add(vRep.rep.bank);
+
+        i++;
+      }
+
+      if (b.isAsynchronous) {
+        setupAsyncFunction(
+          ctx,
+          returnType: d.returnType == null
+              ? null
+              : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!),
+        );
+      }
+
+      final expectedReturnType = AlwaysReturnType.fromAnnotation(
+        ctx,
+        ctx.library,
+        d.returnType,
+        CoreTypes.dynamic.ref(ctx),
+      );
+      final returnType = expectedReturnType.type;
+      ctx.functionSignatures[pos] = MachineFunctionSignature(
+        parameterRepresentations,
+        returnType != null &&
+                returnType.isSpec(CoreTypes.voidType) &&
+                !b.isAsynchronous
+            ? null
+            : Abi.result(
+                returnType ?? CoreTypes.dynamic.ref(ctx),
+                CallableKind.function,
+                isAsync: b.isAsynchronous,
+              ).bank,
+      );
+      StatementInfo? stInfo;
+      if (b is BlockFunctionBody) {
+        stInfo = compileBlock(
+          b.block,
+          expectedReturnType,
+          ctx,
+          name: '${d.name.lexeme}()',
+        );
+      } else if (b is ExpressionFunctionBody) {
+        ctx.beginScope();
+        stInfo = doReturn(
+          ctx,
+          expectedReturnType,
+          compileExpression(
+            b.expression,
+            ctx,
+            // An async body's context type is the *flattened* return type.
+            b.isAsynchronous && expectedReturnType.type != null
+                ? ctx.typeSystem.flatten(expectedReturnType.type!)
+                : expectedReturnType.type,
+          ),
+          isAsync: b.isAsynchronous,
+        );
+        stInfo = StatementInfo(willAlwaysReturn: true);
+        ctx.endScope();
+      } else {
+        throw CompileError('Unsupported function body type: ${b.runtimeType}');
+      }
+      return stInfo;
+    },
+  );
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous) {

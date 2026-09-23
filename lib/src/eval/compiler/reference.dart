@@ -335,7 +335,7 @@ class IdentifierReference implements Reference {
       }
     }
 
-    final typeParameter = ctx.temporaryTypes[ctx.library]?[name];
+    final typeParameter = ctx.typeScopes[ctx.library]?[name];
     if (typeParameter != null && name != '_') {
       return CoreTypes.type.ref(ctx);
     }
@@ -1444,7 +1444,7 @@ class IdentifierReference implements Reference {
 
     // A type parameter in scope evaluates to its bound `Type` object.
     // (`_` is a wildcard type parameter: non-binding.)
-    final typeParameter = ctx.temporaryTypes[ctx.library]?[name];
+    final typeParameter = ctx.typeScopes[ctx.library]?[name];
     if (typeParameter != null && name != '_') {
       return Variable.ssa(
         ctx,
@@ -1989,19 +1989,14 @@ Variable _declarationToVariable(
   TypeRef? returnType;
   var nullable = true;
   if (decl is FunctionDeclaration && decl.returnType != null) {
-    final previousTypes = {...?ctx.temporaryTypes[decOrBridge.sourceLib]};
-    TypeRef.loadTemporaryTypes(
-      ctx,
-      decl.functionExpression.typeParameters?.typeParameters,
-      library: decOrBridge.sourceLib,
-    );
-    returnType = TypeRef.fromAnnotation(
-      ctx,
+    returnType = ctx.withTypeParameters<TypeRef>(
       decOrBridge.sourceLib,
-      decl.returnType!,
+      null,
+      decl.functionExpression.typeParameters?.typeParameters,
+      () =>
+          TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!),
     );
     nullable = decl.returnType!.question != null;
-    ctx.temporaryTypes[decOrBridge.sourceLib] = previousTypes;
   } else if (decl is ConstructorDeclaration) {
     returnType = TypeRef.lookupDeclaration(
       ctx,

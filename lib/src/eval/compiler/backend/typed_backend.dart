@@ -599,7 +599,6 @@ class TypedBackend {
       }
     }
     final constructorOwner = _constructorOwner(library, name);
-    final previousTypes = {...?context.temporaryTypes[libraryId]};
     final typeParameters = switch (constructorOwner) {
       null => switch (declaration) {
         FunctionDeclaration(:final functionExpression) =>
@@ -610,46 +609,43 @@ class TypedBackend {
       },
       _ => classLikeClauses(constructorOwner).$4?.typeParameters,
     };
-    TypeRef.loadTemporaryTypes(
-      context,
-      typeParameters,
-      library: libraryId,
-      owner: constructorOwner == null
+    return context.withTypeParameters(
+      libraryId,
+      constructorOwner == null
           ? null
           : 'class:$libraryId:${declarationName(constructorOwner)}',
+      typeParameters,
+      () {
+        final isGenerativeConstructor =
+            (constructorOwner is ClassDeclaration ||
+                constructorOwner is ClassTypeAlias) &&
+            (declaration is! ConstructorDeclaration ||
+                declaration.factoryKeyword == null);
+        return TypedExport(
+          library,
+          name,
+          indices[functionId]!,
+          generativeConstructorRuntimeTypeId: isGenerativeConstructor
+              ? context.runtimeTypes.idOf(
+                  TypeRef.lookupDeclaration(
+                    context,
+                    libraryId,
+                    constructorOwner!,
+                  ),
+                )
+              : -1,
+          parameters: [
+            for (final parameter in parameters)
+              _exportParameter(
+                parameterLibrary,
+                parameter,
+                parameterHost,
+                indices,
+              ),
+          ],
+        );
+      },
     );
-    try {
-      final isGenerativeConstructor =
-          (constructorOwner is ClassDeclaration ||
-              constructorOwner is ClassTypeAlias) &&
-          (declaration is! ConstructorDeclaration ||
-              declaration.factoryKeyword == null);
-      return TypedExport(
-        library,
-        name,
-        indices[functionId]!,
-        generativeConstructorRuntimeTypeId: isGenerativeConstructor
-            ? context.runtimeTypes.idOf(
-                TypeRef.lookupDeclaration(
-                  context,
-                  libraryId,
-                  constructorOwner!,
-                ),
-              )
-            : -1,
-        parameters: [
-          for (final parameter in parameters)
-            _exportParameter(
-              parameterLibrary,
-              parameter,
-              parameterHost,
-              indices,
-            ),
-        ],
-      );
-    } finally {
-      context.temporaryTypes[libraryId] = previousTypes;
-    }
   }
 
   TypedExportParameter _exportParameter(

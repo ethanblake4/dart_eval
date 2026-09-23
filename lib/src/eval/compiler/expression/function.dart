@@ -78,207 +78,220 @@ Variable compileFunctionExpression(
   ctx.finishMethod();
   final outerBuilder = ctx.builder;
   final fnOffset = ctx.beginFunction('<anonymous closure>');
-  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
-  TypeRef.loadTemporaryTypes(
-    ctx,
-    e.typeParameters?.typeParameters,
-    owner: 'function:${ctx.library}:<anonymous>:$fnOffset',
-  );
+  TypeRef? inferredClosureReturnType;
   final typeParameters =
       e.typeParameters?.typeParameters ?? const <TypeParameter>[];
-  ctx.functionTypeParameterBounds[fnOffset] = [
-    for (final parameter in typeParameters)
-      ctx
-              .temporaryTypes[ctx.library]![parameter.name.lexeme]!
-              .typeParameterBound ??
-          CoreTypes.dynamic.ref(ctx),
-  ];
+  ctx.withTypeParameters(
+    ctx.library,
+    'function:${ctx.library}:<anonymous>:$fnOffset',
+    typeParameters,
+    () {
+      ctx.functionTypeParameterBounds[fnOffset] = [
+        for (final parameter in typeParameters)
+          ctx
+                  .typeScopes[ctx.library]![parameter.name.lexeme]!
+                  .typeParameterBound ??
+              CoreTypes.dynamic.ref(ctx),
+      ];
 
-  ctx.locals = [];
-  ctx.exceptionDepth = 0;
-  ctx.beginScope();
-  ctx.pushOp(
-    function_ir.Parameter(
-      SSA('arg_0'),
-      0,
-      representation: MachineRepresentation.object,
-    ),
-  );
-  var captureIndex = 0;
-  for (final capture in captures.entries) {
-    final loaded = ctx.svar('capture');
-    ctx.pushOp(LoadCapture(loaded, captureIndex++));
-    final binding = Variable.of(
-      ctx,
-      loaded,
-      capture.value.type,
-      representation: capture.value.representation,
-      rep: capture.value.rep,
-      isFinal: capture.value.isFinal,
-      callingConvention: capture.value.callingConvention,
-      methodReturnType: capture.value.methodReturnType,
-    );
-    if (capture.value.captureCell != null) binding.captureCell = loaded;
-    ctx.setLocal(capture.key, binding);
-  }
-  final resolvedParams = resolveFPLDefaults(
-    ctx,
-    e.parameters,
-    false,
-    allowUnboxed: false,
-    sortNamed: true,
-    parameterOffset: 1,
-  );
-
-  List<FunctionFormalParameter> boundNormalParams = [];
-  List<FunctionFormalParameter> boundOptionalParams = [];
-  List<FunctionFormalParameter> boundNamedParams = [];
-  if (bound != null) {
-    final functionType = bound.functionType;
-    if (functionType != null) {
-      boundNormalParams = functionType.normalParameters;
-      boundOptionalParams = functionType.optionalParameters;
-      boundNamedParams = functionType.namedParameters.entries
-          .map((e) => e.value)
-          .sorted((a, b) => a.name!.compareTo(b.name!));
-    }
-  }
-
-  final boundPositionalParams = [...boundNormalParams, ...boundOptionalParams];
-  final inorderBoundParams = [...boundPositionalParams, ...boundNamedParams];
-
-  var i = 0;
-
-  for (final p in resolvedParams) {
-    Variable vRep;
-
-    var type = CoreTypes.dynamic.ref(ctx);
-    if (p.type != null) {
-      type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
-    } else if (i < inorderBoundParams.length) {
-      final fType = inorderBoundParams[i].type;
-      if (fType.type != null) {
-        type = fType.type!;
-      }
-    }
-    vRep = Variable.of(
-      ctx,
-      SSA('arg_${i + 1}'),
-      type,
-      rep: Abi.parameter(type, CallableKind.closure),
-    );
-
-    // `_` parameters are wildcards: non-binding and repeatable.
-    if (p.name!.lexeme != '_') {
-      ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
-    }
-
-    i++;
-  }
-
-  ctx.functionSignatures[fnOffset] = MachineFunctionSignature(
-    List.filled(resolvedParams.length + 1, MachineRepresentation.object),
-    MachineRepresentation.object,
-  );
-  final b = e.body;
-
-  // The closure body's context type is the bound function type's return
-  // type — `Color Function() f = () => .red` resolves `.red` under `Color`.
-  // Local function declarations (`Color f() => ...`) carry the return type
-  // on their parent declaration instead.
-  final declaredReturnType = switch (e.parent) {
-    FunctionDeclaration(:final returnType?) => TypeRef.fromAnnotation(
-      ctx,
-      ctx.library,
-      returnType,
-    ),
-    _ => null,
-  };
-  final boundReturnType =
-      bound?.functionType?.returnType.type ?? declaredReturnType;
-
-  // Block-bodied closures collect the static type of each `return` so the
-  // closure's return type can be inferred (`asyncClosureReturnTypes` serves
-  // sync closures too despite the name).
-  final collectsReturns = b.isAsynchronous || b is BlockFunctionBody;
-  if (b.isAsynchronous) {
-    setupAsyncFunction(ctx, returnType: boundReturnType);
-  }
-  if (collectsReturns) {
-    ctx.asyncClosureReturnTypes.add(<TypeRef>[]);
-  }
-
-  StatementInfo? stInfo;
-  TypeRef? inferredClosureReturnType;
-  ctx.closureDepth++;
-  try {
-    if (b is BlockFunctionBody) {
-      stInfo = compileBlock(
-        b.block,
-        AlwaysReturnType(boundReturnType ?? CoreTypes.dynamic.ref(ctx), false),
-        ctx,
-        name: '(closure)',
-      );
-    } else if (b is ExpressionFunctionBody) {
+      ctx.locals = [];
+      ctx.exceptionDepth = 0;
       ctx.beginScope();
-      final V = compileExpression(b.expression, ctx, boundReturnType);
-      inferredClosureReturnType = V.type;
-      stInfo = doReturn(
-        ctx,
-        AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
-        V,
-        isAsync: b.isAsynchronous,
+      ctx.pushOp(
+        function_ir.Parameter(
+          SSA('arg_0'),
+          0,
+          representation: MachineRepresentation.object,
+        ),
       );
-      ctx.endScope();
-    } else {
-      throw CompileError('Unsupported function body type: ${b.runtimeType}');
-    }
-  } finally {
-    ctx.closureDepth--;
-  }
+      var captureIndex = 0;
+      for (final capture in captures.entries) {
+        final loaded = ctx.svar('capture');
+        ctx.pushOp(LoadCapture(loaded, captureIndex++));
+        final binding = Variable.of(
+          ctx,
+          loaded,
+          capture.value.type,
+          representation: capture.value.representation,
+          rep: capture.value.rep,
+          isFinal: capture.value.isFinal,
+          callingConvention: capture.value.callingConvention,
+          methodReturnType: capture.value.methodReturnType,
+        );
+        if (capture.value.captureCell != null) binding.captureCell = loaded;
+        ctx.setLocal(capture.key, binding);
+      }
+      final resolvedParams = resolveFPLDefaults(
+        ctx,
+        e.parameters,
+        false,
+        allowUnboxed: false,
+        sortNamed: true,
+        parameterOffset: 1,
+      );
 
-  if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
-    if (b.isAsynchronous) {
-      asyncComplete(ctx, null);
-      ctx.endScope();
-    } else {
-      ctx.endScope();
-      ctx.pushOp(Return(null));
-    }
-    // Implicit fall-through contributes `Null` to the inferred return type.
-    if (collectsReturns) {
-      ctx.asyncClosureReturnTypes.last.add(CoreTypes.nullType.ref(ctx));
-    }
-  }
+      List<FunctionFormalParameter> boundNormalParams = [];
+      List<FunctionFormalParameter> boundOptionalParams = [];
+      List<FunctionFormalParameter> boundNamedParams = [];
+      if (bound != null) {
+        final functionType = bound.functionType;
+        if (functionType != null) {
+          boundNormalParams = functionType.normalParameters;
+          boundOptionalParams = functionType.optionalParameters;
+          boundNamedParams = functionType.namedParameters.entries
+              .map((e) => e.value)
+              .sorted((a, b) => a.name!.compareTo(b.name!));
+        }
+      }
 
-  if (collectsReturns) {
-    final returns = ctx.asyncClosureReturnTypes.removeLast();
-    final inferred =
-        inferredClosureReturnType ??
-        (returns.isEmpty
-            ? CoreTypes.nullType.ref(ctx)
-            : returns.every((t) => t == returns.first)
-            ? returns.first
-            : TypeRef.commonBaseType(ctx, returns.toSet()));
-    inferredClosureReturnType = b.isAsynchronous
-        ? CoreTypes.future
-              .ref(ctx)
-              .copyWith(specifiedTypeArgs: [ctx.typeSystem.flatten(inferred)])
-        : inferred;
-  }
+      final boundPositionalParams = [
+        ...boundNormalParams,
+        ...boundOptionalParams,
+      ];
+      final inorderBoundParams = [
+        ...boundPositionalParams,
+        ...boundNamedParams,
+      ];
 
-  ctx.finishMethod();
-  ctx.activeGraph = outerGraph;
-  ctx.builder = outerBuilder;
-  ctx.currentFunctionId = outerFunctionId;
-  ctx.funcLabel = outerFunctionLabel;
-  ctx.hasBegunMethod = true;
-  ctx.exceptionDepth = outerExceptionDepth;
+      var i = 0;
 
-  ctx.labels.addAll(outerLabels);
-  ctx.caughtExceptionTargets.addAll(outerExceptions);
-  ctx.restoreState(ctxSaveState);
-  ctx.temporaryTypes[ctx.library] = previousTypes;
+      for (final p in resolvedParams) {
+        Variable vRep;
+
+        var type = CoreTypes.dynamic.ref(ctx);
+        if (p.type != null) {
+          type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
+        } else if (i < inorderBoundParams.length) {
+          final fType = inorderBoundParams[i].type;
+          if (fType.type != null) {
+            type = fType.type!;
+          }
+        }
+        vRep = Variable.of(
+          ctx,
+          SSA('arg_${i + 1}'),
+          type,
+          rep: Abi.parameter(type, CallableKind.closure),
+        );
+
+        // `_` parameters are wildcards: non-binding and repeatable.
+        if (p.name!.lexeme != '_') {
+          ctx.setLocal(p.name!.lexeme, vRep.captureBinding(ctx, p));
+        }
+
+        i++;
+      }
+
+      ctx.functionSignatures[fnOffset] = MachineFunctionSignature(
+        List.filled(resolvedParams.length + 1, MachineRepresentation.object),
+        MachineRepresentation.object,
+      );
+      final b = e.body;
+
+      // The closure body's context type is the bound function type's return
+      // type — `Color Function() f = () => .red` resolves `.red` under `Color`.
+      // Local function declarations (`Color f() => ...`) carry the return type
+      // on their parent declaration instead.
+      final declaredReturnType = switch (e.parent) {
+        FunctionDeclaration(:final returnType?) => TypeRef.fromAnnotation(
+          ctx,
+          ctx.library,
+          returnType,
+        ),
+        _ => null,
+      };
+      final boundReturnType =
+          bound?.functionType?.returnType.type ?? declaredReturnType;
+
+      // Block-bodied closures collect the static type of each `return` so the
+      // closure's return type can be inferred (`asyncClosureReturnTypes` serves
+      // sync closures too despite the name).
+      final collectsReturns = b.isAsynchronous || b is BlockFunctionBody;
+      if (b.isAsynchronous) {
+        setupAsyncFunction(ctx, returnType: boundReturnType);
+      }
+      if (collectsReturns) {
+        ctx.asyncClosureReturnTypes.add(<TypeRef>[]);
+      }
+
+      StatementInfo? stInfo;
+      ctx.closureDepth++;
+      try {
+        if (b is BlockFunctionBody) {
+          stInfo = compileBlock(
+            b.block,
+            AlwaysReturnType(
+              boundReturnType ?? CoreTypes.dynamic.ref(ctx),
+              false,
+            ),
+            ctx,
+            name: '(closure)',
+          );
+        } else if (b is ExpressionFunctionBody) {
+          ctx.beginScope();
+          final V = compileExpression(b.expression, ctx, boundReturnType);
+          inferredClosureReturnType = V.type;
+          stInfo = doReturn(
+            ctx,
+            AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true),
+            V,
+            isAsync: b.isAsynchronous,
+          );
+          ctx.endScope();
+        } else {
+          throw CompileError(
+            'Unsupported function body type: ${b.runtimeType}',
+          );
+        }
+      } finally {
+        ctx.closureDepth--;
+      }
+
+      if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+        if (b.isAsynchronous) {
+          asyncComplete(ctx, null);
+          ctx.endScope();
+        } else {
+          ctx.endScope();
+          ctx.pushOp(Return(null));
+        }
+        // Implicit fall-through contributes `Null` to the inferred return type.
+        if (collectsReturns) {
+          ctx.asyncClosureReturnTypes.last.add(CoreTypes.nullType.ref(ctx));
+        }
+      }
+
+      if (collectsReturns) {
+        final returns = ctx.asyncClosureReturnTypes.removeLast();
+        final inferred =
+            inferredClosureReturnType ??
+            (returns.isEmpty
+                ? CoreTypes.nullType.ref(ctx)
+                : returns.every((t) => t == returns.first)
+                ? returns.first
+                : TypeRef.commonBaseType(ctx, returns.toSet()));
+        inferredClosureReturnType = b.isAsynchronous
+            ? CoreTypes.future
+                  .ref(ctx)
+                  .copyWith(
+                    specifiedTypeArgs: [ctx.typeSystem.flatten(inferred)],
+                  )
+            : inferred;
+      }
+
+      ctx.finishMethod();
+      ctx.activeGraph = outerGraph;
+      ctx.builder = outerBuilder;
+      ctx.currentFunctionId = outerFunctionId;
+      ctx.funcLabel = outerFunctionLabel;
+      ctx.hasBegunMethod = true;
+      ctx.exceptionDepth = outerExceptionDepth;
+
+      ctx.labels.addAll(outerLabels);
+      ctx.caughtExceptionTargets.addAll(outerExceptions);
+      ctx.restoreState(ctxSaveState);
+    },
+  );
 
   final positional =
       (e.parameters?.parameters.where((element) => element.isPositional) ?? []);

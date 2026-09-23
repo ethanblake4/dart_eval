@@ -10,74 +10,77 @@ import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
-  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
-  TypeRef.loadTemporaryTypes(
-    ctx,
+  return ctx.withTypeParameters(
+    ctx.library,
+    'class:${ctx.library}:${d.namePart.typeName.lexeme}',
     d.namePart.typeParameters?.typeParameters,
-    library: ctx.library,
-    owner: 'class:${ctx.library}:${d.namePart.typeName.lexeme}',
-  );
-  final $runtimeType =
-      ctx.runtimeTypes.indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
-  final clsName = d.namePart.typeName.lexeme;
-  ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
-    {},
-    {},
-    {},
-    $runtimeType,
-  ];
-  ctx.instanceGetterIndices[ctx.library]![clsName] = {};
-  final (constructors, fields, methods) = partitionClassMembers(d.body.members);
-  final (mixinFields, mixinMethods, memberLibraries) = _mixinMembers(
-    ctx,
-    d.withClause?.mixinTypes,
-  );
-  _checkAbstractMixinMemberConformance(
-    ctx,
-    d,
-    fields,
-    methods,
-    mixinFields,
-    mixinMethods,
-    memberLibraries,
-    classLikeClauses(d).$1,
-  );
-  ctx.enclosingLibrary = ctx.library;
-  if (constructors.isEmpty) {
-    ctx.currentClass = d;
-    final $extends = classLikeClauses(d).$1;
-    final superRef = $extends == null
-        ? null
-        : _resolveSuperclass(ctx, $extends);
-    if ($extends == null || _superclassHasUnnamedConstructor(ctx, superRef)) {
-      compileDefaultConstructor(ctx, d, [
-        ...mixinFields,
-        ...fields,
-      ], memberLibraries: memberLibraries);
-    } else if (ctx
-            .topLevelDeclarationsMap[superRef!.file]?[superRef.name]
-            ?.declaration !=
-        null) {
-      throw CompileError(
-        'The superclass ${superRef.name} has no unnamed constructor that '
-        'takes no arguments',
-        $extends,
-        ctx.library,
-        ctx,
+    () {
+      final $runtimeType = ctx
+          .runtimeTypes
+          .indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
+      final clsName = d.namePart.typeName.lexeme;
+      ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
+        {},
+        {},
+        {},
+        $runtimeType,
+      ];
+      ctx.instanceGetterIndices[ctx.library]![clsName] = {};
+      final (constructors, fields, methods) = partitionClassMembers(
+        d.body.members,
       );
-    }
-  }
-  compileClassMembers(
-    ctx,
-    d,
-    constructors: constructors,
-    fields: [...mixinFields, ...fields],
-    methods: [...mixinMethods, ...methods],
-    memberLibraries: memberLibraries,
+      final (mixinFields, mixinMethods, memberLibraries) = _mixinMembers(
+        ctx,
+        d.withClause?.mixinTypes,
+      );
+      _checkAbstractMixinMemberConformance(
+        ctx,
+        d,
+        fields,
+        methods,
+        mixinFields,
+        mixinMethods,
+        memberLibraries,
+        classLikeClauses(d).$1,
+      );
+      ctx.enclosingLibrary = ctx.library;
+      if (constructors.isEmpty) {
+        ctx.currentClass = d;
+        final $extends = classLikeClauses(d).$1;
+        final superRef = $extends == null
+            ? null
+            : _resolveSuperclass(ctx, $extends);
+        if ($extends == null ||
+            _superclassHasUnnamedConstructor(ctx, superRef)) {
+          compileDefaultConstructor(ctx, d, [
+            ...mixinFields,
+            ...fields,
+          ], memberLibraries: memberLibraries);
+        } else if (ctx
+                .topLevelDeclarationsMap[superRef!.file]?[superRef.name]
+                ?.declaration !=
+            null) {
+          throw CompileError(
+            'The superclass ${superRef.name} has no unnamed constructor that '
+            'takes no arguments',
+            $extends,
+            ctx.library,
+            ctx,
+          );
+        }
+      }
+      compileClassMembers(
+        ctx,
+        d,
+        constructors: constructors,
+        fields: [...mixinFields, ...fields],
+        methods: [...mixinMethods, ...methods],
+        memberLibraries: memberLibraries,
+      );
+      ctx.enclosingLibrary = null;
+      ctx.currentClass = null;
+    },
   );
-  ctx.enclosingLibrary = null;
-  ctx.currentClass = null;
-  ctx.temporaryTypes[ctx.library] = previousTypes;
 }
 
 /// Compiles a class type alias (`class C = S with M implements I`): the alias
@@ -85,88 +88,89 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
 /// members and it gains forwarding constructors to each superclass
 /// constructor.
 void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
-  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
-  TypeRef.loadTemporaryTypes(
-    ctx,
+  return ctx.withTypeParameters(
+    ctx.library,
+    'class:${ctx.library}:${d.name.lexeme}',
     d.typeParameters?.typeParameters,
-    library: ctx.library,
-    owner: 'class:${ctx.library}:${d.name.lexeme}',
+    () {
+      final $runtimeType = ctx
+          .runtimeTypes
+          .indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
+      final clsName = d.name.lexeme;
+      ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
+        {},
+        {},
+        {},
+        $runtimeType,
+      ];
+      ctx.instanceGetterIndices[ctx.library]![clsName] = {};
+      final (mixinFields, mixinMethods, memberLibraries) = _mixinMembers(
+        ctx,
+        d.withClause.mixinTypes,
+      );
+      _checkAbstractMixinMemberConformance(
+        ctx,
+        d,
+        const [],
+        const [],
+        mixinFields,
+        mixinMethods,
+        memberLibraries,
+        d.superclass,
+      );
+      ctx.enclosingLibrary = ctx.library;
+      ctx.currentClass = d;
+      final superRef = _resolveSuperclass(ctx, d.superclass);
+      final superCtors = ctx.topLevelDeclarationsMap[superRef.file]!;
+      final superCtorEntries = [
+        for (final entry in superCtors.entries)
+          if (entry.key.startsWith('${superRef.name}.') &&
+              entry.value.declaration is ConstructorDeclaration &&
+              (entry.value.declaration! as ConstructorDeclaration)
+                      .factoryKeyword ==
+                  null)
+            entry,
+      ];
+      if (!superCtorEntries.any((e) => e.key == '${superRef.name}.') &&
+          _superclassHasUnnamedConstructor(ctx, superRef)) {
+        // The superclass has an implicit unnamed constructor, so `C.` is the
+        // synthesized default body forwarding to it.
+        compileDefaultConstructor(
+          ctx,
+          d,
+          mixinFields,
+          memberLibraries: memberLibraries,
+        );
+      }
+      compileClassMembers(
+        ctx,
+        d,
+        constructors: const [],
+        fields: mixinFields,
+        methods: mixinMethods,
+        memberLibraries: memberLibraries,
+      );
+      // Forwarding constructors: `C.n(...)` for each `S.n(...)` on the superclass.
+      for (final entry in superCtorEntries) {
+        final ctorName = entry.key.substring(superRef.name.length + 1);
+        if (ctx.topLevelDeclarationPositions[ctx.library]!.containsKey(
+          '$clsName.$ctorName',
+        )) {
+          continue;
+        }
+        compileAliasForwardingConstructor(
+          ctx,
+          d,
+          ctorName,
+          entry.value,
+          mixinFields,
+          memberLibraries,
+        );
+      }
+      ctx.enclosingLibrary = null;
+      ctx.currentClass = null;
+    },
   );
-  final $runtimeType =
-      ctx.runtimeTypes.indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d)];
-  final clsName = d.name.lexeme;
-  ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
-    {},
-    {},
-    {},
-    $runtimeType,
-  ];
-  ctx.instanceGetterIndices[ctx.library]![clsName] = {};
-  final (mixinFields, mixinMethods, memberLibraries) = _mixinMembers(
-    ctx,
-    d.withClause.mixinTypes,
-  );
-  _checkAbstractMixinMemberConformance(
-    ctx,
-    d,
-    const [],
-    const [],
-    mixinFields,
-    mixinMethods,
-    memberLibraries,
-    d.superclass,
-  );
-  ctx.enclosingLibrary = ctx.library;
-  ctx.currentClass = d;
-  final superRef = _resolveSuperclass(ctx, d.superclass);
-  final superCtors = ctx.topLevelDeclarationsMap[superRef.file]!;
-  final superCtorEntries = [
-    for (final entry in superCtors.entries)
-      if (entry.key.startsWith('${superRef.name}.') &&
-          entry.value.declaration is ConstructorDeclaration &&
-          (entry.value.declaration! as ConstructorDeclaration).factoryKeyword ==
-              null)
-        entry,
-  ];
-  if (!superCtorEntries.any((e) => e.key == '${superRef.name}.') &&
-      _superclassHasUnnamedConstructor(ctx, superRef)) {
-    // The superclass has an implicit unnamed constructor, so `C.` is the
-    // synthesized default body forwarding to it.
-    compileDefaultConstructor(
-      ctx,
-      d,
-      mixinFields,
-      memberLibraries: memberLibraries,
-    );
-  }
-  compileClassMembers(
-    ctx,
-    d,
-    constructors: const [],
-    fields: mixinFields,
-    methods: mixinMethods,
-    memberLibraries: memberLibraries,
-  );
-  // Forwarding constructors: `C.n(...)` for each `S.n(...)` on the superclass.
-  for (final entry in superCtorEntries) {
-    final ctorName = entry.key.substring(superRef.name.length + 1);
-    if (ctx.topLevelDeclarationPositions[ctx.library]!.containsKey(
-      '$clsName.$ctorName',
-    )) {
-      continue;
-    }
-    compileAliasForwardingConstructor(
-      ctx,
-      d,
-      ctorName,
-      entry.value,
-      mixinFields,
-      memberLibraries,
-    );
-  }
-  ctx.enclosingLibrary = null;
-  ctx.currentClass = null;
-  ctx.temporaryTypes[ctx.library] = previousTypes;
 }
 
 /// Resolves a superclass `NamedType` to its [TypeRef] — visible types first,
@@ -262,7 +266,7 @@ _mixinMembers(
       _ => null,
     };
     if (mixinParams != null && mixinParams.isNotEmpty) {
-      final temps = ctx.temporaryTypes[ctx.library] ??= {};
+      final temps = ctx.typeParameterScope(ctx.library);
       final args = mixinType.typeArguments?.arguments;
       final owner = ownerDecl ?? ctx.currentClass;
       final ownerParams = switch (owner) {

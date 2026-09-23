@@ -266,40 +266,40 @@ int _compileDefaultThunk(
   final outerExceptions = [...ctx.caughtExceptionTargets];
   final outerExceptionDepth = ctx.exceptionDepth;
   final saveState = ctx.saveState();
-  final previousTypes = {...?ctx.temporaryTypes[ctx.library]};
   ctx.blockCode = [];
   ctx.labels.clear();
   ctx.caughtExceptionTargets.clear();
   ctx.finishMethod();
-  try {
-    final thunkId = ctx.beginFunction('<default>');
-    ctx.locals = [];
-    ctx.exceptionDepth = 0;
-    ctx.beginScope();
-    ctx.functionSignatures[thunkId] = const MachineFunctionSignature(
-      [],
-      MachineRepresentation.object,
-    );
-    final value = compileExpression(expression, ctx, bound).boxIfNeeded(ctx);
-    ctx.pushOp(Return(value.ssa));
-    ctx.endScope();
-    ctx.finishMethod();
-    return ctx.defaultThunkCache[expression] = thunkId;
-  } finally {
-    ctx.activeGraph = outerGraph;
-    ctx.builder = outerBuilder;
-    ctx.blockCode = outerBlockCode;
-    ctx.currentFunctionId = outerFunctionId;
-    ctx.funcLabel = outerFunctionLabel;
-    ctx.hasBegunMethod = outerHasBegun;
-    ctx.exceptionDepth = outerExceptionDepth;
-    ctx.labels
-      ..clear()
-      ..addAll(outerLabels);
-    ctx.caughtExceptionTargets
-      ..clear()
-      ..addAll(outerExceptions);
-    ctx.restoreState(saveState);
-    ctx.temporaryTypes[ctx.library] = previousTypes;
-  }
+  return ctx.withTypeParameters(ctx.library, null, null, () {
+    try {
+      final thunkId = ctx.beginFunction('<default>');
+      ctx.locals = [];
+      ctx.exceptionDepth = 0;
+      ctx.beginScope();
+      ctx.functionSignatures[thunkId] = const MachineFunctionSignature(
+        [],
+        MachineRepresentation.object,
+      );
+      final value = compileExpression(expression, ctx, bound).boxIfNeeded(ctx);
+      ctx.pushOp(Return(value.ssa));
+      ctx.endScope();
+      ctx.finishMethod();
+      return ctx.defaultThunkCache[expression] = thunkId;
+    } finally {
+      ctx.activeGraph = outerGraph;
+      ctx.builder = outerBuilder;
+      ctx.blockCode = outerBlockCode;
+      ctx.currentFunctionId = outerFunctionId;
+      ctx.funcLabel = outerFunctionLabel;
+      ctx.hasBegunMethod = outerHasBegun;
+      ctx.exceptionDepth = outerExceptionDepth;
+      ctx.labels
+        ..clear()
+        ..addAll(outerLabels);
+      ctx.caughtExceptionTargets
+        ..clear()
+        ..addAll(outerExceptions);
+      ctx.restoreState(saveState);
+    }
+  });
 }

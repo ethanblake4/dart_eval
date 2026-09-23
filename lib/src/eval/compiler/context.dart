@@ -289,7 +289,52 @@ class CompilerContext with ScopeContext {
   /// return type, matching the VM (`() async { return null; }` reifies
   /// `() => Future<Null>`).
   final asyncClosureReturnTypes = <List<TypeRef>>[];
-  Map<int, Map<String, TypeRef>> temporaryTypes = {};
+
+  /// Type parameters currently in scope, per library — folded mixin
+  /// members resolve in their own library, so scopes key by library
+  /// index. The mapped scope is the innermost frame; [withTypeParameters]
+  /// pushes and pops frames around a body, and ambient seeds write into
+  /// the head through [typeParameterScope].
+  final Map<int, TypeScope> typeScopes = {};
+
+  /// The mutable entries of [library]'s innermost type-parameter frame,
+  /// creating a base frame on first use. Direct seeds (mixin application
+  /// arguments, folded member bindings) write here — they live until the
+  /// enclosing [withTypeParameters] frame pops, or for good when no frame
+  /// is open.
+  Map<String, TypeRef> typeParameterScope(int library) =>
+      (typeScopes[library] ??= TypeScope(null)).entries;
+
+  /// Runs [body] with [nodes] visible as [library]'s in-scope type
+  /// parameters (owned by [owner]), restoring the previous scope on exit.
+  T withTypeParameters<T>(
+    int library,
+    String? owner,
+    List<TypeParameter>? nodes,
+    T Function() body, {
+    bool resolveBounds = true,
+  }) {
+    final scope = TypeScope(typeScopes[library]);
+    typeScopes[library] = scope;
+    TypeRef.loadTemporaryTypes(
+      this,
+      nodes,
+      library: library,
+      owner: owner,
+      resolveBounds: resolveBounds,
+    );
+    try {
+      return body();
+    } finally {
+      final parent = scope.parent;
+      if (parent == null) {
+        typeScopes.remove(library);
+      } else {
+        typeScopes[library] = parent;
+      }
+    }
+  }
+
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
 
   /// Import prefixes declared `deferred` in each library (library index →

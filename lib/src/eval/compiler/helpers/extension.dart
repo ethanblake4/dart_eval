@@ -45,35 +45,17 @@ class EvalExtension {
     }
     // Seed the extension's own parameters as visible type parameters so the
     // `on` annotation resolves into a pattern; restore the scope afterwards.
-    final temps = ctx.temporaryTypes[library] ??= {};
-    final saved = <String, TypeRef?>{};
-    for (var i = 0; i < tps.length; i++) {
-      final param = tps[i];
-      saved[param.name.lexeme] = temps[param.name.lexeme];
-      temps[param.name.lexeme] = TypeRef(
-        library,
-        param.name.lexeme,
-        typeParameterOwner: 'extension:$library:$name',
-        typeParameterIndex: i,
-      );
-    }
-    try {
-      return TypeRef.fromAnnotation(
-        ctx,
-        library,
-        declaration.onClause!.extendedType,
-      );
-    } catch (_) {
-      return null;
-    } finally {
-      for (final entry in saved.entries) {
-        if (entry.value == null) {
-          temps.remove(entry.key);
-        } else {
-          temps[entry.key] = entry.value!;
-        }
+    return ctx.withTypeParameters(library, 'extension:$library:$name', tps, () {
+      try {
+        return TypeRef.fromAnnotation(
+          ctx,
+          library,
+          declaration.onClause!.extendedType,
+        );
+      } catch (_) {
+        return null;
       }
-    }
+    }, resolveBounds: false);
   }
 }
 

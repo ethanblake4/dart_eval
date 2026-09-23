@@ -97,9 +97,10 @@ void enforceConditionType(
   Variable value,
   AstNode? source,
 ) {
-  final conversion = value.type
-      
-      .assignmentConversionTo(ctx, CoreTypes.bool.ref(ctx));
+  final conversion = value.type.assignmentConversionTo(
+    ctx,
+    CoreTypes.bool.ref(ctx),
+  );
   if (conversion == AssignmentConversion.invalid ||
       (conversion == AssignmentConversion.runtimeCheck &&
           !value.type.isSpec(CoreTypes.dynamic))) {
