@@ -1,18 +1,15 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/ir/bridge.dart';
-import 'package:dart_eval/src/eval/ir/flow.dart';
-import '../values/value_rep.dart';
+import 'package:dart_eval/src/eval/compiler/invocation/bound_call.dart';
+import 'package:dart_eval/src/eval/compiler/invocation/targets.dart';
 
 Variable compileInstanceCreation(
   CompilerContext ctx,
@@ -105,29 +102,25 @@ Variable compileInstanceOf(
               .file]!['${staticType.name}.$name'] ==
           null &&
       _hasImplicitDefaultConstructor(ctx, staticType)) {
-    var result = ctx.svar('instance');
-    ctx.pushOp(
-      Call(
-        DeferredOrOffset.lookupStatic(
-          ctx,
-          staticType.file,
-          staticType.name,
-          name,
-        ),
-        [pushRuntimeTypeId(ctx, instantiatedType)],
-        result: result,
+    return ConstructorCall(
+      staticType: staticType,
+      instantiatedType: instantiatedType,
+      name: name,
+      offset: DeferredOrOffset.lookupStatic(
+        ctx,
+        staticType.file,
+        staticType.name,
+        name,
       ),
-    );
-    if (isConst) {
-      result = pushInternConst(ctx, result, instantiatedType);
-    }
-    return Variable.of(
+      isConst: isConst,
+      implicitDefault: true,
+    ).emit(
       ctx,
-      result,
-      instantiatedType,
-      rep: ValueRep.boxed,
-      concreteTypes: [instantiatedType],
-      exactType: instantiatedType,
+      BoundCall(
+        positional: const [],
+        named: const [],
+        returnType: instantiatedType,
+      ),
     );
   }
 
@@ -258,79 +251,38 @@ Variable compileInstanceOf(
     //_namedArgs = argsPair.second;
   }
 
-  var result = ctx.svar('instance');
-  // A factory may return any subtype — the result is not exactly the
-  // declared class.
-  final isFactory =
-      !dec0.isBridge &&
-      (dec0.declaration! as ConstructorDeclaration).factoryKeyword != null;
-  if (dec0.isBridge) {
-    final classBridge =
-        ctx.topLevelDeclarationsMap[staticType.file]![staticType.name]?.bridge;
-    final externalId =
-        ctx.bridgeStaticFunctionIndices[staticType
-            .file]!['${staticType.name}.$name']!;
-    if (classBridge is BridgeClassDef && !classBridge.wrap) {
-      final subclass = BuiltinValue().push(ctx);
-      ctx.pushOp(
-        BridgeInstantiate(
-          result,
-          externalId,
-          subclass.ssa,
-          arguments.ssa,
-          runtimeTypeId: ctx.runtimeTypes.idOf(staticType),
-        ),
-      );
-    } else {
-      ctx.pushOp(InvokeExternal(result, externalId, arguments.ssa));
-    }
-  } else {
-    final constructor = dec0.declaration! as ConstructorDeclaration;
-    final offset = DeferredOrOffset.lookupStatic(
-      ctx,
-      staticType.file,
-      staticType.name,
-      name,
-    );
-    final callArguments = [...arguments.ssa];
-    // Enum constructors carry two synthetic leading parameters (index,
-    // name) bound by the enum's own value materialization; direct calls —
-    // only factories are reachable — bind them to null.
-    if (constructor.parent?.parent is EnumDeclaration) {
-      callArguments.insertAll(0, [
-        BuiltinValue().push(ctx).ssa,
-        BuiltinValue().push(ctx).ssa,
-      ]);
-    }
-    if (constructor.factoryKeyword == null) {
-      callArguments.add(pushRuntimeTypeId(ctx, instantiatedType));
-    }
-    ctx.pushOp(
-      Call(
-        offset,
-        callArguments,
-        result: result,
-        // Factories have no receiver, so the class's instantiated type
-        // arguments are delivered through the callable-type-argument channel.
-        typeArguments: constructor.factoryKeyword != null
-            ? [
-                for (final arg in instantiatedType.typeArguments)
-                  ctx.runtimeTypes.idOf(arg),
-              ]
-            : const [],
-      ),
-    );
-  }
-  if (isConst) {
-    result = pushInternConst(ctx, result, instantiatedType);
-  }
-  return Variable.of(
+  final classBridge =
+      ctx.topLevelDeclarationsMap[staticType.file]![staticType.name]?.bridge;
+  final target = ConstructorCall(
+    staticType: staticType,
+    instantiatedType: instantiatedType,
+    name: name,
+    offset: dec0.isBridge
+        ? null
+        : DeferredOrOffset.lookupStatic(
+            ctx,
+            staticType.file,
+            staticType.name,
+            name,
+          ),
+    constructor: dec0.isBridge
+        ? null
+        : dec0.declaration! as ConstructorDeclaration,
+    isConst: isConst,
+    externalIndex: dec0.isBridge
+        ? ctx.bridgeStaticFunctionIndices[staticType
+            .file]!['${staticType.name}.$name']!
+        : null,
+    classBridge: classBridge is BridgeClassDef ? classBridge : null,
+  );
+  return target.emit(
     ctx,
-    result,
-    instantiatedType,
-    rep: ValueRep.boxed,
-    concreteTypes: [instantiatedType],
-    exactType: isFactory ? null : instantiatedType,
+    BoundCall(
+      positional: const [],
+      named: const [],
+      returnType: instantiatedType,
+      vectorOverride: arguments.ssa,
+    ),
   );
 }
 

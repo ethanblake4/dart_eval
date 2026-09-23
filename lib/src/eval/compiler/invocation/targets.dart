@@ -1,12 +1,19 @@
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
+import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
 import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
+import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
@@ -151,21 +158,42 @@ final class ClosureCall extends CallTarget {
 /// construction, super-constructor calls, and enum constants.
 final class ConstructorCall extends CallTarget {
   const ConstructorCall({
-    required this.offset,
+    required this.staticType,
     required this.instantiatedType,
+    this.name = '',
+    this.offset,
     this.constructor,
     this.isConst = false,
-    this.factory = false,
+    this.externalIndex,
+    this.classBridge,
+    this.implicitDefault = false,
   });
 
-  final DeferredOrOffset offset;
+  /// The declaring class.
+  final TypeRef staticType;
+
+  /// The applied type arguments delivered to the callee.
   final TypeRef instantiatedType;
-  final Member? constructor;
+
+  /// Constructor name (`''` for the unnamed/default constructor).
+  final String name;
+
+  /// The resolved call offset for non-bridge constructors.
+  final DeferredOrOffset? offset;
+  final ConstructorDeclaration? constructor;
   final bool isConst;
 
-  /// A factory-redirecting constructor: instantiated class arguments travel
-  /// through `typeArguments` instead of the hidden runtime-id argument.
-  final bool factory;
+  /// Bridge constructors call the host: [externalIndex] is the
+  /// `bridgeStaticFunctionIndices` entry; a non-`wrap` [classBridge]
+  /// instantiates through `BridgeInstantiate`.
+  final int? externalIndex;
+  final BridgeClassDef? classBridge;
+
+  /// A class with no declared constructors gets a synthesized `Name.` body
+  /// taking only the runtime-type argument.
+  final bool implicitDefault;
+
+  bool get _isFactory => constructor?.factoryKeyword != null;
 
   @override
   CallSignature? get signature => null;
@@ -178,8 +206,68 @@ final class ConstructorCall extends CallTarget {
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    // Filled in with the constructor migration (step 5).
-    throw UnimplementedError('ConstructorCall.emit');
+    var result = ctx.svar('instance');
+    if (externalIndex != null) {
+      if (classBridge is BridgeClassDef && !classBridge!.wrap) {
+        final subclass = BuiltinValue().push(ctx);
+        ctx.pushOp(
+          BridgeInstantiate(
+            result,
+            externalIndex!,
+            subclass.ssa,
+            call.vector(),
+            runtimeTypeId: ctx.runtimeTypes.idOf(staticType),
+          ),
+        );
+      } else {
+        ctx.pushOp(InvokeExternal(result, externalIndex!, call.vector()));
+      }
+    } else {
+      final callArguments = <SSA>[
+        // Enum constructors carry two synthetic leading parameters (index,
+        // name) bound by the enum's own value materialization; direct calls
+        // — only factories are reachable — bind them to null.
+        if (constructor != null &&
+            constructor!.parent?.parent is EnumDeclaration) ...[
+          BuiltinValue().push(ctx).ssa,
+          BuiltinValue().push(ctx).ssa,
+        ],
+        if (!implicitDefault) ...call.vector(),
+        // Generative constructors take a hidden trailing runtime-type arg;
+        // the implicit default's synthesized body takes it as its only arg.
+        if (implicitDefault || (constructor != null && !_isFactory))
+          pushRuntimeTypeId(ctx, instantiatedType),
+      ];
+      ctx.pushOp(
+        Call(
+          offset!,
+          callArguments,
+          result: result,
+          // Factories have no receiver, so the class's instantiated type
+          // arguments are delivered through the callable-type-argument
+          // channel.
+          typeArguments: _isFactory
+              ? [
+                  for (final arg in instantiatedType.typeArguments)
+                    ctx.runtimeTypes.idOf(arg),
+                ]
+              : const [],
+        ),
+      );
+    }
+    if (isConst) {
+      result = pushInternConst(ctx, result, instantiatedType);
+    }
+    return Variable.of(
+      ctx,
+      result,
+      instantiatedType,
+      rep: ValueRep.boxed,
+      concreteTypes: [instantiatedType],
+      // A factory may return any subtype — the result is not exactly the
+      // declared class.
+      exactType: _isFactory ? null : instantiatedType,
+    );
   }
 }
 
@@ -381,12 +469,12 @@ final class MemberValueCall extends CallTarget {
   }
 }
 
-/// `super.m(...)` with no concrete member — `Invocation.method`/`getter`
-/// then `noSuchMethod` on `this`.
+/// `super.m(...)` with no concrete member — builds an `Invocation.method`
+/// or `Invocation.getter` describing the call and dispatches to
+/// `noSuchMethod` on `this`.
 final class NoSuchMethodCall extends CallTarget {
-  const NoSuchMethodCall({required this.receiver, required this.name, this.getterShaped = false});
+  const NoSuchMethodCall({required this.name, this.getterShaped = false});
 
-  final Variable receiver;
   final String name;
   final bool getterShaped;
 
@@ -399,9 +487,103 @@ final class NoSuchMethodCall extends CallTarget {
   @override
   CallableAbi get abi => const CallableAbi(<ValueRep>[], ValueRep.boxed);
 
+  Variable _symbolFor(CompilerContext ctx, String member) {
+    final bridge =
+        ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
+    final arg = BuiltinValue(stringval: member).push(ctx).boxIfNeeded(ctx);
+    return Variable.ssa(
+      ctx,
+      InvokeExternal(ctx.svar('sym'), bridge['Symbol.']!, [arg.ssa]),
+      CoreTypes.symbol.ref(ctx),
+    );
+  }
+
+  /// The `Invocation.getter` + `noSuchMethod` read producing the callable
+  /// member value — evaluated before argument binding on the getter-shaped
+  /// `super.m(...)` path.
+  Variable emitGetterValue(CompilerContext ctx) {
+    final bridge =
+        ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
+    final invocation = Variable.ssa(
+      ctx,
+      InvokeExternal(ctx.svar('inv'), bridge['Invocation.getter']!, [
+        _symbolFor(ctx, name).ssa,
+      ]),
+      CoreTypes.invocation.ref(ctx),
+    );
+    return ctx.lookupLocal('#this')!
+        .invoke(ctx, 'noSuchMethod', [invocation])
+        .result;
+  }
+
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    // Filled in with the super migration (step 5).
-    throw UnimplementedError('NoSuchMethodCall.emit');
+    final coreLib = ctx.libraryMap['dart:core']!;
+    final bridge = ctx.bridgeStaticFunctionIndices[coreLib]!;
+
+    // An abstract getter produces a getter-shaped Invocation; the fetched
+    // value is then invoked as a closure.
+    if (getterShaped) {
+      final getterValue = emitGetterValue(ctx);
+      final result = ClosureCall(callee: getterValue).emit(ctx, call);
+      final refined = resolveCallResultType(
+        ctx,
+        callee: getterValue,
+        dispatch: null,
+        argTypes: [for (final arg in call.positional) arg.value.type],
+        namedArgTypes: {
+          for (final entry in call.named) entry.$1: entry.$2.value.type,
+        },
+      );
+      return refined == null ? result : result.copyWith(type: refined);
+    }
+
+    final $this = ctx.lookupLocal('#this')!;
+
+    final listType = CoreTypes.list
+        .ref(ctx)
+        .copyWith(typeArguments: [CoreTypes.dynamic.ref(ctx)]);
+    final list = Variable.ssa(
+      ctx,
+      NewList(ctx.svar('list')),
+      listType,
+      rep: ValueRep.nativeList,
+    );
+    for (final arg in call.positional) {
+      ctx.pushOp(ListAppend(list.ssa, arg.value.boxIfNeeded(ctx).ssa));
+    }
+    final invArgs = [_symbolFor(ctx, name).ssa, list.boxIfNeeded(ctx).ssa];
+    if (call.named.isNotEmpty) {
+      final mapType = CoreTypes.map
+          .ref(ctx)
+          .copyWith(
+            typeArguments: [
+              CoreTypes.symbol.ref(ctx),
+              CoreTypes.dynamic.ref(ctx),
+            ],
+          );
+      final map = Variable.ssa(
+        ctx,
+        NewMap(ctx.svar('map')),
+        mapType,
+        rep: ValueRep.nativeMap,
+      );
+      for (final entry in call.named) {
+        ctx.pushOp(
+          MapSet(
+            map.ssa,
+            _symbolFor(ctx, entry.$1).ssa,
+            entry.$2.value.boxIfNeeded(ctx).ssa,
+          ),
+        );
+      }
+      invArgs.add(map.boxIfNeeded(ctx).ssa);
+    }
+    final invocation = Variable.ssa(
+      ctx,
+      InvokeExternal(ctx.svar('inv'), bridge['Invocation.method']!, invArgs),
+      CoreTypes.invocation.ref(ctx),
+    );
+    return $this.invoke(ctx, 'noSuchMethod', [invocation]).result;
   }
 }
