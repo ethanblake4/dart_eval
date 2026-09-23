@@ -14,7 +14,12 @@ import 'package:dart_eval/src/eval/ir/closures.dart';
 import '../values/abi.dart';
 
 extension TearOff on Variable {
-  Variable tearOff(CompilerContext ctx) {
+  /// Materializes this function reference. When [boundContext] supplies a
+  /// [FunctionTypeRef] (the assignment's destination type), a generic
+  /// callable's own type parameters instantiate from it — `bar` used as a
+  /// `double Function(double)` becomes `bar<double>` — and the binding is
+  /// recorded on the closure so invocations see the bound arguments.
+  Variable tearOff(CompilerContext ctx, {TypeRef? boundContext}) {
     if (!type.isFunctionLike || methodOffset == null) {
       throw CompileError('Cannot tear off non-function or unresolved function');
     }
@@ -159,6 +164,11 @@ extension TearOff on Variable {
         declaration.returnType,
         declaration.typeParameters,
         memberTypeParameters: memberParams,
+        ownTypeParameterOwner: TypeParameterOwner(
+          TypeParameterOwnerKind.tearOff,
+          offset.file ?? ctx.library,
+          offset.name ?? '',
+        ),
       ),
       FunctionDeclaration() => declaredFunctionType(
         ctx,
@@ -166,6 +176,12 @@ extension TearOff on Variable {
         declaration.functionExpression.parameters,
         declaration.returnType,
         declaration.functionExpression.typeParameters,
+        memberTypeParameters: memberParams,
+        ownTypeParameterOwner: TypeParameterOwner(
+          TypeParameterOwnerKind.tearOff,
+          offset.file ?? ctx.library,
+          offset.name ?? '',
+        ),
       ),
       ConstructorDeclaration() => declaredFunctionType(
         ctx,
@@ -177,6 +193,55 @@ extension TearOff on Variable {
       ),
       _ => CoreTypes.function.ref(ctx),
     };
+
+    // Downward instantiation: the context's signature binds this callable's
+    // own type parameters (`bar` as `double Function(double)` → `bar<double>`).
+    var boundCallableTypeArguments = const <int>[];
+    var materializedType = functionType;
+    if (boundContext is FunctionTypeRef &&
+        functionType is FunctionTypeRef &&
+        functionType.signature.typeParameters.isNotEmpty) {
+      final signature = functionType.signature;
+      final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
+      ctx.typeSystem.unify(functionType, boundContext, substitutions);
+      var fullyBound = true;
+      boundCallableTypeArguments = [
+        for (final def in signature.typeParameters)
+          () {
+            final bound = substitutions[def];
+            if (bound == null || bound.isTypeParameter) {
+              fullyBound = false;
+              return ctx.runtimeTypes.idOf(
+                bound ?? CoreTypes.dynamic.ref(ctx),
+              );
+            }
+            return ctx.runtimeTypes.idOf(bound);
+          }(),
+      ];
+      if (fullyBound) {
+        materializedType = FunctionTypeRef(
+          FunctionSignature(
+            positional: [
+              for (final t in signature.positional)
+                t.substituteTypeParameters(substitutions),
+            ],
+            requiredPositional: signature.requiredPositional,
+            named: {
+              for (final e in signature.named.entries)
+                e.key: (
+                  type: e.value.type.substituteTypeParameters(substitutions),
+                  required: e.value.required,
+                ),
+            },
+            returnType: signature.returnType.substituteTypeParameters(
+              substitutions,
+            ),
+          ),
+          decl: functionType.decl,
+          nullable: functionType.nullable,
+        );
+      }
+    }
 
     final captures = <SSA>[];
     if (declaration is MethodDeclaration && !declaration.isStatic) {
@@ -228,9 +293,10 @@ extension TearOff on Variable {
                   !Abi.unboxedAcrossCalls(parameterType(param)).isBoxed,
             )
             .toList(),
-        runtimeTypeId: ctx.runtimeTypes.idOf(functionType),
+        runtimeTypeId: ctx.runtimeTypes.idOf(materializedType),
+        boundCallableTypeArguments: boundCallableTypeArguments,
       ),
-      functionType,
+      materializedType,
       callable: CallableValue(
         offset: offset,
         returnType:

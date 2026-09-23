@@ -120,7 +120,7 @@ Variable convertForAssignment(
   // Bound method tear-offs (e.g. `x.m<T>` used as a value) have no SSA slot
   // until materialized as a closure value.
   if (converted.unmaterializedCallable != null) {
-    converted = converted.tearOff(ctx);
+    converted = converted.tearOff(ctx, boundContext: target);
   }
   if (conversion == AssignmentConversion.intToDouble) {
     final intVar = converted.unboxIfNeeded(ctx, false);

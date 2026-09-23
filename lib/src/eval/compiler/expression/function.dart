@@ -334,7 +334,23 @@ Variable compileFunctionExpression(
         : TypeRef.fromAnnotation(ctx, ctx.library, annotation);
   }
 
-  var closureType = bound is! FunctionTypeRef
+  // A context signature still holding type-parameter refs (`void
+  // Function(X)` inside a generic call's binding) can't stand in as the
+  // closure's own type: the literal's annotated parameters decide the
+  // argument type upward inference sees.
+  bool boundContainsTypeParameter(TypeRef t) =>
+      t.isTypeParameter ||
+      (t is FunctionTypeRef &&
+          (t.signature.positional.any(boundContainsTypeParameter) ||
+              t.signature.named.values.any(
+                (e) => boundContainsTypeParameter(e.type),
+              ) ||
+              boundContainsTypeParameter(t.signature.returnType))) ||
+      t.typeArguments.any(boundContainsTypeParameter);
+  final boundIsParametricSignature =
+      bound is FunctionTypeRef && boundContainsTypeParameter(bound);
+
+  var closureType = bound is! FunctionTypeRef || boundIsParametricSignature
       ? e.typeParameters == null
             ? FunctionTypeRef(
                 FunctionSignature(

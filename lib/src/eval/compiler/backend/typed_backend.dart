@@ -1227,6 +1227,7 @@ class _LoweringSession {
                   const <TypeRef>[])
             b.context.runtimeTypes.idOf(bound),
         ],
+        boundCallableTypeArguments: op.boundCallableTypeArguments,
         runtimeTypeId: op.runtimeTypeId < 0
             ? b.context.runtimeTypes.idOf(CoreTypes.function.ref(b.context))
             : op.runtimeTypeId,

@@ -14,6 +14,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import '../builtins.dart';
 import '../errors.dart';
 import '../helpers/argument_list.dart';
+import '../model/function_type.dart';
 import '../../ir/bridge.dart' show PrepareBridgeArgument;
 import 'bound_call.dart';
 import 'call.dart';
@@ -255,7 +256,45 @@ BoundCall bindParameterList(
         (resolveGenerics.containsKey(typeAnnotation.name.lexeme) ||
             ctorClassParamNames.contains(typeAnnotation.name.lexeme));
 
-    var arg0 = compileExpression(expr, ctx, paramType);
+    // The placeholder-rich parameter shape under [InferenceMode.unify]:
+    // built before argument compilation so context-sensitive arguments
+    // (closures, generic tear-offs) see the generic form rather than the
+    // erased formal type.
+    TypeRef? unifyPattern;
+    final unifyPlaceholders = <String, TypeRef>{};
+    final unifyDefs = <String, TypeParameterDef>{};
+    if (inferGenerics &&
+        options.inference == InferenceMode.unify &&
+        typeAnnotation != null &&
+        resolveGenerics.isNotEmpty) {
+      var i = 0;
+      for (final name in resolveGenerics.keys) {
+        final def = TypeParameterDef(
+          TypeParameterOwner(
+            TypeParameterOwnerKind.callSite,
+            decLibrary,
+            '',
+          ),
+          i++,
+          name,
+        );
+        unifyDefs[name] = def;
+        unifyPlaceholders[name] =
+            TypeParameterTypeRef(def, file: decLibrary);
+      }
+      unifyPattern = formalParameterAnnotationType(
+        ctx,
+        decLibrary,
+        param,
+        typeParameters: {...paramTypeParameters, ...unifyPlaceholders},
+      );
+    }
+
+    // The placeholder-rich shape only serves as context for function-typed
+    // parameters — collection literals need the erased formal so their
+    // element types stay unconstrained until unification.
+    final argBound = unifyPattern is FunctionTypeRef ? unifyPattern : paramType;
+    var arg0 = compileExpression(expr, ctx, argBound);
     arg0 = coerceArgumentForParameter(
       ctx,
       arg0,
@@ -266,36 +305,14 @@ BoundCall bindParameterList(
       source: source,
     );
 
-    if (inferGenerics && options.inference == InferenceMode.unify) {
+    if (unifyPattern != null) {
       // Deep inference: unify the parameter's declared shape against the
       // supplied type — `List<X>` against `List<int>` binds X to int —
       // recording each bound generic name for the common-base solve.
-      if (typeAnnotation != null && resolveGenerics.isNotEmpty) {
-        var i = 0;
-        final defs = <String, TypeParameterDef>{};
-        final placeholders = <String, TypeRef>{};
-        for (final name in resolveGenerics.keys) {
-          final def = TypeParameterDef(
-            TypeParameterOwner(
-              TypeParameterOwnerKind.callSite,
-              decLibrary,
-              '',
-            ),
-            i++,
-            name,
-          );
-          defs[name] = def;
-          placeholders[name] = TypeParameterTypeRef(def, file: decLibrary);
-        }
-        final pattern = TypeRef.fromAnnotation(
-          ctx,
-          decLibrary,
-          typeAnnotation,
-          typeParameters: {...paramTypeParameters, ...placeholders},
-        );
+      {
         final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
-        ctx.typeSystem.unify(pattern, arg0.type, substitutions);
-        for (final e in defs.entries) {
+        ctx.typeSystem.unify(unifyPattern, arg0.type, substitutions);
+        for (final e in unifyDefs.entries) {
           final bound = substitutions[e.value];
           if (bound != null) {
             resolveGenericsMap[e.key] ??= {};
@@ -791,7 +808,7 @@ BoundCall bindBridgeVector(
       arg0 = arg0.boxIfNeeded(ctx);
       if (arg0.type.isFunctionLike &&
           arg0.unmaterializedCallable != null) {
-        arg0 = arg0.tearOff(ctx);
+        arg0 = arg0.tearOff(ctx, boundContext: paramType);
       }
       // Bridge argument conversion lives on the runtime side of the typed
       // boundary (previously the compiler only boxed). Type parameters that
@@ -833,7 +850,7 @@ BoundCall bindBridgeVector(
       ).boxIfNeeded(ctx);
       if (arg0.type.isFunctionLike &&
           arg0.unmaterializedCallable != null) {
-        arg0 = arg0.tearOff(ctx);
+        arg0 = arg0.tearOff(ctx, boundContext: paramType);
       }
       if (arg0.type.assignmentConversionTo(ctx, paramType) ==
           AssignmentConversion.invalid) {

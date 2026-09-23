@@ -19,6 +19,12 @@ final class CreateClosure extends Operation {
   final List<bool> namedUnboxed;
   final int runtimeTypeId;
 
+  /// Runtime type ids for this callable's own type parameters when the
+  /// tear-off was instantiated from context (`bar` under
+  /// `double Function(double)` records `[double]`). Resolved per frame at
+  /// creation like call-site type arguments.
+  final List<int> boundCallableTypeArguments;
+
   /// Hidden thunk function indices for defaults that can't serialize as
   /// scalars, parallel to `[...positionalDefaults, ...namedDefaults]`.
   /// `-1` means the corresponding slot's scalar value is used directly.
@@ -39,6 +45,7 @@ final class CreateClosure extends Operation {
     this.positionalUnboxed = const [],
     this.namedUnboxed = const [],
     this.runtimeTypeId = -1,
+    this.boundCallableTypeArguments = const [],
     this.defaultThunks = const [],
   });
 
@@ -66,6 +73,7 @@ final class CreateClosure extends Operation {
       positionalUnboxed: positionalUnboxed,
       namedUnboxed: namedUnboxed,
       runtimeTypeId: runtimeTypeId,
+      boundCallableTypeArguments: boundCallableTypeArguments,
       defaultThunks: defaultThunks,
     );
   }

@@ -24,7 +24,11 @@ final class TypedClosure extends EvalFunction {
     this.runtime,
     this.definingTypeEnvironmentReceiver,
     List<int> definingTypeArguments,
+    List<int> boundCallableTypeArguments,
   ) : definingTypeArguments = List.unmodifiable(definingTypeArguments),
+      boundCallableTypeArguments = List.unmodifiable(
+        boundCallableTypeArguments,
+      ),
       function = program.functions[descriptor.functionId];
 
   final TypedProgram program;
@@ -34,6 +38,10 @@ final class TypedClosure extends EvalFunction {
   final Runtime? runtime;
   final Object? definingTypeEnvironmentReceiver;
   final List<int> definingTypeArguments;
+
+  /// This callable's own type arguments when context-instantiated at
+  /// creation (empty = unbound); fills in for call sites supplying none.
+  final List<int> boundCallableTypeArguments;
   int? _resolvedRuntimeTypeId;
 
   @override
@@ -69,6 +77,7 @@ final class TypedClosure extends EvalFunction {
     [receiver],
     runtime,
     receiver,
+    const [],
     const [],
   );
   static final _defaultArguments = Expando<List<$Value?>>();
@@ -134,6 +143,17 @@ final class TypedClosure extends EvalFunction {
       runtime,
       definingTypeEnvironmentReceiver,
       definingTypeArguments,
+      descriptor.boundCallableTypeArguments.isEmpty || runtime == null
+          ? descriptor.boundCallableTypeArguments
+          : runtime.resolveTypedCallTypeArguments(
+              descriptor.boundCallableTypeArguments,
+              actualOwnerType:
+                  definingTypeEnvironmentReceiver is TypedInstance
+                  ? definingTypeEnvironmentReceiver.dispatchRoot
+                      .$getRuntimeType(runtime)
+                  : null,
+              callableTypeArguments: definingTypeArguments,
+            ),
     );
   }
 
@@ -157,7 +177,11 @@ final class TypedClosure extends EvalFunction {
     final descriptor = receiver.descriptor;
     if (!descriptor.hasEnvironment) return null;
     final site = program.closureCalls[index];
-    final typeArguments = resolvedTypeArguments ?? site.typeArguments;
+    final suppliedTypeArguments =
+        resolvedTypeArguments ?? site.typeArguments;
+    final typeArguments = suppliedTypeArguments.isEmpty
+        ? receiver.boundCallableTypeArguments
+        : suppliedTypeArguments;
     if (site.positionalCount != descriptor.positionalCount ||
         site.namedNames.length != descriptor.namedNames.length ||
         !receiver.acceptsTypeArguments(typeArguments)) {
@@ -282,8 +306,11 @@ final class TypedClosure extends EvalFunction {
     final typeArguments = resolvedTypeArguments ?? site.typeArguments;
     final count = site.positionalCount + site.namedNames.length;
     if (receiver is TypedClosure) {
+      final effectiveTypeArguments = typeArguments.isEmpty
+          ? receiver.boundCallableTypeArguments
+          : typeArguments;
       if (!receiver.descriptor.accepts(site.positionalCount, site.namedNames) ||
-          !receiver.acceptsTypeArguments(typeArguments)) {
+          !receiver.acceptsTypeArguments(effectiveTypeArguments)) {
         throw NoSuchMethodError.withInvocation(
           receiver,
           _callInvocation(count, first, rest, site),
@@ -294,7 +321,7 @@ final class TypedClosure extends EvalFunction {
         first,
         rest,
         namedNames: site.namedNames,
-        typeArguments: typeArguments,
+        typeArguments: effectiveTypeArguments,
         runtime: runtime,
         trusted: site.trusted,
       );

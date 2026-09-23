@@ -554,7 +554,6 @@ expect_fail:
   - path: 'mixin_legacy/type_parameters_super_test.dart'
   - path: 'mixin_legacy/with_named_import_test.dart'
   - path: 'named_arguments_anywhere/all_kinds_test.dart'
-  - path: 'named_arguments_anywhere/order_side_effects_ok_test.dart'
   - path: 'nnbd/const/potentially_constant_types_test.dart'
   - path: 'nnbd/constant_null_safety_mode_test.dart'
   - path: 'nnbd/flow_analysis/late_var_used_before_assignment_in_switch_test.dart'

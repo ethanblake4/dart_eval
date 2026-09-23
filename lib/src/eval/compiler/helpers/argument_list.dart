@@ -54,7 +54,7 @@ Variable coerceArgumentForParameter(
 
   if (arg0.type.isFunctionLike &&
       arg0.unmaterializedCallable != null) {
-    arg0 = arg0.tearOff(ctx);
+    arg0 = arg0.tearOff(ctx, boundContext: paramType);
   }
   return arg0;
 }

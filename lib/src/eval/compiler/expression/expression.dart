@@ -47,7 +47,7 @@ Variable compileExpression(
     final value = compileIdentifier(e, ctx);
     if (value.unmaterializedCallable != null &&
         value.type.isFunctionLike) {
-      return value.tearOff(ctx);
+      return value.tearOff(ctx, boundContext: bound);
     }
     return value;
   } else if (e is MethodInvocation) {

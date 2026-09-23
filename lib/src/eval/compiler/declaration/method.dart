@@ -90,6 +90,12 @@ int compileMethodDeclaration(
                     .name
                     .lexeme]!,
         },
+        ownTypeParameterOwner: TypeParameterOwner(
+          TypeParameterOwnerKind.method,
+          ctx.library,
+          '$parentName.$methodName',
+          pos,
+        ),
       );
 
       ctx.beginScope();

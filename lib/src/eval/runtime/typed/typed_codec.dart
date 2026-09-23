@@ -331,6 +331,10 @@ abstract final class TypedCodec {
       for (final bound in descriptor.typeParameterBounds) {
         u32(bound);
       }
+      u32(descriptor.boundCallableTypeArguments.length);
+      for (final arg in descriptor.boundCallableTypeArguments) {
+        u32(arg);
+      }
       u32(descriptor.runtimeTypeId + 1);
     }
     for (final call in program.closureCalls) {
@@ -611,6 +615,11 @@ abstract final class TypedCodec {
         (_) => u32(),
         growable: false,
       );
+      final boundCallableTypeArguments = List.generate(
+        u32(),
+        (_) => u32(),
+        growable: false,
+      );
       final runtimeTypeId = u32() - 1;
       closures.add(
         TypedClosureDescriptor(
@@ -629,6 +638,7 @@ abstract final class TypedCodec {
           parameterTypeParameterIndices: parameterTypeParameterIndices,
           parameterNullable: parameterNullable,
           typeParameterBounds: typeParameterBounds,
+          boundCallableTypeArguments: boundCallableTypeArguments,
           runtimeTypeId: runtimeTypeId,
         ),
       );

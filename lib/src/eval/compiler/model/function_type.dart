@@ -185,8 +185,10 @@ FunctionTypeRef functionTypeFromAnnotation(
 }
 
 /// Builds the structural callable type declared by a function or method.
-/// Generic callables stay nominal until runtime type-parameter substitution is
-/// available.
+/// Generic callables produce a [FunctionTypeRef] whose signature owns its own
+/// type parameters; [ownTypeParameterOwner] keys those parameters so the same
+/// declaration read from the same position keeps identical parameter identities
+/// (a tear-off's owner differs from the body's — see [TypeParameterOwnerKind]).
 TypeRef declaredFunctionType(
   CompilerContext ctx,
   int library,
@@ -196,8 +198,27 @@ TypeRef declaredFunctionType(
   // The enclosing class's type parameters, name-keyed — a method's
   // signature resolves them (`MapBase<K, V>.remove` sees `K`).
   Map<String, TypeRef> memberTypeParameters = const {},
+  TypeParameterOwner? ownTypeParameterOwner,
 }) {
-  if (typeParameters != null) return CoreTypes.function.ref(ctx);
+  if (typeParameters != null && typeParameters.typeParameters.isNotEmpty) {
+    return FunctionTypeRef(
+      functionSignatureFromParts(
+        ctx,
+        library,
+        returnType: returnType,
+        typeParameterList: typeParameters,
+        parameterList: parameters,
+        owner: ownTypeParameterOwner ??
+            TypeParameterOwner(
+              TypeParameterOwnerKind.function,
+              library,
+              '',
+            ),
+        typeParameters: memberTypeParameters,
+      ),
+      decl: ctx.types.bySpec(CoreTypes.function),
+    );
+  }
 
   TypeRef parameterType(FormalParameter parameter) {
     final annotation = parameter.type;
