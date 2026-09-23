@@ -938,7 +938,11 @@ StaticDispatch? _declarationToStaticDispatch(
   final decl = decOrBridge.declaration!;
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-    decl as ClassDeclaration;
+    if (decl is! ClassDeclaration) {
+      // Variables, enums and other non-function decls have no static
+      // dispatch target.
+      return null;
+    }
 
     final offset = DeferredOrOffset(
       file: decOrBridge.sourceLib,

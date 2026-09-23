@@ -173,7 +173,8 @@ final class LocalDenotation extends Denotation {
   @override
   StaticDispatch? staticDispatch(CompilerContext ctx, {AstNode? source}) {
     final current = binding.current;
-    if (current.methodOffset != null) {
+    if (current.methodOffset != null &&
+        current.callingConvention != CallingConvention.dynamic) {
       return StaticDispatch(current.methodOffset!, current.methodReturnType!);
     }
     return null;
@@ -346,6 +347,23 @@ final class StaticMemberDenotation extends Denotation {
       );
     }
     throw CompileError('Cannot find value to set: $ownerName.${member.name.lexeme}', source);
+  }
+
+  @override
+  StaticDispatch? staticDispatch(CompilerContext ctx, {AstNode? source}) {
+    if (member.isGetter || member.isSetter) return null;
+    final rt = member.returnType == null
+        ? CoreTypes.dynamic.ref(ctx)
+        : ctx.withTypeParameters<TypeRef>(
+            file,
+            null,
+            member.typeParameters?.typeParameters,
+            () => TypeRef.fromAnnotation(ctx, file, member.returnType!),
+          );
+    return StaticDispatch(
+      _offset(ctx),
+      AlwaysReturnType(rt, member.returnType?.question != null),
+    );
   }
 }
 
@@ -1158,10 +1176,14 @@ final class ExtensionMemberDenotation extends Denotation {
 /// [DeferredOrOffset] to resolve the constructor (e.g. `ClassName.` or, for
 /// bridged enums, `EnumName#wrap`).
 final class TypeLiteralDenotation extends Denotation {
-  const TypeLiteralDenotation(this.type, this.constructorKey);
+  const TypeLiteralDenotation(this.type, this.constructorKey, {this.declaration});
 
   final TypeRef type;
   final String constructorKey;
+
+  /// The declaration the literal was built from — the constructor path
+  /// inspects aliases and class generics through it.
+  final Declaration? declaration;
 
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) =>
@@ -1363,7 +1385,7 @@ Denotation _denotationOf(
   final type = decl is TypeAlias && decl is! ClassTypeAlias
       ? resolveTypeAlias(ctx, decOrBridge.sourceLib, decl)
       : TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
-  return TypeLiteralDenotation(type, '${declarationName(decl)}.');
+  return TypeLiteralDenotation(type, '${declarationName(decl)}.', declaration: decl);
 }
 
 /// A bridge-visible entity (external class, method, or accessor).

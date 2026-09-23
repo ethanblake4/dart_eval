@@ -3,7 +3,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
@@ -12,7 +11,6 @@ import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
-import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -57,9 +55,6 @@ Variable compileMethodInvocation(
     }
   }
 
-  AlwaysReturnType? mReturnType;
-  bool? genericReturnBoxed;
-
   if (L != null) {
     // `a?.m()` and calls continuing a null-shorted chain (`a?.b.m()`): a
     // null receiver nulls the whole expression — argument evaluation is
@@ -68,416 +63,28 @@ Variable compileMethodInvocation(
       return emitNullGuard(
         ctx,
         L,
-        (t) => _invokeWithTarget(ctx, t, e, bound: bound),
+        (t) => invokeMethodWithTarget(ctx, t, e, bound: bound),
         source: e,
       );
     }
-    return _invokeWithTarget(ctx, L, e, bound: bound);
+    return invokeMethodWithTarget(ctx, L, e, bound: bound);
   }
-  final method = isPrefix
-      ? compilePrefixedIdentifier(
-          (e.target as Identifier).name,
-          e.methodName.name,
-          ctx,
-        )
-      : compileIdentifier(e.methodName, ctx);
-
-  // `E(receiver)` — explicit extension application: the callee is the
-  // extension's namespace type literal, so pin member resolution to `E`.
-  if (receiverOf(ctx, method) case TypeLiteralReceiver(:final type)) {
-    final ext = extensionForType(ctx, type);
-    if (ext != null) {
-      return _applyExtension(ctx, e, ext);
-    }
-  }
-
-  if (method.type.isSpec(CoreTypes.dynamic) ||
-      method.callingConvention == CallingConvention.dynamic ||
-      (method.type.isFunctionLike && method.methodOffset == null)) {
-    return _invokeValue(ctx, method, e);
-  }
-
-  if (method.methodOffset == null) {
-    // The receiver isn't a known function — it may still be a callable object
-    // (an implicit `.call` invocation, e.g. `c1(1)` on `C1 c1`). An extension
-    // `call` member applies statically; otherwise dispatch dynamically so
-    // objects without `call` raise NoSuchMethodError at runtime.
-    if (!hasInstanceMethod(ctx, method.type, 'call') &&
-        resolveExtensionMember(
-              ctx,
-              method.type,
-              'call',
-              arity: _positionalArity(e),
-            ) !=
-            null) {
-      final (positional, named) = _compileCallArgs(ctx, e);
-      return method.invoke(ctx, 'call', positional, namedArgs: named).result;
-    }
-    return _invokeValue(ctx, method, e);
-  }
-
-  var offset = method.methodOffset!;
-  if (method.implicitReceiver != null) {
-    // A bound extension-method tear-off invoked directly: `x.m(args)` lowers
-    // to `E.m(x, args)`. Resolve the member from the tear-off's own offset —
-    // this also covers `m(args)` inside the extension body where the receiver
-    // is `this`.
-    EvalExtension? ext;
-    MethodDeclaration? member;
-    for (final candidate in ctx.extensions) {
-      if (candidate.library != offset.file) continue;
-      for (final m in candidate.members.whereType<MethodDeclaration>()) {
-        if (!m.isStatic &&
-            !m.isGetter &&
-            !m.isSetter &&
-            candidate.memberKey(m) == offset.name) {
-          ext = candidate;
-          member = m;
-          break;
-        }
-      }
-      if (ext != null) break;
-    }
-    if (ext != null && member != null) {
-      final receiver = method.implicitReceiver!;
-      return _invokeExtensionMethod(
-        ctx,
-        receiver,
-        e,
-        ext,
-        member,
-        matchExtensionOn(ctx, receiver.type, ext) ?? const [],
-      );
-    }
-  }
-  if (offset.file == ctx.library &&
-      offset.className != null &&
-      offset.className == ctx.currentClassName) {
-    final $this = ctx.lookupLocal('#this')!;
-    return _invokeWithTarget(ctx, $this, e, bound: bound);
-  }
-
-  // `name` can resolve to a class rather than a callable (e.g. `List()`) —
-  // then the callable declaration lives under the offset's `name.ctor` key.
-  var dec0 = ctx.topLevelDeclarationsMap[offset.file]?[e.methodName.name];
-  if (dec0 == null ||
-      (!dec0.isBridge &&
-          (dec0.declaration! is ClassDeclaration ||
-              dec0.declaration! is ClassTypeAlias))) {
-    dec0 =
-        ctx.topLevelDeclarationsMap[offset.file]?[offset.name ??
-            '${e.methodName.name}.'];
-    if (dec0 == null) {
-      // Call to default constructor
-      final result = ctx.svar('constructor');
-      mReturnType =
-          method.methodReturnType?.toAlwaysReturnType(
-            ctx,
-            TypeRef.$this(ctx),
-            [],
-            {},
-          ) ??
-          AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-      final declaredReturnType = mReturnType.type ?? CoreTypes.dynamic.ref(ctx);
-      final resultRep = L != null
-          ? ValueRep.boxed
-          : Abi.unboxedAcrossCalls(declaredReturnType);
-      final instantiatedType = _instantiateConstructorType(
-        ctx,
-        e,
-        declaredReturnType,
-      );
-      ctx.pushOp(
-        Call(offset, [
-          pushRuntimeTypeId(ctx, instantiatedType),
-        ], result: result),
-      );
-      final v = Variable.of(
-        ctx,
-        result,
-        instantiatedType,
-        rep: resultRep,
-        concreteTypes: [instantiatedType],
-        exactType: instantiatedType,
-      );
-
-      return v;
-    }
-  }
-
-  // An invocation `T(args)` where `T` is a type alias to a class is a
-  // constructor call on the aliased type.
-  TypeRef? aliasType;
-  if (!dec0.isBridge && dec0.declaration is TypeAlias) {
-    var resolved = resolveTypeAlias(
-      ctx,
-      ctx.library,
-      dec0.declaration! as TypeAlias,
-      typeArgs: e.typeArguments?.arguments.toList(),
-      rawParams: true,
-    );
-    // Downward inference: `C<num> x = T(num)` instantiates `T` as `C<num>`,
-    // matching alias parameters structurally (`T<X> = C<List<X>>` against
-    // `C<List<num>>` binds `X → num`).
-    final boundChain = bound;
-
-    if (e.typeArguments == null &&
-        boundChain != null &&
-        boundChain.file == resolved.file &&
-        boundChain.name == resolved.name &&
-        boundChain.typeArguments.isNotEmpty) {
-      final substitutions = Substitution.wrap(
-        <TypeParameterDef, TypeRef>{},
-      );
-      for (
-        var i = 0;
-        i < resolved.typeArguments.length &&
-            i < boundChain.typeArguments.length;
-        i++
-      ) {
-        ctx.typeSystem.unify(
-          resolved.typeArguments[i],
-          boundChain.typeArguments[i],
-          substitutions,
-        );
-      }
-      if (substitutions.isNotEmpty) {
-        resolved = resolved.substituteTypeParameters(substitutions);
-      }
-    }
-    aliasType = resolved;
-    dec0 = ctx.topLevelDeclarationsMap[resolved.file]!['${resolved.name}.'];
-    offset = DeferredOrOffset(file: resolved.file, name: '${resolved.name}.');
-    if (dec0 == null) {
-      // The aliased class has an implicit default constructor — call the
-      // synthesized `resolved.` body with just the runtime-type argument.
-      final callResult = ctx.svar('constructor');
-      ctx.pushOp(
-        Call(offset, [pushRuntimeTypeId(ctx, resolved)], result: callResult),
-      );
-      return Variable.of(
-        ctx,
-        callResult,
-        resolved,
-        rep: ValueRep.boxed,
-        concreteTypes: [resolved],
-        exactType: resolved,
-      );
-    }
-  }
-
-  final List<Variable> args;
-  final Map<String, Variable> namedArgs;
-  final List<SSA> callArgs;
-
-  var isConstructor = false;
-  List<TypeRef>? inferredCtorArgs;
-
-  if (dec0.isBridge) {
-    final bridge = dec0.bridge;
-
-    /// If we're invoking a class identifier directly (like ClassName()), call
-    /// its default constructor
-    final fnDescriptor = bridge is BridgeClassDef
-        ? (bridge.constructors['']?.functionDescriptor ??
-              (throw CompileError(
-                'Class "${e.methodName.name}" does not have a default constructor',
-                e,
-              )))
-        : (bridge as BridgeFunctionDeclaration).function;
-
-    final argsPair = compileArgumentListWithBridge(
-      ctx,
-      e.argumentList,
-      fnDescriptor,
-      before: L != null ? [L] : [],
-    );
-
-    args = argsPair.args;
-    namedArgs = argsPair.namedArgs;
-    callArgs = argsPair.ssa;
-    isConstructor = bridge is BridgeClassDef;
-  } else {
-    final dec = dec0.declaration!;
-    isConstructor = dec is ConstructorDeclaration;
-
-    final result = compileNonBridgeArgs(
-      ctx,
-      offset.file!,
-      dec,
-      e.argumentList,
-      before: L != null ? [L] : [],
-      typeArguments: e.typeArguments,
-      source: e,
-    );
-    mReturnType = result.returnType;
-    genericReturnBoxed = result.boxedBySubstitution;
-    args = result.args.args;
-    namedArgs = result.args.namedArgs;
-    callArgs = result.args.ssa;
-
-    // Upward inference for constructors: the class type arguments inferred
-    // from the argument list (or the parameters' bounds), in declaration order.
-    if (isConstructor && result.classTypeParameters != null) {
-      // Downward inference wins: a context type naming the constructed
-      // class pins its type arguments (`A<int> get g => A(1)`).
-      final boundChain = bound;
-      final ctorDecl = dec.parent?.parent;
-      final ctorClassName = ctorDecl is Declaration
-          ? declarationName(ctorDecl)
-          : null;
-      if (boundChain != null &&
-          e.typeArguments == null &&
-          boundChain.name == ctorClassName) {
-        final contextArgs = boundChain.typeArguments;
-        if (contextArgs.isNotEmpty &&
-            contextArgs.every((t) => !t.isTypeParameter)) {
-          inferredCtorArgs = contextArgs;
-        }
-      }
-      inferredCtorArgs ??= [
-        for (final param in result.classTypeParameters!)
-          result.resolveGenerics[param.name.lexeme] ??
-              CoreTypes.dynamic.ref(ctx),
-      ];
-      if (aliasType != null && e.typeArguments == null) {
-        // The alias's instantiated arguments were left as parameter references
-        // for inference; bind them from what the constructor's arguments gave.
-        final substitutions = Substitution.wrap(
-          <TypeParameterDef, TypeRef>{},
-        );
-        final aliasArgs = aliasType.typeArguments;
-        for (
-          var i = 0;
-          i < aliasArgs.length && i < inferredCtorArgs.length;
-          i++
-        ) {
-          ctx.typeSystem.unify(
-            aliasArgs[i],
-            inferredCtorArgs[i],
-            substitutions,
-          );
-        }
-        if (substitutions.isNotEmpty) {
-          aliasType = aliasType.substituteTypeParameters(substitutions);
-        }
-      }
-    }
-  }
-
-  final argTypes = args.map((e) => e.type).toList();
-  final namedArgTypes = namedArgs.map(
-    (key, value) => MapEntry(key, value.type),
-  );
-
-  TypeRef? thisType;
-  if (ctx.currentClass != null) {
-    thisType =
-        ctx.visibleTypes[ctx.enclosingLibrary ??
-            ctx.library]![ctx.currentClassName!]!;
-  }
-
-  mReturnType ??=
-      method.methodReturnType?.toAlwaysReturnType(
-        ctx,
-        thisType,
-        argTypes,
-        namedArgTypes,
-      ) ??
-      AlwaysReturnType(CoreTypes.dynamic.ref(ctx), true);
-  final returnType = mReturnType.type;
-  final resultRep =
-      dec0.isBridge ||
-          (genericReturnBoxed ??
-              Abi.unboxedAcrossCalls(
-                mReturnType.type ?? CoreTypes.dynamic.ref(ctx),
-              ).isBoxed)
-      ? ValueRep.boxed
-      : Abi.unboxedAcrossCalls(mReturnType.type ?? CoreTypes.dynamic.ref(ctx));
-  final instantiatedReturnType = isConstructor && returnType != null
-      ? (aliasType ??
-            _instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
-      : returnType;
-  final declaration = dec0.isBridge ? null : dec0.declaration;
-  final effectiveCallArgs = [...callArgs];
-  if (isConstructor &&
-      declaration is ConstructorDeclaration &&
-      declaration.factoryKeyword == null) {
-    effectiveCallArgs.add(pushRuntimeTypeId(ctx, instantiatedReturnType!));
-  }
-
-  var result = ctx.svar('call');
-  if (dec0.isBridge) {
-    final bridge = dec0.bridge!;
-    if (bridge is BridgeClassDef && !bridge.wrap) {
-      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-      final subclass = BuiltinValue().push(ctx);
-      ctx.pushOp(
-        BridgeInstantiate(
-          result,
-          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
-          subclass.ssa,
-          effectiveCallArgs,
-          runtimeTypeId: ctx.runtimeTypes.idOf(type),
-        ),
-      );
-    } else {
-      ctx.pushOp(
-        InvokeExternal(
-          result,
-          ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!,
-          effectiveCallArgs,
-        ),
-      );
-    }
-  } else {
-    ctx.pushOp(
-      Call(
-        offset,
-        effectiveCallArgs,
-        result: result,
-        // Factories have no receiver, so the class's instantiated type
-        // arguments are delivered through the callable-type-argument channel.
-        typeArguments:
-            declaration is ConstructorDeclaration &&
-                declaration.factoryKeyword != null
-            ? [
-                for (final arg
-                    in instantiatedReturnType?.typeArguments ??
-                        const <TypeRef>[])
-                  ctx.runtimeTypes.idOf(arg),
-              ]
-            : isConstructor
-            ? const []
-            : _runtimeTypeArguments(ctx, e),
+  return CallResolver(ctx).invokeBare(
+    e.methodName.name,
+    CallSite(
+      shape: CallShape.fromArgumentList(
+        e.argumentList,
+        e.typeArguments?.arguments,
       ),
-    );
-  }
-
-  final generativeCtor =
-      declaration is ConstructorDeclaration &&
-      declaration.factoryKeyword == null;
-  if (isConstructor && e.inConstantContext) {
-    result = pushInternConst(ctx, result, instantiatedReturnType!);
-  }
-  final v = Variable.of(
-    ctx,
-    result,
-    instantiatedReturnType ?? CoreTypes.dynamic.ref(ctx),
-    rep: resultRep,
-    concreteTypes: [
-      if (isConstructor && instantiatedReturnType != null)
-        instantiatedReturnType,
-    ],
-    // A factory may return any subtype — the result is not exactly the
-    // declared class.
-    exactType: generativeCtor ? instantiatedReturnType : null,
+      source: e,
+      inConstContext: e.inConstantContext,
+    ),
+    prefix: isPrefix ? (e.target as Identifier).name : null,
+    bound: bound,
   );
-
-  return v;
 }
 
-TypeRef _instantiateConstructorType(
+TypeRef instantiateConstructorType(
   CompilerContext ctx,
   MethodInvocation invocation,
   TypeRef base, [
@@ -616,7 +223,7 @@ int _positionalArity(MethodInvocation e) =>
 /// Compiles `E(receiver)` — explicit extension application. The receiver
 /// keeps its own type but carries a [BoundExtension] so member lookups on
 /// the result resolve only within [ext].
-Variable _applyExtension(
+Variable applyExtension(
   CompilerContext ctx,
   MethodInvocation e,
   EvalExtension ext,
@@ -666,7 +273,7 @@ Variable _applyExtension(
     ..boundExtension = BoundExtension(ext, bindings);
 }
 
-Variable _invokeWithTarget(
+Variable invokeMethodWithTarget(
   CompilerContext ctx,
   Variable L,
   MethodInvocation e, {
@@ -694,7 +301,7 @@ Variable _invokeWithTarget(
         e,
       );
     }
-    return _invokeExtensionMethod(
+    return invokeExtensionMethod(
       ctx,
       L,
       e,
@@ -733,7 +340,7 @@ Variable _invokeWithTarget(
         arity: _positionalArity(e),
       );
       if (found != null) {
-        return _invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+        return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
       }
       // Not a static member of the class — it's an instance method of the
       // `Type` object itself (`Foo.toString()`, `Foo.hashCode`, ...).
@@ -823,7 +430,7 @@ Variable _invokeWithTarget(
                   bindings,
                   result.resolveGenerics,
                 ) ??
-                _runtimeTypeArguments(ctx, e),
+                runtimeTypeArguments(ctx, e),
           ),
         );
         return Variable.of(
@@ -866,7 +473,7 @@ Variable _invokeWithTarget(
         arity: _positionalArity(e),
       );
       if (found != null) {
-        return _invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+        return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
       }
       final foundGetter = resolveExtensionMember(
         ctx,
@@ -935,7 +542,7 @@ Variable _invokeWithTarget(
       arity: _positionalArity(e),
     );
     if (found != null) {
-      return _invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+      return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
     }
   }
 
@@ -1071,7 +678,7 @@ Variable _invokeWithTarget(
           offset,
           callArguments,
           result: result,
-          typeArguments: _runtimeTypeArguments(ctx, e),
+          typeArguments: runtimeTypeArguments(ctx, e),
         ),
       );
       if (declaration is ConstructorDeclaration && e.inConstantContext) {
@@ -1126,7 +733,7 @@ methodType: MemberKind.method,
           ],
           result: result,
           typeEnvironmentReceiver: L.boxIfNeeded(ctx).ssa,
-          typeArguments: _runtimeTypeArguments(ctx, e),
+          typeArguments: runtimeTypeArguments(ctx, e),
         ),
       );
     } else {
@@ -1240,7 +847,7 @@ void _inferBridgeTypeParameters(
 /// the receiver prepended to the argument vector, the extension's `on`
 /// bindings plus the method's resolved type arguments passed in the type
 /// environment.
-Variable _invokeExtensionMethod(
+Variable invokeExtensionMethod(
   CompilerContext ctx,
   Variable receiver,
   MethodInvocation call,
@@ -1277,7 +884,7 @@ Variable _invokeExtensionMethod(
             bindings,
             result.resolveGenerics,
           ) ??
-          _runtimeTypeArguments(ctx, call),
+          runtimeTypeArguments(ctx, call),
     ),
   );
   return Variable.of(
@@ -1288,7 +895,7 @@ Variable _invokeExtensionMethod(
   );
 }
 
-List<int> _runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
+List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
     call.typeArguments?.arguments
         .map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
         .map((type) => ctx.runtimeTypes.idOf(type))
