@@ -83,7 +83,12 @@ Variable compileFunctionExpression(
       e.typeParameters?.typeParameters ?? const <TypeParameter>[];
   ctx.withTypeParameters(
     ctx.library,
-    'function:${ctx.library}:<anonymous>:$fnOffset',
+    TypeParameterOwner(
+      TypeParameterOwnerKind.closure,
+      ctx.library,
+      '<anonymous>',
+      fnOffset,
+    ),
     typeParameters,
     () {
       ctx.functionTypeParameterBounds[fnOffset] = [

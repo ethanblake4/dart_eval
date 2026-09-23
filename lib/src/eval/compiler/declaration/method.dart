@@ -48,7 +48,12 @@ int compileMethodDeclaration(
       d.typeParameters?.typeParameters ?? const <TypeParameter>[];
   final stInfo = ctx.withTypeParameters(
     ctx.library,
-    'method:${ctx.library}:$parentName.$methodName:$pos',
+    TypeParameterOwner(
+      TypeParameterOwnerKind.method,
+      ctx.library,
+      '$parentName.$methodName',
+      pos,
+    ),
     [...extensionTypeParameters, ...methodTypeParameters],
     () {
       ctx.functionTypeParameterBounds[pos] = [

@@ -108,11 +108,17 @@ extension TearOff on Variable {
         const <TypeParameter>[];
     for (var i = 0; i < ownTypeParams.length; i++) {
       final param = ownTypeParams[i];
-      memberParams[param.name.lexeme] = TypeRef(
-        offset.file ?? ctx.library,
-        param.name.lexeme,
-        typeParameterOwner: 'tearoff:${offset.file}:${offset.name}',
-        typeParameterIndex: i,
+      memberParams[param.name.lexeme] = TypeParameterTypeRef(
+        TypeParameterDef(
+          TypeParameterOwner(
+            TypeParameterOwnerKind.tearOff,
+            offset.file ?? ctx.library,
+            offset.name ?? '',
+          ),
+          i,
+          param.name.lexeme,
+        ),
+        file: offset.file ?? ctx.library,
       );
     }
 

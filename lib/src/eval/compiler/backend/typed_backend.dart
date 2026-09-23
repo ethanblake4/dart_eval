@@ -423,7 +423,7 @@ class TypedBackend {
             ],
             parameterTypeParameterIndices: [
               for (final type in parameterTypes)
-                type.typeParameterOwner?.startsWith('class:') == true
+                type.parameter?.owner.isClassLike == true
                     ? type.typeParameterIndex!
                     : -1,
             ],
@@ -613,7 +613,11 @@ class TypedBackend {
       libraryId,
       constructorOwner == null
           ? null
-          : 'class:$libraryId:${declarationName(constructorOwner)}',
+          : TypeParameterOwner(
+            TypeParameterOwnerKind.classLike,
+            libraryId,
+            declarationName(constructorOwner),
+          ),
       typeParameters,
       () {
         final isGenerativeConstructor =
@@ -1213,7 +1217,7 @@ class _LoweringSession {
           for (final type
               in b.context.functionParameterTypes[sourceFunctionId] ??
                   const <TypeRef>[])
-            type.typeParameterOwner?.startsWith('class:') == true
+            type.parameter?.owner.isClassLike == true
                 ? type.typeParameterIndex!
                 : -1,
         ],

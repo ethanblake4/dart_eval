@@ -59,28 +59,24 @@ final class RuntimeTypes {
   /// tag?, ...]` in the order the runtime decoder expects.
   List<int> descriptorOf(TypeRef type) {
     if (type.isTypeParameter) {
-      final ownerType = type.isClassTypeParameter
-          ? () {
-              final owner = type.typeParameterOwner!.split(':');
-              final ownerLibrary = int.parse(owner[1]);
-              return idOf(_ctx.visibleTypes[ownerLibrary]![owner[2]]!);
-            }()
+      final parameter = type.parameter!;
+      final owner = parameter.owner;
+      final ownerType = owner.isClassLike
+          ? idOf(_ctx.visibleTypes[owner.library]![owner.name]!)
           : RuntimeTypeDescriptorTag.callableTypeParameterOwner;
       return [
         idOf(CoreTypes.dynamic.ref(_ctx)),
         type.nullable ? 1 : 0,
         RuntimeTypeDescriptorTag.typeParameter,
         ownerType,
-        type.typeParameterIndex!,
+        parameter.index,
         // F-bounds reference the parameter itself (`T extends Foo<T>`); erase
         // the self-reference to dynamic — descriptors can't be cyclic.
         idOf(
-          (type.typeParameterBound ?? CoreTypes.dynamic.ref(_ctx))
-              .substituteTypeParameters({
-                (type.typeParameterOwner!, type.typeParameterIndex!): CoreTypes
-                    .dynamic
-                    .ref(_ctx),
-              }),
+          (parameter.bound ?? CoreTypes.dynamic.ref(_ctx))
+              .substituteTypeParameters(
+                Substitution.of({parameter: CoreTypes.dynamic.ref(_ctx)}),
+              ),
         ),
       ];
     }

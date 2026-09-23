@@ -17,26 +17,8 @@ final class TypeSystem {
   /// the declaration's own parameter space. Refs constructed without
   /// parameter declarations still map positional arguments into the class's
   /// parameter namespace.
-  Map<(String, int), TypeRef> appliedArguments(TypeRef type) {
-    final decl = type.decl;
-    final params = decl?.typeParameters ?? const <GenericParam>[];
-    if (params.isEmpty) {
-      if (type.specifiedTypeArgs.isEmpty) return const {};
-      return {
-        for (var i = 0; i < type.specifiedTypeArgs.length; i++)
-          ('class:${type.file}:${type.name}', i): type.specifiedTypeArgs[i],
-      };
-    }
-    return {
-      for (var i = 0; i < params.length; i++)
-        (
-          'class:${type.file}:${type.name}',
-          i,
-        ): i < type.specifiedTypeArgs.length
-            ? type.specifiedTypeArgs[i]
-            : (params[i].extendsType ?? CoreTypes.dynamic.ref(_ctx)),
-    };
-  }
+  Substitution appliedArguments(TypeRef type) =>
+      Substitution.forInterface(type);
 
   /// The `extends` superclass of [type], instantiated through [type]'s
   /// arguments — null for type parameters, non-class refs, and `Object`.
@@ -140,14 +122,12 @@ final class TypeSystem {
   void unify(
     TypeRef pattern,
     TypeRef concrete,
-    Map<(String, int), TypeRef> substitutions,
+    Substitution substitutions,
   ) {
     if (pattern.isTypeParameter) {
-      substitutions[(
-            pattern.typeParameterOwner!,
-            pattern.typeParameterIndex!,
-          )] =
-          concrete;
+      if (pattern.parameter != null) {
+        substitutions[pattern.parameter!] = concrete;
+      }
       return;
     }
     if (!identical(pattern.decl, concrete.decl)) {
@@ -172,7 +152,7 @@ final class TypeSystem {
   void _unifyViaSupertypes(
     TypeRef pattern,
     TypeRef concrete,
-    Map<(String, int), TypeRef> substitutions,
+    Substitution substitutions,
   ) {
     final queue = <TypeRef>[pattern];
     final seen = <String>{};
@@ -224,13 +204,15 @@ final class TypeSystem {
   /// those parameters meaning — an unconstrained `T` is not a usable type
   /// for the caller.
   TypeRef lowerTypeParameters(TypeRef type) {
-    final substitutions = <(String, int), TypeRef>{};
+    final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
     void collect(TypeRef t) {
       if (t.isTypeParameter) {
-        substitutions.putIfAbsent((
-          t.typeParameterOwner!,
-          t.typeParameterIndex!,
-        ), () => t.typeParameterBound ?? CoreTypes.dynamic.ref(_ctx));
+        final parameter = t.parameter;
+        if (parameter == null) return;
+        substitutions.bindings.putIfAbsent(
+          parameter,
+          () => t.typeParameterBound ?? CoreTypes.dynamic.ref(_ctx),
+        );
         return;
       }
       for (final argument in t.specifiedTypeArgs) {

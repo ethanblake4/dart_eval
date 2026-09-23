@@ -87,7 +87,12 @@ class EvalFunctionType {
       returnType: annotation.returnType,
       typeParameterList: annotation.typeParameters,
       parameterList: annotation.parameters,
-      owner: 'functionType:$library:${annotation.offset}',
+      owner: TypeParameterOwner(
+        TypeParameterOwnerKind.functionTypeAnnotation,
+        library,
+        '',
+        annotation.offset,
+      ),
       typeParameters: typeParameters,
     );
   }
@@ -103,41 +108,24 @@ class EvalFunctionType {
     required TypeAnnotation? returnType,
     required TypeParameterList? typeParameterList,
     required FormalParameterList? parameterList,
-    required String owner,
+    required TypeParameterOwner owner,
     Map<String, TypeRef> typeParameters = const {},
   }) {
     // The function type's own type parameters (`Function<A>(A x)`) are
     // resolvable inside its bounds, parameters, and return type, and shadow
-    // outer type parameters.
+    // outer type parameters. Bounds resolve in a second pass so F-bounds
+    // (`T extends Foo<T>`) self-reference the already-seeded parameter.
     final ownParams =
         typeParameterList?.typeParameters ?? const <TypeParameter>[];
-    final allTypeParams = <String, TypeRef>{
-      ...typeParameters,
-      for (var i = 0; i < ownParams.length; i++)
-        ownParams[i].name.lexeme: TypeRef(
-          library,
-          ownParams[i].name.lexeme,
-          typeParameterOwner: owner,
-          typeParameterIndex: i,
-        ),
-    };
-
-    // Attach bounds in a second pass so F-bounds (`T extends Foo<T>`)
-    // self-reference the already-seeded parameter.
-    for (var i = 0; i < ownParams.length; i++) {
-      final bound = ownParams[i].bound;
-      if (bound != null) {
-        final key = ownParams[i].name.lexeme;
-        allTypeParams[key] = allTypeParams[key]!.copyWith(
-          typeParameterBound: TypeRef.fromAnnotation(
-            ctx,
-            library,
-            bound,
-            typeParameters: allTypeParams,
-          ),
-        );
-      }
-    }
+    final allTypeParams = <String, TypeRef>{...typeParameters};
+    declareTypeParameters(owner, ownParams, allTypeParams, (bound) {
+      return TypeRef.fromAnnotation(
+        ctx,
+        library,
+        bound,
+        typeParameters: allTypeParams,
+      );
+    });
 
     FunctionTypeAnnotation resolve(TypeAnnotation? type) =>
         FunctionTypeAnnotation.type(
@@ -370,7 +358,12 @@ TypeRef formalParameterAnnotationType(
           returnType: annotation,
           typeParameterList: suffix.typeParameters,
           parameterList: suffix.formalParameters,
-          owner: 'functionTypedParam:$library:${suffix.offset}',
+          owner: TypeParameterOwner(
+            TypeParameterOwnerKind.functionTypedParameter,
+            library,
+            '',
+            suffix.offset,
+          ),
           typeParameters: typeParameters,
         ),
         nullable: suffix.question != null,

@@ -271,47 +271,36 @@ ArgumentListResult compileArgumentList(
   };
   // Field/super formals resolve to class type-parameter references; the call
   // site's bindings instantiate them (e.g. `C<num, double>(0, 0.5)` makes
-  // `this.field2`'s declared `S` check against `double`).
-  final ctorClassParamSubs = <(String, int), TypeRef>{
-    if (parameterHost is ConstructorDeclaration &&
-        parameterHost.parent?.parent is Declaration)
-      for (var i = 0; i < ctorClassParams.length; i++)
-        (
-          'class:$decLibrary:${declarationName(parameterHost.parent!.parent! as Declaration)}',
-          i,
-        ): ?resolveGenerics[ctorClassParams[i].name.lexeme],
-  };
-  // The same parameters as name-keyed references, so annotations on
-  // ordinary (non-formal) params like `T z` resolve inside the ctor.
+  // `this.field2`'s declared `S` check against `double`). The same
+  // parameters appear as name-keyed references so annotations on ordinary
+  // (non-formal) params like `T z` resolve inside the ctor.
   final ctorClassParamRefs = <String, TypeRef>{};
   if (ctorClassParams.isNotEmpty) {
     final hostName = declarationName(
       parameterHost.parent!.parent! as Declaration,
     );
-    for (var i = 0; i < ctorClassParams.length; i++) {
-      final param = ctorClassParams[i];
-      ctorClassParamRefs[param.name.lexeme] = TypeRef(
+    declareTypeParameters(
+      TypeParameterOwner(
+        TypeParameterOwnerKind.classLike,
         decLibrary,
-        param.name.lexeme,
-        typeParameterOwner: 'class:$decLibrary:$hostName',
-        typeParameterIndex: i,
-      );
-    }
-    for (var i = 0; i < ctorClassParams.length; i++) {
-      final bound = ctorClassParams[i].bound;
-      if (bound != null) {
-        final name = ctorClassParams[i].name.lexeme;
-        ctorClassParamRefs[name] = ctorClassParamRefs[name]!.copyWith(
-          typeParameterBound: TypeRef.fromAnnotation(
-            ctx,
-            decLibrary,
-            bound,
-            typeParameters: {...ctorClassParamRefs, ...resolveGenerics},
-          ),
-        );
-      }
-    }
+        hostName,
+      ),
+      ctorClassParams,
+      ctorClassParamRefs,
+      (bound) => TypeRef.fromAnnotation(
+        ctx,
+        decLibrary,
+        bound,
+        typeParameters: {...ctorClassParamRefs, ...resolveGenerics},
+      ),
+    );
   }
+  final ctorClassParamSubs = Substitution.wrap(<TypeParameterDef, TypeRef>{
+    for (final param in ctorClassParams)
+      ctorClassParamRefs[param.name.lexeme]!.parameter!: ?resolveGenerics[param
+          .name
+          .lexeme],
+  });
   final paramTypeParameters = {...ctorClassParamRefs, ...resolveGenerics};
 
   final resolveGenericsMap = <String, Set<TypeRef>>{};
@@ -532,7 +521,7 @@ Variable _forwardedSuperParam(
   int decLibrary,
   String localName, {
   Map<String, TypeRef> typeParameters = const {},
-  Map<(String, int), TypeRef> ctorClassParamSubs = const {},
+  Substitution ctorClassParamSubs = Substitution.empty,
   Set<String> genericParameterNames = const {},
   AstNode? source,
 }) {

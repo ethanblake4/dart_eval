@@ -65,7 +65,12 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final b = d.functionExpression.body;
   final stInfo = ctx.withTypeParameters(
     ctx.library,
-    'function:${ctx.library}:${d.name.lexeme}:$pos',
+    TypeParameterOwner(
+      TypeParameterOwnerKind.function,
+      ctx.library,
+      d.name.lexeme,
+      pos,
+    ),
     typeParameters,
     () {
       ctx.functionTypeParameterBounds[pos] = [

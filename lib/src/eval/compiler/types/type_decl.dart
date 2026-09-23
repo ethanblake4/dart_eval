@@ -66,7 +66,7 @@ sealed class TypeDecl {
 
   /// The declared type parameters (`<T extends num, S>`), with bounds
   /// resolved in the declaring library's scope.
-  late final List<GenericParam> typeParameters = computeTypeParameters();
+  late final List<TypeParameterDef> typeParameters = computeTypeParameters();
 
   /// The declared supertypes, computed once and shared by every
   /// instantiation — cyclic hierarchies throw the same [CompileError] the
@@ -86,14 +86,8 @@ sealed class TypeDecl {
   /// A [TypeRef] for this declaration's [index]th type parameter — the
   /// shared key (`class:library:name`, index) clause types and member
   /// annotations resolve against.
-  TypeRef ownParameterRef(int index) => TypeRef(
-    library,
-    typeParameters[index].name,
-    typeParameterOwner: 'class:$library:$name',
-    typeParameterIndex: index,
-    typeParameterBound:
-        typeParameters[index].extendsType ?? CoreTypes.dynamic.ref(ctx),
-  );
+  TypeRef ownParameterRef(int index) =>
+      TypeParameterTypeRef(typeParameters[index], file: library);
 
   /// `C<args...>` — the raw declaration instantiated with [arguments].
   TypeRef instantiate(List<TypeRef> arguments, {bool nullable = false}) =>
@@ -110,7 +104,7 @@ sealed class TypeDecl {
       typeParameters[i].name: ownParameterRef(i),
   };
 
-  List<GenericParam> computeTypeParameters();
+  List<TypeParameterDef> computeTypeParameters();
 
   DeclaredSupertypes computeSupertypes();
 
@@ -188,7 +182,7 @@ sealed class TypeDecl {
       mixinDeclRef.name,
       mixinDecl.typeParameters,
     );
-    final substitutions = <(String, int), TypeRef>{};
+    final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
     for (final constraint in mixinDecl.onClause!.superclassConstraints) {
       final pattern = TypeRef.fromAnnotation(
         ctx,
@@ -208,11 +202,8 @@ sealed class TypeDecl {
     return mixin.copyWith(
       specifiedTypeArgs: [
         for (var i = 0; i < mixinParams2.length; i++)
-          substitutions[(
-                'class:${mixinDeclRef.library}:${mixinDeclRef.name}',
-                i,
-              )] ??
-              mixinParams2[i].extendsType?.substituteTypeParameters(
+          substitutions[mixinParams2[i]] ??
+              mixinParams2[i].bound?.substituteTypeParameters(
                 substitutions,
               ) ??
               CoreTypes.dynamic.ref(ctx),
@@ -244,26 +235,27 @@ final class SourceTypeDecl extends TypeDecl {
   };
 
   @override
-  List<GenericParam> computeTypeParameters() {
-    final typeParameters = classLikeClauses(node).$4;
-    if (typeParameters == null) return const [];
+  List<TypeParameterDef> computeTypeParameters() {
+    final nodes = classLikeClauses(node).$4;
+    if (nodes == null) return const [];
     // Bounds can reference earlier parameters (`S extends T`), so resolve
     // them with the class's own parameters already seeded.
-    final paramRefs = classTypeParameterRefs(library, name, typeParameters);
-    return [
-      for (final t in typeParameters.typeParameters)
-        GenericParam(
-          t.name.lexeme,
-          t.bound == null
-              ? null
-              : TypeRef.fromAnnotation(
-                  ctx,
-                  library,
-                  t.bound!,
-                  typeParameters: paramRefs,
-                ),
-        ),
-    ];
+    final paramRefs = <String, TypeRef>{};
+    final defs = declareTypeParameters(
+      TypeParameterOwner(TypeParameterOwnerKind.classLike, library, name),
+      nodes.typeParameters,
+      paramRefs,
+      (bound) => TypeRef.fromAnnotation(
+        ctx,
+        library,
+        bound,
+        typeParameters: paramRefs,
+      ),
+    );
+    for (final def in defs) {
+      def.bound ??= CoreTypes.dynamic.ref(ctx);
+    }
+    return defs;
   }
 
   @override
@@ -319,17 +311,21 @@ final class BridgeTypeDecl extends TypeDecl {
   bool get isHostBridged => classDef?.bridge ?? false;
 
   @override
-  List<GenericParam> computeTypeParameters() {
+  List<TypeParameterDef> computeTypeParameters() {
     final classDef = this.classDef;
     if (classDef == null) return const [];
+    final owner = TypeParameterOwner(
+      TypeParameterOwnerKind.classLike,
+      library,
+      name,
+    );
+    var index = 0;
     return [
       for (final g in classDef.type.generics.entries)
-        GenericParam(
-          g.key,
-          g.value.$extends == null
-              ? null
+        TypeParameterDef(owner, index++, g.key)
+          ..bound = g.value.$extends == null
+              ? CoreTypes.dynamic.ref(ctx)
               : TypeRef.fromBridgeTypeRef(ctx, g.value.$extends!),
-        ),
     ];
   }
 

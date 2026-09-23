@@ -45,7 +45,11 @@ class EvalExtension {
     }
     // Seed the extension's own parameters as visible type parameters so the
     // `on` annotation resolves into a pattern; restore the scope afterwards.
-    return ctx.withTypeParameters(library, 'extension:$library:$name', tps, () {
+    return ctx.withTypeParameters(
+      library,
+      TypeParameterOwner(TypeParameterOwnerKind.extension, library, name),
+      tps,
+      () {
       try {
         return TypeRef.fromAnnotation(
           ctx,
@@ -250,10 +254,17 @@ TypeRef _instantiateOnType(
   List<TypeRef> bindings,
 ) {
   if (bindings.isEmpty) return onType;
-  return onType.substituteTypeParameters({
-    for (var i = 0; i < bindings.length; i++)
-      ('extension:${ext.library}:${ext.name}', i): bindings[i],
-  });
+  final owner = TypeParameterOwner(
+    TypeParameterOwnerKind.extension,
+    ext.library,
+    ext.name,
+  );
+  return onType.substituteTypeParameters(
+    Substitution.of({
+      for (var i = 0; i < bindings.length; i++)
+        TypeParameterDef(owner, i, ''): bindings[i],
+    }),
+  );
 }
 
 /// Finds the most specific extension member applicable to [receiverType]

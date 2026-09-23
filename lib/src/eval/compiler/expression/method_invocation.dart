@@ -223,7 +223,9 @@ Variable compileMethodInvocation(
         boundChain.file == resolved.file &&
         boundChain.name == resolved.name &&
         boundChain.specifiedTypeArgs.isNotEmpty) {
-      final substitutions = <(String, int), TypeRef>{};
+      final substitutions = Substitution.wrap(
+        <TypeParameterDef, TypeRef>{},
+      );
       for (
         var i = 0;
         i < resolved.specifiedTypeArgs.length &&
@@ -338,7 +340,9 @@ Variable compileMethodInvocation(
       if (aliasType != null && e.typeArguments == null) {
         // The alias's instantiated arguments were left as parameter references
         // for inference; bind them from what the constructor's arguments gave.
-        final substitutions = <(String, int), TypeRef>{};
+        final substitutions = Substitution.wrap(
+          <TypeParameterDef, TypeRef>{},
+        );
         final aliasArgs = aliasType.specifiedTypeArgs;
         for (
           var i = 0;
@@ -483,10 +487,21 @@ TypeRef _instantiateConstructorType(
     if (baseArgs.isEmpty || baseArgs.every((a) => a.isTypeParameter)) {
       return base.copyWith(specifiedTypeArgs: inferredArgs);
     }
-    return base.substituteTypeParameters({
-      for (var i = 0; i < inferredArgs.length; i++)
-        ('class:${base.file}:${base.name}', i): inferredArgs[i],
-    });
+    return base.substituteTypeParameters(
+      Substitution.of({
+        for (var i = 0; i < inferredArgs.length; i++)
+          (base.decl?.typeParameters[i] ??
+              TypeParameterDef(
+                TypeParameterOwner(
+                  TypeParameterOwnerKind.classLike,
+                  base.file,
+                  base.name,
+                ),
+                i,
+                '',
+              )): inferredArgs[i],
+      }),
+    );
   }
   return base.copyWith(
     specifiedTypeArgs: [
@@ -520,13 +535,16 @@ void _resolveInvocationGenerics(
   }
   // Seed every parameter name before resolving bounds so F-bounds can
   // self-reference (`f<T extends Foo<T>>(...)`).
+  final callOwner = TypeParameterOwner(
+    TypeParameterOwnerKind.callSite,
+    declarationLibrary,
+    '',
+  );
   for (var index = 0; index < parameters.length; index++) {
     final name = parameters[index].name.lexeme;
-    resolved[name] = TypeRef(
-      declarationLibrary,
-      name,
-      typeParameterOwner: 'call:$declarationLibrary',
-      typeParameterIndex: index,
+    resolved[name] = TypeParameterTypeRef(
+      TypeParameterDef(callOwner, index, name),
+      file: declarationLibrary,
     );
   }
   for (var index = 0; index < parameters.length; index++) {
@@ -552,9 +570,9 @@ void _resolveInvocationGenerics(
     );
     // The bound may self-reference (`T extends Generator<T>`); substitute
     // the actual argument before checking assignability.
-    final substitutedBound = bound.substituteTypeParameters({
-      ('call:$declarationLibrary', index): argument,
-    });
+    final substitutedBound = bound.substituteTypeParameters(
+      Substitution.of({resolved[name]!.parameter!: argument}),
+    );
     if (!argument.isSpec(CoreTypes.dynamic) &&
         !substitutedBound.isSpec(CoreTypes.dynamic) &&
         !argument.isAssignableTo(
@@ -1292,7 +1310,7 @@ Map<String, TypeRef> classTypeArguments(
   }
   // Worklist over supertypes: extends, `with` applications, and implements
   // edges each carry the substitutions accumulated along their own path.
-  final worklist = <(TypeRef, Map<(String, int), TypeRef>)>[(receiver, {})];
+  final worklist = <(TypeRef, Substitution)>[(receiver, Substitution.empty)];
   final seen = <String>{};
   while (worklist.isNotEmpty) {
     final (current, substitutions) = worklist.removeLast();
@@ -1315,17 +1333,17 @@ Map<String, TypeRef> classTypeArguments(
     if (decl == null) continue;
     // Fold the current type's arguments into the substitution map so a
     // `with M<T>` clause resolves `T` to the receiver-provided argument.
-    final levelParams = current.decl?.typeParameters ?? const <GenericParam>[];
-    final nextSubstitutions = {
-      ...substitutions,
-      for (var index = 0; index < levelParams.length; index++)
-        (
-          'class:${current.file}:${current.name}',
-          index,
-        ): index < current.specifiedTypeArgs.length
-            ? current.specifiedTypeArgs[index]
-            : levelParams[index].extendsType ?? CoreTypes.dynamic.ref(ctx),
-    };
+    final levelParams =
+        current.decl?.typeParameters ?? const <TypeParameterDef>[];
+    final nextSubstitutions = substitutions.extend(
+      Substitution.of({
+        for (var index = 0; index < levelParams.length; index++)
+          levelParams[index]:
+              index < current.specifiedTypeArgs.length
+                  ? current.specifiedTypeArgs[index]
+                  : levelParams[index].bound ?? CoreTypes.dynamic.ref(ctx),
+      }),
+    );
     if (owner is MixinDeclaration) {
       // The folded method's owner is a mixin: find the `with M<args>` entry
       // on the current class (or on a mixin it applies) and map the mixin's
@@ -1374,7 +1392,7 @@ TypeRef? _resolveAppliedInterface(
   TypeRef current,
   Declaration decl,
   NamedType interface,
-  Map<(String, int), TypeRef> substitutions,
+  Substitution substitutions,
 ) {
   final prefix = interface.importPrefix;
   final name = prefix == null
@@ -1783,13 +1801,16 @@ ResolvedArgs compileNonBridgeArgs(
       typeArguments == null &&
       typeParams != null &&
       returnAnnotation != null) {
+    final callOwner = TypeParameterOwner(
+      TypeParameterOwnerKind.callSite,
+      sourceLib,
+      '',
+    );
     final placeholders = <String, TypeRef>{
       for (var i = 0; i < typeParams.length; i++)
-        typeParams[i].name.lexeme: TypeRef(
-          sourceLib,
-          typeParams[i].name.lexeme,
-          typeParameterOwner: 'call:$sourceLib',
-          typeParameterIndex: i,
+        typeParams[i].name.lexeme: TypeParameterTypeRef(
+          TypeParameterDef(callOwner, i, typeParams[i].name.lexeme),
+          file: sourceLib,
         ),
     };
     final pattern = TypeRef.fromAnnotation(
@@ -1798,12 +1819,12 @@ ResolvedArgs compileNonBridgeArgs(
       returnAnnotation,
       typeParameters: placeholders,
     );
-    final substitutions = <(String, int), TypeRef>{};
+    final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
     ctx.typeSystem.unify(pattern, returnContext, substitutions);
     for (var i = 0; i < typeParams.length; i++) {
       final name = typeParams[i].name.lexeme;
       if (!identical(resolveGenerics[name], unboundGenerics[name])) continue;
-      final bound = substitutions[('call:$sourceLib', i)];
+      final bound = substitutions[placeholders[name]!.parameter!];
       if (bound != null) resolveGenerics[name] = bound;
     }
   }

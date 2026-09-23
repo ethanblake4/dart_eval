@@ -6,12 +6,16 @@ import 'package:dart_eval/src/eval/compiler/model/function_type.dart';
 
 import 'context.dart';
 import 'errors.dart';
+import 'types/substitution.dart';
 import 'types/type_decl.dart';
+import 'types/type_parameter.dart';
 
+export 'types/substitution.dart';
 export 'types/type_decl.dart';
 export 'types/type_system.dart';
 export 'types/runtime_types.dart';
 export 'types/type_scope.dart';
+export 'types/type_parameter.dart';
 
 /// The action required to assign a value to a typed slot.
 enum AssignmentConversion {
@@ -42,9 +46,10 @@ class TypeRef {
     this.functionType,
     this.typeParameterOwner,
     this.typeParameterIndex,
-    this.typeParameterBound,
+    this.parameter,
+    TypeRef? typeParameterBound,
     this.nullable = false,
-  });
+  }) : _typeParameterBound = typeParameterBound;
 
   final int file;
   final String name;
@@ -57,7 +62,19 @@ class TypeRef {
   final EvalFunctionType? functionType;
   final String? typeParameterOwner;
   final int? typeParameterIndex;
-  final TypeRef? typeParameterBound;
+
+  /// The shared [TypeParameterDef] backing this type-parameter reference —
+  /// non-null exactly for type parameters. Preserved through [copyWith], so
+  /// [typeParameterBound] stays live as the def's bound resolves.
+  final TypeParameterDef? parameter;
+
+  final TypeRef? _typeParameterBound;
+
+  /// The parameter's declared bound. Def-backed refs read the def's bound
+  /// (which resolves after seeding), so copies see the same value.
+  TypeRef? get typeParameterBound =>
+      parameter == null ? _typeParameterBound : parameter!.bound;
+
   final bool nullable;
 
   /// Given a set of [TypeRef]s, find their closest common ancestor type.
@@ -362,7 +379,7 @@ class TypeRef {
     bool forFieldFormal = false,
     bool forSet = false,
     AstNode? source,
-    Map<(String, int), TypeRef> substitutions = const {},
+    Substitution substitutions = Substitution.empty,
   }) {
     if ($class.isSpec(CoreTypes.dynamic)) {
       return null;
@@ -401,27 +418,33 @@ class TypeRef {
       var memberMatched = true;
       final resolved = ctx.withTypeParameters(
         $class.file,
-        'class:${$class.file}:${$class.name}',
+        TypeParameterOwner(
+          TypeParameterOwnerKind.classLike,
+          $class.file,
+          $class.name,
+        ),
         typeParams,
         () {
           // A raw type use substitutes the parameter's bound (instantiate to
           // bounds); otherwise the argument at the same position.
           TypeRef substituteClassTypeArguments(TypeRef resolved) {
-            final localSubstitutions = <(String, int), TypeRef>{
-              ...substitutions,
+            final localBindings = <TypeParameterDef, TypeRef>{
+              ...substitutions.bindings,
             };
             for (var i = 0; i < (typeParams?.length ?? 0); i++) {
-              final bound = ctx
-                  .typeScopes[$class.file]![typeParams![i].name.lexeme]!
-                  .typeParameterBound;
+              final paramRef = ctx
+                  .typeScopes[$class.file]![typeParams![i].name.lexeme]!;
+              final bound = paramRef.typeParameterBound;
               final arg = i < $class.specifiedTypeArgs.length
                   ? $class.specifiedTypeArgs[i]
                   : (bound ?? CoreTypes.dynamic.ref(ctx));
-              localSubstitutions[('class:${$class.file}:${$class.name}', i)] =
-                  arg.substituteTypeParameters(substitutions);
+              localBindings[paramRef.parameter!] = arg
+                  .substituteTypeParameters(substitutions);
             }
-            if (localSubstitutions.isEmpty) return resolved;
-            return resolved.substituteTypeParameters(localSubstitutions);
+            if (localBindings.isEmpty) return resolved;
+            return resolved.substituteTypeParameters(
+              Substitution.wrap(localBindings),
+            );
           }
 
           if (forSet) {
@@ -784,6 +807,7 @@ class TypeRef {
     EvalFunctionType? functionType,
     String? typeParameterOwner,
     int? typeParameterIndex,
+    TypeParameterDef? parameter,
     TypeRef? typeParameterBound,
     bool? nullable,
   }) {
@@ -795,6 +819,7 @@ class TypeRef {
       functionType: functionType ?? this.functionType,
       typeParameterOwner: typeParameterOwner ?? this.typeParameterOwner,
       typeParameterIndex: typeParameterIndex ?? this.typeParameterIndex,
+      parameter: parameter ?? this.parameter,
       typeParameterBound: typeParameterBound ?? this.typeParameterBound,
       recordFields: recordFields ?? this.recordFields,
       nullable: nullable ?? this.nullable,
@@ -809,10 +834,11 @@ class TypeRef {
       ctx.typeSystem.lowerTypeParameters(this);
 
   /// Replaces retained type-parameter references anywhere inside this type.
-  TypeRef substituteTypeParameters(Map<(String, int), TypeRef> substitutions) {
+  TypeRef substituteTypeParameters(Substitution substitutions) {
     if (isTypeParameter) {
-      final replacement =
-          substitutions[(typeParameterOwner!, typeParameterIndex!)];
+      final replacement = parameter == null
+          ? null
+          : substitutions[parameter!];
       if (replacement != null) {
         return replacement.copyWith(nullable: nullable || replacement.nullable);
       }
@@ -926,47 +952,20 @@ class TypeRef {
     CompilerContext ctx,
     List<TypeParameter>? typeParams, {
     int? library,
-    String? owner,
+    TypeParameterOwner? owner,
     bool resolveBounds = true,
   }) {
     if (typeParams == null) return;
     final lib = library ?? ctx.library;
     final temps = ctx.typeParameterScope(lib);
-    // First seed every parameter name so F-bounds can self-reference
-    // (`T extends Foo<T>`): the bound resolves while `T` is visible.
-    for (var index = 0; index < typeParams.length; index++) {
-      final param = typeParams[index];
-      temps[param.name.lexeme] = TypeRef(
-        lib,
-        param.name.lexeme,
-        typeParameterOwner: owner ?? 'function:${ctx.currentFunctionId ?? -1}',
-        typeParameterIndex: index,
-      );
-    }
-    if (!resolveBounds) return;
-    for (var index = 0; index < typeParams.length; index++) {
-      final param = typeParams[index];
-      final bound = param.bound;
-      if (bound != null) {
-        temps[param.name.lexeme] = temps[param.name.lexeme]!.copyWith(
-          typeParameterBound: TypeRef.fromAnnotation(ctx, lib, bound),
-        );
-      }
-    }
-    // A bound naming another parameter declared later (`T extends U,
-    // U extends C`) captures U's still-unbound ref in the first pass —
-    // re-resolve now that every bound is populated.
-    for (var index = 0; index < typeParams.length; index++) {
-      final param = typeParams[index];
-      final bound = param.bound;
-      if (bound != null &&
-          temps[param.name.lexeme]!.typeParameterBound?.isTypeParameter ==
-              true) {
-        temps[param.name.lexeme] = temps[param.name.lexeme]!.copyWith(
-          typeParameterBound: TypeRef.fromAnnotation(ctx, lib, bound),
-        );
-      }
-    }
+    declareTypeParameters(
+      owner ?? TypeParameterOwner.scope(ctx.currentFunctionId ?? -1),
+      typeParams,
+      temps,
+      resolveBounds
+          ? (bound) => TypeRef.fromAnnotation(ctx, lib, bound)
+          : null,
+    );
   }
 }
 
@@ -1234,10 +1233,20 @@ AlwaysReturnType _memberReturnAnnotation(
   if (declaringType == null || declaringType.specifiedTypeArgs.isEmpty) {
     return rt;
   }
-  final subs = <(String, int), TypeRef>{
+  final hostDecl = declaringType.decl;
+  final subs = Substitution.wrap({
     for (var i = 0; i < hostTypeParams.typeParameters.length; i++)
-      ('class:$hostFile:$hostName', i): declaringType.specifiedTypeArgs[i],
-  };
+      (hostDecl?.typeParameters[i] ??
+              TypeParameterDef(
+                TypeParameterOwner(
+                  TypeParameterOwnerKind.classLike,
+                  hostFile,
+                  hostName,
+                ),
+                i,
+                '',
+              )): declaringType.specifiedTypeArgs[i],
+  });
   return AlwaysReturnType(rt.type!.substituteTypeParameters(subs), rt.nullable);
 }
 
@@ -1511,21 +1520,14 @@ Map<String, TypeRef> classTypeParameterRefs(
   int file,
   String name,
   TypeParameterList? typeParameters,
-) => {
-  for (var i = 0; i < (typeParameters?.typeParameters.length ?? 0); i++)
-    typeParameters!.typeParameters[i].name.lexeme: TypeRef(
-      file,
-      typeParameters.typeParameters[i].name.lexeme,
-      typeParameterOwner: 'class:$file:$name',
-      typeParameterIndex: i,
-    ),
-};
-
-class GenericParam {
-  const GenericParam(this.name, this.extendsType);
-
-  final String name;
-  final TypeRef? extendsType;
+) {
+  final scope = <String, TypeRef>{};
+  declareTypeParameters(
+    TypeParameterOwner(TypeParameterOwnerKind.classLike, file, name),
+    typeParameters?.typeParameters ?? const <TypeParameter>[],
+    scope,
+  );
+  return scope;
 }
 
 extension Refify on BridgeTypeSpec {
@@ -1615,6 +1617,11 @@ TypeRef _resolveTypeAlias(
   // resolves against the alias's own file — it may name types private to that
   // library.
   final declLibrary = ctx.typeAliasFiles[alias] ?? library;
+  final aliasOwner = TypeParameterOwner(
+    TypeParameterOwnerKind.typeAlias,
+    declLibrary,
+    alias.name.lexeme,
+  );
   final bindings = <String, TypeRef>{};
   for (var i = 0; i < typeParameters.length; i++) {
     final param = typeParameters[i];
@@ -1623,21 +1630,17 @@ TypeRef _resolveTypeAlias(
     if (arg != null) {
       bindings[param.name.lexeme] = arg;
     } else if (rawParams) {
-      bindings[param.name.lexeme] = TypeRef(
-        declLibrary,
-        param.name.lexeme,
-        typeParameterOwner: 'typeAlias:$declLibrary:${alias.name.lexeme}',
-        typeParameterIndex: i,
+      bindings[param.name.lexeme] = TypeParameterTypeRef(
+        TypeParameterDef(aliasOwner, i, param.name.lexeme),
+        file: declLibrary,
       );
     } else if (bound == null) {
       bindings[param.name.lexeme] = CoreTypes.dynamic.ref(ctx);
     } else {
       // A recursive bound (`X extends A<X>`) sees the parameter itself.
-      bindings[param.name.lexeme] = TypeRef(
-        declLibrary,
-        param.name.lexeme,
-        typeParameterOwner: 'typeAlias:$declLibrary:${alias.name.lexeme}',
-        typeParameterIndex: i,
+      bindings[param.name.lexeme] = TypeParameterTypeRef(
+        TypeParameterDef(aliasOwner, i, param.name.lexeme),
+        file: declLibrary,
       );
       bindings[param.name.lexeme] = TypeRef.fromAnnotation(
         ctx,
@@ -1682,7 +1685,11 @@ TypeRef _resolveTypeAlias(
             returnType: alias.returnType,
             typeParameterList: rawParams ? alias.typeParameters : null,
             parameterList: alias.parameters,
-            owner: 'typeAlias:$declLibrary:${alias.name.lexeme}',
+            owner: TypeParameterOwner(
+              TypeParameterOwnerKind.typeAlias,
+              declLibrary,
+              alias.name.lexeme,
+            ),
             typeParameters: bindings,
           ),
         );
@@ -1712,15 +1719,19 @@ TypeRef? resolveAppliedTypeArgument(
       );
       if (index >= 0) {
         final bound = classParams![index].bound;
-        return TypeRef(
-          libraryIndex,
+        final parameter = TypeParameterDef(
+          TypeParameterOwner(
+            TypeParameterOwnerKind.classLike,
+            libraryIndex,
+            ownerClassName,
+          ),
+          index,
           arg.name.lexeme,
-          typeParameterOwner: 'class:$libraryIndex:$ownerClassName',
-          typeParameterIndex: index,
-          typeParameterBound: bound == null
-              ? CoreTypes.dynamic.ref(ctx)
-              : TypeRef.fromAnnotation(ctx, libraryIndex, bound),
         );
+        parameter.bound = bound == null
+            ? CoreTypes.dynamic.ref(ctx)
+            : TypeRef.fromAnnotation(ctx, libraryIndex, bound);
+        return TypeParameterTypeRef(parameter);
       }
     }
     final prefix = arg.importPrefix;
@@ -1765,7 +1776,7 @@ Map<String, TypeRef>? findMixinApplication(
   String declName,
   Declaration mixinOwner,
   int ownerLibrary,
-  Map<(String, int), TypeRef> substitutions,
+  Substitution substitutions,
 ) {
   for (final mixinType in classLikeClauses(decl).$2) {
     final prefix = mixinType.importPrefix;
@@ -1814,12 +1825,20 @@ Map<String, TypeRef>? findMixinApplication(
         ref.name,
         mixinOwner,
         ownerLibrary,
-        {
-          ...substitutions,
+        Substitution.of({
+          ...substitutions.bindings,
           for (var i = 0; i < mixinParams.length; i++)
-            ('class:${ref.file}:${ref.name}', i):
-                applied[mixinParams[i].name.lexeme]!,
-        },
+            (ref.decl?.typeParameters[i] ??
+                    TypeParameterDef(
+                      TypeParameterOwner(
+                        TypeParameterOwnerKind.classLike,
+                        ref.file,
+                        ref.name,
+                      ),
+                      i,
+                      '',
+                    )): applied[mixinParams[i].name.lexeme]!,
+        }),
       );
       if (inner != null) return inner;
     }
@@ -1838,7 +1857,7 @@ TypeRef? resolveAppliedMixinArg(
   String declName,
   List<TypeParameter>? classParams,
   TypeAnnotation? arg,
-  Map<(String, int), TypeRef> substitutions,
+  Substitution substitutions,
 ) {
   if (arg == null) return null;
   return resolveAppliedTypeArgument(
@@ -1855,7 +1874,7 @@ TypeRef substitutedParamBound(
   CompilerContext ctx,
   int file,
   TypeParameter param,
-  Map<(String, int), TypeRef> substitutions,
+  Substitution substitutions,
 ) {
   final bound = param.bound;
   return bound == null
@@ -1889,7 +1908,7 @@ void seedFoldedMemberTypeParams(
     declarationName(applier),
     owner,
     memberLibrary,
-    const {},
+    Substitution.empty,
   );
   if (applied == null) return;
   ctx.typeParameterScope(memberLibrary).addAll(applied);

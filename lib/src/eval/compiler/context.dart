@@ -309,7 +309,7 @@ class CompilerContext with ScopeContext {
   /// parameters (owned by [owner]), restoring the previous scope on exit.
   T withTypeParameters<T>(
     int library,
-    String? owner,
+    TypeParameterOwner? owner,
     List<TypeParameter>? nodes,
     T Function() body, {
     bool resolveBounds = true,

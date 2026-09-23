@@ -167,17 +167,22 @@ Variable compileInstanceOf(
     );
 
     if (genericNames.isNotEmpty && instantiatedType.specifiedTypeArgs.isEmpty) {
-      final ownerKey = 'class:${staticType.file}:${staticType.name}';
       final paramRefs = {
         for (var i = 0; i < genericNames.length; i++)
-          genericNames[i]: TypeRef(
-            staticType.file,
-            genericNames[i],
-            typeParameterOwner: ownerKey,
-            typeParameterIndex: i,
+          genericNames[i]: TypeParameterTypeRef(
+            TypeParameterDef(
+              TypeParameterOwner(
+                TypeParameterOwnerKind.classLike,
+                staticType.file,
+                staticType.name,
+              ),
+              i,
+              genericNames[i],
+            ),
+            file: staticType.file,
           ),
       };
-      final substitutions = <(String, int), TypeRef>{};
+      final substitutions = Substitution.wrap(<TypeParameterDef, TypeRef>{});
       // Bridge parameters carry no named flag; named args ride at the tail.
       final positionalParams = fnDescriptor.params;
       for (
@@ -198,7 +203,8 @@ Variable compileInstanceOf(
       instantiatedType = instantiatedType.copyWith(
         specifiedTypeArgs: [
           for (var i = 0; i < genericNames.length; i++)
-            substitutions[(ownerKey, i)] ?? CoreTypes.dynamic.ref(ctx),
+            substitutions[paramRefs[genericNames[i]]!.parameter!] ??
+                CoreTypes.dynamic.ref(ctx),
         ],
       );
     }

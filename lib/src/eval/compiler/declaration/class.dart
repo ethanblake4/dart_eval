@@ -12,7 +12,11 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
   return ctx.withTypeParameters(
     ctx.library,
-    'class:${ctx.library}:${d.namePart.typeName.lexeme}',
+    TypeParameterOwner(
+      TypeParameterOwnerKind.classLike,
+      ctx.library,
+      d.namePart.typeName.lexeme,
+    ),
     d.namePart.typeParameters?.typeParameters,
     () {
       final $runtimeType = ctx
@@ -90,7 +94,11 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
 void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
   return ctx.withTypeParameters(
     ctx.library,
-    'class:${ctx.library}:${d.name.lexeme}',
+    TypeParameterOwner(
+      TypeParameterOwnerKind.classLike,
+      ctx.library,
+      d.name.lexeme,
+    ),
     d.typeParameters?.typeParameters,
     () {
       final $runtimeType = ctx
@@ -316,7 +324,11 @@ _mixinMembers(
           ctx,
           c.namePart.typeParameters?.typeParameters,
           library: ctx.library,
-          owner: 'class:${ctx.library}:${c.namePart.typeName.lexeme}',
+          owner: TypeParameterOwner(
+            TypeParameterOwnerKind.classLike,
+            ctx.library,
+            c.namePart.typeName.lexeme,
+          ),
         );
         final (f0, m0, l0) = _mixinMembers(
           ctx,
@@ -336,7 +348,11 @@ _mixinMembers(
           ctx,
           a.typeParameters?.typeParameters,
           library: ctx.library,
-          owner: 'class:${ctx.library}:${a.name.lexeme}',
+          owner: TypeParameterOwner(
+            TypeParameterOwnerKind.classLike,
+            ctx.library,
+            a.name.lexeme,
+          ),
         );
         final (f, m, l) = _mixinMembers(
           ctx,

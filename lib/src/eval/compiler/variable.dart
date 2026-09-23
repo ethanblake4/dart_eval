@@ -914,8 +914,11 @@ class Variable {
             param.name.lexeme: TypeRef(
               ext.library,
               param.name.lexeme,
-              typeParameterOwner:
-                  'tearoff:${ext.library}:${member.name.lexeme}',
+              typeParameterOwner: TypeParameterOwner(
+                TypeParameterOwnerKind.tearOff,
+                ext.library,
+                member.name.lexeme,
+              ).key,
             ),
         },
       ),
