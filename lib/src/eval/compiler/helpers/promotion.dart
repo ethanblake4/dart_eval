@@ -61,7 +61,7 @@ void _visitPromotions(
         ((operator == '!=' && value) || (operator == '==' && !value))) {
       final local = ctx.lookupLocal(identifier.name);
       if (local != null && local.type.nullable) {
-        promote(local, local.type.copyWith(nullable: false));
+        promote(local, local.type.withNullable(false));
       }
     }
     return;

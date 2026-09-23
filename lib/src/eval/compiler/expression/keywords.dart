@@ -52,7 +52,7 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
     throw CompileError("Cannot use 'super' outside of a class context");
   }
 
-  var type = CoreTypes.object.ref(ctx);
+  TypeRef type = CoreTypes.object.ref(ctx);
   // `super` binds below the member's own layer: for a member folded in from a
   // mixin that's the earlier `with` mixins then the applying class's
   // superclass, so the static type here is that superclass.

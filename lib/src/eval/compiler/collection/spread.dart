@@ -31,7 +31,7 @@ List<TypeRef> compileCollectionSpread(
   if (element.isNullAware && collection.type.isSpec(CoreTypes.nullType)) {
     return target.type.typeArguments;
   }
-  final sourceType = collection.type.copyWith(nullable: false);
+  final sourceType = collection.type.withNullable(false);
   final requiredType = (isMap ? CoreTypes.map : CoreTypes.iterable).ref(ctx);
   if (!sourceType.isAssignableTo(ctx, requiredType)) {
     throw CompileError(
@@ -54,7 +54,7 @@ List<TypeRef> compileCollectionSpread(
   }
   StatementInfo append(CompilerContext ctx, TypeRef? _) {
     final nonNull = collection
-        .copyWith(type: collection.type.copyWith(nullable: false))
+        .copyWith(type: collection.type.withNullable(false))
         .boxIfNeeded(ctx);
     final iterable = isMap ? GetTarget.read(ctx, nonNull, 'entries') : nonNull;
     final iterator = GetTarget.read(ctx, iterable, 'iterator');

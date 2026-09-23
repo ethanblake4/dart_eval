@@ -469,7 +469,7 @@ BoundExtension boundExtensionFor(
   } else {
     // `E(c)?.m` applies `on C` to a nullable `C?` receiver; the `?.` guard
     // (or a later runtime null check) makes that legal.
-    final nonNull = receiverType.copyWith(nullable: false);
+    final nonNull = receiverType.withNullable(false);
     bindings =
         matchExtensionOn(ctx, nonNull, ext) ??
         (throw CompileError(

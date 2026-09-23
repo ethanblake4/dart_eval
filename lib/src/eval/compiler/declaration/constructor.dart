@@ -175,7 +175,7 @@ void compileConstructorDeclaration(
         superParams.positional.add(p.name.lexeme);
       }
     } else {
-      var type = CoreTypes.dynamic.ref(ctx);
+      TypeRef type = CoreTypes.dynamic.ref(ctx);
       if (p.type != null) {
         type = TypeRef.fromAnnotation(
           ctx,
@@ -1093,8 +1093,8 @@ void _emitConstructorReturn(
   var targetType = targetRef;
   final typeArgs = redirected.type.typeArguments;
   if (typeArgs != null) {
-    targetType = targetRef.copyWith(
-      typeArguments: [
+    targetType = (targetRef as InterfaceTypeRef).copyWith(
+      arguments: [
         for (final arg in typeArgs.arguments)
           TypeRef.fromAnnotation(ctx, ctx.library, arg),
       ],

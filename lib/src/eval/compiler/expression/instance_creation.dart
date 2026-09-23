@@ -32,7 +32,7 @@ Variable compileInstanceCreation(
   }
 
   var staticType = receiver.type;
-  var instantiatedType = staticType.copyWith(nullable: type.question != null);
+  var instantiatedType = staticType.withNullable(type.question != null);
   // A typedef instantiation (`P1()` where `P1 = B2<int>`) constructs the
   // aliased type directly — typedefs register no constructors of their own.
   final aliasDecl = ctx
@@ -40,21 +40,23 @@ Variable compileInstanceCreation(
       ?.declaration;
   if (aliasDecl is TypeAlias && aliasDecl is! ClassTypeAlias) {
     instantiatedType = staticType =
-        resolveTypeAlias(
-          ctx,
-          staticType.file,
-          aliasDecl,
-          nullable: type.question != null,
-          typeArgs: type.typeArguments?.arguments,
-        ).copyWith(
-          typeArguments: [
+        (resolveTypeAlias(
+              ctx,
+              staticType.file,
+              aliasDecl,
+              nullable: type.question != null,
+              typeArgs: type.typeArguments?.arguments,
+            )
+                as InterfaceTypeRef)
+            .copyWith(
+          arguments: [
             if (type.typeArguments == null) ...staticType.typeArguments,
           ],
         );
   }
   if (type.typeArguments != null) {
-    instantiatedType = instantiatedType.copyWith(
-      typeArguments: [
+    instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
+      arguments: [
         for (final arg in type.typeArguments!.arguments)
           TypeRef.fromAnnotation(ctx, ctx.library, arg),
       ],
@@ -66,8 +68,8 @@ Variable compileInstanceCreation(
     if (boundChain.file == staticType.file &&
         boundChain.name == staticType.name &&
         boundChain.typeArguments.isNotEmpty) {
-      instantiatedType = instantiatedType.copyWith(
-        typeArguments: boundChain.typeArguments,
+      instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
+        arguments: boundChain.typeArguments,
       );
     }
   }
@@ -199,8 +201,8 @@ Variable compileInstanceOf(
             arguments.positionalValues[i].type;
         ctx.typeSystem.unify(pattern, concrete, substitutions);
       }
-      instantiatedType = instantiatedType.copyWith(
-        typeArguments: [
+      instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
+        arguments: [
           for (var i = 0; i < genericNames.length; i++)
             substitutions[paramRefs[genericNames[i]]!.parameter] ??
                 CoreTypes.dynamic.ref(ctx),

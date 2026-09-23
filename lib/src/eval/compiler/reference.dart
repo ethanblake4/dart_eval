@@ -152,7 +152,7 @@ Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
       signature: CallSignature.returnOnly(
         CoreTypes.future
             .ref(ctx)
-            .copyWith(typeArguments: [CoreTypes.nullType.ref(ctx)]),
+            .copyWith(arguments: [CoreTypes.nullType.ref(ctx)]),
       ),
     ),
   );

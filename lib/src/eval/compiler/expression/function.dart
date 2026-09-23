@@ -167,7 +167,7 @@ Variable compileFunctionExpression(
       for (final p in resolvedParams) {
         Variable vRep;
 
-        var type = CoreTypes.dynamic.ref(ctx);
+        TypeRef type = CoreTypes.dynamic.ref(ctx);
         if (p.type != null) {
           type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
         } else if (i < inorderBoundParams.length) {
@@ -278,7 +278,7 @@ Variable compileFunctionExpression(
             ? CoreTypes.future
                   .ref(ctx)
                   .copyWith(
-                    typeArguments: [ctx.typeSystem.flatten(inferred)],
+                    arguments: [ctx.typeSystem.flatten(inferred)],
                   )
             : inferred;
       }
@@ -377,7 +377,7 @@ Variable compileFunctionExpression(
                 decl: ctx.types.bySpec(CoreTypes.function),
               )
             : CoreTypes.function.ref(ctx)
-      : bound.copyWith(nullable: false);
+      : bound.withNullable(false);
   if (closureType is FunctionTypeRef && inferredClosureReturnType != null) {
     // Replace a placeholder return — `dynamic`, or a type parameter (a
     // bridge `S Function(E)` gives the closure a param-typed return) —

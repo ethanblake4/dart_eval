@@ -99,7 +99,7 @@ TypeRef forEachIterableBound(
   };
   return (await_ ? CoreTypes.stream : CoreTypes.iterable)
       .ref(ctx)
-      .copyWith(typeArguments: [elementType ?? CoreTypes.dynamic.ref(ctx)]);
+      .copyWith(arguments: [elementType ?? CoreTypes.dynamic.ref(ctx)]);
 }
 
 /// Compiles the non-`await` form of `for (v in iterable)`: iterable type
@@ -156,7 +156,7 @@ StatementInfo compileForEachLoop(
         iterator = iterator.copyWith(
           type: CoreTypes.iterator
               .ref(ctx)
-              .copyWith(typeArguments: [elementType]),
+              .copyWith(arguments: [elementType]),
         );
 
         final name = parts.loopVariable.name.lexeme;
@@ -248,7 +248,7 @@ StatementInfo compileAwaitForLoop(
   final iterator = Variable.of(
     ctx,
     ssa,
-    itType.copyWith(typeArguments: [elementType]),
+    itType.copyWith(arguments: [elementType]),
     rep: ValueRep.boxed,
   );
   final completer = ctx.lookupLocal('#completer')!;

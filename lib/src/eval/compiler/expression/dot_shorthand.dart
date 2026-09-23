@@ -31,7 +31,7 @@ TypeRef _shorthandContextType(
   while (type.name == 'FutureOr' && type.typeArguments.isNotEmpty) {
     type = type.typeArguments.first;
   }
-  type = type.copyWith(nullable: false);
+  type = type.withNullable(false);
   if (type.isTypeParameter || type.isSpec(CoreTypes.dynamic)) {
     throw CompileError(
       'Dot shorthand requires a concrete context type, got $type',

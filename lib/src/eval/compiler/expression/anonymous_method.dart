@@ -69,7 +69,7 @@ Variable _runBody(
   // `this` and the parameter bind the non-nullable receiver type.
   final boundReceiver =
       (e.isNullAware || (!e.isCascaded && isNullShorted(e.target)))
-      ? receiver.copyWith(type: receiver.type.copyWith(nullable: false))
+      ? receiver.copyWith(type: receiver.type.withNullable(false))
       : receiver;
   ctx.anonymousThisReceiver = boundReceiver;
   ctx.setLocal('#this', boundReceiver);
@@ -102,7 +102,7 @@ Variable _runBody(
     // enclosing frame and survives the exit-block state merge. Declared
     // `Object?` for the same reason as the null-aware result local.
     final resultName = '#anonResult${ctx.svar('anon_result').name}';
-    final resultType = CoreTypes.object.ref(ctx).copyWith(nullable: true);
+    final resultType = CoreTypes.object.ref(ctx).withNullable(true);
     ctx.setLocal(
       resultName,
       BuiltinValue()

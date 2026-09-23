@@ -98,7 +98,7 @@ TypeRef instantiateConstructorType(
     if (inferredArgs == null) return base;
     final baseArgs = base.typeArguments;
     if (baseArgs.isEmpty || baseArgs.every((a) => a.isTypeParameter)) {
-      return base.copyWith(typeArguments: inferredArgs);
+      return (base as InterfaceTypeRef).copyWith(arguments: inferredArgs);
     }
     return base.substituteTypeParameters(
       Substitution.of({
@@ -116,8 +116,8 @@ TypeRef instantiateConstructorType(
       }),
     );
   }
-  return base.copyWith(
-    typeArguments: [
+  return (base as InterfaceTypeRef).copyWith(
+    arguments: [
       for (final argument in arguments)
         TypeRef.fromAnnotation(ctx, ctx.library, argument),
     ],

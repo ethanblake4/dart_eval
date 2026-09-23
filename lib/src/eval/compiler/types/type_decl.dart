@@ -146,8 +146,8 @@ sealed class TypeDecl {
       throw CompileError('Type $name not found');
     }
     final ownTypeParams = this.ownTypeParams;
-    return type.copyWith(
-      typeArguments: [
+    return (type as InterfaceTypeRef).copyWith(
+      arguments: [
         for (final arg in clauseName.typeArguments?.arguments ?? const [])
           TypeRef.fromAnnotation(
             ctx,
@@ -201,8 +201,8 @@ sealed class TypeDecl {
     }
     if (substitutions.isEmpty) return mixin;
     final mixinParams2 = mixinDeclRef.typeParameters;
-    return mixin.copyWith(
-      typeArguments: [
+    return (mixin as InterfaceTypeRef).copyWith(
+      arguments: [
         for (var i = 0; i < mixinParams2.length; i++)
           substitutions[mixinParams2[i]] ??
               mixinParams2[i].bound?.substituteTypeParameters(
@@ -353,7 +353,7 @@ final class BridgeTypeDecl extends TypeDecl {
       // Null's nominal superclass is Object, but `Null <: T` holds only
       // when T is nullable or a top type — model that as extends Object?.
       if (isSpec(CoreTypes.nullType)) {
-        superclass = superclass.copyWith(nullable: true);
+        superclass = superclass.withNullable(true);
       }
     }
     return DeclaredSupertypes(

@@ -307,14 +307,14 @@ final class TypeSystem {
       }
       final instantiation = asInstanceOf(t, futureDecl);
       if (instantiation == null) {
-        return t.copyWith(nullable: t.nullable || nullable);
+        return t.withNullable(t.nullable || nullable);
       }
       nullable = nullable || t.nullable;
       t = instantiation.typeArguments.isEmpty
           ? CoreTypes.dynamic.ref(_ctx)
           : instantiation.typeArguments.first;
     }
-    return t.copyWith(nullable: t.nullable || nullable);
+    return t.withNullable(t.nullable || nullable);
   }
 
   /// Resolves [paramName] — a generic parameter declared by a bridge class —
@@ -358,7 +358,7 @@ final class TypeSystem {
       return CoreTypes.nullType.ref(_ctx);
     }
     if (types.length == 1) {
-      return makeNullable ? types.first.copyWith(nullable: true) : types.first;
+      return makeNullable ? types.first.withNullable(true) : types.first;
     }
     final chains = types.map(_typeChain).toList();
 
@@ -417,7 +417,7 @@ final class TypeSystem {
     final sorted = refCount.keys.toList()
       ..sort((k1, k2) => layer[k1]! - layer[k2]!);
     if (sorted.isEmpty) {
-      return CoreTypes.dynamic.ref(_ctx).copyWith(nullable: makeNullable);
+      return CoreTypes.dynamic.ref(_ctx).withNullable(makeNullable);
     }
     // Among the shallowest common supertypes, pick the one that is a subtype
     // of all the others (e.g. `num` over `Object`). When several are
@@ -436,7 +436,7 @@ final class TypeSystem {
       orElse: () => candidates.last,
     );
     final bestType = firstSeen[best]!;
-    return bestType.copyWith(nullable: bestType.nullable || makeNullable);
+    return bestType.withNullable(bestType.nullable || makeNullable);
   }
 
   /// The declaration-shaped chain for [type]: `[this]`, then layers of
@@ -532,7 +532,7 @@ final class TypeSystem {
       // An unbounded parameter (`<T>`) has the implicit bound `Object?`.
       return isAssignable(
         (from as TypeParameterTypeRef).parameter.bound ??
-            CoreTypes.object.ref(_ctx).copyWith(nullable: true),
+            CoreTypes.object.ref(_ctx).withNullable(true),
         to,
         forceAllowDynamic: forceAllowDynamic,
       );
@@ -614,9 +614,8 @@ final class TypeSystem {
               for (final argument in type.typeArguments)
                 if (argument is TypeParameterTypeRef &&
                     argument.parameter.index < generics.length)
-                  generics[argument.parameter.index].copyWith(
-                    nullable:
-                        argument.nullable ||
+                  generics[argument.parameter.index].withNullable(
+                    argument.nullable ||
                         generics[argument.parameter.index].nullable,
                   )
                 else
@@ -651,7 +650,7 @@ final class TypeSystem {
     if (from.nullable &&
         !to.nullable &&
         isAssignable(
-          from.copyWith(nullable: false),
+          from.withNullable(false),
           to,
           forceAllowDynamic: false,
         )) {

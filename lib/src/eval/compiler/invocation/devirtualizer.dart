@@ -1,5 +1,6 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
+import '../type.dart';
 import 'deferred.dart';
 import 'targets.dart';
 

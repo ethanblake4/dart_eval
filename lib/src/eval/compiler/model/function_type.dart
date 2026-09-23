@@ -48,7 +48,7 @@ FunctionSignature functionSignatureFromBridgeFunctionDef(
     if (type.ref != null) {
       final resolved = scope[type.ref];
       if (resolved != null) {
-        return resolved.copyWith(nullable: annotation.nullable);
+        return resolved.withNullable(annotation.nullable);
       }
       return TypeParameterTypeRef(extraDef(type.ref!));
     }

@@ -60,7 +60,7 @@ Variable compileSetOrMapLiteral(
                   !sameDeclaration(resolvedBound, CoreTypes.set.ref(ctx))
               : literal.elements.first is MapLiteralEntry ||
                     (firstSpread?.type
-                            .copyWith(nullable: false)
+                            .withNullable(false)
                             .isAssignableTo(
                               ctx,
                               CoreTypes.map.ref(ctx),
@@ -72,7 +72,7 @@ Variable compileSetOrMapLiteral(
   final target = ctx.svar(isMap ? 'map' : 'set');
   final collectionType = (isMap ? CoreTypes.map : CoreTypes.set).ref(ctx);
   final exactCollectionType = collectionType.copyWith(
-    typeArguments: [
+    arguments: [
       explicitKey ?? CoreTypes.dynamic.ref(ctx),
       if (isMap) explicitValue ?? CoreTypes.dynamic.ref(ctx),
     ],
@@ -103,8 +103,8 @@ Variable compileSetOrMapLiteral(
           ? CoreTypes.dynamic.ref(ctx)
           : TypeRef.commonBaseType(ctx, values));
   final result = collection.copyWith(
-    type: collection.type.copyWith(
-      typeArguments: [
+    type: (collection.type as InterfaceTypeRef).copyWith(
+      arguments: [
         infer(explicitKey, keyTypes),
         if (isMap) infer(explicitValue, valueTypes),
       ],

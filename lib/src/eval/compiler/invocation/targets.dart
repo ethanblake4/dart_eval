@@ -561,7 +561,7 @@ final class NoSuchMethodCall extends CallTarget {
 
     final listType = CoreTypes.list
         .ref(ctx)
-        .copyWith(typeArguments: [CoreTypes.dynamic.ref(ctx)]);
+        .copyWith(arguments: [CoreTypes.dynamic.ref(ctx)]);
     final list = Variable.ssa(
       ctx,
       NewList(ctx.svar('list')),
@@ -576,7 +576,7 @@ final class NoSuchMethodCall extends CallTarget {
       final mapType = CoreTypes.map
           .ref(ctx)
           .copyWith(
-            typeArguments: [
+            arguments: [
               CoreTypes.symbol.ref(ctx),
               CoreTypes.dynamic.ref(ctx),
             ],

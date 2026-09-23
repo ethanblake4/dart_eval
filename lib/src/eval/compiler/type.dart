@@ -41,24 +41,6 @@ enum AssignmentConversion {
 sealed class TypeRef {
   const TypeRef({required this.nullable});
 
-  /// The declaring library of the named type — the declaration's library
-  /// for interface/function types, the owner library for type parameters,
-  /// -1 for records, and the caller's for decl-less nominals.
-  int get file;
-
-  /// The simple name — the declaration's name, the parameter's name for
-  /// type parameters, or the canonical `@record` name for records.
-  String get name;
-
-  /// The declaration this type names — null for type parameters, records,
-  /// and decl-less nominals.
-  TypeDecl? get decl;
-
-  /// Interim bridge for type arguments: [InterfaceTypeRef.arguments] on
-  /// interface types, empty everywhere else. Migrated readers take
-  /// `arguments`; this accessor is removed when every use classifies.
-  List<TypeRef> get typeArguments => const [];
-
   final bool nullable;
 
   /// Given a set of [TypeRef]s, find their closest common ancestor type.
@@ -154,15 +136,20 @@ sealed class TypeRef {
           ),
         );
       }
-      return unspecifiedType.copyWith(
-        typeArguments: resolved,
-        nullable: typeAnnotation.question != null || unspecifiedType.nullable,
-      );
+      final nullability =
+          typeAnnotation.question != null || unspecifiedType.nullable;
+      return switch (unspecifiedType) {
+        InterfaceTypeRef() => unspecifiedType.copyWith(
+          arguments: resolved,
+          nullable: nullability,
+        ),
+        _ => unspecifiedType.withNullable(nullability),
+      };
     }
     // A bare type-parameter reference keeps the nullability of its bound
     // value — `T` is nullable when T resolves to `String?`.
-    return unspecifiedType.copyWith(
-      nullable: typeAnnotation.question != null || unspecifiedType.nullable,
+    return unspecifiedType.withNullable(
+      typeAnnotation.question != null || unspecifiedType.nullable,
     );
   }
 
@@ -180,7 +167,7 @@ sealed class TypeRef {
       specifyingType: specifyingType,
       specifiedType: specifiedType,
       typeParameters: typeParameters,
-    ).copyWith(nullable: typeAnnotation.nullable);
+    ).withNullable(typeAnnotation.nullable);
   }
 
   factory TypeRef.fromBridgeTypeRef(
@@ -216,7 +203,9 @@ sealed class TypeRef {
           (throw CompileError(
             'Bridge: cannot find type ${spec.name} in library ${spec.library}',
           ));
-      return typeSpec.copyWith(typeArguments: arguments);
+      return (typeSpec as InterfaceTypeRef).copyWith(
+        arguments: arguments,
+      );
     }
     final ref = typeReference.ref;
     if (ref != null) {
@@ -316,7 +305,9 @@ sealed class TypeRef {
       final params = classLikeClauses(currentClass).$4;
       final refs = classTypeParameterRefs(ref.file, ref.name, params);
       if (refs.isNotEmpty) {
-        return ref.copyWith(typeArguments: refs.values.toList());
+        return (ref as InterfaceTypeRef).copyWith(
+          arguments: refs.values.toList(),
+        );
       }
     }
     return ref;
@@ -421,47 +412,14 @@ sealed class TypeRef {
     forceAllowDynamic: forceAllowDynamic,
   );
 
-  TypeRef copyWith({
-    TypeDecl? decl,
-    List<TypeRef>? typeArguments,
-    bool? nullable,
-  }) {
-    final self = this;
-    if (self is RecordTypeRef) {
-      return RecordTypeRef(
-        self.positional,
-        self.named,
-        nullable: nullable ?? self.nullable,
-      );
-    }
-    if (self is TypeParameterTypeRef) {
-      return TypeParameterTypeRef(
-        self.parameter,
-        nullable: nullable ?? self.nullable,
-        file: self._file,
-      );
-    }
-    if (self is FunctionTypeRef) {
-      return FunctionTypeRef(
-        self.signature,
-        decl: decl ?? self.decl,
-        nullable: nullable ?? self.nullable,
-      );
-    }
-    if (self is InterfaceTypeRef) {
-      return InterfaceTypeRef(
-        decl ?? self.decl,
-        arguments: typeArguments ?? self.arguments,
-        nullable: nullable ?? self.nullable,
-      );
-    }
-    final unresolved = self as ExtensionNamespaceTypeRef;
-    return ExtensionNamespaceTypeRef(
-      unresolved.library,
-      unresolved.extensionName,
-      nullable: nullable ?? unresolved.nullable,
-    );
-  }
+  /// A copy of this type with nullability set — implemented per variant
+  /// because a nominal's copy carries different data than a record's.
+  TypeRef withNullable(bool nullable);
+
+  /// Replaces retained type-parameter references anywhere inside this
+  /// type — per-variant: a parameter looks itself up, composites recurse
+  /// into their parts, and nominals recurse into their arguments.
+  TypeRef substituteTypeParameters(Substitution substitutions);
 
   /// Replaces every free type-parameter reference inside this type with its
   /// declared bound (or `dynamic` when unbounded). Callers use this when a
@@ -469,70 +427,6 @@ sealed class TypeRef {
   /// unconstrained `T` is not a usable type for the caller.
   TypeRef lowerTypeParameters(CompilerContext ctx) =>
       ctx.typeSystem.lowerTypeParameters(this);
-
-  /// Replaces retained type-parameter references anywhere inside this type.
-  TypeRef substituteTypeParameters(Substitution substitutions) {
-    final self = this;
-    if (self is TypeParameterTypeRef) {
-      final replacement = substitutions[self.parameter];
-      if (replacement != null) {
-        return replacement.copyWith(nullable: nullable || replacement.nullable);
-      }
-      return this;
-    }
-    if (typeArguments.isEmpty &&
-        self is! RecordTypeRef &&
-        self is! FunctionTypeRef) {
-      return this;
-    }
-
-    if (self is RecordTypeRef) {
-      return RecordTypeRef(
-        [
-          for (final type in self.positional)
-            type.substituteTypeParameters(substitutions),
-        ],
-        {
-          for (final entry in self.named.entries)
-            entry.key: entry.value.substituteTypeParameters(substitutions),
-        },
-        nullable: self.nullable,
-      );
-    }
-    if (self is FunctionTypeRef) {
-      // The signature's own type parameters are not substituted; refs to
-      // them simply miss the outer substitution map.
-      final signature = self.signature;
-      return FunctionTypeRef(
-        FunctionSignature(
-          typeParameters: signature.typeParameters,
-          positional: [
-            for (final type in signature.positional)
-              type.substituteTypeParameters(substitutions),
-          ],
-          requiredPositional: signature.requiredPositional,
-          named: {
-            for (final entry in signature.named.entries)
-              entry.key: (
-                type: entry.value.type.substituteTypeParameters(substitutions),
-                required: entry.value.required,
-              ),
-          },
-          returnType: signature.returnType.substituteTypeParameters(
-            substitutions,
-          ),
-        ),
-        decl: self.decl,
-        nullable: self.nullable,
-      );
-    }
-    return copyWith(
-      typeArguments: [
-        for (final argument in typeArguments)
-          argument.substituteTypeParameters(substitutions),
-      ],
-    );
-  }
 
 
   @override
@@ -712,7 +606,6 @@ final class InterfaceTypeRef extends TypeRef {
     super.nullable = false,
   }) : arguments = List.unmodifiable(arguments);
 
-  @override
   final TypeDecl decl;
 
   /// Empty means a raw use — `Future` acts as `Future<dynamic>` in both
@@ -720,14 +613,39 @@ final class InterfaceTypeRef extends TypeRef {
   /// `specifiedTypeArgs` did.
   final List<TypeRef> arguments;
 
-  @override
+  /// The declaring library.
   int get file => decl.library;
 
-  @override
+  /// The declaration's simple name.
   String get name => decl.name;
 
-  @override
+  /// [arguments] through the nominal view.
   List<TypeRef> get typeArguments => arguments;
+
+  InterfaceTypeRef copyWith({
+    TypeDecl? decl,
+    List<TypeRef>? arguments,
+    bool? nullable,
+  }) => InterfaceTypeRef(
+    decl ?? this.decl,
+    arguments: arguments ?? this.arguments,
+    nullable: nullable ?? this.nullable,
+  );
+
+  @override
+  InterfaceTypeRef withNullable(bool nullable) =>
+      nullable == this.nullable ? this : copyWith(nullable: nullable);
+
+  @override
+  TypeRef substituteTypeParameters(Substitution substitutions) {
+    if (arguments.isEmpty) return this;
+    return copyWith(
+      arguments: [
+        for (final argument in arguments)
+          argument.substituteTypeParameters(substitutions),
+      ],
+    );
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -795,14 +713,28 @@ final class TypeParameterTypeRef extends TypeRef {
   /// An explicit library override — the owner library otherwise.
   final int? _file;
 
-  @override
+  /// The owner library.
   int get file => _file ?? parameter.owner.library;
 
-  @override
+  /// The parameter's declared name.
   String get name => parameter.name;
 
+  TypeParameterTypeRef copyWith({bool? nullable}) => TypeParameterTypeRef(
+    parameter,
+    nullable: nullable ?? this.nullable,
+    file: _file,
+  );
+
   @override
-  TypeDecl? get decl => null;
+  TypeParameterTypeRef withNullable(bool nullable) =>
+      nullable == this.nullable ? this : copyWith(nullable: nullable);
+
+  @override
+  TypeRef substituteTypeParameters(Substitution substitutions) {
+    final replacement = substitutions[parameter];
+    if (replacement == null) return this;
+    return replacement.withNullable(nullable || replacement.nullable);
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -846,14 +778,31 @@ final class RecordTypeRef extends TypeRef {
   /// Named fields in canonical (name-sorted) order.
   final Map<String, TypeRef> named;
 
-  @override
+  /// The canonical `@record` name.
   final String name;
 
-  @override
+  /// Records own no library — nominal file lookups answer -1.
   int get file => -1;
 
   @override
-  TypeDecl? get decl => null;
+  RecordTypeRef withNullable(bool nullable) =>
+      nullable == this.nullable
+          ? this
+          : RecordTypeRef(positional, named, nullable: nullable);
+
+  @override
+  TypeRef substituteTypeParameters(Substitution substitutions) =>
+      RecordTypeRef(
+        [
+          for (final type in positional)
+            type.substituteTypeParameters(substitutions),
+        ],
+        {
+          for (final entry in named.entries)
+            entry.key: entry.value.substituteTypeParameters(substitutions),
+        },
+        nullable: nullable,
+      );
 
   /// The canonical `@record` name: positionals in order, then named
   /// fields sorted — the single identity every record producer shares.
@@ -935,14 +884,52 @@ final class FunctionTypeRef extends TypeRef {
 
   final FunctionSignature signature;
 
-  @override
   final TypeDecl decl;
 
-  @override
+  /// The declaring library.
   int get file => decl.library;
 
-  @override
+  /// The declaration's simple name.
   String get name => decl.name;
+
+  FunctionTypeRef copyWith({
+    FunctionSignature? signature,
+    TypeDecl? decl,
+    bool? nullable,
+  }) => FunctionTypeRef(
+    signature ?? this.signature,
+    decl: decl ?? this.decl,
+    nullable: nullable ?? this.nullable,
+  );
+
+  @override
+  FunctionTypeRef withNullable(bool nullable) =>
+      nullable == this.nullable ? this : copyWith(nullable: nullable);
+
+  @override
+  TypeRef substituteTypeParameters(Substitution substitutions) {
+    // The signature's own type parameters are not substituted; refs to
+    // them simply miss the outer substitution map.
+    final s = signature;
+    return copyWith(
+      signature: FunctionSignature(
+        typeParameters: s.typeParameters,
+        positional: [
+          for (final type in s.positional)
+            type.substituteTypeParameters(substitutions),
+        ],
+        requiredPositional: s.requiredPositional,
+        named: {
+          for (final entry in s.named.entries)
+            entry.key: (
+              type: entry.value.type.substituteTypeParameters(substitutions),
+              required: entry.value.required,
+            ),
+        },
+        returnType: s.returnType.substituteTypeParameters(substitutions),
+      ),
+    );
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -971,14 +958,24 @@ final class ExtensionNamespaceTypeRef extends TypeRef {
   /// extensions.
   final String extensionName;
 
-  @override
+  /// The declaring library.
   int get file => library;
 
-  @override
+  /// The extension's registration name.
   String get name => extensionName;
 
   @override
-  TypeDecl? get decl => null;
+  ExtensionNamespaceTypeRef withNullable(bool nullable) =>
+      nullable == this.nullable
+          ? this
+          : ExtensionNamespaceTypeRef(
+              library,
+              extensionName,
+              nullable: nullable,
+            );
+
+  @override
+  TypeRef substituteTypeParameters(Substitution substitutions) => this;
 
   @override
   bool operator ==(Object other) =>
@@ -990,6 +987,49 @@ final class ExtensionNamespaceTypeRef extends TypeRef {
 
   @override
   late final int hashCode = Object.hash(library, extensionName, nullable);
+}
+
+/// The nominal view of a [TypeRef] — which library declared it, what it's
+/// called, its declaration when it has one, and its type arguments. Every
+/// variant answers these, but they are classifications over the sealed
+/// set, not shared fields: a record has no library, a type parameter has
+/// no declaration, and only an interface type has arguments.
+extension TypeRefNominal on TypeRef {
+  /// The declaring library — the declaration's library for interface and
+  /// function types, the owner library for type parameters, the
+  /// extension's library for its namespace, and -1 for records.
+  int get file => switch (this) {
+    InterfaceTypeRef ref => ref.file,
+    FunctionTypeRef ref => ref.file,
+    TypeParameterTypeRef ref => ref.file,
+    RecordTypeRef() => -1,
+    ExtensionNamespaceTypeRef ref => ref.file,
+  };
+
+  /// The simple name — the declaration's name, the parameter's name for
+  /// type parameters, the canonical `@record` name for records, and the
+  /// registration name for extension namespaces.
+  String get name => switch (this) {
+    InterfaceTypeRef ref => ref.name,
+    FunctionTypeRef ref => ref.name,
+    TypeParameterTypeRef ref => ref.name,
+    RecordTypeRef ref => ref.name,
+    ExtensionNamespaceTypeRef ref => ref.name,
+  };
+
+  /// The declaration this type names — null for type parameters, records,
+  /// and extension namespaces.
+  TypeDecl? get decl => switch (this) {
+    InterfaceTypeRef(:final decl) || FunctionTypeRef(:final decl) => decl,
+    _ => null,
+  };
+
+  /// [InterfaceTypeRef.arguments] on interface types, empty everywhere
+  /// else.
+  List<TypeRef> get typeArguments => switch (this) {
+    InterfaceTypeRef(:final arguments) => arguments,
+    _ => const [],
+  };
 }
 
 
@@ -1011,7 +1051,7 @@ Map<String, TypeRef> classTypeParameterRefs(
 }
 
 extension Refify on BridgeTypeSpec {
-  TypeRef ref(
+  InterfaceTypeRef ref(
     CompilerContext ctx, [
     List<BridgeTypeAnnotation> typeArgs = const [],
   ]) {
@@ -1171,7 +1211,7 @@ TypeRef _resolveTypeAlias(
   } else {
     target = CoreTypes.function.ref(ctx);
   }
-  return target.copyWith(nullable: nullable || target.nullable);
+  return target.withNullable(nullable || target.nullable);
 }
 
 /// Resolves a type argument in a `with`/`extends` application: a bare name
@@ -1217,8 +1257,8 @@ TypeRef? resolveAppliedTypeArgument(
     if (base != null) {
       final nestedArgs = arg.typeArguments?.arguments;
       if (nestedArgs == null) return base;
-      return base.copyWith(
-        typeArguments: [
+      return (base as InterfaceTypeRef).copyWith(
+        arguments: [
           for (final nested in nestedArgs)
             resolveAppliedTypeArgument(
                   ctx,

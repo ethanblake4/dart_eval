@@ -835,7 +835,7 @@ class TypedBackend {
       }
     }
     if (positional.isEmpty && named.isEmpty) return signature;
-    final object = CoreTypes.object.ref(context).copyWith(nullable: true);
+    final object = CoreTypes.object.ref(context).withNullable(true);
     var index = 0;
     return FunctionTypeRef(
       FunctionSignature(

@@ -157,7 +157,7 @@ int compileMethodDeclaration(
       var i = hasReceiver ? 1 : 0;
 
       for (final p in resolvedParams) {
-        var type = CoreTypes.dynamic.ref(ctx);
+        TypeRef type = CoreTypes.dynamic.ref(ctx);
         if (p.type != null) {
           type = formalParameterAnnotationType(ctx, ctx.library, p);
         }

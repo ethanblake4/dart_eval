@@ -62,8 +62,8 @@ TypeRef? clauseNamedType(
   if (type != null) {
     final args = clause.typeArguments?.arguments;
     if (args == null) return type;
-    return type.copyWith(
-      typeArguments: [
+    return (type as InterfaceTypeRef).copyWith(
+      arguments: [
         for (final arg in args)
           TypeRef.fromAnnotation(
             ctx,

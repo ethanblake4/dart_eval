@@ -97,7 +97,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       for (final p in resolvedParams) {
         Variable vRep;
 
-        var type = CoreTypes.dynamic.ref(ctx);
+        TypeRef type = CoreTypes.dynamic.ref(ctx);
         if (p.type != null) {
           type = formalParameterAnnotationType(ctx, ctx.library, p);
         }

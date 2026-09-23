@@ -137,7 +137,7 @@ Variable _compileShortCircuit(
       // `x ?? .y` gives the RHS the join context (outer bound, else the
       // non-nullable LHS type); `x && .y`/`||` give it `bool`.
       final rightBound = operator == '??'
-          ? boundType ?? L.type.copyWith(nullable: false)
+          ? boundType ?? L.type.withNullable(false)
           : CoreTypes.bool.ref(ctx);
       var R = compileExpression(right, ctx, rightBound);
       if (operator != '??') {
@@ -164,7 +164,7 @@ Variable _compileShortCircuit(
   // a `Null`-typed LHS contributes nothing (`Null ?? C` is `C`, not `C?`).
   final lhsType = L.type.isSpec(CoreTypes.nullType)
       ? null
-      : L.type.copyWith(nullable: false);
+      : L.type.withNullable(false);
   final outType = operator == '??'
       ? lhsType == null
             ? rightType

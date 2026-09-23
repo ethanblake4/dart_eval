@@ -68,7 +68,7 @@ void setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
   final runtimeType =
       returnType != null && sameDeclaration(returnType, future)
       ? returnType
-      : future.copyWith(typeArguments: [CoreTypes.dynamic.ref(ctx)]);
+      : future.copyWith(arguments: [CoreTypes.dynamic.ref(ctx)]);
   ctx.setLocal(
     '#completer',
     Variable.ssa(

@@ -107,12 +107,12 @@ Variable _assignWithReference(
     // Per spec, `e1 ??= e2` has type UP(NonNull(T1), T2'): the join of the
     // non-null read type and the stored type — `int? ??= double` is `num`.
     final joined = TypeRef.commonBaseType(ctx, {
-      readValue!.type.copyWith(nullable: false),
+      readValue!.type.withNullable(false),
       storedType ?? readValue!.type,
     });
     return out.copyWith(
-      type: joined.copyWith(
-        nullable: storedType?.nullable ?? readValue!.type.nullable,
+      type: joined.withNullable(
+        storedType?.nullable ?? readValue!.type.nullable,
       ),
     );
   } else {

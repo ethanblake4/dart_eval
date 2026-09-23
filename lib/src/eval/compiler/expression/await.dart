@@ -26,15 +26,15 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
 
   final completer = ctx.lookupLocal('#completer')!;
   final isFuture = type
-      .copyWith(nullable: false)
+      .withNullable(false)
       .isAssignableTo(ctx, CoreTypes.future.ref(ctx));
   final resultType = isFuture ? ctx.typeSystem.flatten(type) : type;
 
   return Variable.ssa(
     ctx,
     Await(ctx.svar('await_result'), completer.ssa, subject.ssa),
-    resultType.copyWith(
-      nullable: resultType.nullable || isFuture && type.nullable,
+    resultType.withNullable(
+      resultType.nullable || isFuture && type.nullable,
     ),
     rep: ValueRep.boxed,
   );

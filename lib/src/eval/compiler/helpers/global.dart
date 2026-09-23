@@ -119,8 +119,8 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     if (resolved == null) return CoreTypes.dynamic.ref(ctx);
     final type = expression.constructorName.type;
     if (type.typeArguments == null) return resolved;
-    return resolved.copyWith(
-      typeArguments: [
+    return (resolved as InterfaceTypeRef).copyWith(
+      arguments: [
         for (final arg in type.typeArguments!.arguments)
           TypeRef.fromAnnotation(ctx, library, arg),
       ],
@@ -186,7 +186,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   if (expression is PostfixExpression) {
     final operand = _infer(ctx, library, expression.operand);
     return expression.operator.lexeme == '!'
-        ? operand.copyWith(nullable: false)
+        ? operand.withNullable(false)
         : operand;
   }
   if (expression is IsExpression) return CoreTypes.bool.ref(ctx);
@@ -324,7 +324,7 @@ TypeRef _collectionType(
   if (elementTypes == null || elementTypes.isEmpty) return core.ref(ctx);
   return core
       .ref(ctx)
-      .copyWith(typeArguments: [TypeRef.commonBaseType(ctx, elementTypes)]);
+      .copyWith(arguments: [TypeRef.commonBaseType(ctx, elementTypes)]);
 }
 
 /// The type of a map literal: bare `Map` when the entry types are unknown,
@@ -346,7 +346,7 @@ TypeRef _mapType(
   return CoreTypes.map
       .ref(ctx)
       .copyWith(
-        typeArguments: [
+        arguments: [
           TypeRef.commonBaseType(ctx, keyTypes),
           TypeRef.commonBaseType(ctx, valueTypes),
         ],

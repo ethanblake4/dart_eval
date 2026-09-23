@@ -23,7 +23,7 @@ Variable compilePostfixExpression(
         AssertType(boxed.ssa, ctx.runtimeTypes.idOf(CoreTypes.object.ref(ctx))),
       );
     }
-    return v.copyWith(type: v.type.copyWith(nullable: false));
+    return v.copyWith(type: v.type.withNullable(false));
   }
 
   if (e.operator.type == TokenType.BANG) {

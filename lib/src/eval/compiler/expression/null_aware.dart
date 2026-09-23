@@ -80,10 +80,10 @@ Variable emitNullGuard(
       // extension resolution (`c1n?.ext` on `extension on C1`) see the
       // non-nullable view.
       final V = body(
-        target.copyWith(type: target.type.copyWith(nullable: false)),
+        target.copyWith(type: target.type.withNullable(false)),
       ).boxIfNeeded(ctx);
       out = out.copyWith(
-        type: V.type.copyWith(nullable: true),
+        type: V.type.withNullable(true),
         concreteTypes: {
           ...V.concreteTypes,
           CoreTypes.nullType.ref(ctx),

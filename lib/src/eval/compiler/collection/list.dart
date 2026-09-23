@@ -57,7 +57,7 @@ Variable compileListLiteral(
   final listType = CoreTypes.list
       .ref(ctx)
       .copyWith(
-        typeArguments: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
+        arguments: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
       );
   var list = Variable.ssa(
     ctx,
@@ -79,7 +79,7 @@ Variable compileListLiteral(
       type: CoreTypes.list
           .ref(ctx)
           .copyWith(
-            typeArguments: [
+            arguments: [
               resultTypes.isEmpty
                   ? CoreTypes.dynamic.ref(ctx)
                   : TypeRef.commonBaseType(ctx, resultTypes.toSet()),
@@ -96,7 +96,7 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
   final newList = Variable.ssa(
     ctx,
     NewList(ctx.svar('boxed_elements')),
-    list.type.copyWith(typeArguments: [elementType]),
+    (list.type as InterfaceTypeRef).copyWith(arguments: [elementType]),
     rep: ValueRep.nativeList,
   );
   final index = BuiltinValue(intval: 0).push(ctx);
