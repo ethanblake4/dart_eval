@@ -11,8 +11,8 @@ import 'package:dart_eval/src/eval/ir/objects.dart';
 
 /// Compile-time only data describing how to perform a static-dispatch function call (e.g. when the exact function
 /// to be called is known at compile time)
-class StaticDispatch {
-  const StaticDispatch(this.offset, this.returnType);
+class DirectCall {
+  const DirectCall(this.offset, this.returnType);
 
   final DeferredOrOffset offset;
   final ReturnType returnType;

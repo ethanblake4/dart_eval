@@ -100,9 +100,9 @@ final class ClosureCall extends CallTarget {
   /// The callee value; null when [known] dispatches statically.
   final Variable? callee;
 
-  /// A statically known target — today: `getStaticDispatch` on a
+  /// A statically known target — today: `getDirectCall` on a
   /// reference-typed callee.
-  final StaticDispatch? known;
+  final DirectCall? known;
 
   @override
   CallSignature? get signature => null;

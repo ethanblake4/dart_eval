@@ -56,7 +56,7 @@ final class CallResolver {
     Reference? ref,
     Variable? callee,
   }) {
-    final dispatch = ref?.getStaticDispatch(ctx, site.source);
+    final dispatch = ref?.getDirectCall(ctx, site.source);
     final callable = dispatch == null
         ? (ref?.getValue(ctx, site.source) ?? callee!)
         : null;
@@ -1054,7 +1054,7 @@ final class CallResolver {
       case FunctionDenotation() ||
           StaticMemberDenotation() ||
           ExtensionMemberDenotation():
-        final dispatch = d.staticDispatch(ctx, source: e);
+        final dispatch = d.call(ctx, source: e);
         if (dispatch == null) return invokeValue(site, ref: ref);
         offset = dispatch.offset;
         sigReturn = dispatch.returnType;

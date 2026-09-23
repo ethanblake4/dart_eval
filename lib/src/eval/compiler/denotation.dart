@@ -21,7 +21,7 @@ sealed class Denotation {
   Variable write(CompilerContext ctx, Variable value, {AstNode? source});
 
   /// Compile-time call dispatch when this denotation is invoked directly.
-  StaticDispatch? staticDispatch(CompilerContext ctx, {AstNode? source}) =>
+  DirectCall? call(CompilerContext ctx, {AstNode? source}) =>
       null;
 }
 
@@ -171,11 +171,11 @@ final class LocalDenotation extends Denotation {
   }
 
   @override
-  StaticDispatch? staticDispatch(CompilerContext ctx, {AstNode? source}) {
+  DirectCall? call(CompilerContext ctx, {AstNode? source}) {
     final current = binding.current;
     if (current.methodOffset != null &&
         current.callingConvention != CallingConvention.dynamic) {
-      return StaticDispatch(current.methodOffset!, current.methodReturnType!);
+      return DirectCall(current.methodOffset!, current.methodReturnType!);
     }
     return null;
   }
@@ -264,7 +264,7 @@ final class FunctionDenotation extends Denotation {
   }
 
   @override
-  StaticDispatch? staticDispatch(CompilerContext ctx, {AstNode? source}) {
+  DirectCall? call(CompilerContext ctx, {AstNode? source}) {
     final decl = _decl;
     if (target.isBridge) return null;
     // `x()` where `x` is a getter must call the getter's *result*, not the
@@ -272,7 +272,7 @@ final class FunctionDenotation extends Denotation {
     if (decl is FunctionDeclaration && (decl.isGetter || decl.isSetter)) {
       return null;
     }
-    return _declarationToStaticDispatch(target, name, ctx, source);
+    return _declarationToDirectCall(target, name, ctx, source);
   }
 }
 
@@ -350,7 +350,7 @@ final class StaticMemberDenotation extends Denotation {
   }
 
   @override
-  StaticDispatch? staticDispatch(CompilerContext ctx, {AstNode? source}) {
+  DirectCall? call(CompilerContext ctx, {AstNode? source}) {
     if (member.isGetter || member.isSetter) return null;
     final rt = member.returnType == null
         ? CoreTypes.dynamic.ref(ctx)
@@ -360,7 +360,7 @@ final class StaticMemberDenotation extends Denotation {
             member.typeParameters?.typeParameters,
             () => TypeRef.fromAnnotation(ctx, file, member.returnType!),
           );
-    return StaticDispatch(
+    return DirectCall(
       _offset(ctx),
       AlwaysReturnType(rt, member.returnType?.question != null),
     );
@@ -695,7 +695,7 @@ final class InstanceMemberDenotation extends Denotation {
   }
 
   @override
-  StaticDispatch? staticDispatch(CompilerContext ctx, {AstNode? source}) {
+  DirectCall? call(CompilerContext ctx, {AstNode? source}) {
     final r = receiver;
     final object = r is ValueReceiver
         ? r.value
@@ -734,7 +734,7 @@ final class InstanceMemberDenotation extends Denotation {
           )) {
         return null;
       }
-      return StaticDispatch(
+      return DirectCall(
         DeferredOrOffset(file: link.file, offset: methodsMap![name]),
         returnType,
       );
@@ -956,8 +956,8 @@ final class TypeLiteralDenotation extends Denotation {
       throw CompileError('Cannot assign to a type literal', source);
 
   @override
-  StaticDispatch? staticDispatch(CompilerContext ctx, {AstNode? source}) =>
-      StaticDispatch(
+  DirectCall? call(CompilerContext ctx, {AstNode? source}) =>
+      DirectCall(
         DeferredOrOffset(file: type.file, name: constructorKey),
         AlwaysReturnType(type, false),
       );
@@ -1669,18 +1669,3 @@ Receiver compileReceiver(CompilerContext ctx, Expression target) {
 }
 
 /// Field-wise equality for shadow comparison of dispatch results.
-bool _staticDispatchEquals(StaticDispatch? a, StaticDispatch? b) {
-  if (a == null || b == null) return a == b;
-  bool offsetEq(DeferredOrOffset x, DeferredOrOffset y) =>
-      x.offset == y.offset &&
-      x.file == y.file &&
-      x.name == y.name &&
-      x.className == y.className &&
-      x.methodType == y.methodType;
-  TypeRef? rt(ReturnType r) =>
-      r is AlwaysReturnType ? r.type : null;
-  return offsetEq(a.offset, b.offset) &&
-      (a.returnType == b.returnType ||
-          (rt(a.returnType) != null &&
-              rt(a.returnType) == rt(b.returnType)));
-}

@@ -114,7 +114,7 @@ final class ArgumentBinder {
 TypeRef? resolveCallResultType(
   CompilerContext ctx, {
   required Variable? callee,
-  required StaticDispatch? dispatch,
+  required DirectCall? dispatch,
   required List<TypeRef> argTypes,
   required Map<String, TypeRef> namedArgTypes,
 }) {

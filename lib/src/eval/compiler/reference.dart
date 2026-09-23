@@ -51,7 +51,7 @@ abstract class Reference {
 
   Variable getValue(CompilerContext ctx, [AstNode? source]);
 
-  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]);
+  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]);
 }
 
 /// A property whose getter and setter resolve from the lexical superclass.
@@ -67,7 +67,7 @@ class SuperPropertyReference extends IdentifierReference {
 
 
   @override
-  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) =>
+  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) =>
       null;
 }
 
@@ -77,40 +77,6 @@ class IdentifierReference implements Reference {
 
   Variable? object;
   final String name;
-
-  /// The static type an extension accessor named [name] on [object]
-  /// contributes — the setter's parameter type or the getter's return type —
-  /// or null when no extension member applies.
-  TypeRef? _extensionMemberType(CompilerContext ctx, {required bool forSet}) {
-    final found = resolveExtensionMember(
-      ctx,
-      object!.type,
-      name,
-      getter: !forSet,
-      setter: forSet,
-    );
-    if (found == null) return null;
-    final (ext, member, bindings) = found;
-    final typeParams = extBindingsMap(ext, bindings);
-    if (forSet) {
-      final param = member.parameters?.parameters.firstOrNull;
-      if (param?.type == null) return null;
-      return formalParameterAnnotationType(
-        ctx,
-        ext.library,
-        param!,
-        typeParameters: typeParams,
-      );
-    }
-    return member.returnType == null
-        ? null
-        : TypeRef.fromAnnotation(
-            ctx,
-            ext.library,
-            member.returnType!,
-            typeParameters: typeParams,
-          );
-  }
 
   /// The denotation this reference resolves to — computed per call since
   /// resolution depends on the scope at the use site (the plan's
@@ -141,276 +107,9 @@ class IdentifierReference implements Reference {
     AstNode? source,
   }) {
     final d = denotation(ctx, forSet: forSet, source: source);
-    final now = forSet
+    return forSet
         ? d.writeType(ctx, source: source)
         : d.readType(ctx, source: source);
-    assert(() {
-      final legacy = _legacyResolveType(ctx, forSet: forSet, source: source);
-      if (legacy != now) {
-        // Shadow report (Phase D.4): the unified cascade picks a different
-        // type than the legacy resolveType. Expected where the cascades
-        // disagreed; each instance is reviewed under the incidental-fix
-        // policy.
-        // ignore: avoid_print
-        print(
-          'DENOTATION-DIVERGE resolveType $name forSet=$forSet: '
-          'now=$now legacy=$legacy',
-        );
-      }
-      return true;
-    }());
-    return now;
-  }
-
-  TypeRef _legacyResolveType(
-    CompilerContext ctx, {
-    bool forSet = false,
-    AstNode? source,
-  }) {
-    if (object != null) {
-      if (object!.type.isSpec(CoreTypes.type)) {
-        final concrete = object!.concreteTypes[0];
-        if (extensionForType(ctx, concrete) != null) {
-          // `E.member` — a tear-off (or getter invocation) through the
-          // extension namespace; precise typing isn't needed here.
-          return CoreTypes.function.ref(ctx);
-        }
-        final concreteType = concrete;
-        // Static accessors (`C.x*g`/`C.x*s`) report the value type —
-        // the getter's return type or the setter's parameter type — so
-        // compound-assignment and boxing decisions see the real member.
-        final accessor = ctx
-            .topLevelDeclarationsMap[concreteType
-                .file]?['${concreteType.name}.${MemberName(name, forSet ? MemberKind.setter : MemberKind.getter).key}']
-            ?.declaration;
-        if (accessor is MethodDeclaration) {
-          if (accessor.isSetter && forSet) {
-            return _setterValueType(
-                  ctx,
-                  concreteType.file,
-                  accessor.parameters,
-                ) ??
-                CoreTypes.dynamic.ref(ctx);
-          }
-          if (accessor.isGetter && !forSet) {
-            return accessor.returnType != null
-                ? TypeRef.fromAnnotation(
-                    ctx,
-                    concreteType.file,
-                    accessor.returnType!,
-                  )
-                : CoreTypes.dynamic.ref(ctx);
-          }
-        }
-        return concreteType;
-      }
-      var fieldType = TypeRef.lookupFieldType(
-        ctx,
-        object!.type,
-        name,
-        forSet: forSet,
-        source: source,
-      );
-      // Extension accessors apply when the receiver's interface has no
-      // member of the matching kind — same gate as [setValue].
-      if (fieldType == null &&
-          !hasInstanceMember(ctx, object!.type, name, forSet: forSet)) {
-        fieldType = _extensionMemberType(ctx, forSet: forSet);
-      }
-      return fieldType ?? CoreTypes.dynamic.ref(ctx);
-    }
-
-    // Locals
-    final local = ctx.lookupLocal(name);
-    if (local != null) {
-      // The write context of an assignment is the variable's declared
-      // type — a promoted type doesn't narrow what may be stored into it.
-      return forSet ? local.declaredType : local.type;
-    }
-
-    // Inside an anonymous-method body, member names resolve on the
-    // anonymous receiver rather than the enclosing class. The receiver is
-    // read through the `#this` local so nested closures capture it.
-    final anonymousReceiver = ctx.anonymousThisReceiver;
-    final receiverVar = anonymousReceiver == null
-        ? null
-        : ctx.lookupLocal('#this') ?? anonymousReceiver;
-    if (receiverVar != null &&
-        _hasReceiverMember(ctx, receiverVar, name, forSet: forSet)) {
-      final fieldType = TypeRef.lookupFieldType(
-        ctx,
-        receiverVar.type,
-        name,
-        forSet: forSet,
-        source: source,
-      );
-      if (fieldType != null) return fieldType;
-      // Methods produce tear-offs when referenced without a call.
-      return CoreTypes.function.ref(ctx);
-    }
-
-    // Instance
-    if (anonymousReceiver == null && ctx.currentClass != null) {
-      final fieldType = _resolveInstanceFieldType(
-        ctx,
-        name,
-        forSet: forSet,
-        source: source,
-      );
-      if (fieldType != null) return fieldType;
-
-      final staticDeclaration = resolveScopedStaticDeclaration(
-        ctx,
-        name,
-        forSet: forSet,
-      );
-
-      if (staticDeclaration != null &&
-          staticDeclaration.$1.declaration != null) {
-        final (staticDecl, scopeFile, scopeName) = staticDeclaration;
-        final staticDec = staticDecl.declaration!;
-        if (staticDec is MethodDeclaration) {
-          if (staticDec.isGetter && !forSet) {
-            return staticDec.returnType != null
-                ? TypeRef.fromAnnotation(ctx, scopeFile, staticDec.returnType!)
-                : CoreTypes.dynamic.ref(ctx);
-          }
-          if (staticDec.isSetter && forSet) {
-            return _setterValueType(ctx, scopeFile, staticDec.parameters) ??
-                CoreTypes.dynamic.ref(ctx);
-          }
-          return CoreTypes.function.ref(ctx);
-        } else if (staticDec is VariableDeclaration) {
-          final name = '$scopeName.${staticDec.name.lexeme}';
-          return resolveGlobalType(ctx, scopeFile, name);
-        }
-      }
-    }
-
-    final typeParameter = ctx.typeScopes[ctx.library]?[name];
-    if (typeParameter != null && name != '_') {
-      return CoreTypes.type.ref(ctx);
-    }
-
-    // A bare identifier inside an extension body or instance method can
-    // denote a member of the implicit receiver. The members that outrank
-    // globals are the extension's own members, and — in a class method —
-    // the members the enclosing class itself declares; inherited members
-    // and members of other extensions only apply after globals miss.
-    final $this = (ctx.currentExtension == null && ctx.currentClass == null)
-        ? null
-        : ctx.lookupLocal('#this');
-    final currentExtension = ctx.currentExtension;
-    if (currentExtension is ExtensionDeclaration) {
-      final ext = ctx.extensions.firstWhereOrNull(
-        (e) => e.declaration == currentExtension,
-      );
-      if (ext != null) {
-        final member =
-            extensionMember(ext, name, getter: !forSet, setter: forSet) ??
-            extensionStaticMember(ext, name, getter: !forSet, setter: forSet);
-        if (member != null) {
-          if (forSet) {
-            return _setterValueType(ctx, ext.library, member.parameters) ??
-                CoreTypes.dynamic.ref(ctx);
-          }
-          return AlwaysReturnType.fromAnnotation(
-                ctx,
-                ext.library,
-                member.returnType,
-                CoreTypes.dynamic.ref(ctx),
-              ).type ??
-              CoreTypes.dynamic.ref(ctx);
-        }
-        if (extensionStaticField(ext, name) != null) {
-          return resolveGlobalType(ctx, ext.library, '${ext.name}.$name');
-        }
-      }
-    } else if ($this != null &&
-        ctx.currentClass != null &&
-        ctx.instanceDeclarationsMap[ctx.enclosingLibrary ??
-                ctx.library]?[ctx.currentClassName!]?[name] !=
-            null) {
-      final memberType = TypeRef.lookupFieldType(
-        ctx,
-        $this.type,
-        name,
-        forSet: forSet,
-        source: source,
-      );
-      if (memberType != null) return memberType;
-    }
-
-    DeclarationOrBridge? declarationValue;
-    try {
-      declarationValue = _lookupVisibleValue(ctx, name, source, forSet: forSet);
-    } on CompileError {
-      // `this.` members apply after globals miss: instance members
-      // (inherited included), then members of applicable extensions.
-      if ($this != null) {
-        final memberType = TypeRef.lookupFieldType(
-          ctx,
-          $this.type,
-          name,
-          forSet: forSet,
-          source: source,
-        );
-        if (memberType != null) return memberType;
-        final extMember = resolveExtensionMember(
-          ctx,
-          $this.type,
-          name,
-          getter: !forSet,
-          setter: forSet,
-        );
-        if (extMember != null) {
-          if (forSet) {
-            return _setterValueType(
-                  ctx,
-                  extMember.$1.library,
-                  extMember.$2.parameters,
-                ) ??
-                CoreTypes.dynamic.ref(ctx);
-          }
-          return AlwaysReturnType.fromAnnotation(
-                ctx,
-                extMember.$1.library,
-                extMember.$2.returnType,
-                CoreTypes.dynamic.ref(ctx),
-              ).type ??
-              CoreTypes.dynamic.ref(ctx);
-        }
-      }
-      rethrow;
-    }
-    final decl = declarationValue.declaration!;
-
-    if (decl is VariableDeclaration) {
-      return resolveGlobalType(
-        ctx,
-        declarationValue.sourceLib,
-        decl.name.lexeme,
-      );
-    }
-    if (decl is FunctionDeclaration && decl.isGetter && !forSet) {
-      return decl.returnType != null
-          ? TypeRef.fromAnnotation(
-              ctx,
-              declarationValue.sourceLib,
-              decl.returnType!,
-            )
-          : CoreTypes.dynamic.ref(ctx);
-    }
-    if (decl is FunctionDeclaration && decl.isSetter && forSet) {
-      return _setterValueType(
-            ctx,
-            declarationValue.sourceLib,
-            decl.functionExpression.parameters,
-          ) ??
-          CoreTypes.dynamic.ref(ctx);
-    }
-
-    return CoreTypes.type.ref(ctx);
   }
 
   @override
@@ -423,104 +122,8 @@ class IdentifierReference implements Reference {
       denotation(ctx, source: source).read(ctx, source: source);
 
   @override
-  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
-    final now = denotation(ctx, source: source).staticDispatch(
-      ctx,
-      source: source,
-    );
-    assert(() {
-      final legacy = _legacyGetStaticDispatch(ctx, source);
-      if (!_staticDispatchEquals(now, legacy)) {
-        // Shadow report (Phase D.4): the denotation cascade's dispatch
-        // disagrees with the legacy lookup.
-        // ignore: avoid_print
-        print(
-          'DENOTATION-DIVERGE getStaticDispatch $name: '
-          'now=$now legacy=$legacy',
-        );
-      }
-      return true;
-    }());
-    return now;
-  }
-
-  StaticDispatch? _legacyGetStaticDispatch(
-    CompilerContext ctx, [
-    AstNode? source,
-  ]) {
-    if (object != null) {
-      final exact = object!.exactType;
-      final actualType =
-          exact ??
-          (object!.concreteTypes.length == 1 ? object!.concreteTypes[0] : null);
-      if (actualType != null) {
-        // If we know the concrete type of the object, we can easily optimize to a static call
-        final returnType = AlwaysReturnType.fromInstanceMethod(
-          ctx,
-          actualType,
-          name,
-          CoreTypes.dynamic.ref(ctx),
-        );
-
-        // The statically-fixed target is the nearest class at-or-above the
-        // receiver type declaring the method. An exact allocation type needs
-        // no override check; a merely-declared type does.
-        for (final link in [
-          actualType,
-          ...ctx.typeSystem.superclassChain(actualType),
-        ]) {
-          final methodsMap =
-              ctx.instanceDeclarationPositions[link.file]?[link.name]?[2];
-          if (methodsMap?.containsKey(name) != true) continue;
-          if (exact == null &&
-              ctx.memberOverriddenInSubclass(
-                actualType.file,
-                actualType.name,
-                name,
-              )) {
-            return null;
-          }
-          return StaticDispatch(
-            DeferredOrOffset(file: link.file, offset: methodsMap![name]),
-            returnType,
-          );
-        }
-        // An inherited method needs the owner's field view as its receiver.
-        // Dynamic dispatch resolves that view as well as the method offset.
-        return null;
-      }
-      return null;
-    }
-
-    // First look at locals
-    final local = ctx.lookupLocal(name);
-    if (local != null) {
-      if (local.methodOffset != null) {
-        return StaticDispatch(local.methodOffset!, local.methodReturnType!);
-      }
-      return null;
-    }
-
-    // Next, the instance (if available)
-    if (ctx.currentClass != null) {
-      // No static dispatch because any method could be overridden in a subclass
-      return null;
-    }
-
-    final declaration =
-        ctx.visibleDeclarations[ctx.library]![name] ??
-        ctx.visibleDeclarations[ctx.library]![name.split('.')[0]];
-    final decOrBridge = declaration?.declaration;
-    if (decOrBridge == null) return null;
-    final topDecl = decOrBridge.declaration;
-    // `x()` where `x` is a getter must call the getter's *result*, not the
-    // getter itself — no direct dispatch.
-    if (topDecl is FunctionDeclaration &&
-        (topDecl.isGetter || topDecl.isSetter)) {
-      return null;
-    }
-    return _declarationToStaticDispatch(decOrBridge, name, ctx, source);
-  }
+  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) =>
+      denotation(ctx, source: source).call(ctx, source: source);
 }
 
 /// A deferred import prefix exposes an implicit `loadLibrary` member. Since
@@ -576,8 +179,8 @@ class PrefixedIdentifierReference implements Reference {
   }
 
   @override
-  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) =>
-      denotation(ctx, source: source).staticDispatch(ctx, source: source);
+  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) =>
+      denotation(ctx, source: source).call(ctx, source: source);
 
   @override
   Variable getValue(CompilerContext ctx, [AstNode? source]) =>
@@ -804,7 +407,7 @@ class IndexedReference implements Reference {
   }
 
   @override
-  StaticDispatch? getStaticDispatch(CompilerContext ctx, [AstNode? source]) {
+  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) {
     return null;
   }
 }
@@ -925,7 +528,7 @@ Variable _declarationToVariable(
   return fn;
 }
 
-StaticDispatch? _declarationToStaticDispatch(
+DirectCall? _declarationToDirectCall(
   DeclarationOrBridge decOrBridge,
   String name,
   CompilerContext ctx, [
@@ -955,7 +558,7 @@ StaticDispatch? _declarationToStaticDispatch(
       false,
     );
 
-    return StaticDispatch(offset, rt);
+    return DirectCall(offset, rt);
   }
 
   TypeRef? returnType;
@@ -991,7 +594,7 @@ StaticDispatch? _declarationToStaticDispatch(
         : name,
   );
 
-  return StaticDispatch(offset, AlwaysReturnType(returnType, nullable));
+  return DirectCall(offset, AlwaysReturnType(returnType, nullable));
 }
 
 /// Loads a top-level (or static field) global by its qualified [globalName],
