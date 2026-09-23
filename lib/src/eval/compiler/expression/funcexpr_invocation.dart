@@ -2,21 +2,25 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import '../invocation/call.dart';
+import '../invocation/resolver.dart';
 
 /// Compile a [FunctionExpressionInvocation]
 Variable compileFunctionExpressionInvocation(
   FunctionExpressionInvocation e,
   CompilerContext ctx,
 ) {
-  Variable invoke(Variable fn) => invokeClosure(
-    ctx,
-    null,
-    fn,
-    e.argumentList,
-    typeArguments: e.typeArguments?.arguments.toList(),
-  ).result;
+  Variable invoke(Variable fn) => CallResolver(ctx).invokeValue(
+    CallSite(
+      shape: CallShape.fromArgumentList(
+        e.argumentList,
+        e.typeArguments?.arguments.toList(),
+      ),
+      source: e,
+    ),
+    callee: fn,
+  );
 
   // `f?.(args)` — a callee on a null-shorted chain (`a?.fn()(args)`) nulls
   // the whole expression; the arguments are not evaluated.
@@ -28,13 +32,16 @@ Variable compileFunctionExpressionInvocation(
   // Using a reference allows us to potentially optimize to static dispatch, if the exact function
   // is known at compile-time
   if (canReference(e.function)) {
-    return invokeClosure(
-      ctx,
-      compileExpressionAsReference(e.function, ctx),
-      null,
-      e.argumentList,
-      typeArguments: e.typeArguments?.arguments.toList(),
-    ).result;
+    return CallResolver(ctx).invokeValue(
+      CallSite(
+        shape: CallShape.fromArgumentList(
+          e.argumentList,
+          e.typeArguments?.arguments.toList(),
+        ),
+        source: e,
+      ),
+      ref: compileExpressionAsReference(e.function, ctx),
+    );
   }
   return invoke(compileExpression(e.function, ctx));
 }

@@ -8,13 +8,14 @@ import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import '../values/value_rep.dart';
+import '../invocation/call.dart';
+import '../invocation/resolver.dart';
 
 /// Resolves the context type a `.member` shorthand selects: the bound type
 /// with nullability stripped and `FutureOr` unwrapped. Throws when the
@@ -236,11 +237,14 @@ Variable _invokeShorthandMember(
   if (fn.name == null && fn.methodOffset != null) {
     fn = fn.tearOff(ctx);
   }
-  return invokeClosure(
-    ctx,
-    null,
-    fn,
-    argumentList,
-    typeArguments: typeArguments?.arguments.toList(),
-  ).result;
+  return CallResolver(ctx).invokeValue(
+    CallSite(
+      shape: CallShape.fromArgumentList(
+        argumentList,
+        typeArguments?.arguments.toList(),
+      ),
+      source: argumentList,
+    ),
+    callee: fn,
+  );
 }

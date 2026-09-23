@@ -5,7 +5,6 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/invoke.dart';
@@ -27,6 +26,8 @@ import 'identifier.dart';
 import 'null_aware.dart';
 import '../values/abi.dart';
 import '../member/member_name.dart';
+import '../invocation/call.dart';
+import '../invocation/resolver.dart';
 
 Variable compileMethodInvocation(
   CompilerContext ctx,
@@ -846,14 +847,13 @@ Variable _invokeWithTarget(
         receiverType.named.containsKey(e.methodName.name)) {
       final (prePositional, preNamed) = _compileCallArgs(ctx, e);
       final property = L.getProperty(ctx, e.methodName.name);
-      return invokeClosure(
-        ctx,
-        null,
-        property,
-        null,
-        positional: prePositional,
-        named: preNamed,
-      ).result;
+      return CallResolver(ctx).invokeValue(
+        CallSite(
+          shape: CallShape.values(prePositional, preNamed),
+          source: e,
+        ),
+        callee: property,
+      );
     }
     try {
       dec0 = resolveInstanceMethod(ctx, L.type, e.methodName.name, e);
@@ -911,15 +911,17 @@ Variable _invokeWithTarget(
       // arguments evaluate before the member read (method-invocation order).
       final (prePositional, preNamed) = _compileCallArgs(ctx, e);
       final property = L.getProperty(ctx, e.methodName.name);
-      return invokeClosure(
-        ctx,
-        null,
-        property,
-        null,
-        positional: prePositional,
-        named: preNamed,
-        typeArguments: e.typeArguments?.arguments.toList(),
-      ).result;
+      return CallResolver(ctx).invokeValue(
+        CallSite(
+          shape: CallShape.values(
+            prePositional,
+            preNamed,
+            e.typeArguments?.arguments.toList(),
+          ),
+          source: e,
+        ),
+        callee: property,
+      );
     }
     isStatic = false;
   } else {
@@ -2130,13 +2132,16 @@ Variable _invokeSuperNoSuchMethod(
 /// callable) — with the call's argument list. The member read already
 /// happened; this is the function-expression invocation.
 Variable _invokeValue(CompilerContext ctx, Variable value, MethodInvocation e) {
-  return invokeClosure(
-    ctx,
-    null,
-    value,
-    e.argumentList,
-    typeArguments: e.typeArguments?.arguments.toList(),
-  ).result;
+  return CallResolver(ctx).invokeValue(
+    CallSite(
+      shape: CallShape.fromArgumentList(
+        e.argumentList,
+        e.typeArguments?.arguments.toList(),
+      ),
+      source: e,
+    ),
+    callee: value,
+  );
 }
 
 /// Compiles a call's argument list into positional/named variable pairs. Used

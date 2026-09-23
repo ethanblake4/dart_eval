@@ -1,0 +1,91 @@
+import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
+import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/variable.dart';
+
+/// How the binder treats arguments the caller did not supply.
+enum BindingPolicy {
+  /// Full typed vector; omitted parameters get compiled defaults.
+  callerFillsDefaults,
+
+  /// Supplied arguments only; the runtime binds names and defaults.
+  calleeBinds,
+
+  /// Flattened positional vector; named arguments in declaration order
+  /// with shared null placeholders.
+  bridgeVector,
+
+  /// Box everything, no coercion — today's operator path. Removed in
+  /// phase 7.
+  untypedLegacy,
+}
+
+/// Whether a member *value* call evaluates the read or the arguments first.
+enum EvalOrder { argumentsFirst, readFirst }
+
+/// Binder configuration. `legacy` reproduces today's behavior; phase 7's
+/// semantic changes flip individual options.
+final class BindingOptions {
+  const BindingOptions({
+    required this.namedOrder,
+    required this.allowNamedBeforePositional,
+    required this.inference,
+  });
+
+  static const legacy = BindingOptions(
+    namedOrder: NamedOrder.declaration,
+    allowNamedBeforePositional: false,
+    inference: InferenceMode.legacy,
+  );
+
+  final NamedOrder namedOrder;
+  final bool allowNamedBeforePositional;
+  final InferenceMode inference;
+}
+
+enum NamedOrder { declaration, source }
+
+enum InferenceMode { legacy, unify }
+
+/// A matched, compiled, and coerced argument.
+final class BoundArgument {
+  const BoundArgument(this.value, {this.supplied = true});
+
+  final Variable value;
+
+  /// False for defaults filled by the binder.
+  final bool supplied;
+}
+
+/// The binder's output: callee-order arguments, resolved type arguments,
+/// the post-coercion receiver, and the call's return type.
+final class BoundCall {
+  const BoundCall({
+    this.receiver,
+    required this.positional,
+    required this.named,
+    this.typeArguments = const {},
+    this.runtimeTypeArguments = const [],
+    required this.returnType,
+    this.trusted = false,
+  });
+
+  /// The receiver after coercion — compound assignments and indexed
+  /// references read the post-coercion values from here.
+  final Variable? receiver;
+  final List<BoundArgument> positional;
+  final List<(String, BoundArgument)> named;
+  final Map<String, TypeRef> typeArguments;
+  final List<int> runtimeTypeArguments;
+  final TypeRef returnType;
+
+  /// ClosureCall: every supplied argument proven against the static
+  /// signature, so the runtime skips per-argument checks.
+  final bool trusted;
+
+  /// The flattened call vector: positionals then named values in
+  /// declaration order.
+  List<SSA> vector() => [
+    for (final arg in positional) arg.value.ssa,
+    for (final entry in named) entry.$2.value.ssa,
+  ];
+}

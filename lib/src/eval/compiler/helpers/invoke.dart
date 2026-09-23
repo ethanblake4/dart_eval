@@ -7,7 +7,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/dispatch.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/closure.dart';
+import 'package:dart_eval/src/eval/compiler/invocation/binder.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
@@ -23,6 +23,8 @@ import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import '../values/abi.dart';
+import '../invocation/call.dart';
+import '../invocation/resolver.dart';
 
 extension Invoke on Variable {
   InvokeResult invoke(
@@ -459,13 +461,15 @@ extension Invoke on Variable {
     }
     if (callingConvention == CallingConvention.dynamic ||
         methodOffset == null) {
-      return invokeClosure(
-        ctx,
+      final (result, bound) = CallResolver(ctx).invokeValueWithArgs(
+        CallSite(shape: CallShape.values(args, namedArgs)),
+        callee: this,
+      );
+      return InvokeResult(
         null,
-        this,
-        null,
-        positional: args,
-        named: namedArgs,
+        result,
+        [for (final a in bound.positional) a.value],
+        namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
       );
     }
     final target = ctx.svar('call_result');
