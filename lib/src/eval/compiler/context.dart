@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
@@ -16,38 +17,39 @@ import 'member/member_lookup.dart';
 import 'member/member_name.dart';
 
 abstract class AbstractScopeContext {
-  List<Map<String, Variable>> get locals;
+  List<Map<String, LocalBinding>> get locals;
 }
 
 mixin ScopeContext on Object implements AbstractScopeContext {
   @override
-  List<Map<String, Variable>> locals = [];
+  List<Map<String, LocalBinding>> locals = [];
 
   void beginScope() => locals.add({});
 
   void endScope() => locals.removeLast();
 
-  Variable setLocal(String name, Variable v, {int? frame}) {
-    if (frame != null) {
-      return locals[frame][name] = v
-        ..frameIndex = frame
-        ..localName = name;
-    }
-
-    return locals.last[name] = v
-      ..frameIndex = locals.length - 1
-      ..localName = name;
-  }
-
-  Variable? lookupLocal(String name) {
+  /// The binding for [name] in innermost-first scope order.
+  LocalBinding? lookupBinding(String name) {
     for (var i = locals.length - 1; i >= 0; i--) {
-      if (locals[i].containsKey(name)) {
-        return locals[i][name]!
-          ..localName = name
-          ..frameIndex = i;
-      }
+      final binding = locals[i][name];
+      if (binding != null) return binding;
     }
+    return null;
   }
+
+  Variable setLocal(String name, Variable v, {int? frame}) {
+    final f = frame ?? locals.length - 1;
+    final binding = locals[f][name];
+    if (binding != null) {
+      binding.rebind(v..frameIndex = f..localName = name);
+      return binding.current;
+    }
+    final nb = LocalBinding(name, v..frameIndex = f..localName = name);
+    locals[f][name] = nb;
+    return nb.current;
+  }
+
+  Variable? lookupLocal(String name) => lookupBinding(name)?.current;
 
   ContextSaveState saveState() {
     final state = ContextSaveState.of(this);
@@ -65,11 +67,12 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       final myLocalsMap = myLocals[i];
 
       otherLocalsMap.forEach((key, value) {
-        final myLocal = myLocalsMap[key]!;
-        if (!myLocal.boxed && value.boxed) {
-          locals[i][key] = myLocal.boxIfNeeded(this);
-        } else if (myLocal.boxed && !value.boxed) {
-          locals[i][key] = myLocal.unboxIfNeeded(this as CompilerContext);
+        final binding = myLocalsMap[key]!;
+        final myLocal = binding.current;
+        if (!myLocal.boxed && value.current.boxed) {
+          binding.rebind(myLocal.boxIfNeeded(this));
+        } else if (myLocal.boxed && !value.current.boxed) {
+          binding.rebind(myLocal.unboxIfNeeded(this as CompilerContext));
         }
       });
     }
@@ -77,7 +80,11 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 
   void restoreState(ContextSaveState initial) {
     locals = [
-      for (final scope in initial.locals) {...scope},
+      for (final scope in initial.locals)
+        {
+          for (final entry in scope.entries)
+            entry.key: LocalBinding.snapshot(entry.key, entry.value.current),
+        },
     ];
   }
 
@@ -90,12 +97,12 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     for (var i = 0; i < locals.length; i++) {
       final frame = locals[i];
       for (final key in frame.keys.toList()) {
-        final current = frame[key]!;
-        frame[key] = current.joinedWith([
+        final binding = frame[key]!;
+        binding.rebind(binding.current.joinedWith([
           for (final state in incoming)
             if (i < state.locals.length && state.locals[i][key] != null)
-              state.locals[i][key]!,
-        ]);
+              state.locals[i][key]!.current,
+        ]));
       }
     }
   }
@@ -107,9 +114,9 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     for (var i = 0; i < locals.length; i++) {
       final frame = locals[i];
       for (final name in names) {
-        final v = frame[name];
-        if (v == null) continue;
-        frame[name] = v.widened();
+        final binding = frame[name];
+        if (binding == null) continue;
+        binding.rebind(binding.current.widened());
       }
     }
   }
@@ -126,9 +133,9 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       final myLocalsMap = myLocals[i];
 
       otherLocalsMap.forEach((key, value) {
-        final myLocal = myLocalsMap[key]!;
-        if (myLocal.rep != value.rep) {
-          locals[i][key] = myLocal.copyWith(rep: value.rep);
+        final binding = myLocalsMap[key]!;
+        if (binding.current.rep != value.current.rep) {
+          binding.rebind(binding.current.copyWith(rep: value.current.rep));
         }
       });
     }
@@ -522,17 +529,16 @@ class CompilerContext with ScopeContext {
   /// For every local in [savedLocals] whose type differs from the current
   /// binding, write back a copy carrying the saved type (keeping the current
   /// boxing state).
-  void _restoreSavedTypes(List<Map<String, Variable>> savedLocals) {
+  void _restoreSavedTypes(List<Map<String, LocalBinding>> savedLocals) {
     final myLocals = [...locals];
     for (var i = 0; i < math.min(savedLocals.length, myLocals.length); i++) {
       final savedLocalsMap = savedLocals[i];
       final myLocalsMap = myLocals[i];
 
       savedLocalsMap.forEach((key, value) {
-        final myLocal = myLocalsMap[key];
-        if (myLocal != null &&
-            myLocal.type != value.type) {
-          locals[i][key] = myLocal.copyWith(type: value.type);
+        final binding = myLocalsMap[key];
+        if (binding != null && binding.current.type != value.current.type) {
+          binding.rebind(binding.current.copyWith(type: value.current.type));
         }
       });
     }
@@ -542,7 +548,11 @@ class CompilerContext with ScopeContext {
 class ContextSaveState with ScopeContext {
   ContextSaveState.of(AbstractScopeContext context) {
     locals = [
-      for (final scope in context.locals) {...scope},
+      for (final scope in context.locals)
+        {
+          for (final entry in scope.entries)
+            entry.key: LocalBinding.snapshot(entry.key, entry.value.current),
+        },
     ];
   }
 }

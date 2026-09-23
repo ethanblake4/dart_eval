@@ -11,10 +11,10 @@ void completeJump(
   final trampoline = BasicBlock<Operation>([
     for (final scope in ctx.locals)
       for (final binding in scope.values)
-        if (binding.captureCellSlot case final slot?)
-          LoadExceptionSlot(binding.captureCell!, slot)
-        else if (binding.exceptionSlot case final slot?)
-          LoadExceptionSlot(binding.ssa, slot),
+        if (binding.current.captureCellSlot case final slot?)
+          LoadExceptionSlot(binding.current.captureCell!, slot)
+        else if (binding.current.exceptionSlot case final slot?)
+          LoadExceptionSlot(binding.current.ssa, slot),
     Jump(target.label!),
   ], label: ctx.label('jump_completion'));
   ctx.pushOp(CompleteJump(trampoline.label!, targetDepth));

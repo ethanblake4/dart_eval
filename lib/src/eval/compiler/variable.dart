@@ -17,6 +17,7 @@ import 'package:dart_eval/src/eval/compiler/model/function_type.dart'
     show declaredFunctionType;
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable/value_facts.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
@@ -266,6 +267,11 @@ class Variable {
   /// Source binding name, independent of the SSA temporary name.
   String? localName;
   int? frameIndex;
+
+  /// The [LocalBinding] this value is the current value of, if any —
+  /// in-place boxing/unboxing of a bound local must rebind through it
+  /// rather than writing back through `ctx.locals`.
+  LocalBinding? binding;
   SSA? captureCell;
   ExceptionSlot? exceptionSlot;
   ExceptionSlot? captureCellSlot;
@@ -572,7 +578,7 @@ class Variable {
     );
 
     if (uV.localName != null && uV.frameIndex != null && ctx != null) {
-      ctx.locals[uV.frameIndex!][uV.localName!] = uV;
+      ctx.locals[uV.frameIndex!][uV.localName!]?.rebind(uV);
     }
 
     return uV;
@@ -583,8 +589,7 @@ class Variable {
         frameIndex != null &&
         ctx.typeInferenceSaveStates.isNotEmpty) {
       final locals = ctx.typeInferenceSaveStates.last.locals;
-      locals[frameIndex!][localName!] = locals[frameIndex!][localName!]!
-          .copyWith(type: type);
+      locals[frameIndex!][localName!]?.promote(type);
     }
   }
 

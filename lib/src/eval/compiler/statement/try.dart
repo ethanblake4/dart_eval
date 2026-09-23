@@ -35,22 +35,22 @@ StatementInfo compileTryStatement(
   for (var frame = 0; frame < ctx.locals.length; frame++) {
     for (final entry in ctx.locals[frame].entries.toList()) {
       final binding = entry.value;
-      if (binding.captureCell != null) {
+      final current = binding.current;
+      if (current.captureCell != null) {
         final slot = ExceptionSlot(
           ctx.svar('handler_cell').name,
           MachineRepresentation.object,
         );
         captureSlots[(frame, entry.key)] = slot;
-        ctx.pushOp(StoreExceptionSlot(slot, binding.captureCell!));
-        ctx.locals[frame][entry.key] = binding.copyWith()
-          ..captureCellSlot = slot;
-      } else if (binding.exceptionSlot == null) {
+        ctx.pushOp(StoreExceptionSlot(slot, current.captureCell!));
+        binding.rebind(current.copyWith()..captureCellSlot = slot);
+      } else if (current.exceptionSlot == null) {
         final slot = ExceptionSlot(
           ctx.svar('handler_local').name,
-          binding.representation,
+          current.representation,
         );
-        ctx.pushOp(StoreExceptionSlot(slot, binding.ssa));
-        ctx.locals[frame][entry.key] = binding.copyWith()..exceptionSlot = slot;
+        ctx.pushOp(StoreExceptionSlot(slot, current.ssa));
+        binding.rebind(current.copyWith()..exceptionSlot = slot);
       }
     }
   }
@@ -60,11 +60,13 @@ StatementInfo compileTryStatement(
     for (var frame = 0; frame < ctx.locals.length; frame++) {
       for (final entry in ctx.locals[frame].entries.toList()) {
         final binding = entry.value;
+        final current = binding.current;
         final cellSlot = captureSlots[(frame, entry.key)];
         final slot =
-            cellSlot ?? initialState.locals[frame][entry.key]!.exceptionSlot;
+            cellSlot ??
+            initialState.locals[frame][entry.key]!.current.exceptionSlot;
         if (slot == null) continue;
-        final loaded = cellSlot == null ? binding.ssa : binding.captureCell!;
+        final loaded = cellSlot == null ? current.ssa : current.captureCell!;
         ctx.pushOp(LoadExceptionSlot(loaded, slot));
       }
     }

@@ -776,7 +776,8 @@ class IdentifierReference implements Reference {
         ctx.pushOp(StoreExceptionSlot(local.exceptionSlot!, stored.ssa));
         // Slot reads after a handler edge can observe a value written before
         // the exception — allocation proofs can't be trusted across it.
-        ctx.locals[local.frameIndex!][local.localName!] = local.widened();
+        ctx.locals[local.frameIndex!][local.localName!]
+            ?.rebind(local.widened());
         return stored;
       }
       if (local.captureCell != null) {
@@ -789,7 +790,8 @@ class IdentifierReference implements Reference {
         );
         // The cell can also be written by a closure invocation — allocation
         // proofs can't be trusted across it.
-        ctx.locals[local.frameIndex!][local.localName!] = local.widened();
+        ctx.locals[local.frameIndex!][local.localName!]
+            ?.rebind(local.widened());
         return stored;
       }
       ctx.pushOp(Assign(local.ssa, stored.ssa));
