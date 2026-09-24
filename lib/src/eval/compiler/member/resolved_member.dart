@@ -30,7 +30,7 @@ final class ResolvedMember {
   /// the owner decl instantiated from the receiver, this is a zip of
   /// parameter names to arguments.
   Map<String, TypeRef> get ownerTypeArguments =>
-      ownerTypeArgumentsOf(member.ownerDecl, viewedAs);
+      ownerTypeArgumentsOf(member.declaringDecl ?? member.ownerDecl, viewedAs);
 
   /// The field's declared/inferred type through the receiver's view —
   /// null when the field has neither, matching `lookupFieldType`.

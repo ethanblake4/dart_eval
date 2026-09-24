@@ -101,7 +101,10 @@ final class MemberLookup {
 
     final member = decl.declaredMember(name);
     if (member != null) {
-      return ResolvedMember(member, _interfaceView(type, decl));
+      return ResolvedMember(
+        member,
+        _interfaceView(type, member.declaringDecl ?? decl),
+      );
     }
 
     if (decl.kind == TypeDeclKind.enumDecl) {

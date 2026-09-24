@@ -105,6 +105,12 @@ sealed class Member {
   bool get isField;
   CallSignature get signature;
   DeferredOrOffset? get body;
+
+  /// The decl that declared this member — for mixin-folded members the
+  /// applying class's decl is [ownerDecl] but the member's annotations,
+  /// type parameters, and library belong to the mixin. Null where the
+  /// owner isn't a type declaration.
+  TypeDecl? get declaringDecl => null;
 }
 
 /// The [MemberKind] a [MethodDeclaration] declares.
@@ -122,9 +128,9 @@ final class SourceMember extends Member {
     required this.owner,
     required this.name,
     required this.node,
-    required this.library,
+    required int library,
     this.variable,
-  });
+  }) : _declaredLibrary = library;
 
   @override
   final MemberOwner owner;
@@ -144,8 +150,43 @@ final class SourceMember extends Member {
   /// returned.
   Declaration get sourceDeclaration => variable ?? node as Declaration;
 
-  /// The declaring library — where annotations and defaults resolve.
-  final int library;
+  /// The declaring library — where annotations and defaults resolve. For
+  /// mixin-folded members this is the mixin's library.
+  late final int library = declaringDecl?.library ?? _declaredLibrary;
+
+  final int _declaredLibrary;
+
+  @override
+  late final TypeDecl? declaringDecl = _declaringDecl();
+
+  /// The declaring decl is [node]'s enclosing class-like; when it isn't
+  /// the owner decl itself (a mixin-folded member) the mixin's decl is
+  /// found by walking the owner's supertype graph.
+  TypeDecl? _declaringDecl() {
+    final o = owner;
+    if (o is! TypeDeclMemberOwner) return null;
+    final decl = o.decl;
+    final ast = node.parent?.parent;
+    if (ast is! Declaration) return decl;
+    if (decl is SourceTypeDecl && identical(decl.node, ast)) return decl;
+    return _findDeclaringDecl(decl, ast, <TypeDecl>{}) ?? decl;
+  }
+
+  TypeDecl? _findDeclaringDecl(
+    TypeDecl decl,
+    AstNode target,
+    Set<TypeDecl> seen,
+  ) {
+    if (!seen.add(decl)) return null;
+    for (final sup in decl.supertypes.all) {
+      final d = sup.decl ?? _ctx.types.find(sup.file, sup.name);
+      if (d is! SourceTypeDecl) continue;
+      if (identical(d.node, target)) return d;
+      final found = _findDeclaringDecl(d, target, seen);
+      if (found != null) return found;
+    }
+    return null;
+  }
 
   TypeDecl get _decl => (owner as TypeDeclMemberOwner).decl;
 
@@ -160,13 +201,15 @@ final class SourceMember extends Member {
   };
 
   Map<String, TypeRef> get _ownTypeParams => switch (owner) {
-    TypeDeclMemberOwner o => o.decl.ownTypeParams,
+    TypeDeclMemberOwner _ => declaringDecl!.ownTypeParams,
     ExtensionDecl o => o.ownTypeParams,
   };
 
   Declaration? get _parameterHost => switch (owner) {
-    TypeDeclMemberOwner o =>
-      o.decl is SourceTypeDecl ? (o.decl as SourceTypeDecl).node : null,
+    TypeDeclMemberOwner _ =>
+      declaringDecl is SourceTypeDecl
+          ? (declaringDecl! as SourceTypeDecl).node
+          : null,
     ExtensionDecl o => o.extension.declaration,
   };
 

@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../invocation/binder.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -722,11 +723,15 @@ Map<String, Variable> _evalUnusedFieldInitializers(
           ? memberOwner
           : null;
       if (memberLibrary != null && parent != null) {
-        ctx.typeFactory.seedFoldedMemberTypeParams(
-          parent,
-          fd,
-          memberLibrary,
-          prevLibrary,
+        ctx.typeParameterScope(memberLibrary).addAll(
+          foldedMemberTypeParams(
+                ctx,
+                parent,
+                fd,
+                memberLibrary,
+                prevLibrary,
+              ) ??
+              const {},
         );
       }
       final Variable V;
@@ -783,11 +788,15 @@ void _compileUnusedFields(
               ? memberOwner
               : null;
           if (memberLibrary != null && parent != null) {
-            ctx.typeFactory.seedFoldedMemberTypeParams(
-              parent,
-              fd,
-              memberLibrary,
-              prevLibrary,
+            ctx.typeParameterScope(memberLibrary).addAll(
+              foldedMemberTypeParams(
+                    ctx,
+                    parent,
+                    fd,
+                    memberLibrary,
+                    prevLibrary,
+                  ) ??
+                  const {},
             );
           }
           final Variable v0;

@@ -510,7 +510,12 @@ final class CallResolver {
             bindingLib = refined.offset!.file ?? memberLibrary;
             bindingDec = member.sourceDeclaration;
             bindingMember = member;
-            bindingView = refined.declaringLink!;
+            bindingView =
+                ctx.typeSystem.asInstanceOf(
+                  refined.declaringLink!,
+                  member.declaringDecl ?? member.ownerDecl,
+                ) ??
+                refined.declaringLink!;
           }
         }
         argsPair = ArgumentBinder(ctx).bindDeclaration(
@@ -520,7 +525,10 @@ final class CallResolver {
           typeArguments: e.typeArguments,
           source: e,
           seedGenerics: !isStatic && bindingDec is MethodDeclaration
-              ? ownerTypeArgumentsOf(bindingMember.ownerDecl, bindingView)
+              ? ownerTypeArgumentsOf(
+                  bindingMember.declaringDecl ?? bindingMember.ownerDecl,
+                  bindingView,
+                )
               : const {},
           returnContext: bound,
         );

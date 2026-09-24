@@ -2,6 +2,7 @@
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/enum.dart';
@@ -102,13 +103,19 @@ void compileClassMembers(
     // For a member folded in from a mixin (possibly through a chain of
     // mixin applications), rebind the declaring mixin's type parameters to
     // this application's arguments so `T` in its body resolves against the
-    // applying class's type environment.
+    // applying class's type environment. The seed lives in the member's
+    // declaring-library scope — folded member signatures resolve lazily
+    // under that ambient environment.
     if (memberLibrary != null) {
-      ctx.typeFactory.seedFoldedMemberTypeParams(
-        parent,
-        m,
-        memberLibrary,
-        previousLibrary,
+      ctx.typeParameterScope(memberLibrary).addAll(
+        foldedMemberTypeParams(
+              ctx,
+              parent,
+              m,
+              memberLibrary,
+              previousLibrary,
+            ) ??
+            const {},
       );
     }
     try {
