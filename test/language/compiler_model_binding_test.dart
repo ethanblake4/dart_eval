@@ -89,4 +89,25 @@ void main() {
       throwsA(isA<CompileError>()),
     );
   });
+
+  test('implicit super calls bind the constructor signature defaults', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          class Base {
+            final int value;
+            Base([this.value = 7]);
+          }
+          class Child extends Base { Child(); }
+          int main() => Child().value;
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      7,
+    );
+  });
 }

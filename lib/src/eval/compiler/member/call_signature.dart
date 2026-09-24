@@ -83,16 +83,19 @@ final class ParameterSpec {
 /// and named parameter specs, and return type. In the owner's type-parameter
 /// space — instantiate through [substitute] for a receiver's view.
 final class CallSignature {
-  const CallSignature({
-    this.typeParameters = const [],
-    this.typeParameterRefs = const {},
-    required this.positional,
+  CallSignature({
+    List<TypeParameterDef> typeParameters = const [],
+    Map<String, TypeRef> typeParameterRefs = const {},
+    required List<ParameterSpec> positional,
     required this.requiredPositional,
-    this.named = const [],
+    List<ParameterSpec> named = const [],
     required this.returnType,
     this.returnAnnotated = true,
     this.returnOverride,
-  });
+  }) : typeParameters = List.unmodifiable(typeParameters),
+       typeParameterRefs = Map.unmodifiable(typeParameterRefs),
+       positional = List.unmodifiable(positional),
+       named = List.unmodifiable(named);
 
   /// The member's own type parameters (`m<T>`), in declaration order.
   final List<TypeParameterDef> typeParameters;
@@ -217,7 +220,7 @@ final class CallSignature {
           );
     return CallSignature(
       typeParameters: ownDefs,
-      typeParameterRefs: Map.unmodifiable(allTypeParams),
+      typeParameterRefs: allTypeParams,
       positional: positional,
       requiredPositional: requiredCount,
       named: named,

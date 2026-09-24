@@ -2,7 +2,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'default_value.dart';
 
@@ -52,9 +51,6 @@ Variable coerceArgumentForParameter(
       ? arg0.boxIfNeeded(ctx)
       : arg0.unboxIfNeeded(ctx);
 
-  if (arg0.type.isFunctionLike && arg0.unmaterializedCallable != null) {
-    arg0 = arg0.tearOff(ctx, boundContext: paramType);
-  }
   return arg0;
 }
 
@@ -71,7 +67,8 @@ SSA pushRuntimeTypeId(CompilerContext ctx, TypeRef type) {
 }
 
 /// Compiles the fallback value for [parameter] when the caller supplies no
-/// argument: the parameter's default expression, or null.
+/// argument: the parameter's default expression, or null. Signature binding
+/// passes [declaredType] so the formal annotation is resolved only once.
 Variable compileOmittedArgument(
   CompilerContext ctx,
   int library,
@@ -79,6 +76,7 @@ Variable compileOmittedArgument(
   Declaration host, {
   Map<String, TypeRef> typeParameters = const {},
   SourceDefault? defaultSource,
+  TypeRef? declaredType,
 }) {
   if (parameter.isRequired) {
     throw CompileError(
@@ -111,14 +109,16 @@ Variable compileOmittedArgument(
       }
     }
   }
-  final (declaredType, _) = getFormalParameterType(
-    ctx,
-    parameter,
-    library,
-    host,
-    typeParameters: typeParameters,
-  );
-  final type = declaredType ?? CoreTypes.dynamic.ref(ctx);
+  final type =
+      declaredType ??
+      getFormalParameterType(
+        ctx,
+        parameter,
+        library,
+        host,
+        typeParameters: typeParameters,
+      ).$1 ??
+      CoreTypes.dynamic.ref(ctx);
   // Scalar defaults push as native constants; anything else (tear-offs, const
   // objects) compiles the constant expression normally. Super formals inherit
   // their default from the bound super-constructor parameter, evaluated in

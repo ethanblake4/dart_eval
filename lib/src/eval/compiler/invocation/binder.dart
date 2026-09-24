@@ -5,8 +5,6 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' hide Assign;
-import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -184,11 +182,10 @@ final class ArgumentBinder {
   }
 
   /// Binds an argument list against a [CallSignature]: the signature owns
-  /// the callee's shape (arity, requiredness, names); each
-  /// [ParameterSpec]'s `node` supplies the AST bits defaults and field /
-  /// super formals still resolve from.
+  /// the callee's shape and resolved types. A null [argumentList] is an
+  /// implicit super call with only forwarded locals and omitted defaults.
   BoundCall bindParameterList(
-    ArgumentList argumentList,
+    ArgumentList? argumentList,
     int decLibrary,
     CallSignature signature,
     Declaration parameterHost, {
@@ -243,24 +240,6 @@ final class ArgumentBinder {
     final named = {for (final spec in signature.named) spec.name: spec};
 
     var i = 0;
-
-    // Constructor class parameters are already resolved in the signature's
-    // declaration scope. Reuse them for field/super formals and omitted values.
-    final ctorClassParamRefs = <String, TypeRef>{
-      if (parameterHost is ConstructorDeclaration)
-        for (final entry in signature.typeParameterRefs.entries)
-          if (entry.value is TypeParameterTypeRef &&
-              (entry.value as TypeParameterTypeRef).parameter.owner.kind ==
-                  TypeParameterOwnerKind.classLike)
-            entry.key: entry.value,
-    };
-    final ctorClassParamNames = ctorClassParamRefs.keys.toSet();
-    final ctorClassParamSubs = Substitution.of(<TypeParameterDef, TypeRef>{
-      for (final entry in ctorClassParamRefs.entries)
-        (entry.value as TypeParameterTypeRef).parameter:
-            ?resolveGenerics[entry.key],
-    });
-    final paramTypeParameters = {...ctorClassParamRefs, ...resolveGenerics};
 
     // The signature resolved formal annotations in the declaring scope. Bind
     // those exact parameter identities to the call's receiver and type args;
@@ -329,13 +308,15 @@ final class ArgumentBinder {
       return arg0.copyIntoFreshSlot(ctx, 'source_argument');
     }
 
-    final matched = _matchArguments(
-      argumentList,
-      positional.length,
-      named.keys.toSet(),
-      offset: argIndexOffset,
-      leadingPositional: superParams.positional.length,
-    );
+    final matched = argumentList == null
+        ? const <_MatchedArgument>[]
+        : _matchArguments(
+            argumentList,
+            positional.length,
+            named.keys.toSet(),
+            offset: argIndexOffset,
+            leadingPositional: superParams.positional.length,
+          );
     final suppliedNames = {
       for (final argument in matched)
         if (argument.named case final String name) name,
@@ -377,16 +358,10 @@ final class ArgumentBinder {
       // positional ones bind to the callee's positional parameters in order.
       if (i < superParams.positional.length) {
         final V = _forwardedSuperParam(
-          spec.node!,
+          spec,
           parameterHost,
-          decLibrary,
           superParams.positional[i],
-          typeParameters: paramTypeParameters,
-          ctorClassParamSubs: ctorClassParamSubs,
-          genericParameterNames: {
-            ...resolveGenerics.keys,
-            ...ctorClassParamNames,
-          },
+          substitution: argumentSubstitution,
           source: source,
         );
         push.add(V);
@@ -407,10 +382,12 @@ final class ArgumentBinder {
             decLibrary,
             spec.node!,
             parameterHost,
-            typeParameters: paramTypeParameters,
             defaultSource: spec.defaultValue is SourceDefault
                 ? spec.defaultValue as SourceDefault
                 : null,
+            declaredType: spec.type.substituteTypeParameters(
+              argumentSubstitution,
+            ),
           );
           push.add(value);
           args.add(value);
@@ -424,16 +401,10 @@ final class ArgumentBinder {
       final spec0 = n.value;
       if (superParams.named.contains(name)) {
         final V = _forwardedSuperParam(
-          spec0.node!,
+          spec0,
           parameterHost,
-          decLibrary,
           name,
-          typeParameters: paramTypeParameters,
-          ctorClassParamSubs: ctorClassParamSubs,
-          genericParameterNames: {
-            ...resolveGenerics.keys,
-            ...ctorClassParamNames,
-          },
+          substitution: argumentSubstitution,
           source: source,
         );
         push.add(V);
@@ -451,10 +422,12 @@ final class ArgumentBinder {
           decLibrary,
           spec0.node!,
           parameterHost,
-          typeParameters: paramTypeParameters,
           defaultSource: spec0.defaultValue is SourceDefault
               ? spec0.defaultValue as SourceDefault
               : null,
+          declaredType: spec0.type.substituteTypeParameters(
+            argumentSubstitution,
+          ),
         );
         push.add(value);
         namedArgs[name] = value;
@@ -487,36 +460,20 @@ final class ArgumentBinder {
   /// unboxed, or vice versa — without the coercion the SSA keeps the wrong
   /// representation.
   Variable _forwardedSuperParam(
-    FormalParameter param,
+    ParameterSpec spec,
     Declaration parameterHost,
-    int decLibrary,
     String localName, {
-    Map<String, TypeRef> typeParameters = const {},
-    Substitution ctorClassParamSubs = Substitution.empty,
-    Set<String> genericParameterNames = const {},
+    Substitution substitution = Substitution.empty,
     AstNode? source,
   }) {
-    var (paramType, typeAnnotation) = getFormalParameterType(
-      ctx,
-      param,
-      decLibrary,
-      parameterHost,
-      typeParameters: typeParameters,
-    );
-    paramType ??= CoreTypes.dynamic.ref(ctx);
-    if (ctorClassParamSubs.isNotEmpty) {
-      paramType = paramType.substituteTypeParameters(ctorClassParamSubs);
-    }
-    final genericParameter =
-        typeAnnotation is NamedType &&
-        genericParameterNames.contains(typeAnnotation.name.lexeme);
+    final paramType = spec.type.substituteTypeParameters(substitution);
     return coerceArgumentForParameter(
       ctx,
       ctx.lookupLocal(localName)!,
       paramType,
-      param,
+      spec.node!,
       parameterHost,
-      genericParameter: genericParameter,
+      genericParameter: spec.erased,
       source: source,
     );
   }
@@ -529,84 +486,21 @@ final class ArgumentBinder {
     SuperParams superParams = const (positional: [], named: {}),
     AstNode? source,
   }) {
-    final ssa = <SSA>[];
-    final args = <Variable>[];
-    final push = <Variable>[...before];
-    final namedArgs = <String, Variable>{};
-
-    final positional = <FormalParameter>[];
-    final named = <String, FormalParameter>{};
-
-    for (final param in fpl) {
-      if (param.isNamed) {
-        named[param.name!.lexeme] = param;
-      } else {
-        positional.add(param);
-      }
-    }
-
-    var positionalSuperIndex = 0;
-    for (final param in positional) {
-      // First check super params. Super params do not contain an expression;
-      // positional ones bind to the callee's positional parameters in order.
-      if (positionalSuperIndex < superParams.positional.length) {
-        final V = _forwardedSuperParam(
-          param,
-          parameterHost,
-          decLibrary,
-          superParams.positional[positionalSuperIndex++],
-          source: source,
-        );
-        push.add(V);
-        args.add(V);
-      } else {
-        if (param.isRequired) {
-          throw CompileError('Not enough positional arguments');
-        } else {
-          final value = compileOmittedArgument(
-            ctx,
-            decLibrary,
-            param,
-            parameterHost,
-          );
-          push.add(value);
-          args.add(value);
-        }
-      }
-    }
-
-    for (final n in named.entries) {
-      final name = n.key;
-      if (superParams.named.contains(name)) {
-        final V = _forwardedSuperParam(
-          n.value,
-          parameterHost,
-          decLibrary,
-          name,
-          source: source,
-        );
-        push.add(V);
-        namedArgs[name] = V;
-      } else {
-        final value = compileOmittedArgument(
-          ctx,
-          decLibrary,
-          n.value,
-          parameterHost,
-        );
-        push.add(value);
-        namedArgs[name] = value;
-      }
-    }
-
-    ssa.addAll(push.map((argument) => argument.ssa));
-    return BoundCall(
-      positional: [for (final a in args) BoundArgument(a)],
-      named: [
-        for (final e in namedArgs.entries) (e.key, BoundArgument(e.value)),
-      ],
-      vectorOverride: ssa,
-      returnType: CoreTypes.dynamic.ref(ctx),
+    // An implicit super call has no expressions to evaluate. Forwarded locals
+    // and omitted defaults follow the same declaration signature as an
+    // explicit super invocation.
+    assert(
+      parameterHost is ConstructorDeclaration &&
+          fpl.length == parameterHost.parameters.parameters.length,
+    );
+    return bindParameterList(
+      null,
+      decLibrary,
+      CallSignature.forDeclaration(ctx, decLibrary, parameterHost),
+      parameterHost,
+      before: before,
+      superParams: superParams,
+      source: source,
     );
   }
 
@@ -614,16 +508,26 @@ final class ArgumentBinder {
     BridgeFunctionDef function, {
     List<Variable> before = const [],
     SuperParams superParams = const (positional: [], named: {}),
-  }) => _finishBridgeVector(
-    function,
-    before: before,
-    superParams: superParams,
-    positionalValues: List<Variable?>.filled(function.params.length, null),
-    namedValues: const {},
-  );
+  }) {
+    final signature = CallSignature.bridge(
+      ctx,
+      function,
+      returnFallback: CoreTypes.dynamic.ref(ctx),
+    );
+    return _finishBridgeVector(
+      signature,
+      before: before,
+      superParams: superParams,
+      positionalValues: List<Variable?>.filled(
+        signature.positional.length,
+        null,
+      ),
+      namedValues: const {},
+    );
+  }
 
   BoundCall _finishBridgeVector(
-    BridgeFunctionDef function, {
+    CallSignature signature, {
     required List<Variable> before,
     required SuperParams superParams,
     required List<Variable?> positionalValues,
@@ -634,8 +538,8 @@ final class ArgumentBinder {
     final namedArgs = <String, Variable>{};
     Variable? $null;
 
-    for (var i = 0; i < function.params.length; i++) {
-      final param = function.params[i];
+    for (var i = 0; i < signature.positional.length; i++) {
+      final param = signature.positional[i];
       if (i < superParams.positional.length) {
         final V = _providedBridgeArgument(
           ctx,
@@ -651,14 +555,14 @@ final class ArgumentBinder {
         args.add(supplied);
         continue;
       }
-      if (!param.optional) {
+      if (param.isRequired) {
         throw CompileError('Not enough positional arguments');
       }
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
     }
 
-    for (final param in function.namedParams) {
+    for (final param in signature.named) {
       if (superParams.named.contains(param.name)) {
         final V = _providedBridgeArgument(ctx, ctx.lookupLocal(param.name)!);
         push.add(V);
@@ -703,9 +607,6 @@ final class ArgumentBinder {
 
       final expression = arg.argumentExpression;
       var arg0 = compileExpression(expression, ctx);
-      if (arg0.type.isFunctionLike && arg0.unmaterializedCallable != null) {
-        arg0 = arg0.tearOff(ctx);
-      }
       // Dynamic calls use canonical object values for every argument. Their
       // signature cannot justify unboxing a scalar or a collection here.
       arg0 = arg0.boxIfNeeded(ctx);
@@ -737,8 +638,16 @@ final class ArgumentBinder {
     SuperParams superParams = const (positional: [], named: {}),
     Map<String, TypeRef> typeParameters = const {},
   }) {
-    final positional = function.params;
-    final namedParamByName = {for (final p in function.namedParams) p.name: p};
+    final signature = CallSignature.bridge(
+      ctx,
+      function,
+      returnFallback: CoreTypes.dynamic.ref(ctx),
+      typeParameters: typeParameters,
+    );
+    final positional = signature.positional;
+    final namedParamByName = {
+      for (final spec in signature.named) spec.name: spec,
+    };
     final matched = _matchArguments(argumentList, positional.length, {
       ...namedParamByName.keys,
       ...superParams.named,
@@ -748,19 +657,12 @@ final class ArgumentBinder {
     // Bridge positional arguments defer assignment checks to the runtime;
     // named arguments retain the existing static conversion rule.
     Variable compileMatchedBridge(
-      BridgeParameter param,
+      ParameterSpec param,
       Expression expr, {
       required bool named,
     }) {
-      final paramType = TypeRef.fromBridgeAnnotation(
-        ctx,
-        param.type,
-        typeParameters: typeParameters,
-      );
+      final paramType = param.type;
       var arg0 = compileExpression(expr, ctx, paramType).boxIfNeeded(ctx);
-      if (arg0.type.isFunctionLike && arg0.unmaterializedCallable != null) {
-        arg0 = arg0.tearOff(ctx, boundContext: paramType);
-      }
       if (named) {
         if (arg0.type.assignmentConversionTo(ctx, paramType) ==
             AssignmentConversion.invalid) {
@@ -811,7 +713,7 @@ final class ArgumentBinder {
     }
 
     return _finishBridgeVector(
-      function,
+      signature,
       before: before,
       superParams: superParams,
       positionalValues: compiledPositional,
