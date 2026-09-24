@@ -20,7 +20,7 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
     // than compiling `p` as a receiver — no exceptions for control flow.
     final prefixRef = IdentifierReference(null, id.prefix.name);
     if (prefixRef.denotation(ctx, source: id) case PrefixDenotation()) {
-      return IdentifierReference(null, '${id.prefix}.${id.identifier.name}');
+      return PrefixedIdentifierReference(id.prefix.name, id.identifier.name);
     }
     final L = prefixRef.getValue(ctx, id);
     return IdentifierReference(L, id.identifier.name);

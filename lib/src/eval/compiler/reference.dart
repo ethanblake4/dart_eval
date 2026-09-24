@@ -160,11 +160,12 @@ class PrefixedIdentifierReference implements Reference {
     CompilerContext ctx, {
     bool forSet = false,
     AstNode? source,
-  }) => denotation(
-    ctx,
-    forSet: forSet,
-    source: source,
-  ).readType(ctx, source: source);
+  }) {
+    final d = denotation(ctx, forSet: forSet, source: source);
+    return forSet
+        ? d.writeType(ctx, source: source)
+        : d.readType(ctx, source: source);
+  }
 
   @override
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) =>
