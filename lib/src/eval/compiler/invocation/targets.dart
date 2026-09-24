@@ -126,9 +126,9 @@ final class ClosureCall extends CallTarget {
   /// The callee value; null when [known] dispatches statically.
   final Variable? callee;
 
-  /// A statically known target — today: `getDirectCall` on a
+  /// A statically known target — `getDirectCall` on a
   /// reference-typed callee.
-  final DirectCall? known;
+  final StaticCall? known;
 
   /// The known target's signature, else the callee's own callable
   /// signature (a tear-off's `methodSignature`).
@@ -141,7 +141,7 @@ final class ClosureCall extends CallTarget {
     if (known != null) {
       ctx.pushOp(
         Call(
-          known!.offset,
+          known!.offset!,
           call.vector(),
           result: target,
           typeArguments: call.runtimeTypeArguments,

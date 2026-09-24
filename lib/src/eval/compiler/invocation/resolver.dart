@@ -52,11 +52,14 @@ final class CallResolver {
     Reference? ref,
     Variable? callee,
   }) {
-    final dispatch = ref?.getDirectCall(ctx, site.source);
-    final callable = dispatch == null
+    final known = ref?.getDirectCall(ctx, site.source);
+    final callable = known == null
         ? (ref?.getValue(ctx, site.source) ?? callee!)
         : null;
-    final target = ClosureCall(callee: callable, known: dispatch);
+    final target = ClosureCall(
+      callee: callable,
+      known: known is StaticCall ? known : null,
+    );
     final bound = ArgumentBinder(
       ctx,
     ).bindSuppliedOnly(target, site, callee: callable);
@@ -1224,10 +1227,14 @@ final class CallResolver {
       case FunctionDenotation() ||
           StaticMemberDenotation() ||
           ExtensionMemberDenotation():
-        final dispatch = d.call(ctx, source: e);
-        if (dispatch == null) return invokeValue(site, ref: ref);
-        offset = dispatch.offset;
-        sigReturn = dispatch.signature.returnType;
+        final target = d.call(ctx, source: e);
+        if (target is! StaticCall ||
+            target.offset == null ||
+            target.signature == null) {
+          return invokeValue(site, ref: ref);
+        }
+        offset = target.offset!;
+        sigReturn = target.signature!.returnType;
         dec0 = switch (d) {
           FunctionDenotation(:final target) => target,
           StaticMemberDenotation(:final file, :final member) =>

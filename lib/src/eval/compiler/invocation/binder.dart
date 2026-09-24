@@ -1,5 +1,4 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'deferred.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -1223,7 +1222,7 @@ final class ArgumentBinder {
 TypeRef? callResultType(
   CompilerContext ctx, {
   required Variable? callee,
-  required DirectCall? dispatch,
+  required CallTarget? dispatch,
   required List<TypeRef> argTypes,
   required Map<String, TypeRef> namedArgTypes,
   TypeDecl? signatureOwner,

@@ -1,16 +1,5 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
-import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
-
-/// Compile-time only data describing how to perform a static-dispatch
-/// function call (e.g. when the exact function to be called is known at
-/// compile time).
-class DirectCall {
-  const DirectCall(this.offset, this.signature);
-
-  final DeferredOrOffset offset;
-  final CallSignature signature;
-}
 
 /// A function ID or declaration reference resolved when the backend links
 /// calls.

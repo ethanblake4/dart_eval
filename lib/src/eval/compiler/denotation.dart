@@ -1,4 +1,39 @@
-part of 'reference.dart';
+import 'helpers/global.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
+import 'helpers/conversion.dart';
+import 'helpers/tearoff.dart';
+import 'member/call_signature.dart';
+import 'member/member.dart';
+import 'member/member_name.dart';
+import 'member/resolved_member.dart';
+import '../ir/closures.dart';
+import '../ir/exception.dart';
+import 'backend/representation.dart' show MachineRepresentation;
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
+import 'invocation/deferred.dart';
+import 'invocation/targets.dart';
+import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
+import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
+import 'package:collection/collection.dart';
+import 'package:dart_eval/src/eval/ir/globals.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'values/abi.dart';
+import 'invocation/accessors.dart';
+import 'invocation/resolver.dart';
+import 'variable/value_facts.dart';
+import 'reference.dart';
+
 
 /// What a name refers to — the compile-time meaning of an identifier,
 /// independent of how the reference is used (read, written, or called).
@@ -21,7 +56,7 @@ sealed class Denotation {
   Variable write(CompilerContext ctx, Variable value, {AstNode? source});
 
   /// Compile-time call dispatch when this denotation is invoked directly.
-  DirectCall? call(CompilerContext ctx, {AstNode? source}) => null;
+  CallTarget? call(CompilerContext ctx, {AstNode? source}) => null;
 }
 
 /// The special receivers a member access can target.
@@ -185,11 +220,11 @@ final class LocalDenotation extends Denotation {
   }
 
   @override
-  DirectCall? call(CompilerContext ctx, {AstNode? source}) {
+  CallTarget? call(CompilerContext ctx, {AstNode? source}) {
     final current = binding.current;
     if (current.methodOffset != null &&
         current.callingConvention != CallingConvention.dynamic) {
-      return DirectCall(current.methodOffset!, current.methodSignature!);
+      return StaticCall(current.methodOffset!, signature: current.methodSignature!);
     }
     return null;
   }
@@ -211,7 +246,7 @@ final class GlobalDenotation extends Denotation {
 
   @override
   Variable read(CompilerContext ctx, {AstNode? source}) =>
-      _loadGlobalVariable(ctx, library, name, displayName);
+      loadGlobalVariable(ctx, library, name, displayName);
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
@@ -247,7 +282,7 @@ final class FunctionDenotation extends Denotation {
   TypeRef writeType(CompilerContext ctx, {AstNode? source}) {
     final decl = _decl;
     if (decl is FunctionDeclaration && decl.isSetter) {
-      return _setterValueType(ctx, _file, decl.functionExpression.parameters) ??
+      return setterValueType(ctx, _file, decl.functionExpression.parameters) ??
           CoreTypes.dynamic.ref(ctx);
     }
     return CoreTypes.type.ref(ctx);
@@ -278,7 +313,7 @@ final class FunctionDenotation extends Denotation {
   }
 
   @override
-  DirectCall? call(CompilerContext ctx, {AstNode? source}) {
+  CallTarget? call(CompilerContext ctx, {AstNode? source}) {
     final decl = _decl;
     if (target.isBridge) return null;
     // `x()` where `x` is a getter must call the getter's *result*, not the
@@ -286,7 +321,7 @@ final class FunctionDenotation extends Denotation {
     if (decl is FunctionDeclaration && (decl.isGetter || decl.isSetter)) {
       return null;
     }
-    return _declarationToDirectCall(target, name, ctx, source);
+    return _declarationToCallTarget(target, name, ctx, source);
   }
 }
 
@@ -316,7 +351,7 @@ final class StaticMemberDenotation extends Denotation {
   @override
   TypeRef writeType(CompilerContext ctx, {AstNode? source}) {
     if (member.isSetter) {
-      return _setterValueType(ctx, file, member.parameters) ??
+      return setterValueType(ctx, file, member.parameters) ??
           CoreTypes.dynamic.ref(ctx);
     }
     return readType(ctx, source: source);
@@ -369,7 +404,7 @@ final class StaticMemberDenotation extends Denotation {
   }
 
   @override
-  DirectCall? call(CompilerContext ctx, {AstNode? source}) {
+  CallTarget? call(CompilerContext ctx, {AstNode? source}) {
     if (member.isGetter || member.isSetter) return null;
     final rt = member.returnType == null
         ? CoreTypes.dynamic.ref(ctx)
@@ -379,7 +414,7 @@ final class StaticMemberDenotation extends Denotation {
             member.typeParameters?.typeParameters,
             () => TypeRef.fromAnnotation(ctx, file, member.returnType!),
           );
-    return DirectCall(_offset(ctx), CallSignature.returnOnly(rt));
+    return StaticCall(_offset(ctx), signature: CallSignature.returnOnly(rt));
   }
 }
 
@@ -673,7 +708,7 @@ final class InstanceMemberDenotation extends Denotation {
   }
 
   @override
-  DirectCall? call(CompilerContext ctx, {AstNode? source}) {
+  CallTarget? call(CompilerContext ctx, {AstNode? source}) {
     final r = receiver;
     final object = r is ValueReceiver
         ? r.value
@@ -715,9 +750,9 @@ final class InstanceMemberDenotation extends Denotation {
           )) {
         return null;
       }
-      return DirectCall(
+      return StaticCall(
         DeferredOrOffset(file: link.file, offset: methodsMap![name]),
-        CallSignature.returnOnly(returnType),
+        signature: CallSignature.returnOnly(returnType),
       );
     }
     // An inherited method needs the owner's field view as its receiver.
@@ -761,7 +796,7 @@ final class ExtensionMemberDenotation extends Denotation {
   @override
   TypeRef writeType(CompilerContext ctx, {AstNode? source}) {
     if (member.isSetter) {
-      return _setterValueType(ctx, ext.library, member.parameters) ??
+      return setterValueType(ctx, ext.library, member.parameters) ??
           CoreTypes.dynamic.ref(ctx);
     }
     return readType(ctx, source: source);
@@ -928,16 +963,16 @@ final class TypeLiteralDenotation extends Denotation {
 
   @override
   Variable read(CompilerContext ctx, {AstNode? source}) =>
-      _typeLiteral(ctx, type, constructorKey);
+      typeLiteral(ctx, type, constructorKey);
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
       throw CompileError('Cannot assign to a type literal', source);
 
   @override
-  DirectCall? call(CompilerContext ctx, {AstNode? source}) => DirectCall(
+  CallTarget? call(CompilerContext ctx, {AstNode? source}) => StaticCall(
     DeferredOrOffset(file: type.file, name: constructorKey),
-    CallSignature.returnOnly(type),
+    signature: CallSignature.returnOnly(type),
   );
 }
 
@@ -1531,7 +1566,7 @@ final class _TypeMemberDenotation extends Denotation {
         .topLevelDeclarationsMap[type.file]?[MemberName.setter(fqName).key]
         ?.declaration;
     if (setter is MethodDeclaration && setter.isSetter) {
-      return _setterValueType(ctx, type.file, setter.parameters) ??
+      return setterValueType(ctx, type.file, setter.parameters) ??
           CoreTypes.dynamic.ref(ctx);
     }
     return resolveGlobalType(ctx, type.file, fqName);
@@ -1572,7 +1607,7 @@ final class _TypeMemberDenotation extends Denotation {
       // Static method tear-off.
       return fn;
     }
-    return _loadGlobalVariable(ctx, type.file, fqName, name);
+    return loadGlobalVariable(ctx, type.file, fqName, name);
   }
 
   @override
@@ -1652,3 +1687,389 @@ Receiver compileReceiver(CompilerContext ctx, Expression target) {
 }
 
 /// Field-wise equality for shadow comparison of dispatch results.
+
+
+/// A deferred import prefix exposes an implicit `loadLibrary` member. Since
+/// all libraries are compiled eagerly, it resolves to a stub closure
+/// returning an already-completed `Future<Null>` — and it shadows any
+/// `loadLibrary` declared by the imported library itself.
+Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
+  if (!(ctx.deferredPrefixes[ctx.library]?.contains(prefix) ?? false)) {
+    return null;
+  }
+  final idx =
+      ctx.bridgeStaticFunctionIndices[ctx
+          .libraryMap['dart:core']]?['deferred_loadLibrary'];
+  if (idx == null) return null;
+  return Variable.ssa(
+    ctx,
+    InvokeExternal(ctx.svar('loadLibrary'), idx, []),
+    CoreTypes.function.ref(ctx),
+    callable: CallableValue(
+      signature: CallSignature.returnOnly(
+        CoreTypes.future
+            .ref(ctx)
+            .copyWith(arguments: [CoreTypes.nullType.ref(ctx)]),
+      ),
+    ),
+  );
+}
+
+Variable _declarationToVariable(
+  DeclarationOrBridge decOrBridge,
+  String name,
+  CompilerContext ctx, [
+  AstNode? source,
+]) {
+  if (decOrBridge.isBridge) {
+    final bridge = decOrBridge.bridge!;
+
+    if (bridge is BridgeClassDef) {
+      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
+      return typeLiteral(ctx, type, '${type.name}.');
+    }
+
+    if (bridge is BridgeEnumDef) {
+      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
+      return typeLiteral(ctx, type, '${type.name}#wrap');
+    }
+
+    if (bridge is BridgeFunctionDeclaration) {
+      final returnType = TypeRef.fromBridgeAnnotation(
+        ctx,
+        bridge.function.returns,
+      );
+      return Variable(
+        CoreTypes.function.ref(ctx),
+        rep: ValueRep.boxed,
+        callable: CallableValue(
+          offset: DeferredOrOffset(file: decOrBridge.sourceLib, name: name),
+          signature: CallSignature.returnOnly(returnType),
+        ),
+      );
+    }
+
+    throw CompileError(
+      'Cannot resolve bridged ${bridge.runtimeType} in reference',
+      source,
+    );
+  }
+
+  final decl = decOrBridge.declaration!;
+
+  if (decl is VariableDeclaration) {
+    return loadGlobalVariable(ctx, decOrBridge.sourceLib, decl.name.lexeme);
+  }
+
+  if (decl is ExtensionDeclaration) {
+    // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
+    // (explicit application) and `E.staticM(...)` resolve through it.
+    final ext = ctx.extensions.firstWhere(
+      (e) => e.declaration == decl,
+      orElse: () => EvalExtension(
+        decOrBridge.sourceLib,
+        decl,
+        declarationName(decl),
+      ),
+    );
+    return Variable(
+      CoreTypes.type.ref(ctx),
+      rep: ValueRep.boxed,
+      facts: ValueFacts(denotedExtension: ext),
+      callable: CallableValue(
+        offset: DeferredOrOffset(
+          file: decOrBridge.sourceLib,
+          name: '${declarationName(decl)}.',
+        ),
+      ),
+    );
+  }
+
+  if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
+    final type = decl is TypeAlias && decl is! ClassTypeAlias
+        ? ctx.typeFactory.resolveTypeAlias(decOrBridge.sourceLib, decl)
+        : TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
+    return typeLiteral(ctx, type, '${declarationName(decl)}.');
+  }
+
+  TypeRef? returnType;
+  if (decl is FunctionDeclaration && decl.returnType != null) {
+    returnType = ctx.withTypeParameters<TypeRef>(
+      decOrBridge.sourceLib,
+      null,
+      decl.functionExpression.typeParameters?.typeParameters,
+      () =>
+          TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!),
+    );
+  } else if (decl is ConstructorDeclaration) {
+    returnType = TypeRef.lookupDeclaration(
+      ctx,
+      decOrBridge.sourceLib,
+      decl.parent!.parent as ClassDeclaration,
+    );
+  } else {
+    // A function without a return type annotation returns dynamic.
+    returnType = CoreTypes.dynamic.ref(ctx);
+  }
+
+  // Accessors compile under `*g`/`*s` keys — use the accessor's own key so
+  // deferred resolution finds the right function entry.
+  final offset = DeferredOrOffset(
+    file: decOrBridge.sourceLib,
+    name: decl is FunctionDeclaration
+        ? (decl.isGetter
+              ? MemberName.getter(decl.name.lexeme).key
+              : decl.isSetter
+              ? MemberName.setter(decl.name.lexeme).key
+              : name)
+        : name,
+  );
+
+  final fn = Variable(
+    decl is FunctionDeclaration
+        ? CoreTypes.function.ref(ctx)
+        : CoreTypes.type.ref(ctx),
+    rep: ValueRep.boxed,
+    facts: decl is FunctionDeclaration
+        ? ValueFacts(possibleClasses: [returnType])
+        : ValueFacts(denotedType: returnType, possibleClasses: [returnType]),
+    callable: CallableValue(
+      offset: offset,
+      signature: CallSignature.returnOnly(returnType),
+    ),
+  );
+
+  if (decl is FunctionDeclaration && decl.isGetter) {
+    return CallResolver(ctx).invokeOperator(fn, null, []).result;
+  }
+  return fn;
+}
+
+CallTarget? _declarationToCallTarget(
+  DeclarationOrBridge decOrBridge,
+  String name,
+  CompilerContext ctx, [
+  AstNode? source,
+]) {
+  if (decOrBridge.isBridge) {
+    // No static dispatch for bridge
+    return null;
+  }
+
+  final decl = decOrBridge.declaration!;
+
+  if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
+    if (decl is! ClassDeclaration) {
+      // Variables, enums and other non-function decls have no static
+      // dispatch target.
+      return null;
+    }
+
+    final offset = DeferredOrOffset(
+      file: decOrBridge.sourceLib,
+      name: '$name.',
+    );
+
+    final rt = TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
+
+    return StaticCall(offset, signature: CallSignature.returnOnly(rt));
+  }
+
+  TypeRef? returnType;
+  if (decl is FunctionDeclaration && decl.returnType != null) {
+    returnType = ctx.withTypeParameters<TypeRef>(
+      decOrBridge.sourceLib,
+      null,
+      decl.functionExpression.typeParameters?.typeParameters,
+      () =>
+          TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!),
+    );
+  } else if (decl is ConstructorDeclaration) {
+    returnType = TypeRef.lookupDeclaration(
+      ctx,
+      decOrBridge.sourceLib,
+      decl.parent!.parent as ClassDeclaration,
+    );
+  } else {
+    // A function without a return type annotation returns dynamic.
+    returnType = CoreTypes.dynamic.ref(ctx);
+  }
+
+  // Accessors compile under `*g`/`*s` keys — use the accessor's own key so
+  // deferred resolution finds the right function entry.
+  final offset = DeferredOrOffset(
+    file: decOrBridge.sourceLib,
+    name: decl is FunctionDeclaration
+        ? (decl.isGetter
+              ? MemberName.getter(decl.name.lexeme).key
+              : decl.isSetter
+              ? MemberName.setter(decl.name.lexeme).key
+              : name)
+        : name,
+  );
+
+  return StaticCall(offset, signature: CallSignature.returnOnly(returnType));
+}
+
+/// The declared type of instance member [name] on the enclosing class, or null
+/// when the current class has no such member.
+TypeRef? _resolveInstanceFieldType(
+  CompilerContext ctx,
+  String name, {
+  bool forSet = false,
+  AstNode? source,
+}) {
+  final selfDecl = ctx.types.find(ctx.library, ctx.currentClassName!);
+  if (selfDecl == null ||
+      ctx.memberLookup.declaredAccessor(selfDecl, name) == null) {
+    return null;
+  }
+  return ctx.memberLookup.fieldType(
+        selfDecl.thisType,
+        name,
+        forSet: forSet,
+        source: source,
+      ) ??
+      CoreTypes.dynamic.ref(ctx);
+}
+
+/// Resolves [name] to a top-level declaration visible in the current library.
+/// Throws a [CompileError] when the name resolves to an import prefix rather than
+/// a concrete declaration.
+DeclarationOrBridge _lookupVisibleValue(
+  CompilerContext ctx,
+  String name,
+  AstNode? source, {
+  bool forSet = false,
+}) {
+  final visible = ctx.visibleDeclarations[ctx.library]!;
+  Map<String, DeclarationOrBridge>? children;
+  var key = name;
+  // `prefix.member` — descend into the prefix's children.
+  if (name.contains('.')) {
+    final split = name.split('.');
+    final prefixEntry = visible[split[0]];
+    if (prefixEntry != null &&
+        prefixEntry.declaration == null &&
+        prefixEntry.children != null) {
+      children = prefixEntry.children;
+      key = split.sublist(1).join('.');
+    }
+  }
+  // Top-level accessors register under `*g`/`*s` — reads prefer the getter
+  // key, writes the setter key, falling back to the plain name (variables,
+  // functions, classes).
+  DeclarationOrBridge? found;
+  if (children != null) {
+    found = forSet
+        ? children[MemberName.setter(key).key] ?? children[key]
+        : children[MemberName.getter(key).key] ?? children[key];
+  } else {
+    found = forSet
+        ? visible[MemberName.setter(key).key]?.declaration ??
+              visible[key]?.declaration
+        : visible[MemberName.getter(key).key]?.declaration ??
+              visible[key]?.declaration;
+  }
+  if (found == null) {
+    if (children == null && visible[key] != null) {
+      throw CompileError(
+        '"$name" is an import prefix, not a declaration',
+        source,
+      );
+    }
+    throw CompileError('Could not find declaration "$name"', source);
+  }
+  return found;
+}
+
+/// Emits a `Call` to a setter taking [value] as its argument. The value is
+/// first converted to the setter's declared parameter type (which can apply
+/// coercions like the implicit `.call` tear-off), then adapted to the
+/// parameter's representation across the call boundary. Returns the converted
+/// variable — the assignment expression's value.
+Variable _invokeSetter(
+  CompilerContext ctx,
+  DeferredOrOffset offset,
+  Variable value,
+  int file,
+  FormalParameterList? parameters, {
+  required bool isMethod,
+  AstNode? source,
+}) {
+  final paramType = setterValueType(ctx, file, parameters);
+  final converted = paramType == null
+      ? value
+      : convertForAssignment(
+          ctx,
+          value,
+          paramType,
+          representation: isMethod
+              ? MachineRepresentation.object
+              : Abi.unboxedAcrossCalls(paramType).bank,
+          source: source,
+        );
+  ctx.pushOp(
+    Call(offset, [
+      _setterArgument(ctx, converted, file, parameters, isMethod: isMethod).ssa,
+    ], result: ctx.svar('setter_result')),
+  );
+  return converted;
+}
+
+bool _hasReceiverMember(
+  CompilerContext ctx,
+  Variable receiver,
+  String name, {
+  bool forSet = false,
+  AstNode? source,
+}) {
+  final resolvedReceiver = ctx.typeSystem.throughTypeParameters(receiver.type);
+  if (resolvedReceiver.isSpec(CoreTypes.dynamic)) return true;
+  if (ctx.memberLookup.fieldType(
+        resolvedReceiver,
+        name,
+        forSet: forSet,
+        source: source,
+      ) !=
+      null) {
+    return true;
+  }
+  if (hasInstanceMember(ctx, resolvedReceiver, name, forSet: forSet)) {
+    return true;
+  }
+  return resolveExtensionMember(
+            ctx,
+            resolvedReceiver,
+            name,
+            getter: !forSet,
+            setter: forSet,
+          ) !=
+          null ||
+      resolveExtensionMember(ctx, resolvedReceiver, name) != null;
+}
+
+/// Adapts [value] to the physical representation a setter's `value` parameter
+/// travels in across the call boundary. A direct `Call` constrains argument
+/// representations to the callee signature, so the caller must emit the
+/// conversion itself. Method parameters are always boxed (bridge interop);
+/// top-level function parameters travel in their boundary representation
+/// (unboxed `int`/`double`/`bool`, boxed otherwise).
+Variable _setterArgument(
+  CompilerContext ctx,
+  Variable value,
+  int file,
+  FormalParameterList? parameters, {
+  required bool isMethod,
+}) {
+  if (isMethod) {
+    return value.boxIntoFreshSlot(ctx);
+  }
+  final paramType = setterValueType(ctx, file, parameters);
+  final rep = Abi.unboxedAcrossCalls(
+    paramType ?? CoreTypes.dynamic.ref(ctx),
+  ).bank;
+  return rep == MachineRepresentation.object
+      ? value.boxIntoFreshSlot(ctx)
+      : value.unboxIfNeeded(ctx, false);
+}

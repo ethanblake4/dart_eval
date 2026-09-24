@@ -1,40 +1,30 @@
 import 'helpers/global.dart';
-import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
-import 'helpers/tearoff.dart';
 import 'member/call_signature.dart';
 import 'member/member.dart';
 import 'member/member_name.dart';
-import 'member/resolved_member.dart';
-import '../ir/closures.dart';
-import '../ir/exception.dart';
 import 'backend/representation.dart' show MachineRepresentation;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'invocation/deferred.dart';
-import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'invocation/targets.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
-import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
-import 'package:dart_eval/src/eval/ir/flow.dart';
-import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'values/abi.dart';
-import 'invocation/accessors.dart';
 import 'invocation/resolver.dart';
 import 'variable/value_facts.dart';
 
-part 'denotation.dart';
+import 'denotation.dart';
+export 'denotation.dart';
 
 /// A compile-time datum that can be - at the very least - converted to a [Variable] in the
 /// future if needed. May also contain information about how to modify its value.
@@ -52,7 +42,7 @@ abstract class Reference {
 
   Variable getValue(CompilerContext ctx, [AstNode? source]);
 
-  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]);
+  CallTarget? getDirectCall(CompilerContext ctx, [AstNode? source]);
 }
 
 /// A property whose getter and setter resolve from the lexical superclass.
@@ -67,7 +57,7 @@ class SuperPropertyReference extends IdentifierReference {
   }) => InstanceMemberDenotation(SuperReceiver(object!), name);
 
   @override
-  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) => null;
+  CallTarget? getDirectCall(CompilerContext ctx, [AstNode? source]) => null;
 }
 
 /// A local, instance, or top-level reference with an optional target object.
@@ -128,34 +118,8 @@ class IdentifierReference implements Reference {
       denotation(ctx, source: source).read(ctx, source: source);
 
   @override
-  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) =>
+  CallTarget? getDirectCall(CompilerContext ctx, [AstNode? source]) =>
       denotation(ctx, source: source).call(ctx, source: source);
-}
-
-/// A deferred import prefix exposes an implicit `loadLibrary` member. Since
-/// all libraries are compiled eagerly, it resolves to a stub closure
-/// returning an already-completed `Future<Null>` — and it shadows any
-/// `loadLibrary` declared by the imported library itself.
-Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
-  if (!(ctx.deferredPrefixes[ctx.library]?.contains(prefix) ?? false)) {
-    return null;
-  }
-  final idx =
-      ctx.bridgeStaticFunctionIndices[ctx
-          .libraryMap['dart:core']]?['deferred_loadLibrary'];
-  if (idx == null) return null;
-  return Variable.ssa(
-    ctx,
-    InvokeExternal(ctx.svar('loadLibrary'), idx, []),
-    CoreTypes.function.ref(ctx),
-    callable: CallableValue(
-      signature: CallSignature.returnOnly(
-        CoreTypes.future
-            .ref(ctx)
-            .copyWith(arguments: [CoreTypes.nullType.ref(ctx)]),
-      ),
-    ),
-  );
 }
 
 /// A [Reference] with a prefixed String identifier, for accessing prefixed
@@ -184,7 +148,7 @@ class PrefixedIdentifierReference implements Reference {
   }
 
   @override
-  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) =>
+  CallTarget? getDirectCall(CompilerContext ctx, [AstNode? source]) =>
       denotation(ctx, source: source).call(ctx, source: source);
 
   @override
@@ -247,14 +211,14 @@ class IndexedReference implements Reference {
     // custom `[]=` the write type is the operator's value parameter —
     // callers use it as the RHS's context type (e.g. `a?[i] ??= e`).
     if (forSet) {
-      return _setterValueType(ctx, source) ?? CoreTypes.dynamic.ref(ctx);
+      return setterValueType(ctx, source) ?? CoreTypes.dynamic.ref(ctx);
     }
     return getValue(ctx).type;
   }
 
   /// The declared value-parameter type of the receiver's `[]=` operator, or
   /// null when it cannot be resolved (dynamic receivers, missing member).
-  TypeRef? _setterValueType(CompilerContext ctx, [AstNode? source]) {
+  TypeRef? setterValueType(CompilerContext ctx, [AstNode? source]) {
     try {
       final resolved = ctx.memberLookup.interfaceMember(
         _variable.type,
@@ -398,7 +362,7 @@ class IndexedReference implements Reference {
     // tear-off applies when the parameter is a function type. A missing
     // instance member means an extension `[]=` may apply (handled inside
     // [Variable.invoke]).
-    final valueType = _setterValueType(ctx, source);
+    final valueType = setterValueType(ctx, source);
     final converted = valueType == null
         ? value
         : convertForAssignment(
@@ -418,210 +382,14 @@ class IndexedReference implements Reference {
   }
 
   @override
-  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) {
+  CallTarget? getDirectCall(CompilerContext ctx, [AstNode? source]) {
     return null;
   }
-}
-
-Variable _declarationToVariable(
-  DeclarationOrBridge decOrBridge,
-  String name,
-  CompilerContext ctx, [
-  AstNode? source,
-]) {
-  if (decOrBridge.isBridge) {
-    final bridge = decOrBridge.bridge!;
-
-    if (bridge is BridgeClassDef) {
-      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-      return _typeLiteral(ctx, type, '${type.name}.');
-    }
-
-    if (bridge is BridgeEnumDef) {
-      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
-      return _typeLiteral(ctx, type, '${type.name}#wrap');
-    }
-
-    if (bridge is BridgeFunctionDeclaration) {
-      final returnType = TypeRef.fromBridgeAnnotation(
-        ctx,
-        bridge.function.returns,
-      );
-      return Variable(
-        CoreTypes.function.ref(ctx),
-        rep: ValueRep.boxed,
-        callable: CallableValue(
-          offset: DeferredOrOffset(file: decOrBridge.sourceLib, name: name),
-          signature: CallSignature.returnOnly(returnType),
-        ),
-      );
-    }
-
-    throw CompileError(
-      'Cannot resolve bridged ${bridge.runtimeType} in reference',
-      source,
-    );
-  }
-
-  final decl = decOrBridge.declaration!;
-
-  if (decl is VariableDeclaration) {
-    return _loadGlobalVariable(ctx, decOrBridge.sourceLib, decl.name.lexeme);
-  }
-
-  if (decl is ExtensionDeclaration) {
-    // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
-    // (explicit application) and `E.staticM(...)` resolve through it.
-    final ext = ctx.extensions.firstWhere(
-      (e) => e.declaration == decl,
-      orElse: () => EvalExtension(
-        decOrBridge.sourceLib,
-        decl,
-        declarationName(decl),
-      ),
-    );
-    return Variable(
-      CoreTypes.type.ref(ctx),
-      rep: ValueRep.boxed,
-      facts: ValueFacts(denotedExtension: ext),
-      callable: CallableValue(
-        offset: DeferredOrOffset(
-          file: decOrBridge.sourceLib,
-          name: '${declarationName(decl)}.',
-        ),
-      ),
-    );
-  }
-
-  if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-    final type = decl is TypeAlias && decl is! ClassTypeAlias
-        ? ctx.typeFactory.resolveTypeAlias(decOrBridge.sourceLib, decl)
-        : TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
-    return _typeLiteral(ctx, type, '${declarationName(decl)}.');
-  }
-
-  TypeRef? returnType;
-  if (decl is FunctionDeclaration && decl.returnType != null) {
-    returnType = ctx.withTypeParameters<TypeRef>(
-      decOrBridge.sourceLib,
-      null,
-      decl.functionExpression.typeParameters?.typeParameters,
-      () =>
-          TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!),
-    );
-  } else if (decl is ConstructorDeclaration) {
-    returnType = TypeRef.lookupDeclaration(
-      ctx,
-      decOrBridge.sourceLib,
-      decl.parent!.parent as ClassDeclaration,
-    );
-  } else {
-    // A function without a return type annotation returns dynamic.
-    returnType = CoreTypes.dynamic.ref(ctx);
-  }
-
-  // Accessors compile under `*g`/`*s` keys — use the accessor's own key so
-  // deferred resolution finds the right function entry.
-  final offset = DeferredOrOffset(
-    file: decOrBridge.sourceLib,
-    name: decl is FunctionDeclaration
-        ? (decl.isGetter
-              ? MemberName.getter(decl.name.lexeme).key
-              : decl.isSetter
-              ? MemberName.setter(decl.name.lexeme).key
-              : name)
-        : name,
-  );
-
-  final fn = Variable(
-    decl is FunctionDeclaration
-        ? CoreTypes.function.ref(ctx)
-        : CoreTypes.type.ref(ctx),
-    rep: ValueRep.boxed,
-    facts: decl is FunctionDeclaration
-        ? ValueFacts(possibleClasses: [returnType])
-        : ValueFacts(denotedType: returnType, possibleClasses: [returnType]),
-    callable: CallableValue(
-      offset: offset,
-      signature: CallSignature.returnOnly(returnType),
-    ),
-  );
-
-  if (decl is FunctionDeclaration && decl.isGetter) {
-    return CallResolver(ctx).invokeOperator(fn, null, []).result;
-  }
-  return fn;
-}
-
-DirectCall? _declarationToDirectCall(
-  DeclarationOrBridge decOrBridge,
-  String name,
-  CompilerContext ctx, [
-  AstNode? source,
-]) {
-  if (decOrBridge.isBridge) {
-    // No static dispatch for bridge
-    return null;
-  }
-
-  final decl = decOrBridge.declaration!;
-
-  if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
-    if (decl is! ClassDeclaration) {
-      // Variables, enums and other non-function decls have no static
-      // dispatch target.
-      return null;
-    }
-
-    final offset = DeferredOrOffset(
-      file: decOrBridge.sourceLib,
-      name: '$name.',
-    );
-
-    final rt = TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
-
-    return DirectCall(offset, CallSignature.returnOnly(rt));
-  }
-
-  TypeRef? returnType;
-  if (decl is FunctionDeclaration && decl.returnType != null) {
-    returnType = ctx.withTypeParameters<TypeRef>(
-      decOrBridge.sourceLib,
-      null,
-      decl.functionExpression.typeParameters?.typeParameters,
-      () =>
-          TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!),
-    );
-  } else if (decl is ConstructorDeclaration) {
-    returnType = TypeRef.lookupDeclaration(
-      ctx,
-      decOrBridge.sourceLib,
-      decl.parent!.parent as ClassDeclaration,
-    );
-  } else {
-    // A function without a return type annotation returns dynamic.
-    returnType = CoreTypes.dynamic.ref(ctx);
-  }
-
-  // Accessors compile under `*g`/`*s` keys — use the accessor's own key so
-  // deferred resolution finds the right function entry.
-  final offset = DeferredOrOffset(
-    file: decOrBridge.sourceLib,
-    name: decl is FunctionDeclaration
-        ? (decl.isGetter
-              ? MemberName.getter(decl.name.lexeme).key
-              : decl.isSetter
-              ? MemberName.setter(decl.name.lexeme).key
-              : name)
-        : name,
-  );
-
-  return DirectCall(offset, CallSignature.returnOnly(returnType));
 }
 
 /// Loads a top-level (or static field) global by its qualified [globalName],
 /// using [valueName] (defaults to the unqualified name) for the SSA variable.
-Variable _loadGlobalVariable(
+Variable loadGlobalVariable(
   CompilerContext ctx,
   int sourceLib,
   String globalName, [
@@ -641,7 +409,7 @@ Variable _loadGlobalVariable(
 /// A `Type` literal variable for [type]. [constructorKey] is the name used in
 /// [DeferredOrOffset] to resolve the constructor (e.g. `ClassName.` or, for
 /// bridged enums, `EnumName#wrap`).
-Variable _typeLiteral(
+Variable typeLiteral(
   CompilerContext ctx,
   TypeRef type,
   String constructorKey,
@@ -662,81 +430,9 @@ Variable _typeLiteral(
   );
 }
 
-/// The declared type of instance member [name] on the enclosing class, or null
-/// when the current class has no such member.
-TypeRef? _resolveInstanceFieldType(
-  CompilerContext ctx,
-  String name, {
-  bool forSet = false,
-  AstNode? source,
-}) {
-  final selfDecl = ctx.types.find(ctx.library, ctx.currentClassName!);
-  if (selfDecl == null ||
-      ctx.memberLookup.declaredAccessor(selfDecl, name) == null) {
-    return null;
-  }
-  return ctx.memberLookup.fieldType(
-        selfDecl.thisType,
-        name,
-        forSet: forSet,
-        source: source,
-      ) ??
-      CoreTypes.dynamic.ref(ctx);
-}
-
-/// Resolves [name] to a top-level declaration visible in the current library.
-/// Throws a [CompileError] when the name resolves to an import prefix rather than
-/// a concrete declaration.
-DeclarationOrBridge _lookupVisibleValue(
-  CompilerContext ctx,
-  String name,
-  AstNode? source, {
-  bool forSet = false,
-}) {
-  final visible = ctx.visibleDeclarations[ctx.library]!;
-  Map<String, DeclarationOrBridge>? children;
-  var key = name;
-  // `prefix.member` — descend into the prefix's children.
-  if (name.contains('.')) {
-    final split = name.split('.');
-    final prefixEntry = visible[split[0]];
-    if (prefixEntry != null &&
-        prefixEntry.declaration == null &&
-        prefixEntry.children != null) {
-      children = prefixEntry.children;
-      key = split.sublist(1).join('.');
-    }
-  }
-  // Top-level accessors register under `*g`/`*s` — reads prefer the getter
-  // key, writes the setter key, falling back to the plain name (variables,
-  // functions, classes).
-  DeclarationOrBridge? found;
-  if (children != null) {
-    found = forSet
-        ? children[MemberName.setter(key).key] ?? children[key]
-        : children[MemberName.getter(key).key] ?? children[key];
-  } else {
-    found = forSet
-        ? visible[MemberName.setter(key).key]?.declaration ??
-              visible[key]?.declaration
-        : visible[MemberName.getter(key).key]?.declaration ??
-              visible[key]?.declaration;
-  }
-  if (found == null) {
-    if (children == null && visible[key] != null) {
-      throw CompileError(
-        '"$name" is an import prefix, not a declaration',
-        source,
-      );
-    }
-    throw CompileError('Could not find declaration "$name"', source);
-  }
-  return found;
-}
-
 /// The declared type of a setter's `value` parameter, or null when the
 /// parameter list is empty or untyped.
-TypeRef? _setterValueType(
+TypeRef? setterValueType(
   CompilerContext ctx,
   int file,
   FormalParameterList? parameters,
@@ -744,65 +440,6 @@ TypeRef? _setterValueType(
   final param = parameters?.parameters.firstOrNull;
   if (param == null || param.type == null) return null;
   return ctx.typeFactory.formalParameterAnnotationType(file, param);
-}
-
-/// Emits a `Call` to a setter taking [value] as its argument. The value is
-/// first converted to the setter's declared parameter type (which can apply
-/// coercions like the implicit `.call` tear-off), then adapted to the
-/// parameter's representation across the call boundary. Returns the converted
-/// variable — the assignment expression's value.
-Variable _invokeSetter(
-  CompilerContext ctx,
-  DeferredOrOffset offset,
-  Variable value,
-  int file,
-  FormalParameterList? parameters, {
-  required bool isMethod,
-  AstNode? source,
-}) {
-  final paramType = _setterValueType(ctx, file, parameters);
-  final converted = paramType == null
-      ? value
-      : convertForAssignment(
-          ctx,
-          value,
-          paramType,
-          representation: isMethod
-              ? MachineRepresentation.object
-              : Abi.unboxedAcrossCalls(paramType).bank,
-          source: source,
-        );
-  ctx.pushOp(
-    Call(offset, [
-      _setterArgument(ctx, converted, file, parameters, isMethod: isMethod).ssa,
-    ], result: ctx.svar('setter_result')),
-  );
-  return converted;
-}
-
-/// Adapts [value] to the physical representation a setter's `value` parameter
-/// travels in across the call boundary. A direct `Call` constrains argument
-/// representations to the callee signature, so the caller must emit the
-/// conversion itself. Method parameters are always boxed (bridge interop);
-/// top-level function parameters travel in their boundary representation
-/// (unboxed `int`/`double`/`bool`, boxed otherwise).
-Variable _setterArgument(
-  CompilerContext ctx,
-  Variable value,
-  int file,
-  FormalParameterList? parameters, {
-  required bool isMethod,
-}) {
-  if (isMethod) {
-    return value.boxIntoFreshSlot(ctx);
-  }
-  final paramType = _setterValueType(ctx, file, parameters);
-  final rep = Abi.unboxedAcrossCalls(
-    paramType ?? CoreTypes.dynamic.ref(ctx),
-  ).bank;
-  return rep == MachineRepresentation.object
-      ? value.boxIntoFreshSlot(ctx)
-      : value.unboxIfNeeded(ctx, false);
 }
 
 /// Whether [name] resolves to a field, method, or extension member of
@@ -832,38 +469,6 @@ bool hasInstanceMember(
           MemberName(name, MemberKind.getter),
         );
   return member != null;
-}
-
-bool _hasReceiverMember(
-  CompilerContext ctx,
-  Variable receiver,
-  String name, {
-  bool forSet = false,
-  AstNode? source,
-}) {
-  final resolvedReceiver = ctx.typeSystem.throughTypeParameters(receiver.type);
-  if (resolvedReceiver.isSpec(CoreTypes.dynamic)) return true;
-  if (ctx.memberLookup.fieldType(
-        resolvedReceiver,
-        name,
-        forSet: forSet,
-        source: source,
-      ) !=
-      null) {
-    return true;
-  }
-  if (hasInstanceMember(ctx, resolvedReceiver, name, forSet: forSet)) {
-    return true;
-  }
-  return resolveExtensionMember(
-            ctx,
-            resolvedReceiver,
-            name,
-            getter: !forSet,
-            setter: forSet,
-          ) !=
-          null ||
-      resolveExtensionMember(ctx, resolvedReceiver, name) != null;
 }
 
 /// Re-derives the [BoundExtension] pin an `E(x)` target expression would
