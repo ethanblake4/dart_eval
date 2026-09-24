@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../member/call_signature.dart';
 import '../member/resolved_member.dart';
@@ -970,11 +969,8 @@ final class CallResolver {
       ],
       returnType: returnType,
     );
-    // Typed binding: a declared operator coerces its operands to the
-    // declared signature (e.g. `int.+` takes num) instead of the legacy
-    // box-everything vector.
+    ResolvedMember? opResolved;
     if (!isBareCall && !recv.type.isSpec(CoreTypes.dynamic)) {
-      ResolvedMember? opResolved;
       try {
         opResolved = ctx.memberLookup.interfaceMember(
           recv.type,
@@ -983,56 +979,53 @@ final class CallResolver {
       } on CompileError {
         // No resolvable declaration — the untyped dispatch applies.
       }
-      if (opResolved != null) {
-        final opMember = opResolved.member;
-        if (opMember is SourceMember && opMember.node is MethodDeclaration) {
-          final opDecl = opMember.node as MethodDeclaration;
-          final opParams =
-              opDecl.parameters?.parameters ?? const <FormalParameter>[];
-          final typedPositional = <BoundArgument>[];
-          var pi = 0;
-          for (final param in opParams) {
-            if (param.isNamed || pi >= prepared.length) break;
-            var (paramType, _) = getFormalParameterType(
-              ctx,
-              param,
-              opMember.library,
-              opDecl,
-            );
-            paramType ??= CoreTypes.dynamic.ref(ctx);
-            typedPositional.add(
-              BoundArgument(
-                coerceArgumentForParameter(
-                  ctx,
-                  prepared[pi],
-                  paramType,
-                  param,
-                  opDecl,
-                ),
-              ),
-            );
-            pi++;
-          }
-          for (; pi < prepared.length; pi++) {
-            typedPositional.add(BoundArgument(prepared[pi]));
-          }
-          boundCall = BoundCall(
-            receiver: recv,
-            positional: typedPositional,
-            named: boundCall.named,
-            returnType: returnType,
-          );
-        }
-      }
     }
-    final result = Devirtualizer(
-      ctx,
-    ).refine(VirtualCall(receiver: recv, name: method)).emit(ctx, boundCall);
+    final target = Devirtualizer(ctx).refine(
+      VirtualCall(receiver: recv, name: method, member: opResolved?.member),
+    );
+    if (opResolved?.member case SourceMember sourceMember
+        when sourceMember.sourceDeclaration is MethodDeclaration) {
+      final selectedMember = switch (target) {
+        StaticCall(member: SourceMember member) => member,
+        _ => sourceMember,
+      };
+      final seedGenerics = target is VirtualCall
+          ? opResolved!.ownerTypeArguments
+          : ownerTypeArgumentsOf(
+              selectedMember.declaringDecl ?? selectedMember.ownerDecl,
+              switch (target) {
+                StaticCall(:final declaringLink?) =>
+                  ctx.typeSystem.asInstanceOf(
+                        declaringLink,
+                        selectedMember.declaringDecl ??
+                            selectedMember.ownerDecl,
+                      ) ??
+                      declaringLink,
+                _ => opResolved!.viewedAs,
+              },
+            );
+      final typed = ArgumentBinder(ctx).bindSourceValues(
+        target,
+        prepared,
+        namedArgs ?? const {},
+        seedGenerics: seedGenerics,
+      );
+      boundCall = BoundCall(
+        receiver: recv,
+        positional: typed.positional,
+        named: typed.named,
+        runtimeTypeArguments: typed.runtimeTypeArguments,
+        returnType: target.signature?.returnAnnotated == true
+            ? typed.returnType
+            : returnType,
+      );
+    }
+    final result = target.emit(ctx, boundCall);
     return (
       target: recv,
       result: result,
       args: boundCall.positionalValues,
-      namedArgs: namedArgs ?? {},
+      namedArgs: boundCall.namedValues,
     );
   }
 

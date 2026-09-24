@@ -140,18 +140,20 @@ Variable _invokeShorthandMember(
   // A non-bridge static method — bounded argument compilation plus a direct
   // Call, the same path `C.member(...)` takes.
   if (decl is MethodDeclaration && decl.isStatic) {
-    final result = ArgumentBinder(ctx).bindDeclaration(
-      member!.sourceLib,
-      decl,
+    final target = StaticCall(
+      DeferredOrOffset.lookupStatic(ctx, type.file, type.name, memberName),
+      sourceDeclaration: decl,
+      signature: CallSignature.forDeclaration(ctx, member!.sourceLib, decl),
+    );
+    final result = ArgumentBinder(ctx).bindSourceTarget(
+      target,
       argumentList,
       typeArguments: typeArguments,
       source: source,
       returnContext: bound,
     );
 
-    return StaticCall(
-      DeferredOrOffset.lookupStatic(ctx, type.file, type.name, memberName),
-    ).emit(
+    return target.emit(
       ctx,
       BoundCall(
         positional: result.positional,
@@ -162,7 +164,7 @@ Variable _invokeShorthandMember(
                 .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
                 .map((t) => ctx.runtimeTypes.idOf(t))
                 .toList() ??
-            const [],
+            result.runtimeTypeArguments,
         returnType: result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
         rep: ValueRep.boxed,
       ),
@@ -170,18 +172,25 @@ Variable _invokeShorthandMember(
   }
   if (member != null && member.isBridge && member.bridge is BridgeMethodDef) {
     final fd = (member.bridge as BridgeMethodDef).functionDescriptor;
+    final target = StaticCall(
+      null,
+      externalIndex:
+          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.$name']!,
+      bridgeFunction: fd,
+      signature: CallSignature.bridge(
+        ctx,
+        fd,
+        returnFallback: CoreTypes.dynamic.ref(ctx),
+        owner: type,
+      ),
+    );
     final arguments = ArgumentBinder(
       ctx,
-    ).bindBridgeVector(argumentList, fd, typeParameters: const {});
+    ).bindBridgeTarget(target, argumentList);
     final returnType =
         resolveCallResultType(
           ctx,
-          signature: CallSignature.bridge(
-            ctx,
-            fd,
-            returnFallback: CoreTypes.dynamic.ref(ctx),
-            owner: type,
-          ),
+          signature: target.signature!,
           targetType: type,
           argTypes: arguments.positionalValues.map((a) => a.type).toList(),
           namedArgTypes: arguments.namedValues.map(
@@ -189,11 +198,7 @@ Variable _invokeShorthandMember(
           ),
         ) ??
         CoreTypes.dynamic.ref(ctx);
-    return StaticCall(
-      null,
-      externalIndex:
-          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.$name']!,
-    ).emit(
+    return target.emit(
       ctx,
       BoundCall(
         positional: arguments.positional,

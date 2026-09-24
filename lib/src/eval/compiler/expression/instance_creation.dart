@@ -50,7 +50,8 @@ Variable compileInstanceCreation(
                 as InterfaceTypeRef)
             .copyWith(
               arguments: [
-                if (type.typeArguments == null) ...interfaceArgumentsOf(staticType),
+                if (type.typeArguments == null)
+                  ...interfaceArgumentsOf(staticType),
               ],
             );
   }
@@ -131,6 +132,7 @@ Variable compileInstanceOf(
       ctx.memberLookup.staticMember(staticType, name, MemberKind.method) ??
       (throw CompileError('Cannot find static method $staticType.$name'));
 
+  late final ConstructorCall target;
   final BoundCall arguments;
 
   if (resolved is BridgeMember) {
@@ -151,20 +153,39 @@ Variable compileInstanceOf(
         ? classBridge.type.generics.keys.toList()
         : const <String>[];
     Map<String, TypeRef> argTypeParameters = const {};
-    if (genericNames.isNotEmpty && interfaceArgumentsOf(instantiatedType).isEmpty) {
+    if (genericNames.isNotEmpty &&
+        interfaceArgumentsOf(instantiatedType).isEmpty) {
       // Parameter annotations compile permissively (`T` → dynamic); the real
       // bindings are inferred from the argument types below.
       argTypeParameters = {
         for (final name in genericNames) name: CoreTypes.dynamic.ref(ctx),
       };
     }
-    arguments = ArgumentBinder(ctx).bindBridgeVector(
-      argumentList,
-      fnDescriptor,
-      typeParameters: argTypeParameters,
+    target = ConstructorCall(
+      staticType: staticType,
+      instantiatedType:
+          genericNames.isNotEmpty &&
+              interfaceArgumentsOf(instantiatedType).isEmpty
+          ? null
+          : instantiatedType,
+      name: name,
+      isConst: isConst,
+      externalIndex:
+          ctx.bridgeStaticFunctionIndices[staticType
+              .file]!['${staticType.name}.$name']!,
+      classBridge: classBridge is BridgeClassDef ? classBridge : null,
+      bridgeFunction: fnDescriptor,
+      signature: CallSignature.bridge(
+        ctx,
+        fnDescriptor,
+        returnFallback: CoreTypes.dynamic.ref(ctx),
+        typeParameters: argTypeParameters,
+      ),
     );
+    arguments = ArgumentBinder(ctx).bindBridgeTarget(target, argumentList);
 
-    if (genericNames.isNotEmpty && interfaceArgumentsOf(instantiatedType).isEmpty) {
+    if (genericNames.isNotEmpty &&
+        interfaceArgumentsOf(instantiatedType).isEmpty) {
       final paramRefs = {
         for (var i = 0; i < genericNames.length; i++)
           genericNames[i]: TypeParameterTypeRef(
@@ -244,47 +265,29 @@ Variable compileInstanceOf(
       }
     }
 
-    arguments = ArgumentBinder(ctx).bindParameterList(
-      argumentList,
-      staticType.file,
-      CallSignature.forDeclaration(
+    target = ConstructorCall(
+      staticType: staticType,
+      instantiatedType: instantiatedType,
+      name: name,
+      offset: DeferredOrOffset.lookupStatic(
         ctx,
         staticType.file,
-        dec as ConstructorDeclaration,
+        staticType.name,
+        name,
       ),
-      dec,
+      constructor: dec as ConstructorDeclaration,
+      isConst: isConst,
+      signature: CallSignature.forDeclaration(ctx, staticType.file, dec),
+    );
+    arguments = ArgumentBinder(ctx).bindSourceTarget(
+      target,
+      argumentList,
       source: source,
-      resolveGenerics: seedGenerics,
+      seedGenerics: seedGenerics,
     );
 
-    //_args = argsPair.first;
-    //_namedArgs = argsPair.second;
   }
 
-  final classBridge =
-      ctx.topLevelDeclarationsMap[staticType.file]![staticType.name]?.bridge;
-  final target = ConstructorCall(
-    staticType: staticType,
-    instantiatedType: instantiatedType,
-    name: name,
-    offset: resolved is BridgeMember
-        ? null
-        : DeferredOrOffset.lookupStatic(
-            ctx,
-            staticType.file,
-            staticType.name,
-            name,
-          ),
-    constructor: resolved is BridgeMember
-        ? null
-        : (resolved as SourceMember).node as ConstructorDeclaration,
-    isConst: isConst,
-    externalIndex: resolved is BridgeMember
-        ? ctx.bridgeStaticFunctionIndices[staticType
-              .file]!['${staticType.name}.$name']!
-        : null,
-    classBridge: classBridge is BridgeClassDef ? classBridge : null,
-  );
   return target.emit(
     ctx,
     BoundCall(

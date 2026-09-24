@@ -1012,16 +1012,181 @@ final class ArgumentBinder {
     if (library == null || declaration == null || target.signature == null) {
       throw StateError('Source call target requires a source signature');
     }
+    final seeds = <String, TypeRef>{...seedGenerics};
+    if (target is ConstructorCall) {
+      final arguments = interfaceArgumentsOf(target.staticType);
+      final classParameters = [
+        for (final entry in target.signature!.typeParameterRefs.entries)
+          if (entry.value is TypeParameterTypeRef &&
+              (entry.value as TypeParameterTypeRef).parameter.owner.kind ==
+                  TypeParameterOwnerKind.classLike)
+            entry.key,
+      ];
+      for (var i = 0; i < arguments.length && i < classParameters.length; i++) {
+        seeds.putIfAbsent(classParameters[i], () => arguments[i]);
+      }
+    }
     return bindDeclaration(
       library,
       declaration,
       argumentList,
       typeArguments: typeArguments,
       source: source,
-      seedGenerics: seedGenerics,
+      seedGenerics: seeds,
       returnContext: returnContext,
       fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
       targetSignature: target.signature,
+    );
+  }
+
+  /// Bind operands that were evaluated before target resolution (operators,
+  /// indexes, and implicit `.call`). The selected signature supplies formal
+  /// types in its declaring scope; receiver arguments instantiate them.
+  BoundCall bindSourceValues(
+    CallTarget target,
+    List<Variable> positionalValues,
+    Map<String, Variable> namedValues, {
+    Map<String, TypeRef> seedGenerics = const {},
+    AstNode? source,
+  }) {
+    final member = switch (target) {
+      StaticCall(member: SourceMember member) ||
+      VirtualCall(member: SourceMember member) => member,
+      _ => null,
+    };
+    if (member == null ||
+        member.sourceDeclaration is! MethodDeclaration ||
+        target.signature == null) {
+      throw StateError('Source value call requires a method signature');
+    }
+    final declaration = member.sourceDeclaration as MethodDeclaration;
+    final signature = target.signature!;
+    if (positionalValues.length > signature.positional.length) {
+      throw CompileError('Too many positional arguments', source);
+    }
+    if (positionalValues.length < signature.requiredPositional) {
+      throw CompileError('Not enough positional arguments', source);
+    }
+    final namedSpecs = {for (final spec in signature.named) spec.name: spec};
+    for (final name in namedValues.keys) {
+      if (!namedSpecs.containsKey(name)) {
+        throw CompileError('Unknown named argument $name', source);
+      }
+    }
+    for (final spec in signature.named) {
+      if (spec.isRequired && !namedValues.containsKey(spec.name)) {
+        throw CompileError('Missing required argument ${spec.name}', source);
+      }
+    }
+
+    final resolvedGenerics = <String, TypeRef>{...seedGenerics};
+    _resolveInvocationGenerics(
+      signature,
+      null,
+      resolvedGenerics,
+      source ?? declaration,
+    );
+    final substitution = signature.substitutionFor(resolvedGenerics);
+    final classSubstitution = signature.substitutionFor(
+      seedGenerics,
+      includeOwn: false,
+    );
+    final inferred = <String, Set<TypeRef>>{};
+    final ownByDef = {
+      for (final def in signature.typeParameters) def: def.name,
+    };
+    Variable convert(ParameterSpec spec, Variable value) {
+      if (ownByDef.isNotEmpty) {
+        final bindings = <TypeParameterDef, TypeRef>{};
+        ctx.typeSystem.unify(
+          spec.type.substituteTypeParameters(classSubstitution),
+          value.type,
+          bindings,
+        );
+        for (final entry in bindings.entries) {
+          final name = ownByDef[entry.key];
+          if (name != null) {
+            inferred.putIfAbsent(name, () => <TypeRef>{}).add(entry.value);
+          }
+        }
+      }
+      return coerceArgumentForParameter(
+        ctx,
+        value,
+        spec.type.substituteTypeParameters(substitution),
+        spec.node!,
+        declaration,
+        genericParameter: spec.erased,
+        source: source,
+      );
+    }
+
+    final fillDefaults = target.policy == BindingPolicy.callerFillsDefaults;
+    final positional = <BoundArgument>[];
+    for (var i = 0; i < signature.positional.length; i++) {
+      final spec = signature.positional[i];
+      if (i < positionalValues.length) {
+        positional.add(BoundArgument(convert(spec, positionalValues[i])));
+      } else if (fillDefaults) {
+        positional.add(
+          BoundArgument(
+            compileOmittedArgument(
+              ctx,
+              member.library,
+              spec.node!,
+              declaration,
+              defaultSource: spec.defaultValue is SourceDefault
+                  ? spec.defaultValue as SourceDefault
+                  : null,
+              declaredType: spec.type.substituteTypeParameters(substitution),
+            ),
+          ),
+        );
+      }
+    }
+    final named = <(String, BoundArgument)>[];
+    final names = fillDefaults
+        ? [for (final spec in signature.named) spec.name]
+        : namedValues.keys;
+    for (final name in names) {
+      final spec = namedSpecs[name]!;
+      final supplied = namedValues[name];
+      if (supplied != null) {
+        named.add((name, BoundArgument(convert(spec, supplied))));
+      } else if (fillDefaults) {
+        named.add((
+          name,
+          BoundArgument(
+            compileOmittedArgument(
+              ctx,
+              member.library,
+              spec.node!,
+              declaration,
+              defaultSource: spec.defaultValue is SourceDefault
+                  ? spec.defaultValue as SourceDefault
+                  : null,
+              declaredType: spec.type.substituteTypeParameters(substitution),
+            ),
+          ),
+        ));
+      }
+    }
+    for (final entry in inferred.entries) {
+      resolvedGenerics[entry.key] = TypeRef.commonBaseType(ctx, entry.value);
+    }
+    final returnType = signature.returnType
+        .substituteTypeParameters(signature.substitutionFor(resolvedGenerics))
+        .lowerTypeParameters(ctx);
+    return BoundCall(
+      positional: positional,
+      named: named,
+      returnType: returnType.isSpec(CoreTypes.voidType)
+          ? CoreTypes.dynamic.ref(ctx)
+          : returnType,
+      runtimeTypeArguments: [
+        for (final def in signature.typeParameters)
+          ctx.runtimeTypes.idOf(resolvedGenerics[def.name]!),
+      ],
     );
   }
 
@@ -1069,12 +1234,21 @@ final class ArgumentBinder {
       final explicitArgs = typeArguments?.arguments;
       for (var i = 0; i < classParams.length; i++) {
         final (name, parameter) = classParams[i];
-        resolveGenerics[name] = explicitArgs != null && i < explicitArgs.length
-            ? TypeRef.fromAnnotation(ctx, sourceLib, explicitArgs[i])
-            : (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
-                  .substituteTypeParameters(
-                    signature.substitutionFor(resolveGenerics),
-                  );
+        if (explicitArgs != null && i < explicitArgs.length) {
+          resolveGenerics[name] = TypeRef.fromAnnotation(
+            ctx,
+            sourceLib,
+            explicitArgs[i],
+          );
+        } else {
+          resolveGenerics.putIfAbsent(
+            name,
+            () => (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
+                .substituteTypeParameters(
+                  signature.substitutionFor(resolveGenerics),
+                ),
+          );
+        }
       }
     }
     if (isCallableDecl) {

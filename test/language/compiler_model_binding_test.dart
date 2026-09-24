@@ -215,4 +215,34 @@ void main() {
       9,
     );
   });
+
+  test('operators bind applied and inherited generic formals', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          class A<T> {
+            T operator +(T value) => value;
+          }
+          class B<U> extends A<U> {}
+          class C extends A<int> {
+            @override
+            int operator +(int value) => value + 1;
+          }
+          int use(A<int> value) => value + 4;
+          int main() {
+            A<int> a = A<int>();
+            B<int> b = B<int>();
+            A<int> c = C();
+            return (a + 2) + (b + 3) + (c + 4) + use(A<int>()) + use(C());
+          }
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      19,
+    );
+  });
 }
