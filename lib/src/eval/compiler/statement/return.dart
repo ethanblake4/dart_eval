@@ -74,6 +74,17 @@ StatementInfo compileReturn(
       value?.type ?? CoreTypes.nullType.ref(ctx),
     );
   }
+  // A bare `return;` inside a generative constructor still returns the
+  // instance under construction, not null.
+  final parent = body.parent;
+  if (value == null &&
+      parent is ConstructorDeclaration &&
+      parent.factoryKeyword == null) {
+    final inst = ctx.lookupLocal('#this');
+    if (inst != null) {
+      return doReturn(ctx, inst.type, inst);
+    }
+  }
   return doReturn(
     ctx,
     expectedReturnType ?? CoreTypes.dynamic.ref(ctx),
