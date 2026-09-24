@@ -134,11 +134,17 @@ void main() {
       final graph = namedGraph(compiler, 'main()');
       final call = operations(graph).whereType<Call>().single;
       expect(call.arguments, hasLength(2));
-      final constants = {
-        for (final load in operations(graph).whereType<LoadInt>())
-          load.target: load.value,
+      final definitions = {
+        for (final op in operations(graph))
+          if (op.writesTo case final target?) target: op,
       };
-      expect(call.arguments.map((argument) => constants[argument]), [9, 4]);
+      int? constantOf(SSA argument) {
+        final definition = definitions[argument];
+        if (definition is LoadInt) return definition.value;
+        if (definition case Assign(:final source)) return constantOf(source);
+        return null;
+      }
+      expect(call.arguments.map(constantOf), [9, 4]);
       expect(call.writesTo, isNotNull);
       expect(operations(graph).whereType<Return>().single.value, call.writesTo);
       expectDefinedReads(graph);
