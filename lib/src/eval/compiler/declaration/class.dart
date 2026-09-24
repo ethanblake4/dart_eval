@@ -235,14 +235,18 @@ _mixinMembers(
   // Mixin-application declarations already folded along this path — reentry
   // means a cyclic `with` chain (`class C = S with C`), a compile error.
   Set<String>? visited,
+  // The library the `with` clause was written in — the applying class's
+  // library normally, the mixin decl's own library when recursing.
+  int? clauseLibrary,
 ]) {
+  final clauseLib = clauseLibrary ?? ctx.library;
   visited ??= {};
   final fields = <FieldDeclaration>[];
   final methods = <MethodDeclaration>[];
   final memberLibraries = <ClassMember, int>{};
   if (mixinTypes == null) return (fields, methods, memberLibraries);
   for (final mixinType in mixinTypes) {
-    final ref = TypeRef.fromAnnotation(ctx, ctx.library, mixinType);
+    final ref = TypeRef.fromAnnotation(ctx, clauseLib, mixinType);
     final decl = ctx.topLevelDeclarationsMap[ref.file]![ref.name]?.declaration;
     final declKey = '${ref.file}:${ref.name}';
     if (!visited.add(declKey)) {
@@ -264,7 +268,9 @@ _mixinMembers(
       _ => null,
     };
     if (mixinParams != null && mixinParams.isNotEmpty) {
-      final temps = ctx.typeParameterScope(ctx.library);
+      // Seed into the mixin's own library scope — its bounds and folded
+      // member signatures resolve against its imports, not the caller's.
+      final temps = ctx.typeParameterScope(ref.file);
       final args = mixinType.typeArguments?.arguments;
       final owner = ownerDecl ?? ctx.currentClass;
       final ownerParams = switch (owner) {
@@ -286,14 +292,14 @@ _mixinMembers(
         temps[param.name.lexeme] =
             (args != null && i < args.length
                 ? ctx.typeFactory.resolveAppliedTypeArgument(
-                    ctx.library,
+                    clauseLib,
                     ownerName,
                     ownerParams,
                     args[i],
                   )
                 : null) ??
             (bound != null
-                ? TypeRef.fromAnnotation(ctx, ctx.library, bound)
+                ? TypeRef.fromAnnotation(ctx, ref.file, bound)
                 : CoreTypes.dynamic.ref(ctx));
       }
     }
@@ -313,14 +319,14 @@ _mixinMembers(
         // `class D<U> = X with M<U>` resolves `M`'s arguments against U.
         // A pushed frame keeps the seed scoped to this fold.
         final (f0, m0, l0) = ctx.withTypeParameters(
-          ctx.library,
+          ref.file,
           TypeParameterOwner(
             TypeParameterOwnerKind.classLike,
-            ctx.library,
+            ref.file,
             c.namePart.typeName.lexeme,
           ),
           c.namePart.typeParameters?.typeParameters,
-          () => _mixinMembers(ctx, c.withClause!.mixinTypes, c, visited),
+          () => _mixinMembers(ctx, c.withClause!.mixinTypes, c, visited, ref.file),
         );
         memberLibraries.addAll(l0);
         final (_, cf, cm) = partitionClassMembers(c.body.members);
@@ -331,14 +337,14 @@ _mixinMembers(
       // contributes the alias's own folded mixin members.
       ClassTypeAlias a => () {
         final (f, m, l) = ctx.withTypeParameters(
-          ctx.library,
+          ref.file,
           TypeParameterOwner(
             TypeParameterOwnerKind.classLike,
-            ctx.library,
+            ref.file,
             a.name.lexeme,
           ),
           a.typeParameters?.typeParameters,
-          () => _mixinMembers(ctx, a.withClause.mixinTypes, a, visited),
+          () => _mixinMembers(ctx, a.withClause.mixinTypes, a, visited, ref.file),
         );
         memberLibraries.addAll(l);
         return (<ConstructorDeclaration>[], f, m);

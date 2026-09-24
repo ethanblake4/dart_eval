@@ -15,6 +15,12 @@ final class TypeFactory {
 
   final CompilerContext _ctx;
 
+  /// Stable per-[BridgeFunctionDef] identity for type-parameter owner keys.
+  /// `def.hashCode` is an identity hash that can collide across different
+  /// defs; a sequence number cannot.
+  final _bridgeFunctionDefIds = Expando<int>();
+  var _bridgeFunctionDefSeq = 0;
+
   /// Resolves a source [TypeAnnotation] to its [TypeRef]: named types look
   /// up in-scope parameters then library-visible types, `?`-suffixed names
   /// set nullability, applied type arguments resolve recursively, and
@@ -597,7 +603,7 @@ final class TypeFactory {
       TypeParameterOwnerKind.functionTypeAnnotation,
       -1,
       '',
-      def.hashCode,
+      _bridgeFunctionDefIds[def] ??= ++_bridgeFunctionDefSeq,
     );
     final genericEntries = def.generics.entries.toList();
     final ownDefs = _ctx.typeParameterDefs.intern(owner, [

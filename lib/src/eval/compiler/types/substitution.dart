@@ -24,17 +24,19 @@ final class Substitution {
     final params = decl?.typeParameters ?? const <TypeParameterDef>[];
     if (params.isEmpty) {
       if (type.typeArguments.isEmpty) return empty;
+      final owner = TypeParameterOwner(
+        TypeParameterOwnerKind.classLike,
+        type.file,
+        type.name,
+      );
+      // Keys come from the interner so they share identity (and bounds)
+      // with defs declared elsewhere for the same owner; `key` returns a
+      // fresh unbound key only when the owner was never declared.
+      final defs = decl?.ctx.typeParameterDefs;
       return Substitution._({
         for (var i = 0; i < type.typeArguments.length; i++)
-          TypeParameterDef(
-            TypeParameterOwner(
-              TypeParameterOwnerKind.classLike,
-              type.file,
-              type.name,
-            ),
-            i,
-            '',
-          ): type.typeArguments[i],
+          (defs?.key(owner, i, '') ?? TypeParameterDef(owner, i, '')):
+              type.typeArguments[i],
       });
     }
     return Substitution._({
