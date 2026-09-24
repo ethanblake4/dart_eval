@@ -14,7 +14,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'invocation/deferred.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';

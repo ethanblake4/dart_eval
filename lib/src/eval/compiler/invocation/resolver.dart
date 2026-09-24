@@ -18,7 +18,6 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
-import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';

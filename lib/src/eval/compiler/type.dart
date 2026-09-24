@@ -851,9 +851,3 @@ extension Refify on BridgeTypeSpec {
     ]);
   }
 }
-
-/// Resolves a `typedef` use to the type it aliases. Function-type aliases
-/// (`typedef void F()`, `typedef F = void Function()`) map to `Function`;
-/// named-type aliases (`typedef X = List<int>`) resolve recursively. Type
-/// parameters on the alias are bound (and substituted by any supplied type
-/// arguments) while the underlying annotation resolves.

@@ -208,10 +208,7 @@ final class SourceMember extends Member {
             m.offset,
           ),
           returnAnnotation: m.returnType,
-          returnFallback: switch (m.body) {
-            ExpressionFunctionBody() => CoreTypes.dynamic.ref(ctx),
-            _ => CoreTypes.dynamic.ref(ctx),
-          },
+          returnFallback: CoreTypes.dynamic.ref(ctx),
           typeParameters: ownerParams,
           parameterHost: _parameterHost,
         );

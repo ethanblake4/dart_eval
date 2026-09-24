@@ -26,8 +26,6 @@ import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import '../values/abi.dart';
 
-enum CallingConvention { static, dynamic }
-
 Variable compileFunctionExpression(
   FunctionExpression e,
   CompilerContext ctx, [

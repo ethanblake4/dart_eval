@@ -3,7 +3,6 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable/value_facts.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
@@ -13,6 +12,11 @@ import 'errors.dart';
 import 'invocation/deferred.dart';
 import 'member/call_signature.dart';
 import 'values/abi.dart';
+
+/// How a call reaches its callee — `static` skips runtime member lookup,
+/// `dynamic` dispatches through the receiver's runtime type.
+enum CallingConvention { static, dynamic }
+
 
 /// A compiler value with an SSA identity, language type and calling convention.
 /// Compile-time metadata for a [Variable] denoting a statically known

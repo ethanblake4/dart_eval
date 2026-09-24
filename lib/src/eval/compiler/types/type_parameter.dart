@@ -187,7 +187,3 @@ List<TypeParameterDef> declareTypeParameters(
   }
   return defs;
 }
-
-/// A [TypeRef] that names a type parameter. The [TypeRef.parameter] def is
-/// shared by every reference to the same `(owner, index)`, so a bound
-/// resolved after seeding is visible through every copy.

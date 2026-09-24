@@ -6,7 +6,6 @@ import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'deferred.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
-import 'package:dart_eval/src/eval/compiler/expression/function.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
