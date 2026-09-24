@@ -622,83 +622,70 @@ final class CallResolver {
         ctx,
       ).bindDynamicVector(e.argumentList, before: [L]);
     } else {
-      final dec = (resolved!.member as SourceMember).node as Declaration;
-      final memberLibrary = (resolved.member as SourceMember).library;
-      // Instance calls compile supplied arguments against the resolved
-      // signature — context types and coercion apply — but only a call
-      // proven static fills omitted arguments. A call that stays virtual
-      // leaves names and defaults for the runtime to bind (`calleeBinds`).
-      final refined = isStatic
-          ? null
-          : Devirtualizer(ctx).refine(
-              VirtualCall(
-                receiver: L,
-                name: e.methodName.name,
-                member: resolved.member,
-                isSuperReceiver: e.target is SuperExpression,
-              ),
-            );
-      target = refined;
-      final policy = refined?.policy ?? BindingPolicy.callerFillsDefaults;
-      if (!isStatic && refined is VirtualCall) {
-        // Still virtual: bind against the interface signature resolved on
-        // the receiver's static type — supplied arguments only.
-        argsPair = ArgumentBinder(ctx).bindDeclaration(
-          memberLibrary,
-          dec,
+      final sourceMember = resolved!.member as SourceMember;
+      final declaration = sourceMember.sourceDeclaration;
+      if (declaration is MethodDeclaration) {
+        // Refine before binding. The chosen target owns the signature and
+        // default policy, including an override's concrete defaults.
+        target = isStatic
+            ? StaticCall(
+                DeferredOrOffset.lookupStatic(
+                  ctx,
+                  staticType!.file,
+                  staticType.name,
+                  e.methodName.name,
+                ),
+                member: sourceMember,
+              )
+            : Devirtualizer(ctx).refine(
+                VirtualCall(
+                  receiver: L,
+                  name: e.methodName.name,
+                  member: sourceMember,
+                  isSuperReceiver: e.target is SuperExpression,
+                ),
+              );
+        final boundMember = switch (target) {
+          StaticCall(:final member) ||
+          VirtualCall(:final member) => member as SourceMember,
+          _ => throw StateError('Expected a source method target'),
+        };
+        final seedGenerics = isStatic
+            ? const <String, TypeRef>{}
+            : target is VirtualCall
+            ? resolved.ownerTypeArguments
+            : ownerTypeArgumentsOf(
+                boundMember.declaringDecl ?? boundMember.ownerDecl,
+                switch (target) {
+                  StaticCall(:final declaringLink?) =>
+                    ctx.typeSystem.asInstanceOf(
+                          declaringLink,
+                          boundMember.declaringDecl ?? boundMember.ownerDecl,
+                        ) ??
+                        declaringLink,
+                  _ => resolved.viewedAs,
+                },
+              );
+        argsPair = ArgumentBinder(ctx).bindSourceTarget(
+          target,
           e.argumentList,
           typeArguments: e.typeArguments,
           source: e,
-          seedGenerics: dec is MethodDeclaration
-              ? resolved.ownerTypeArguments
-              : const {},
+          seedGenerics: seedGenerics,
           returnContext: bound,
-          fillOmitted: policy == BindingPolicy.callerFillsDefaults,
         );
-        mReturnType = argsPair.declaredReturn;
       } else {
-        // Static (and devirtualized) calls bind against the concrete
-        // implementation's signature: [refine] resolved the declaring
-        // owner, which may differ from the static declaration when an
-        // override carries its own defaults.
-        var bindingLib = memberLibrary;
-        Declaration bindingDec = dec;
-        var bindingMember = resolved.member;
-        var bindingView = resolved.viewedAs;
-        if (refined is StaticCall && refined.declaringLink != null) {
-          final member = ctx.memberLookup.concreteMemberOn(
-            refined.declaringLink!,
-            MemberName(e.methodName.name, MemberKind.method),
-          );
-          if (member is SourceMember) {
-            bindingLib = refined.offset!.file ?? memberLibrary;
-            bindingDec = member.sourceDeclaration;
-            bindingMember = member;
-            bindingView =
-                ctx.typeSystem.asInstanceOf(
-                  refined.declaringLink!,
-                  member.declaringDecl ?? member.ownerDecl,
-                ) ??
-                refined.declaringLink!;
-          }
-        }
+        // Constructors retain their existing binding path in this step.
         argsPair = ArgumentBinder(ctx).bindDeclaration(
-          bindingLib,
-          bindingDec,
+          sourceMember.library,
+          declaration,
           e.argumentList,
           typeArguments: e.typeArguments,
           source: e,
-          seedGenerics: !isStatic && bindingDec is MethodDeclaration
-              ? ownerTypeArgumentsOf(
-                  bindingMember.declaringDecl ?? bindingMember.ownerDecl,
-                  bindingView,
-                )
-              : const {},
           returnContext: bound,
-          fillOmitted: policy == BindingPolicy.callerFillsDefaults,
         );
-        mReturnType = argsPair.declaredReturn;
       }
+      mReturnType = argsPair.declaredReturn;
     }
 
     return (args: argsPair, returnType: mReturnType, target: target);
@@ -763,6 +750,9 @@ final class CallResolver {
           constructor: declaration,
           isConst: e.inConstantContext,
         ).emit(ctx, boundCall);
+      }
+      if (resolvedTarget is StaticCall) {
+        return resolvedTarget.emit(ctx, boundCall);
       }
       if (resolved?.member is BridgeMember) {
         return StaticCall(

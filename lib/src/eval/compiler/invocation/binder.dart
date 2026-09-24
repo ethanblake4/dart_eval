@@ -963,6 +963,37 @@ final class ArgumentBinder {
               _usesParameter(signature.returnType, parameters),
       };
 
+  /// Bind an ordinary source method using the member and policy selected by
+  /// resolution. A virtual target leaves defaults to the runtime; a direct
+  /// target uses the concrete implementation's defaults and declared types.
+  BoundCall bindSourceTarget(
+    CallTarget target,
+    ArgumentList argumentList, {
+    TypeArgumentList? typeArguments,
+    AstNode? source,
+    Map<String, TypeRef> seedGenerics = const {},
+    TypeRef? returnContext,
+  }) {
+    final member = switch (target) {
+      StaticCall(:final member) || VirtualCall(:final member) => member,
+      _ => null,
+    };
+    if (member is! SourceMember || target.signature == null) {
+      throw StateError('Source call target requires a source signature');
+    }
+    return bindDeclaration(
+      member.library,
+      member.sourceDeclaration,
+      argumentList,
+      typeArguments: typeArguments,
+      source: source,
+      seedGenerics: seedGenerics,
+      returnContext: returnContext,
+      fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
+      targetSignature: target.signature,
+    );
+  }
+
   /// Compiles the argument list for a call to a non-bridge declaration [dec],
   /// resolving generic type parameters at the call site. [seedGenerics] provides
   /// receiver-class type arguments (for instance calls); [typeArguments] are the
@@ -986,8 +1017,10 @@ final class ArgumentBinder {
 
     /// See [bindParameterList.fillOmitted].
     bool fillOmitted = true,
+    CallSignature? targetSignature,
   }) {
-    final signature = CallSignature.forDeclaration(ctx, sourceLib, dec);
+    final signature =
+        targetSignature ?? CallSignature.forDeclaration(ctx, sourceLib, dec);
     final typeParams = signature.typeParameters;
     final isCallableDecl =
         dec is FunctionDeclaration || dec is MethodDeclaration;

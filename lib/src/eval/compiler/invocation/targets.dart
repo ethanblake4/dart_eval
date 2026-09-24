@@ -74,11 +74,11 @@ final class StaticCall extends CallTarget {
     this.receiver,
     this.ownerLink,
     this.typeEnvironmentReceiver,
-    this.signature,
+    CallSignature? signature,
     this.declaringLink,
     this.externalIndex,
     this.functionDeclaration,
-  });
+  }) : _signature = signature;
 
   /// The resolved call offset; null only when [externalIndex] is set —
   /// bridge members call through `bridgeStaticFunctionIndices`.
@@ -109,8 +109,10 @@ final class StaticCall extends CallTarget {
   /// A boxed receiver carried for runtime generic checks.
   final Variable? typeEnvironmentReceiver;
 
+  final CallSignature? _signature;
+
   @override
-  final CallSignature? signature;
+  CallSignature? get signature => _signature ?? member?.signature;
 
   @override
   CallableAbi? declaredAbi(CompilerContext ctx) {

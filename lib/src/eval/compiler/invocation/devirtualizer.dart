@@ -1,5 +1,6 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
+import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import '../type.dart';
 import 'deferred.dart';
 import 'targets.dart';
@@ -55,6 +56,11 @@ final class Devirtualizer {
           MemberName(name, MemberKind.method),
         );
     if (directOwner != null && (linkType != null || !needsLink)) {
+      final member = ctx.memberLookup.concreteMemberOn(
+        directOwner,
+        MemberName.method(name),
+      );
+      if (member is! SourceMember) return target;
       return StaticCall(
         DeferredOrOffset(
           file: directOwner.file,
@@ -68,6 +74,7 @@ final class Devirtualizer {
             : null,
         typeEnvironmentReceiver: L,
         declaringLink: directOwner,
+        member: member,
       );
     }
     return target;
