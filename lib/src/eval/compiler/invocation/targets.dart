@@ -79,18 +79,34 @@ final class StaticCall extends CallTarget {
   @override
   final CallSignature? signature;
 
+  CallableAbi? _declaredAbi(CompilerContext ctx) {
+    // Call-site type substitution may narrow the language result, but the
+    // representation comes from the callee's declared machine layout.
+    if (member != null) return CallableAbi.of(member!);
+    final reference = offset;
+    // A method offset can have the same unqualified name as a top-level
+    // function. Only plain top-level offsets index this declaration table.
+    if (reference?.className != null || reference?.methodType != null) {
+      return null;
+    }
+    final library = reference?.file;
+    final name = reference?.name;
+    if (library == null || name == null) return null;
+    final declaration =
+        ctx.topLevelDeclarationsMap[library]?[name]?.declaration;
+    return declaration is FunctionDeclaration
+        ? CallableAbi.ofFunction(ctx, library, declaration)
+        : null;
+  }
+
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     final s = ctx.svar('method_result');
+    final resultRep = _declaredAbi(ctx)?.result ?? call.rep ?? ValueRep.boxed;
     final index = externalIndex;
     if (index != null) {
       ctx.pushOp(InvokeExternal(s, index, call.vector()));
-      return Variable.of(
-        ctx,
-        s,
-        call.returnType,
-        rep: call.rep ?? ValueRep.boxed,
-      );
+      return Variable.of(ctx, s, call.returnType, rep: resultRep);
     }
     final link = ownerLink;
     ctx.pushOp(
@@ -108,12 +124,7 @@ final class StaticCall extends CallTarget {
         typeEnvironmentReceiver: typeEnvironmentReceiver?.boxIfNeeded(ctx).ssa,
       ),
     );
-    return Variable.of(
-      ctx,
-      s,
-      call.returnType,
-      rep: call.rep ?? ValueRep.boxed,
-    );
+    return Variable.of(ctx, s, call.returnType, rep: resultRep);
   }
 }
 
@@ -137,47 +148,37 @@ final class ClosureCall extends CallTarget {
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    final target = ctx.svar('closure_result');
     if (known != null) {
-      ctx.pushOp(
-        Call(
-          known!.offset!,
-          call.vector(),
-          result: target,
-          typeArguments: call.runtimeTypeArguments,
-        ),
-      );
-    } else {
-      // Prefer the callee snapshotted at bind time — the binder copies it
-      // before the arguments evaluate; the path below remains for bound
-      // calls built outside [ArgumentBinder.bindSuppliedOnly]. The callee
-      // sits in object position at the call boundary: boxing in place
-      // would double-define the SSA, so unboxed values box into a fresh
-      // slot.
-      final closure =
-          call.callee ??
-          () {
-            final boxed = callee!.boxed
-                ? callee!
-                : callee!.boxIntoFreshSlot(ctx);
-            return Variable.ssa(
-              ctx,
-              Assign(ctx.svar('closure_target'), boxed.ssa),
-              boxed.type,
-              rep: boxed.rep,
-            );
-          }();
-      ctx.pushOp(
-        InvokeClosure(
-          target,
-          closure.ssa,
-          [for (final arg in call.positional) arg.value.ssa],
-          {for (final entry in call.named) entry.$1: entry.$2.value.ssa},
-          typeArguments: call.runtimeTypeArguments,
-          trusted: call.trusted,
-        ),
-      );
+      return known!.emit(ctx, call);
     }
+    final target = ctx.svar('closure_result');
+    // Prefer the callee snapshotted at bind time — the binder copies it
+    // before the arguments evaluate; the path below remains for bound
+    // calls built outside [ArgumentBinder.bindSuppliedOnly]. The callee
+    // sits in object position at the call boundary: boxing in place
+    // would double-define the SSA, so unboxed values box into a fresh
+    // slot.
+    final closure =
+        call.callee ??
+        () {
+          final boxed = callee!.boxed ? callee! : callee!.boxIntoFreshSlot(ctx);
+          return Variable.ssa(
+            ctx,
+            Assign(ctx.svar('closure_target'), boxed.ssa),
+            boxed.type,
+            rep: boxed.rep,
+          );
+        }();
+    ctx.pushOp(
+      InvokeClosure(
+        target,
+        closure.ssa,
+        [for (final arg in call.positional) arg.value.ssa],
+        {for (final entry in call.named) entry.$1: entry.$2.value.ssa},
+        typeArguments: call.runtimeTypeArguments,
+        trusted: call.trusted,
+      ),
+    );
     return Variable.of(ctx, target, call.returnType, rep: ValueRep.boxed);
   }
 }
