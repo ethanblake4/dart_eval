@@ -611,7 +611,22 @@ class TypedBackend {
     return context.withTypeParameters(
       libraryId,
       constructorOwner == null
-          ? null
+          ? switch (declaration) {
+              FunctionDeclaration(:final functionExpression) =>
+                TypeParameterOwner(
+                  TypeParameterOwnerKind.function,
+                  libraryId,
+                  name,
+                  functionExpression.offset,
+                ),
+              MethodDeclaration() => TypeParameterOwner(
+                TypeParameterOwnerKind.method,
+                libraryId,
+                name,
+                declaration.offset,
+              ),
+              _ => null,
+            }
           : TypeParameterOwner(
               TypeParameterOwnerKind.classLike,
               libraryId,

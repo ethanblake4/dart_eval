@@ -20,6 +20,31 @@ List<String> callSetup(TypedProgram program) {
 }
 
 void main() {
+  for (final closureCall in [false, true]) {
+    test('generic exports retain separate owners with '
+        '${closureCall ? 'closure' : 'direct'} calls', () {
+      final program = Compiler().compile({
+        'generic': {
+          'main.dart':
+              '''
+            Type selected<T>(T value) => T;
+            Type outer<U>(U value) {
+              ${closureCall ? 'final select = selected;' : ''}
+              return ${closureCall ? 'select<U>' : 'selected<U>'}(value);
+            }
+            bool main() => outer<int>(1) == int;
+          ''',
+        },
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        expect(runtime.executeLib('package:generic/main.dart', 'main'), true);
+      }
+    });
+  }
+
   test('inferred generic return type retains the declared callee ABI', () {
     final program = Compiler().compile({
       'generic': {
