@@ -1,12 +1,9 @@
-import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import '../member/member_name.dart';
 
 Variable compileIdentifier(
   Identifier id,
@@ -87,84 +84,6 @@ TypeRef? clauseNamedType(
       typeArgs: clause.typeArguments?.arguments,
       callerTypeParameters: typeParameters,
     );
-  }
-  return null;
-}
-
-/// Resolves [name] as a static member of [$class] in [library]. Static
-/// accessors register under `*g`/`*s` keys: [forSet] checks the setter key
-/// first (writes), otherwise the getter key (reads), then the plain name
-/// (methods and static fields).
-DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
-  CompilerContext ctx,
-  int library,
-  String $class,
-  String name, {
-  bool forSet = false,
-}) {
-  final decl = ctx.types.find(library, $class);
-  final member = decl?.staticMember(
-    name,
-    forSet ? MemberKind.setter : MemberKind.getter,
-  );
-  if (member is SourceMember) {
-    return DeclarationOrBridge(library, declaration: member.sourceDeclaration);
-  }
-  if (member is BridgeMember) {
-    return DeclarationOrBridge(
-      library,
-      bridge: member.def as BridgeDeclaration,
-    );
-  }
-  return null;
-}
-
-/// Looks up [name] as a static member of the enclosing class, then of each
-/// mixin applied to it transitively — bodies of members folded in from a
-/// mixin reference the mixin's statics bare (`with M` where M declares
-/// `static x` lets the applying class's methods say just `x`). Returns the
-/// declaration plus the library and owner name under which its global/static
-/// key was registered, or null.
-(DeclarationOrBridge<Declaration, BridgeDeclaration>, int, String)?
-resolveScopedStaticDeclaration(
-  CompilerContext ctx,
-  String name, {
-  bool forSet = false,
-}) {
-  final current = ctx.memberDeclaringClass ?? ctx.currentClass;
-  if (current == null) return null;
-  final className = declarationName(current);
-  final own = resolveStaticDeclaration(
-    ctx,
-    ctx.library,
-    className,
-    name,
-    forSet: forSet,
-  );
-  if (own != null) return (own, ctx.library, className);
-  final seen = <Declaration>{current};
-  final queue = <Declaration>[current];
-  while (queue.isNotEmpty) {
-    final decl = queue.removeAt(0);
-    for (final mixinType in classLikeClauses(decl).$2) {
-      final prefix = mixinType.importPrefix;
-      final mixinName = prefix == null
-          ? mixinType.name.lexeme
-          : '${prefix.name.lexeme}.${mixinType.name.lexeme}';
-      final ref = ctx.visibleTypes[ctx.library]?[mixinName];
-      if (ref == null) continue;
-      final found = resolveStaticDeclaration(
-        ctx,
-        ref.file,
-        ref.name,
-        name,
-        forSet: forSet,
-      );
-      if (found != null) return (found, ref.file, ref.name);
-      final mixinDecl =
-          ctx.topLevelDeclarationsMap[ref.file]?[ref.name]?.declaration;
-      if (mixinDecl != null && seen.add(mixinDecl)) queue.add(mixinDecl);
-    }
   }
   return null;
 }

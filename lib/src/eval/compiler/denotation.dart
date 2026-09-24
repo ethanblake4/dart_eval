@@ -1434,14 +1434,13 @@ Denotation resolveIdentifier(
       }
     }
 
-    final staticDeclaration = resolveScopedStaticDeclaration(
-      ctx,
+    final staticMember = ctx.memberLookup.scopedStaticMember(
       name,
       forSet: forSet,
     );
-    if (staticDeclaration != null && staticDeclaration.$1.declaration != null) {
-      final (staticDecl, scopeFile, scopeName) = staticDeclaration;
-      final staticDec = staticDecl.declaration!;
+    if (staticMember != null && staticMember.$1 is SourceMember) {
+      final (member, scopeFile, scopeName) = staticMember;
+      final staticDec = (member as SourceMember).sourceDeclaration;
       if (staticDec is MethodDeclaration) {
         if ((forSet && staticDec.isSetter) ||
             (!forSet && staticDec.isGetter) ||

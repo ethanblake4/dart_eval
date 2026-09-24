@@ -433,6 +433,47 @@ final class MemberLookup {
     return extensionMember(ext, name, kind);
   }
 
+  /// A static member visible by its bare name inside the enclosing class or
+  /// any mixin folded into it. The returned owner is the namespace used for
+  /// the member's global/static key.
+  (Member, int, String)? scopedStaticMember(
+    String name, {
+    bool forSet = false,
+  }) {
+    final current = ctx.memberDeclaringClass ?? ctx.currentClass;
+    if (current == null) return null;
+    final kind = forSet ? MemberKind.setter : MemberKind.getter;
+    (Member, int, String)? on(int library, String owner) {
+      final member = ctx.types.find(library, owner)?.staticMember(name, kind);
+      return member == null ? null : (member, library, owner);
+    }
+
+    final ownName = declarationName(current);
+    final own = on(ctx.library, ownName);
+    if (own != null) return own;
+    final seen = <Declaration>{current};
+    final queue = <Declaration>[current];
+    while (queue.isNotEmpty) {
+      final declaration = queue.removeAt(0);
+      for (final mixinType in classLikeClauses(declaration).$2) {
+        final prefix = mixinType.importPrefix;
+        final mixinName = prefix == null
+            ? mixinType.name.lexeme
+            : '${prefix.name.lexeme}.${mixinType.name.lexeme}';
+        final type = ctx.visibleTypes[ctx.library]?[mixinName];
+        if (type == null) continue;
+        final found = on(type.file, type.name);
+        if (found != null) return found;
+        final mixinDeclaration =
+            ctx.topLevelDeclarationsMap[type.file]?[type.name]?.declaration;
+        if (mixinDeclaration != null && seen.add(mixinDeclaration)) {
+          queue.add(mixinDeclaration);
+        }
+      }
+    }
+    return null;
+  }
+
   /// A member of extension [ext] by name — `E.name` namespace resolution.
   /// `method` covers static methods and instance members applied
   /// explicitly (`E.m(recv)`); `getter`/`setter` cover accessors and field
