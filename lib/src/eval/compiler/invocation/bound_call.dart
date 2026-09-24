@@ -28,7 +28,6 @@ final class BoundCall {
     this.rep,
     this.vectorOverride,
     this.declaredReturn,
-    this.genericReturnBoxed,
   });
 
   /// The receiver after coercion — compound assignments and indexed
@@ -49,9 +48,8 @@ final class BoundCall {
   /// signature, so the runtime skips per-argument checks.
   final bool trusted;
 
-  /// The result variable's representation; null defaults to
-  /// [ValueRep.boxed] at the call boundary. Source-level calls to
-  /// scalar-returning functions carry [Abi.unboxedAcrossCalls].
+  /// Compatibility representation for offset-only static calls that have no
+  /// declaration ABI yet. New target-backed paths use CallTarget.declaredAbi.
   final ValueRep? rep;
 
   /// A precomputed call vector for legacy arg machinery whose ordering
@@ -63,10 +61,6 @@ final class BoundCall {
   /// (declaration-vector paths only — null when the annotation wasn't
   /// generic-dependent or the target has no declaration).
   final TypeRef? declaredReturn;
-
-  /// Whether generic substitution narrowed the language return type without
-  /// changing the callee's compiled ABI, forcing the result to stay boxed.
-  final bool? genericReturnBoxed;
 
   /// The provided positional arguments as plain variables.
   List<Variable> get positionalValues => [

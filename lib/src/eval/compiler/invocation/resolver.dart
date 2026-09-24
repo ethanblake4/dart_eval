@@ -19,7 +19,6 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
-import '../values/abi.dart';
 import 'binder.dart';
 import 'bound_call.dart';
 import 'call.dart';
@@ -640,6 +639,7 @@ final class CallResolver {
               ),
             );
       target = refined;
+      final policy = refined?.policy ?? BindingPolicy.callerFillsDefaults;
       if (!isStatic && refined is VirtualCall) {
         // Still virtual: bind against the interface signature resolved on
         // the receiver's static type — supplied arguments only.
@@ -653,7 +653,7 @@ final class CallResolver {
               ? resolved.ownerTypeArguments
               : const {},
           returnContext: bound,
-          fillOmitted: false,
+          fillOmitted: policy == BindingPolicy.callerFillsDefaults,
         );
         mReturnType = argsPair.declaredReturn;
       } else {
@@ -695,6 +695,7 @@ final class CallResolver {
                 )
               : const {},
           returnContext: bound,
+          fillOmitted: policy == BindingPolicy.callerFillsDefaults,
         );
         mReturnType = argsPair.declaredReturn;
       }
@@ -1386,7 +1387,6 @@ final class CallResolver {
 
     var isConstructor = false;
     List<TypeRef>? inferredCtorArgs;
-    bool? genericReturnBoxed;
 
     if (bridgeDecl != null) {
       final bridge = bridgeDecl;
@@ -1424,7 +1424,6 @@ final class CallResolver {
       );
 
       mReturnType = result.declaredReturn;
-      genericReturnBoxed = result.genericReturnBoxed;
       args = result.positionalValues;
       namedArgs = result.namedValues;
       callArgs = result.vector();
@@ -1505,12 +1504,6 @@ final class CallResolver {
               ) ??
               sigReturn;
     final returnType = mReturnType ?? CoreTypes.dynamic.ref(ctx);
-    final resultRep =
-        bridgeDecl != null ||
-            sourceDecl is! FunctionDeclaration ||
-            (genericReturnBoxed ?? Abi.unboxedAcrossCalls(returnType).isBoxed)
-        ? ValueRep.boxed
-        : Abi.unboxedAcrossCalls(returnType);
     final instantiatedReturnType = isConstructor
         ? (aliasType ??
               instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
@@ -1522,7 +1515,6 @@ final class CallResolver {
           ? runtimeTypeArguments(ctx, e)
           : inferredTypeArgs,
       returnType: instantiatedReturnType,
-      rep: resultRep,
       vectorOverride: callArgs,
     );
     if (isConstructor) {
@@ -1553,7 +1545,12 @@ final class CallResolver {
             ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!,
       ).emit(ctx, boundCall);
     }
-    return StaticCall(offset).emit(ctx, boundCall);
+    return StaticCall(
+      offset,
+      functionDeclaration: sourceDecl is FunctionDeclaration
+          ? sourceDecl
+          : null,
+    ).emit(ctx, boundCall);
   }
 }
 

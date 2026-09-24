@@ -23,6 +23,14 @@ import 'resolver.dart';
 import 'bound_call.dart';
 import '../variable/value_facts.dart';
 
+/// Who supplies omitted arguments and how supplied arguments reach the callee.
+enum BindingPolicy {
+  callerFillsDefaults,
+  calleeBinds,
+  bridgeVector,
+  untypedLegacy,
+}
+
 /// What is called — the resolver's output: a value holding only the
 /// information resolution established (offsets, resolved members,
 /// receivers). [emit] produces the IR ops and the result value; binding
@@ -32,6 +40,26 @@ sealed class CallTarget {
   const CallTarget();
 
   CallSignature? get signature;
+
+  BindingPolicy get policy => switch (this) {
+    StaticCall(:final externalIndex) when externalIndex != null =>
+      BindingPolicy.bridgeVector,
+    StaticCall() => BindingPolicy.callerFillsDefaults,
+    ConstructorCall(:final externalIndex) when externalIndex != null =>
+      BindingPolicy.bridgeVector,
+    ConstructorCall() => BindingPolicy.callerFillsDefaults,
+    BridgeCall() => BindingPolicy.bridgeVector,
+    VirtualCall() ||
+    ClosureCall() ||
+    DynamicCall() ||
+    MemberValueCall() ||
+    NoSuchMethodCall() => BindingPolicy.calleeBinds,
+    EqualityCall() => BindingPolicy.untypedLegacy,
+  };
+
+  /// The callee's declared machine layout when this target has a fixed body.
+  /// Dynamic and virtual calls expose a boxed invocation boundary instead.
+  CallableAbi? declaredAbi(CompilerContext ctx) => null;
 
   Variable emit(CompilerContext ctx, BoundCall call);
 }
@@ -49,6 +77,7 @@ final class StaticCall extends CallTarget {
     this.signature,
     this.declaringLink,
     this.externalIndex,
+    this.functionDeclaration,
   });
 
   /// The resolved call offset; null only when [externalIndex] is set —
@@ -58,6 +87,10 @@ final class StaticCall extends CallTarget {
   /// A host-side function: emits `InvokeExternal` rather than `Call`.
   final int? externalIndex;
   final Member? member;
+
+  /// A resolved top-level function. Offset-only targets still use the
+  /// declaration table as a compatibility fallback.
+  final FunctionDeclaration? functionDeclaration;
 
   /// For devirtualized methods: the chain link declaring the
   /// implementation — used to bind the implementation's signature
@@ -79,10 +112,14 @@ final class StaticCall extends CallTarget {
   @override
   final CallSignature? signature;
 
-  CallableAbi? _declaredAbi(CompilerContext ctx) {
+  @override
+  CallableAbi? declaredAbi(CompilerContext ctx) {
     // Call-site type substitution may narrow the language result, but the
     // representation comes from the callee's declared machine layout.
     if (member != null) return CallableAbi.of(member!);
+    if (functionDeclaration != null) {
+      return CallableAbi.ofFunction(ctx, offset!.file!, functionDeclaration!);
+    }
     final reference = offset;
     // A method offset can have the same unqualified name as a top-level
     // function. Only plain top-level offsets index this declaration table.
@@ -102,7 +139,7 @@ final class StaticCall extends CallTarget {
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     final s = ctx.svar('method_result');
-    final resultRep = _declaredAbi(ctx)?.result ?? call.rep ?? ValueRep.boxed;
+    final resultRep = declaredAbi(ctx)?.result ?? call.rep ?? ValueRep.boxed;
     final index = externalIndex;
     if (index != null) {
       ctx.pushOp(InvokeExternal(s, index, call.vector()));

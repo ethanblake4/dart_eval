@@ -1022,19 +1022,6 @@ final class ArgumentBinder {
       );
     }
 
-    bool? boxedBySubstitution;
-    final referencedParameters = {
-      for (final entry in signature.typeParameterRefs.entries)
-        if (resolveGenerics.containsKey(entry.key) &&
-            entry.value is TypeParameterTypeRef)
-          (entry.value as TypeParameterTypeRef).parameter,
-    };
-    if (signature.returnAnnotated &&
-        _usesParameter(signature.returnType, referencedParameters)) {
-      // Substitution narrows the language type, not the compiled callee's ABI.
-      boxedBySubstitution = true;
-    }
-
     // Snapshot the pre-inference bindings: entries still identical after the
     // argument list compiles were never constrained by the arguments.
     final unboundGenerics = Map<String, TypeRef>.of(resolveGenerics);
@@ -1103,7 +1090,6 @@ final class ArgumentBinder {
       declaredReturn: returnType,
       typeArguments: resolveGenerics,
       runtimeTypeArguments: inferredRuntimeTypeArguments,
-      genericReturnBoxed: boxedBySubstitution,
     );
   }
 }
