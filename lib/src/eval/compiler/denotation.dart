@@ -63,6 +63,16 @@ final class ExtensionApplicationReceiver extends Receiver {
   final Variable value;
 }
 
+/// `E.name` — an extension's namespace value: `E.m(recv)` explicit
+/// application and `E.staticM` resolve through [ext]'s members. [value] is
+/// the marker `Type` object carried at runtime.
+final class ExtensionNamespaceReceiver extends Receiver {
+  const ExtensionNamespaceReceiver(this.ext, this.value);
+
+  final EvalExtension ext;
+  final Variable value;
+}
+
 /// `p.name` — member access into an import prefix's namespace.
 final class PrefixReceiver extends Receiver {
   const PrefixReceiver(this.prefix);
@@ -76,6 +86,8 @@ Receiver receiverOf(CompilerContext ctx, Variable v, {BoundExtension? pin}) {
   if (pin case final bound?) {
     return ExtensionApplicationReceiver(bound.ext, bound.onBindings, v);
   }
+  final ext = v.denotedExtension;
+  if (ext != null) return ExtensionNamespaceReceiver(ext, v);
   final denoted = v.denotedType;
   if (denoted != null) return TypeLiteralReceiver(denoted, v);
   return ValueReceiver(v);
@@ -1059,11 +1071,10 @@ final class ExtensionNamespaceDenotation extends Denotation {
     // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
     // (explicit application) and `E.staticM(...)` resolve through it. The
     // pseudo-type `E` exists only in the declarations map, never as a class.
-    final extType = ExtensionNamespaceTypeRef(ext.library, ext.name);
     return Variable(
       CoreTypes.type.ref(ctx),
       rep: ValueRep.boxed,
-      facts: ValueFacts(denotedType: extType, possibleClasses: [extType]),
+      facts: ValueFacts(denotedExtension: ext),
       callable: CallableValue(
         offset: DeferredOrOffset(file: ext.library, name: '${ext.name}.'),
       ),
@@ -1372,8 +1383,20 @@ Denotation resolveMemberAccess(
       return InstanceMemberDenotation(receiver, name);
     case ValueReceiver(:final value):
       return InstanceMemberDenotation(ValueReceiver(value), name);
+    case ExtensionNamespaceReceiver(:final ext):
+      final member = ext.members
+          .whereType<MethodDeclaration>()
+          .firstWhereOrNull((m) => m.name.lexeme == name);
+      if (member == null) {
+        throw CompileError(
+          'Extension member not found: ${ext.name}.$name',
+          source,
+        );
+      }
+      return ExtensionMemberDenotation(ext, member);
     case TypeLiteralReceiver(:final type, :final value):
-      // `E.member` — access through the extension namespace.
+      // A type literal sharing its name with an extension still resolves
+      // members through the extension namespace.
       final ext = extensionForType(ctx, type);
       if (ext != null) {
         final member = ext.members
@@ -1599,8 +1622,8 @@ Receiver compileReceiver(CompilerContext ctx, Expression target) {
         t.type,
         t.read(ctx, source: target),
       ),
-      ExtensionNamespaceDenotation e => TypeLiteralReceiver(
-        ExtensionNamespaceTypeRef(e.ext.library, e.ext.name),
+      ExtensionNamespaceDenotation e => ExtensionNamespaceReceiver(
+        e.ext,
         e.read(ctx, source: target),
       ),
       _ => ValueReceiver(denotation.read(ctx, source: target)),
@@ -1618,8 +1641,8 @@ Receiver compileReceiver(CompilerContext ctx, Expression target) {
         t.type,
         t.read(ctx, source: target),
       ),
-      ExtensionNamespaceDenotation e => TypeLiteralReceiver(
-        ExtensionNamespaceTypeRef(e.ext.library, e.ext.name),
+      ExtensionNamespaceDenotation e => ExtensionNamespaceReceiver(
+        e.ext,
         e.read(ctx, source: target),
       ),
       _ => ValueReceiver(denotation.read(ctx, source: target)),

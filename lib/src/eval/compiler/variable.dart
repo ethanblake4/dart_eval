@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/eval_extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable/value_facts.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
@@ -151,6 +152,10 @@ class Variable {
 
   /// For a `Type`-typed value, the type it denotes.
   TypeRef? get denotedType => facts.denotedType;
+
+  /// For an `E` expression, the extension whose namespace the value
+  /// denotes.
+  EvalExtension? get denotedExtension => facts.denotedExtension;
 
   /// Whether this value is a compile-time-constant int expression —
   /// enables the `int → double` literal coercion. Dropped as soon as the

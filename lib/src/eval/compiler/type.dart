@@ -734,51 +734,6 @@ final class FunctionTypeRef extends TypeRef {
   late final int hashCode = Object.hash(signature, nullable);
 }
 
-/// The pseudo-type of an extension's namespace value — `E` used as an
-/// expression (`E.m(recv)` explicit application, `E.staticM`). Not a value
-/// type: it exists only to route member resolution and equality through
-/// the extension's namespace.
-final class ExtensionNamespaceTypeRef extends TypeRef {
-  ExtensionNamespaceTypeRef(
-    this.library,
-    this.extensionName, {
-    super.nullable = false,
-  });
-
-  /// The library declaring the extension.
-  final int library;
-
-  /// The extension's registration name — synthesized for unnamed
-  /// extensions.
-  final String extensionName;
-
-  /// The declaring library.
-  int get file => library;
-
-  /// The extension's registration name.
-  String get name => extensionName;
-
-  @override
-  ExtensionNamespaceTypeRef withNullable(bool nullable) =>
-      nullable == this.nullable
-      ? this
-      : ExtensionNamespaceTypeRef(library, extensionName, nullable: nullable);
-
-  @override
-  TypeRef substituteTypeParameters(Substitution substitutions) => this;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ExtensionNamespaceTypeRef &&
-          nullable == other.nullable &&
-          library == other.library &&
-          extensionName == other.extensionName;
-
-  @override
-  late final int hashCode = Object.hash(library, extensionName, nullable);
-}
-
 /// The nominal view of a [TypeRef] — which library declared it, what it's
 /// called, its declaration when it has one, and its type arguments. Every
 /// variant answers these, but they are classifications over the sealed
@@ -793,7 +748,6 @@ extension TypeRefNominal on TypeRef {
     FunctionTypeRef ref => ref.file,
     TypeParameterTypeRef ref => ref.file,
     RecordTypeRef() => -1,
-    ExtensionNamespaceTypeRef ref => ref.file,
   };
 
   /// The simple name — the declaration's name, the parameter's name for
@@ -804,7 +758,6 @@ extension TypeRefNominal on TypeRef {
     FunctionTypeRef ref => ref.name,
     TypeParameterTypeRef ref => ref.name,
     RecordTypeRef ref => ref.name,
-    ExtensionNamespaceTypeRef ref => ref.name,
   };
 
   /// The declaration this type names — null for type parameters, records,

@@ -471,16 +471,19 @@ Variable _declarationToVariable(
 
   if (decl is ExtensionDeclaration) {
     // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
-    // (explicit application) and `E.staticM(...)` resolve through it. The
-    // pseudo-type `E` exists only in the declarations map, never as a class.
-    final extType = ExtensionNamespaceTypeRef(
-      decOrBridge.sourceLib,
-      declarationName(decl),
+    // (explicit application) and `E.staticM(...)` resolve through it.
+    final ext = ctx.extensions.firstWhere(
+      (e) => e.declaration == decl,
+      orElse: () => EvalExtension(
+        decOrBridge.sourceLib,
+        decl,
+        declarationName(decl),
+      ),
     );
     return Variable(
       CoreTypes.type.ref(ctx),
       rep: ValueRep.boxed,
-      facts: ValueFacts(denotedType: extType, possibleClasses: [extType]),
+      facts: ValueFacts(denotedExtension: ext),
       callable: CallableValue(
         offset: DeferredOrOffset(
           file: decOrBridge.sourceLib,

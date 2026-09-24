@@ -1,3 +1,4 @@
+import 'package:dart_eval/src/eval/compiler/helpers/eval_extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 /// Compile-time facts known about the value a [Variable] holds: what its
@@ -11,6 +12,7 @@ final class ValueFacts {
     this.exact,
     this.possibleClasses = const [],
     this.denotedType,
+    this.denotedExtension,
     this.isConst = false,
     this.isConstInt = false,
   });
@@ -31,6 +33,11 @@ final class ValueFacts {
   /// parameter values, function return types).
   final TypeRef? denotedType;
 
+  /// For an `E` expression, the extension whose namespace the value
+  /// denotes — member accesses on it resolve through [EvalExtension]'s
+  /// members.
+  final EvalExtension? denotedExtension;
+
   /// Whether this value is the result of a compile-time-constant
   /// expression — a literal or a `const`-declared binding.
   final bool isConst;
@@ -43,12 +50,14 @@ final class ValueFacts {
     TypeRef? exact,
     List<TypeRef>? possibleClasses,
     TypeRef? denotedType,
+    EvalExtension? denotedExtension,
     bool? isConst,
     bool? isConstInt,
   }) => ValueFacts(
     exact: exact ?? this.exact,
     possibleClasses: possibleClasses ?? this.possibleClasses,
     denotedType: denotedType ?? this.denotedType,
+    denotedExtension: denotedExtension ?? this.denotedExtension,
     isConst: isConst ?? this.isConst,
     isConstInt: isConstInt ?? this.isConstInt,
   );
@@ -62,6 +71,9 @@ final class ValueFacts {
         ? const []
         : {...possibleClasses, ...other.possibleClasses}.toList(),
     denotedType: other.denotedType == denotedType ? denotedType : null,
+    denotedExtension: identical(other.denotedExtension, denotedExtension)
+        ? denotedExtension
+        : null,
     isConst: isConst && other.isConst,
     isConstInt: isConstInt && other.isConstInt,
   );

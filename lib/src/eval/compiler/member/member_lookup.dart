@@ -245,6 +245,14 @@ final class MemberLookup {
     // namespace — resolve against the extension's own member list.
     final ext = extensionForType(ctx, type);
     if (ext == null) return null;
+    return extensionMember(ext, name, kind);
+  }
+
+  /// A member of extension [ext] by name — `E.name` namespace resolution.
+  /// `method` covers static methods and instance members applied
+  /// explicitly (`E.m(recv)`); `getter`/`setter` cover accessors and field
+  /// accessors.
+  Member? extensionMember(EvalExtension ext, String name, MemberKind kind) {
     for (final member in ext.members) {
       if (member is MethodDeclaration &&
           member.name.lexeme == name &&

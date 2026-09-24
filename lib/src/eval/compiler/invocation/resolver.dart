@@ -104,6 +104,7 @@ final class CallResolver {
     ValueReceiver(:final value) => value,
     ExtensionApplicationReceiver(:final value) => value,
     TypeLiteralReceiver(:final value) => value,
+    ExtensionNamespaceReceiver(:final value) => value,
     SuperReceiver(:final self) => self,
     PrefixReceiver() => throw CompileError('Unresolved import prefix'),
   };
@@ -171,8 +172,30 @@ final class CallResolver {
     // `C.new(...)` invokes the unnamed constructor.
     final staticMemberName = ctorNameOf(e.methodName.name);
 
-    if (receiverOf(ctx, L, pin: extensionPinOf(ctx, e.target, L.type))
-        case TypeLiteralReceiver(:final type)) {
+    final receiver =
+        receiverOf(ctx, L, pin: extensionPinOf(ctx, e.target, L.type));
+    EvalExtension? namespaceExt;
+    if (receiver is ExtensionNamespaceReceiver) {
+      // `E.m(...)` — a member of the extension's namespace: an instance
+      // member applied explicitly (receiver is the first argument) or a
+      // static member.
+      namespaceExt = receiver.ext;
+      final member = ctx.memberLookup.extensionMember(
+        receiver.ext,
+        staticMemberName,
+        MemberKind.method,
+      );
+      resolved = member == null
+          ? null
+          : ResolvedMember(member, CoreTypes.dynamic.ref(ctx));
+      if (resolved == null) {
+        throw CompileError(
+          'Cannot find member ${receiver.ext.name}.$staticMemberName',
+          e,
+        );
+      }
+      isStatic = true;
+    } else if (receiver case TypeLiteralReceiver(:final type)) {
       // Static method
       staticType = type;
       if (ctx.topLevelDeclarationsMap[staticType
@@ -218,64 +241,7 @@ final class CallResolver {
           e,
         );
       }
-      // `C.field(args)` where `field` holds a closure, or `C.x(args)` where
-      // `x` is a static getter, reads the member value and invokes its result
-      // rather than calling a function named `C.field`/`C.x`.
-      final memberDecl0 = resolved.member is SourceMember
-          ? (resolved.member as SourceMember).node
-          : null;
-      if (memberDecl0 is FieldDeclaration ||
-          (memberDecl0 is MethodDeclaration && memberDecl0.isGetter)) {
-        // `C.getter(args)` is a function-expression invocation: the member
-        // value is read first, then the arguments evaluate.
-        return invokeValue(
-          callSite(),
-          callee: IdentifierReference(L, staticMemberName).getValue(ctx, e),
-        );
-      }
       isStatic = true;
-      // `E.m(receiver, ...)` — explicit application of an instance extension
-      // member through the namespace. The receiver is the first argument and
-      // binds the extension's `on` type parameters.
-      final memberDecl = resolved.member is SourceMember
-          ? (resolved.member as SourceMember).node
-          : null;
-      if (memberDecl is MethodDeclaration &&
-          !memberDecl.isStatic &&
-          !memberDecl.isGetter &&
-          !memberDecl.isSetter) {
-        final memberExt = extensionOfMember(ctx, memberDecl);
-        if (memberExt != null) {
-          final positional = e.argumentList.arguments;
-          if (positional.isEmpty || positional.first is NamedArgument) {
-            throw CompileError(
-              'Extension ${memberExt.name} requires a receiver argument',
-              e,
-            );
-          }
-          final receiver = compileExpression(
-            positional.first.argumentExpression,
-            ctx,
-          );
-          final bindings = matchExtensionOn(ctx, receiver.type, memberExt);
-          if (bindings == null) {
-            throw CompileError(
-              '${receiver.type} is not assignable to the `on` clause of '
-              'extension ${memberExt.name}',
-              e,
-            );
-          }
-          return invokeExtensionMethod(
-            ctx,
-            receiver,
-            e,
-            memberExt,
-            memberDecl,
-            bindings,
-            argIndexOffset: 1,
-          );
-        }
-      }
     } else if (L.type.isFunctionLike && e.methodName.name == 'call') {
       // `fn.call(...)`: Function has no declared `call` member; the call is
       // the invocation itself, typed by the callee's own signature.
@@ -386,6 +352,62 @@ final class CallResolver {
       }
     }
 
+    if (isStatic) {
+      // `C.field(args)`/`E.field(args)` where `field` holds a closure, or a
+      // static getter invoked with arguments, reads the member value and
+      // invokes its result rather than calling a function named
+      // `C.field`/`C.x`.
+      final memberDecl = resolved?.member is SourceMember
+          ? (resolved!.member as SourceMember).node
+          : null;
+      if (memberDecl is FieldDeclaration ||
+          (memberDecl is MethodDeclaration && memberDecl.isGetter)) {
+        return invokeValue(
+          callSite(),
+          callee: IdentifierReference(L, staticMemberName).getValue(ctx, e),
+        );
+      }
+      // `E.m(receiver, ...)` — explicit application of an instance
+      // extension member through the namespace. The receiver is the first
+      // argument and binds the extension's `on` type parameters.
+      if (memberDecl is MethodDeclaration &&
+          !memberDecl.isStatic &&
+          !memberDecl.isGetter &&
+          !memberDecl.isSetter) {
+        final memberExt = extensionOfMember(ctx, memberDecl);
+        if (memberExt != null) {
+          final positional = e.argumentList.arguments;
+          if (positional.isEmpty || positional.first is NamedArgument) {
+            throw CompileError(
+              'Extension ${memberExt.name} requires a receiver argument',
+              e,
+            );
+          }
+          final receiverArg = compileExpression(
+            positional.first.argumentExpression,
+            ctx,
+          );
+          final bindings = matchExtensionOn(ctx, receiverArg.type, memberExt);
+          if (bindings == null) {
+            throw CompileError(
+              '${receiverArg.type} is not assignable to the `on` clause of '
+              'extension ${memberExt.name}',
+              e,
+            );
+          }
+          return invokeExtensionMethod(
+            ctx,
+            receiverArg,
+            e,
+            memberExt,
+            memberDecl,
+            bindings,
+            argIndexOffset: 1,
+          );
+        }
+      }
+    }
+
     final resolvedMember = resolved?.member;
     if (resolvedMember is BridgeMember) {
       final br = resolvedMember.def;
@@ -461,7 +483,7 @@ final class CallResolver {
       ).bindDynamicVector(e.argumentList, before: [L]);
     } else {
       final dec = (resolved!.member as SourceMember).node as Declaration;
-      final memberLibrary = resolved.member.ownerDecl!.library;
+      final memberLibrary = (resolved.member as SourceMember).library;
       // Instance calls compile supplied arguments against the resolved
       // signature — context types and coercion apply — but only a call
       // proven static fills omitted arguments. A call that stays virtual
@@ -542,7 +564,7 @@ final class CallResolver {
     );
     mReturnType ??= memberCallResultType(
       ctx,
-      isStatic ? staticType! : L.type,
+      isStatic ? staticType ?? CoreTypes.dynamic.ref(ctx) : L.type,
       staticMemberName,
       argTypes,
       namedArgTypes,
@@ -591,8 +613,8 @@ final class CallResolver {
       return StaticCall(
         DeferredOrOffset.lookupStatic(
           ctx,
-          staticType!.file,
-          staticType.name,
+          namespaceExt?.library ?? staticType!.file,
+          namespaceExt?.name ?? staticType!.name,
           staticMemberName,
         ),
         member: resolved?.member,
