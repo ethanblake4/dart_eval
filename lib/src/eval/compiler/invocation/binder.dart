@@ -1015,10 +1015,12 @@ final class ArgumentBinder {
   BoundCall bindSourceTarget(
     CallTarget target,
     ArgumentList argumentList, {
+    List<Variable> before = const [],
     TypeArgumentList? typeArguments,
     AstNode? source,
     Map<String, TypeRef> seedGenerics = const {},
     TypeRef? returnContext,
+    int argIndexOffset = 0,
   }) {
     final (library, declaration) = switch (target) {
       StaticCall(member: SourceMember member) ||
@@ -1056,10 +1058,12 @@ final class ArgumentBinder {
       library,
       declaration,
       argumentList,
+      before: before,
       typeArguments: typeArguments,
       source: source,
       seedGenerics: seeds,
       returnContext: returnContext,
+      argIndexOffset: argIndexOffset,
       fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
       targetSignature: target.signature,
     );
@@ -1075,17 +1079,23 @@ final class ArgumentBinder {
     Map<String, TypeRef> seedGenerics = const {},
     AstNode? source,
   }) {
-    final member = switch (target) {
+    final (library, declaration) = switch (target) {
       StaticCall(member: SourceMember member) ||
-      VirtualCall(member: SourceMember member) => member,
-      _ => null,
+      VirtualCall(
+        member: SourceMember member,
+      ) => (member.library, member.sourceDeclaration),
+      StaticCall(
+        sourceDeclaration: MethodDeclaration method,
+        offset: final offset?,
+      ) =>
+        (offset.file, method),
+      _ => (null, null),
     };
-    if (member == null ||
-        member.sourceDeclaration is! MethodDeclaration ||
+    if (library == null ||
+        declaration is! MethodDeclaration ||
         target.signature == null) {
       throw StateError('Source value call requires a method signature');
     }
-    final declaration = member.sourceDeclaration as MethodDeclaration;
     final signature = target.signature!;
     final resolvedGenerics = <String, TypeRef>{...seedGenerics};
     _resolveInvocationGenerics(
@@ -1096,7 +1106,7 @@ final class ArgumentBinder {
     );
     final args = bindParameterList(
       null,
-      member.library,
+      library,
       signature,
       declaration,
       suppliedShape: CallShape.values(positionalValues, namedValues),
@@ -1114,6 +1124,7 @@ final class ArgumentBinder {
       positional: args.positional,
       named: args.named,
       vectorOverride: args.vectorOverride,
+      typeArguments: resolvedGenerics,
       returnType: returnType.isSpec(CoreTypes.voidType)
           ? CoreTypes.dynamic.ref(ctx)
           : returnType,

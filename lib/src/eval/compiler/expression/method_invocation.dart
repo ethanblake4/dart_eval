@@ -14,6 +14,7 @@ import 'expression.dart';
 import '../reference.dart';
 import 'null_aware.dart';
 import '../member/member_name.dart';
+import '../member/call_signature.dart';
 import '../invocation/call.dart';
 import '../invocation/binder.dart';
 import '../invocation/resolver.dart';
@@ -163,9 +164,9 @@ TypeRef instantiateConstructorType(
 int positionalArity(MethodInvocation e) =>
     e.argumentList.arguments.where((a) => a is! NamedArgument).length;
 
-/// Compiles `E(receiver)` — explicit extension application. The receiver
-/// keeps its own type but carries a [BoundExtension] so member lookups on
-/// the result resolve only within [ext].
+/// Compiles `E(receiver)` — explicit extension application. The resolver
+/// handles the extension pin at the call site; this validates the receiver
+/// and returns its value without retaining a local binding.
 Variable applyExtension(
   CompilerContext ctx,
   MethodInvocation e,
@@ -184,9 +185,8 @@ Variable applyExtension(
     ctx,
   ).boxIfNeeded(ctx);
   boundExtensionFor(ctx, e, ext, receiver.type); // validates `on` bindings
-  // The application result shares the receiver's SSA but is a distinct
-  // value — dropping `binding` keeps `updated()` from re-resolving the
-  // bound wrapper back to the unbound local.
+  // The application result shares the receiver's SSA but cannot rebind the
+  // source local when a later conversion changes its representation.
   return receiver.copyWith()..binding = null;
 }
 
@@ -216,9 +216,13 @@ Variable invokeExtensionMethod(
 }) {
   final extParams =
       ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
-  final result = ArgumentBinder(ctx).bindDeclaration(
-    ext.library,
-    member,
+  final target = StaticCall(
+    DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+    sourceDeclaration: member,
+    signature: CallSignature.forDeclaration(ctx, ext.library, member),
+  );
+  final result = ArgumentBinder(ctx).bindSourceTarget(
+    target,
     call.argumentList,
     before: [receiver.boxIfNeeded(ctx)],
     typeArguments: call.typeArguments,
@@ -230,9 +234,7 @@ Variable invokeExtensionMethod(
     source: call,
   );
 
-  return StaticCall(
-    DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
-  ).emit(
+  return target.emit(
     ctx,
     BoundCall(
       positional: const [],

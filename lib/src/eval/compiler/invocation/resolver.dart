@@ -6,7 +6,6 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../member/call_signature.dart';
@@ -16,8 +15,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
-import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
-import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'binder.dart';
 import 'bound_call.dart';
 import 'call.dart';
@@ -81,34 +78,37 @@ final class CallResolver {
           argIndexOffset: 1,
         );
       }
-      final arguments = ArgumentBinder(ctx).bindDeclaration(
-        receiver.ext.library,
-        member,
+      final target = StaticCall(
+        DeferredOrOffset(
+          file: receiver.ext.library,
+          name: receiver.ext.memberKey(member),
+        ),
+        sourceDeclaration: member,
+        signature: CallSignature.forDeclaration(
+          ctx,
+          receiver.ext.library,
+          member,
+        ),
+      );
+      final arguments = ArgumentBinder(ctx).bindSourceTarget(
+        target,
         invocation.argumentList,
         typeArguments: invocation.typeArguments,
         source: invocation,
         returnContext: bound,
       );
-      return denotation
-          .call(ctx, source: invocation)!
-          .emit(
-            ctx,
-            BoundCall(
-              positional: arguments.positional,
-              named: arguments.named,
-              vectorOverride: arguments.vector(),
-              runtimeTypeArguments: invocation.typeArguments == null
-                  ? arguments.runtimeTypeArguments
-                  : runtimeTypeArguments(ctx, invocation),
-              returnType:
-                  arguments.declaredReturn ??
-                  CallSignature.forDeclaration(
-                    ctx,
-                    receiver.ext.library,
-                    member,
-                  ).returnType,
-            ),
-          );
+      return target.emit(
+        ctx,
+        BoundCall(
+          positional: arguments.positional,
+          named: arguments.named,
+          vectorOverride: arguments.vector(),
+          runtimeTypeArguments: invocation.typeArguments == null
+              ? arguments.runtimeTypeArguments
+              : runtimeTypeArguments(ctx, invocation),
+          returnType: arguments.declaredReturn ?? target.signature!.returnType,
+        ),
+      );
     }
     return invokeValue(
       CallSite(
@@ -859,9 +859,7 @@ final class CallResolver {
     var recv = receiver;
     if ((namedArgs == null || namedArgs.isEmpty) &&
         !recv.type.isSpec(CoreTypes.dynamic)) {
-      // `E(x).m(...)` — explicit application pins member resolution to E.
-      // Operators are never extension members, so a pinned receiver can
-      // only reach this path dead — the probe is preserved for parity.
+      // `E(x)` pins member resolution to E, including operator members.
       final bound = extensionPin;
       if (bound != null) {
         final member = extensionMember(bound.ext, method);
@@ -1074,73 +1072,41 @@ final class CallResolver {
     Map<String, TypeRef> typeParams,
     List<Variable> args,
   ) {
-    final formals = member.parameters?.parameters ?? const [];
-    final convertedArgs = [
-      for (var i = 0; i < args.length; i++)
-        i < formals.length && formals[i].type != null
-            ? convertForAssignment(
-                ctx,
-                args[i],
-                ctx.typeFactory.formalParameterAnnotationType(
-                  ext.library,
-                  formals[i],
-                  typeParameters: typeParams,
-                ),
-                representation: MachineRepresentation.object,
-              )
-            : args[i],
-    ];
-    // Pad omitted optional positionals with their declared defaults —
-    // extension members are static calls, so the full declared argument
-    // vector is always passed.
-    final positionalFormals = formals.where((f) => f.isPositional).toList();
-    for (var i = convertedArgs.length; i < positionalFormals.length; i++) {
-      convertedArgs.add(
-        compileOmittedArgument(
-          ctx,
-          ext.library,
-          positionalFormals[i],
-          member,
-          typeParameters: typeParams,
-        ),
-      );
-    }
-    final returnType = member.returnType == null
-        ? CoreTypes.dynamic.ref(ctx)
-        : TypeRef.fromAnnotation(
-            ctx,
-            ext.library,
-            member.returnType!,
-            typeParameters: typeParams,
-          );
+    final target = StaticCall(
+      DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+      receiver: receiver.boxIfNeeded(ctx),
+      sourceDeclaration: member,
+      signature: CallSignature.forDeclaration(ctx, ext.library, member),
+    );
+    final bound = ArgumentBinder(ctx).bindSourceValues(
+      target,
+      args,
+      const {},
+      seedGenerics: typeParams,
+      source: member,
+    );
     return (
       target: receiver,
-      result:
-          StaticCall(
-            DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
-            receiver: receiver.boxIfNeeded(ctx),
-          ).emit(
-            ctx,
-            BoundCall(
-              positional: const [],
-              named: const [],
-              runtimeTypeArguments:
-                  extensionCallTypeArguments(
-                    ctx,
-                    ext,
-                    member,
-                    bindings,
-                    const {},
-                  ) ??
-                  const [],
-              returnType: returnType,
-              vectorOverride: [
-                for (final a in convertedArgs) a.boxIfNeeded(ctx).ssa,
-              ],
-            ),
-          ),
-      args: convertedArgs,
-      namedArgs: const {},
+      result: target.emit(
+        ctx,
+        BoundCall(
+          positional: bound.positional,
+          named: bound.named,
+          runtimeTypeArguments:
+              extensionCallTypeArguments(
+                ctx,
+                ext,
+                member,
+                bindings,
+                bound.typeArguments,
+              ) ??
+              const [],
+          returnType: bound.returnType,
+          vectorOverride: bound.vector(),
+        ),
+      ),
+      args: bound.positionalValues,
+      namedArgs: bound.namedValues,
     );
   }
 
@@ -1174,7 +1140,11 @@ final class CallResolver {
     // anonymous receiver).
     if (d is InstanceMemberDenotation) {
       final recv = d.receiver == null
-          ? ctx.lookupLocal('#this')!
+          ? ctx.lookupLocal('#this') ??
+                (throw CompileError(
+                  'Cannot access instance member $name without an instance receiver',
+                  e,
+                ))
           : _receiverVariable(d.receiver!);
       return invokeMethodWithTarget(ctx, recv, e, bound: bound);
     }

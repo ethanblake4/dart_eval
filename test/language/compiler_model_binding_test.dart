@@ -3,6 +3,29 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('bare instance calls without a receiver report a compile error', () {
+    expect(
+      () => Compiler().compile({
+        'binding': {
+          'main.dart': '''
+            class A {
+              int value() => 1;
+              static int invalid() => value();
+            }
+            int main() => A.invalid();
+          ''',
+        },
+      }),
+      throwsA(
+        isA<CompileError>().having(
+          (error) => error.message,
+          'message',
+          contains('without an instance receiver'),
+        ),
+      ),
+    );
+  });
+
   test('virtual calls require named arguments before emission', () {
     expect(
       () => Compiler().compile({
@@ -243,6 +266,60 @@ void main() {
         program,
       ).executeLib('package:binding/main.dart', 'main'),
       19,
+    );
+  });
+
+  test('extension methods and operators bind their target signatures', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          class Box<T> {}
+          extension BoxOps on Box<int> {
+            int score([int extra = 3]) => 10 + extra;
+            T identity<T>(T value) => value;
+            int operator +(int value) => value;
+          }
+          int main() {
+            final box = Box<int>();
+            return box.score() + BoxOps(box).score(4) +
+                BoxOps.score(box, 4) + (box + 5) +
+                box.identity<int>(6) + BoxOps.identity<int>(box, 7);
+          }
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      59,
+    );
+  });
+
+  test('extension index operators bind both supplied operands', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          class Store { int value = 0; }
+          extension StoreOps on Store {
+            int operator [](int offset) => value + offset;
+            void operator []=(int offset, int next) {
+              value = next + offset;
+            }
+          }
+          int main() {
+            final store = Store();
+            store[2] = 3;
+            return store[1];
+          }
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      6,
     );
   });
 }
