@@ -120,37 +120,6 @@ class Variable {
 
   bool get boxed => rep.isBoxed;
 
-  /// Returns this variable with the allocation proofs that do not survive a
-  /// value change dropped: [exactType], [concreteTypes], and method tear-off
-  /// info are cleared. All SSA identity and binding metadata is preserved.
-  Variable widened() {
-    return Variable(ssa, type, rep: rep, facts: facts.cleared())
-      ..binding = binding;
-  }
-
-  /// Widens this variable's allocation proofs for a control-flow join.
-  /// [incoming] are the variable's counterparts on other incoming edges.
-  /// [exactType] survives only when every edge proves the same one;
-  /// [concreteTypes] become the union across edges (empty on any edge means
-  /// unknown); method tear-off info is dropped when it differs. Returns
-  /// `this` when every edge holds this same variable.
-  Variable joinedWith(Iterable<Variable> incoming) {
-    var merged = facts;
-    var c = callable;
-    var changed = false;
-    for (final other in incoming) {
-      if (identical(other, this)) continue;
-      changed = true;
-      merged = merged.join(other.facts);
-      if (other.callable?.signature != c?.signature) {
-        c = null;
-      }
-    }
-    if (!changed) return this;
-    return Variable(ssa, type, rep: rep, callable: c, facts: merged)
-      ..binding = binding;
-  }
-
   final SSA ssa;
 
   String get name => ssa.name;

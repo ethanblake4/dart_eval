@@ -90,6 +90,20 @@ final class LocalBinding {
     _current = value..binding = this;
   }
 
+  /// An unknown replacement invalidates allocation proofs and callable
+  /// metadata. The local's SSA slot, flow type, and representation stay put.
+  void clearValueFacts() {
+    final value = current;
+    rebind(
+      Variable(
+        value.ssa,
+        value.type,
+        rep: value.rep,
+        facts: value.facts.cleared(),
+      ),
+    );
+  }
+
   /// Writes a new value through this binding's storage and replaces the
   /// previous value's flow facts with the stored value's facts.
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) {
@@ -118,17 +132,17 @@ final class LocalBinding {
     // through the cell. The trampoline restores the cell itself.
     if (storage case ExceptionSlotStorage(:final cell?)) {
       ctx.pushOp(WriteCaptureCell(cell, stored.ssa, local.representation));
-      rebind(local.widened());
+      clearValueFacts();
       return stored;
     }
     if (storage case ExceptionSlotStorage(:final slot)) {
       ctx.pushOp(StoreExceptionSlot(slot, stored.ssa));
-      rebind(local.widened());
+      clearValueFacts();
       return stored;
     }
     if (captureCell case final cell?) {
       ctx.pushOp(WriteCaptureCell(cell, stored.ssa, local.representation));
-      rebind(local.widened());
+      clearValueFacts();
       return stored;
     }
 
@@ -183,7 +197,7 @@ final class LocalBinding {
     final cell = ctx.svar('cell');
     ctx.pushOp(NewCaptureCell(cell, _current.ssa, _current.representation));
     storage = CaptureCellStorage(cell);
-    rebind(_current.widened());
+    clearValueFacts();
   }
 
   /// Re-initializes the capture cell from its current value — used at loop

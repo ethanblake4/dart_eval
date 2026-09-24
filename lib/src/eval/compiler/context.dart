@@ -113,7 +113,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 
   /// Widens local type proofs at a control-flow join. For each local that was
   /// reassigned on any of the [incoming] edges, keeps only the allocation
-  /// info every edge agrees on (see [Variable.joinedWith]). The current
+  /// info every edge agrees on. The current
   /// state's SSA bindings are authoritative — the incoming states only
   /// contribute their type proofs.
   void mergeBranchState(Iterable<ContextSaveState> incoming) {
@@ -121,13 +121,30 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       final frame = locals[i];
       for (final key in frame.keys.toList()) {
         final binding = frame[key]!;
-        binding.rebind(
-          binding.current.joinedWith([
-            for (final state in incoming)
-              if (i < state.locals.length && state.locals[i][key] != null)
-                state.locals[i][key]!.current,
-          ]),
-        );
+        final value = binding.current;
+        var facts = value.facts;
+        var callable = value.callable;
+        var changed = false;
+        for (final state in incoming) {
+          final other = i < state.locals.length
+              ? state.locals[i][key]?.current
+              : null;
+          if (other == null || identical(other, value)) continue;
+          changed = true;
+          facts = facts.join(other.facts);
+          if (other.callable?.signature != callable?.signature) callable = null;
+        }
+        if (changed) {
+          binding.rebind(
+            Variable(
+              value.ssa,
+              value.type,
+              rep: value.rep,
+              facts: facts,
+              callable: callable,
+            ),
+          );
+        }
       }
     }
   }
@@ -141,7 +158,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       for (final name in names) {
         final binding = frame[name];
         if (binding == null) continue;
-        binding.rebind(binding.current.widened());
+        binding.clearValueFacts();
       }
     }
   }
