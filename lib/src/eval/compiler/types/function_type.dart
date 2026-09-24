@@ -7,13 +7,15 @@ import '../type.dart';
 /// signature's own type parameters. Positional parameter names are not
 /// part of the type (`typedef void F(int x)` equals `void Function(int)`).
 final class FunctionSignature {
-  const FunctionSignature({
-    this.typeParameters = const [],
-    required this.positional,
+  FunctionSignature({
+    List<TypeParameterDef> typeParameters = const [],
+    required List<TypeRef> positional,
     required this.requiredPositional,
-    this.named = const {},
+    Map<String, ({TypeRef type, bool required})> named = const {},
     required this.returnType,
-  });
+  }) : typeParameters = List.unmodifiable(typeParameters),
+       positional = List.unmodifiable(positional),
+       named = Map.unmodifiable(named);
 
   /// The signature's own type parameters (`R Function<T>(T x)`). Refs to
   /// them are owned by this signature — see [TypeParameterOwnerKind].

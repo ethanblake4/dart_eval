@@ -78,7 +78,10 @@ final class CallShape {
         for (final entry in (named ?? const <String, Variable>{}).entries)
           (entry.key, ValueArg(entry.value)),
       ],
-      List.generate(positional.length, (i) => i),
+      [
+        for (var i = 0; i < positional.length; i++) i,
+        for (var i = 0; i < (named?.length ?? 0); i++) -1 - i,
+      ],
       typeArguments,
     );
   }

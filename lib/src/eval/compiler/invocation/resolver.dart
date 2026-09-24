@@ -169,8 +169,11 @@ final class CallResolver {
     // `C.new(...)` invokes the unnamed constructor.
     final staticMemberName = ctorNameOf(e.methodName.name);
 
-    final receiver =
-        receiverOf(ctx, L, pin: extensionPinOf(ctx, e.target, L.type));
+    final receiver = receiverOf(
+      ctx,
+      L,
+      pin: extensionPinOf(ctx, e.target, L.type),
+    );
     EvalExtension? namespaceExt;
     if (receiver is ExtensionNamespaceReceiver) {
       // `E.m(...)` — a member of the extension's namespace: an instance
@@ -423,6 +426,7 @@ final class CallResolver {
       namespaceExt: namespaceExt,
       argsPair: boundArgs.args,
       mReturnType: boundArgs.returnType,
+      resolvedTarget: boundArgs.target,
     );
   }
 
@@ -432,7 +436,8 @@ final class CallResolver {
   /// member's own declaration signature for source members (the interface
   /// signature while the call stays virtual, the concrete
   /// implementation's once it's static or devirtualized).
-  ({BoundCall args, TypeRef? returnType}) _bindInvokeMethodArgs(
+  ({BoundCall args, TypeRef? returnType, CallTarget? target})
+  _bindInvokeMethodArgs(
     Variable L,
     MethodInvocation e, {
     required ResolvedMember? resolved,
@@ -442,6 +447,7 @@ final class CallResolver {
   }) {
     TypeRef? mReturnType;
     BoundCall argsPair;
+    CallTarget? target;
     final bridgeTypeParameters = <String, TypeRef>{};
     final resolvedMember = resolved?.member;
     if (resolvedMember is BridgeMember) {
@@ -513,6 +519,7 @@ final class CallResolver {
                 isSuperReceiver: e.target is SuperExpression,
               ),
             );
+      target = refined;
       if (!isStatic && refined is VirtualCall) {
         // Still virtual: bind against the interface signature resolved on
         // the receiver's static type — supplied arguments only.
@@ -573,7 +580,7 @@ final class CallResolver {
       }
     }
 
-    return (args: argsPair, returnType: mReturnType);
+    return (args: argsPair, returnType: mReturnType, target: target);
   }
 
   /// The emission phase of [invokeMethod]: resolve the call's return type
@@ -591,6 +598,7 @@ final class CallResolver {
     required EvalExtension? namespaceExt,
     required BoundCall argsPair,
     required TypeRef? mReturnType,
+    required CallTarget? resolvedTarget,
   }) {
     final resolvedMember = resolved?.member;
     final argTypes = argsPair.positionalValues.map((e) => e.type).toList();
@@ -713,16 +721,7 @@ final class CallResolver {
         name: e.methodName.name,
       ).emit(ctx, boundCall);
     }
-    return Devirtualizer(ctx)
-        .refine(
-          VirtualCall(
-            receiver: L,
-            name: e.methodName.name,
-            member: resolvedMember,
-            isSuperReceiver: e.target is SuperExpression,
-          ),
-        )
-        .emit(ctx, boundCall);
+    return resolvedTarget!.emit(ctx, boundCall);
   }
 
   /// `a + b`, `a[i]`, `!x`, `a == b`, `it.moveNext()` — the operator and
@@ -882,11 +881,16 @@ final class CallResolver {
     // declared signature (e.g. `int.+` takes num) instead of the legacy
     // box-everything vector.
     if (!isBareCall && !recv.type.isSpec(CoreTypes.dynamic)) {
+      ResolvedMember? opResolved;
       try {
-        final opResolved = ctx.memberLookup.interfaceMember(
+        opResolved = ctx.memberLookup.interfaceMember(
           recv.type,
           ctx.memberNameOf(method, MemberKind.method),
         );
+      } on CompileError {
+        // No resolvable declaration — the untyped dispatch applies.
+      }
+      if (opResolved != null) {
         final opMember = opResolved.member;
         if (opMember is SourceMember && opMember.node is MethodDeclaration) {
           final opDecl = opMember.node as MethodDeclaration;
@@ -926,8 +930,6 @@ final class CallResolver {
             returnType: returnType,
           );
         }
-      } on CompileError {
-        // No resolvable declaration — the untyped dispatch applies.
       }
     }
     final result = Devirtualizer(
@@ -936,7 +938,7 @@ final class CallResolver {
     return (
       target: recv,
       result: result,
-      args: prepared,
+      args: boundCall.positionalValues,
       namedArgs: namedArgs ?? {},
     );
   }
@@ -1231,9 +1233,9 @@ final class CallResolver {
             }
           }
           aliasType = resolved;
-          sourceDecl =
-              ctx.topLevelDeclarationsMap[resolved.file]!['${resolved.name}.']
-                  ?.declaration;
+          sourceDecl = ctx
+              .topLevelDeclarationsMap[resolved.file]!['${resolved.name}.']
+              ?.declaration;
           offset = DeferredOrOffset(
             file: resolved.file,
             name: '${resolved.name}.',
@@ -1257,9 +1259,9 @@ final class CallResolver {
           }
           break;
         }
-        sourceDecl =
-            ctx.topLevelDeclarationsMap[type.file]?[constructorKey]
-                ?.declaration;
+        sourceDecl = ctx
+            .topLevelDeclarationsMap[type.file]?[constructorKey]
+            ?.declaration;
         offset = DeferredOrOffset(file: type.file, name: constructorKey);
         sigReturn = type;
         if (sourceDecl == null) {

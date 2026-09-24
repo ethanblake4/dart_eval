@@ -375,6 +375,13 @@ final class ArgumentBinder {
         argIndexToPositional[a] = p;
       }
     }
+    for (final spec in signature.named) {
+      if (spec.isRequired &&
+          !matchNamed.containsKey(spec.name) &&
+          !superParams.named.contains(spec.name)) {
+        throw CompileError('Missing required argument ${spec.name}', spec.node);
+      }
+    }
 
     // **Compile** supplied arguments in source order — a named argument
     // interleaves with positionals.

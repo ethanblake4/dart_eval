@@ -1,5 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import '../invocation/binder.dart';
+import '../invocation/bound_call.dart';
+import '../invocation/targets.dart';
 import '../member/call_signature.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -10,8 +12,6 @@ import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/ir/bridge.dart';
-import 'package:dart_eval/src/eval/ir/flow.dart';
 import '../values/value_rep.dart';
 import '../invocation/call.dart';
 import '../invocation/resolver.dart';
@@ -159,25 +159,23 @@ Variable _invokeShorthandMember(
       returnContext: bound,
     );
 
-    final s = ctx.svar('method_result');
-    ctx.pushOp(
-      Call(
-        DeferredOrOffset.lookupStatic(ctx, type.file, type.name, memberName),
-        [...result.vector()],
-        result: s,
-        typeArguments:
+    return StaticCall(
+      DeferredOrOffset.lookupStatic(ctx, type.file, type.name, memberName),
+    ).emit(
+      ctx,
+      BoundCall(
+        positional: result.positional,
+        named: result.named,
+        vectorOverride: result.vector(),
+        runtimeTypeArguments:
             typeArguments?.arguments
                 .map((t) => TypeRef.fromAnnotation(ctx, ctx.library, t))
                 .map((t) => ctx.runtimeTypes.idOf(t))
                 .toList() ??
             const [],
+        returnType: result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
+        rep: ValueRep.boxed,
       ),
-    );
-    return Variable.of(
-      ctx,
-      s,
-      result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
-      rep: ValueRep.boxed,
     );
   }
   if (member != null && member.isBridge && member.bridge is BridgeMethodDef) {
@@ -185,14 +183,6 @@ Variable _invokeShorthandMember(
     final arguments = ArgumentBinder(
       ctx,
     ).bindBridgeVector(argumentList, fd, typeParameters: const {});
-    final result = ctx.svar('method_result');
-    ctx.pushOp(
-      InvokeExternal(
-        result,
-        ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.$name']!,
-        arguments.vector(),
-      ),
-    );
     final returnType =
         resolveCallResultType(
           ctx,
@@ -209,7 +199,20 @@ Variable _invokeShorthandMember(
           ),
         ) ??
         CoreTypes.dynamic.ref(ctx);
-    return Variable.of(ctx, result, returnType, rep: ValueRep.boxed);
+    return StaticCall(
+      null,
+      externalIndex:
+          ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.$name']!,
+    ).emit(
+      ctx,
+      BoundCall(
+        positional: arguments.positional,
+        named: arguments.named,
+        vectorOverride: arguments.vector(),
+        returnType: returnType,
+        rep: ValueRep.boxed,
+      ),
+    );
   }
   // A static method, a static field/getter holding a callable, or a named
   // constructor of a class without declared ctors — resolve the member value
