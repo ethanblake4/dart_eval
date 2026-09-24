@@ -334,10 +334,10 @@ class CompilerContext with ScopeContext {
   late final typeFactory = TypeFactory(this);
 
   /// The mutable entries of [library]'s innermost type-parameter frame,
-  /// creating a base frame on first use. Direct seeds (mixin application
-  /// arguments, folded member bindings) write here — they live until the
-  /// enclosing [withTypeParameters] frame pops, or for good when no frame
-  /// is open.
+  /// creating a base frame on first use. Writes are always scoped: seeds
+  /// (mixin application arguments, folded member bindings) are added only
+  /// inside a [withTypeParameters] frame and pop with it — the base frame
+  /// is never a durable write target.
   Map<String, TypeRef> typeParameterScope(int library) =>
       (typeScopes[library] ??= TypeScope(null)).entries;
 

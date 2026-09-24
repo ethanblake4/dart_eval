@@ -15,7 +15,6 @@ import 'deferred.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
-import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
@@ -1111,12 +1110,13 @@ final class CallResolver {
     TypeRef? mReturnType;
     TypeRef? sigReturn;
     DeferredOrOffset offset;
-    DeclarationOrBridge? dec0;
+    BridgeDeclaration? bridgeDecl;
+    Declaration? sourceDecl;
     TypeRef? aliasType;
 
     switch (d) {
       case BridgeDenotation(:final target, :final name):
-        dec0 = target;
+        bridgeDecl = target.bridge;
         final bridge = target.bridge;
         TypeRef? bridgeType;
         if (bridge is BridgeFunctionDeclaration) {
@@ -1178,13 +1178,14 @@ final class CallResolver {
             }
           }
           aliasType = resolved;
-          dec0 =
-              ctx.topLevelDeclarationsMap[resolved.file]!['${resolved.name}.'];
+          sourceDecl =
+              ctx.topLevelDeclarationsMap[resolved.file]!['${resolved.name}.']
+                  ?.declaration;
           offset = DeferredOrOffset(
             file: resolved.file,
             name: '${resolved.name}.',
           );
-          if (dec0 == null) {
+          if (sourceDecl == null) {
             // The aliased class has an implicit default constructor — call
             // the synthesized body with just the runtime-type argument.
             return ConstructorCall(
@@ -1203,10 +1204,12 @@ final class CallResolver {
           }
           break;
         }
-        dec0 = ctx.topLevelDeclarationsMap[type.file]?[constructorKey];
+        sourceDecl =
+            ctx.topLevelDeclarationsMap[type.file]?[constructorKey]
+                ?.declaration;
         offset = DeferredOrOffset(file: type.file, name: constructorKey);
         sigReturn = type;
-        if (dec0 == null) {
+        if (sourceDecl == null) {
           // Call to an implicit default constructor.
           mReturnType = type;
           final instantiatedType = instantiateConstructorType(ctx, e, type);
@@ -1235,12 +1238,10 @@ final class CallResolver {
         }
         offset = target.offset!;
         sigReturn = target.signature!.returnType;
-        dec0 = switch (d) {
-          FunctionDenotation(:final target) => target,
-          StaticMemberDenotation(:final file, :final member) =>
-            DeclarationOrBridge(file, declaration: member),
-          ExtensionMemberDenotation(:final ext, :final member) =>
-            DeclarationOrBridge(ext.library, declaration: member),
+        sourceDecl = switch (d) {
+          FunctionDenotation(:final target) => target.declaration,
+          StaticMemberDenotation(:final member) => member,
+          ExtensionMemberDenotation(:final member) => member,
           _ => throw CompileError('Cannot call $name', e),
         };
       default:
@@ -1256,8 +1257,8 @@ final class CallResolver {
     List<TypeRef>? inferredCtorArgs;
     bool? genericReturnBoxed;
 
-    if (dec0.isBridge) {
-      final bridge = dec0.bridge;
+    if (bridgeDecl != null) {
+      final bridge = bridgeDecl;
 
       /// If we're invoking a class identifier directly (like ClassName()),
       /// call its default constructor
@@ -1279,7 +1280,7 @@ final class CallResolver {
       callArgs = argsPair.vector();
       isConstructor = bridge is BridgeClassDef;
     } else {
-      final dec = dec0.declaration!;
+      final dec = sourceDecl!;
       isConstructor = dec is ConstructorDeclaration;
 
       final result = ArgumentBinder(ctx).bindDeclaration(
@@ -1373,8 +1374,8 @@ final class CallResolver {
               sigReturn;
     final returnType = mReturnType ?? CoreTypes.dynamic.ref(ctx);
     final resultRep =
-        dec0.isBridge ||
-            dec0.declaration is! FunctionDeclaration ||
+        bridgeDecl != null ||
+            sourceDecl is! FunctionDeclaration ||
             (genericReturnBoxed ?? Abi.unboxedAcrossCalls(returnType).isBoxed)
         ? ValueRep.boxed
         : Abi.unboxedAcrossCalls(returnType);
@@ -1382,7 +1383,6 @@ final class CallResolver {
         ? (aliasType ??
               instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
         : returnType;
-    final declaration = dec0.isBridge ? null : dec0.declaration;
     final boundCall = BoundCall(
       positional: const [],
       named: const [],
@@ -1394,8 +1394,8 @@ final class CallResolver {
       vectorOverride: callArgs,
     );
     if (isConstructor) {
-      if (dec0.isBridge) {
-        final bridge = dec0.bridge as BridgeClassDef;
+      if (bridgeDecl is BridgeClassDef) {
+        final bridge = bridgeDecl;
         final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
         return ConstructorCall(
           staticType: type,
@@ -1410,11 +1410,11 @@ final class CallResolver {
         staticType: instantiatedReturnType,
         instantiatedType: instantiatedReturnType,
         offset: offset,
-        constructor: declaration as ConstructorDeclaration,
+        constructor: sourceDecl! as ConstructorDeclaration,
         isConst: e.inConstantContext,
       ).emit(ctx, boundCall);
     }
-    if (dec0.isBridge) {
+    if (bridgeDecl != null) {
       return StaticCall(
         null,
         externalIndex:
