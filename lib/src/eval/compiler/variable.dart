@@ -18,7 +18,6 @@ import 'values/abi.dart';
 /// `dynamic` dispatches through the receiver's runtime type.
 enum CallingConvention { static, dynamic }
 
-
 /// Compile-time metadata for a [Variable] denoting a statically known
 /// function: the link-time [offset], the [signature] used to bind and
 /// type the call, the [convention] used to reach it, and — for
@@ -531,7 +530,7 @@ class Variable {
     );
 
     if (ctx != null) {
-      uV.binding?.liveIn(ctx).rebind(uV);
+      uV.binding?.rebind(uV);
     }
     return uV;
   }

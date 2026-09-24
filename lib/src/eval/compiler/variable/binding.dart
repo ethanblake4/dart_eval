@@ -53,33 +53,6 @@ final class LocalBinding {
     current.binding = this;
   }
 
-  /// A snapshot binding for a save state: a NEW binding around a copy of
-  /// the current value and the same storage — copying the value keeps
-  /// rebinding the live binding from rewriting the save, and gives the
-  /// snapshot's value this snapshot as its back-reference.
-  factory LocalBinding.snapshot(LocalBinding binding) {
-    final snapshot = LocalBinding._raw(
-      binding.name,
-      binding.current.copyWith(),
-      binding.frameIndex,
-      binding.declaredType,
-      binding.isFinal,
-    );
-    snapshot.storage = binding.storage;
-    snapshot.initialized = binding.initialized;
-    snapshot._current.binding = snapshot;
-    return snapshot;
-  }
-
-  LocalBinding._raw(
-    this.name,
-    this._current,
-    this.frameIndex,
-    this.declaredType,
-    this.isFinal,
-  ) : storage = SsaStorage(),
-      initialized = true;
-
   final String name;
 
   /// Scope frame the binding was declared in — -1 until [setLocal] assigns it.
@@ -109,14 +82,6 @@ final class LocalBinding {
     ExceptionSlotStorage s => s.cell,
     _ => null,
   };
-
-  /// The binding currently occupying this binding's locals slot in [ctx]:
-  /// this binding, or the snapshot binding a save/restore cycle installed
-  /// in its place.
-  LocalBinding liveIn(ScopeContext ctx) {
-    if (frameIndex < 0 || frameIndex >= ctx.locals.length) return this;
-    return ctx.locals[frameIndex][name] ?? this;
-  }
 
   /// Replaces the binding's current value — assignment, reconciliation at
   /// flow joins, and in-place box/unbox updates. Storage is unchanged:

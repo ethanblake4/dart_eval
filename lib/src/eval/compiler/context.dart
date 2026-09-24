@@ -89,10 +89,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   void restoreState(ContextSaveState initial) {
     locals = [
       for (final scope in initial.locals)
-        {
-          for (final entry in scope.entries)
-            entry.key: LocalBinding.snapshot(entry.value),
-        },
+        {for (final entry in scope.entries) entry.key: entry.value.restore()},
     ];
   }
 
@@ -547,7 +544,7 @@ class CompilerContext with ScopeContext {
   /// For every local in [savedLocals] whose type differs from the current
   /// binding, write back a copy carrying the saved type (keeping the current
   /// boxing state).
-  void _restoreSavedTypes(List<Map<String, LocalBinding>> savedLocals) {
+  void _restoreSavedTypes(List<Map<String, SavedLocalBinding>> savedLocals) {
     final myLocals = [...locals];
     for (var i = 0; i < math.min(savedLocals.length, myLocals.length); i++) {
       final savedLocalsMap = savedLocals[i];
@@ -563,16 +560,44 @@ class CompilerContext with ScopeContext {
   }
 }
 
-class ContextSaveState with ScopeContext {
+/// A frozen flow-state view over stable source-level bindings. Restoring a
+/// branch changes each binding's current value and storage, never its identity.
+final class SavedLocalBinding {
+  SavedLocalBinding(LocalBinding binding)
+    : binding = binding,
+      current = binding.current.copyWith(),
+      storage = binding.storage,
+      initialized = binding.initialized;
+
+  final LocalBinding binding;
+  Variable current;
+  final BindingStorage storage;
+  final bool initialized;
+
+  void promote(TypeRef type) {
+    current = current.copyWith(type: type);
+  }
+
+  LocalBinding restore() {
+    binding.storage = storage;
+    binding.initialized = initialized;
+    binding.rebind(current.copyWith());
+    return binding;
+  }
+}
+
+class ContextSaveState {
   ContextSaveState.of(AbstractScopeContext context) {
     locals = [
       for (final scope in context.locals)
         {
           for (final entry in scope.entries)
-            entry.key: LocalBinding.snapshot(entry.value),
+            entry.key: SavedLocalBinding(entry.value),
         },
     ];
   }
+
+  late final List<Map<String, SavedLocalBinding>> locals;
 }
 
 /// The bare declared name of a class-like [Declaration] (e.g. `Foo` for
