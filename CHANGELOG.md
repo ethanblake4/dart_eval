@@ -27,6 +27,12 @@
 - Removed the compiler-only `KnownMethod`/`KnownField` tables. Intrinsic member
   semantics now live in real bridge declarations, and parameter-dependent return
   types are expressed via `BridgeReturnTypeDependency` on `BridgeFunctionDef`.
+- Virtual instance calls now bind against the interface signature and reject
+  wrong arity at compile time (matching Dart semantics), instead of falling
+  through to a call the callee would never satisfy. Supplied arguments are
+  compiled with context types and implicit coercion (`int`→`double`, tear-offs,
+  dot shorthands); callee default values are no longer re-emitted at the call
+  site.
 
 **New features**
 

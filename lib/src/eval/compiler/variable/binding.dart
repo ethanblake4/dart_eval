@@ -106,6 +106,14 @@ final class LocalBinding {
     _ => null,
   };
 
+  /// The binding currently occupying this binding's locals slot in [ctx]:
+  /// this binding, or the snapshot binding a save/restore cycle installed
+  /// in its place.
+  LocalBinding liveIn(ScopeContext ctx) {
+    if (frameIndex < 0 || frameIndex >= ctx.locals.length) return this;
+    return ctx.locals[frameIndex][name] ?? this;
+  }
+
   /// Replaces the binding's current value — assignment, reconciliation at
   /// flow joins, and in-place box/unbox updates. Storage is unchanged:
   /// rebinding never moves the value in or out of a cell or slot.

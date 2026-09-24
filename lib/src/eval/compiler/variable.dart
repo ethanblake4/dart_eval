@@ -19,13 +19,12 @@ import 'values/abi.dart';
 enum CallingConvention { static, dynamic }
 
 
-/// A compiler value with an SSA identity, language type and calling convention.
 /// Compile-time metadata for a [Variable] denoting a statically known
-/// function: the link-time [offset], the declared [returnType], the
-/// [convention] used to reach it, and — for extension-method tear-offs —
-/// the [implicitReceiver] prepended as the first argument. An offset-less
-/// instance carries only signature hints (a dynamic member value whose type
-/// is `Function`).
+/// function: the link-time [offset], the [signature] used to bind and
+/// type the call, the [convention] used to reach it, and — for
+/// extension-method tear-offs — the [implicitReceiver] prepended as the
+/// first argument. An offset-less instance carries only signature hints
+/// (a dynamic member value whose type is `Function`).
 final class CallableValue {
   const CallableValue({
     this.offset,
@@ -40,8 +39,8 @@ final class CallableValue {
   final DeferredOrOffset? offset;
 
   /// The callee's calling shape — parameter specs drive binding, and
-  /// [CallSignature.returnType]/[CallSignature.returnOverride] resolve the
-  /// call's result type.
+  /// [CallSignature.returnType]/[CallSignature.returnOverride] resolve
+  /// the call's result type.
   final CallSignature? signature;
   final CallingConvention convention;
 
@@ -55,6 +54,10 @@ final class CallableValue {
   final bool materialized;
 }
 
+/// A compiler value with an SSA identity, a language [type], a
+/// representation ([rep] → [boxed]/[representation]), optional [callable]
+/// metadata, and flow [facts]. [binding] links it to the [LocalBinding]
+/// holding it, when bound.
 class Variable {
   Variable(
     TypeRef type, {
@@ -120,6 +123,9 @@ class Variable {
 
   final TypeRef type;
 
+  /// Carriers for the binding's [LocalBinding.declaredType]/[LocalBinding.isFinal]
+  /// before the value is bound: `setLocal` copies them onto the binding.
+  /// Once bound, the binding is authoritative and these are ignored.
   final TypeRef? _declaredType;
   final bool _isFinal;
 
@@ -528,16 +534,7 @@ class Variable {
     );
 
     if (ctx != null) {
-      final b = uV.binding;
-      // The back-reference can point at a binding a save/restore cycle has
-      // since replaced in the locals map — rebind whichever binding
-      // actually occupies the slot.
-      if (b != null) {
-        final live = b.frameIndex >= 0 && b.frameIndex < ctx.locals.length
-            ? ctx.locals[b.frameIndex][b.name] ?? b
-            : b;
-        live.rebind(uV);
-      }
+      uV.binding?.liveIn(ctx).rebind(uV);
     }
     return uV;
   }
