@@ -25,6 +25,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import '../values/abi.dart';
+import '../variable/value_facts.dart';
 
 Variable compileFunctionExpression(
   FunctionExpression e,
@@ -125,7 +126,9 @@ Variable compileFunctionExpression(
             loaded,
             capture.value.current.type,
             rep: capture.value.current.rep,
-            callable: capture.value.current.callable,
+            facts: ValueFacts(
+              callableSignature: capture.value.current.methodSignature,
+            ),
           ),
           declaredType: capture.value.declaredType,
           isFinal: capture.value.isFinal,
@@ -420,8 +423,8 @@ Variable compileFunctionExpression(
       runtimeTypeId: ctx.runtimeTypes.idOf(closureType),
     ),
     closureType,
-    callable: CallableValue(
-      signature: CallSignature.returnOnly(
+    facts: ValueFacts(
+      callableSignature: CallSignature.returnOnly(
         inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
       ),
     ),

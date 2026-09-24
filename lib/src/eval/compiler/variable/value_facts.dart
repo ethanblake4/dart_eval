@@ -1,4 +1,5 @@
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 
 /// Compile-time facts known about the value a [Variable] holds: what its
 /// runtime type provably is, what it denotes, and whether it is constant.
@@ -11,6 +12,7 @@ final class ValueFacts {
     this.exact,
     this.possibleClasses = const [],
     this.denotedType,
+    this.callableSignature,
     this.isConst = false,
     this.isConstInt = false,
   });
@@ -30,6 +32,10 @@ final class ValueFacts {
   /// parameter values).
   final TypeRef? denotedType;
 
+  /// A runtime callable's known signature, including bridge return rules.
+  /// Retained when its static type is widened to `Function` or `dynamic`.
+  final CallSignature? callableSignature;
+
   /// Whether this value is the result of a compile-time-constant
   /// expression — a literal or a `const`-declared binding.
   final bool isConst;
@@ -48,6 +54,7 @@ final class ValueFacts {
     exact: exact,
     possibleClasses: possibleClasses ?? this.possibleClasses,
     denotedType: denotedType,
+    callableSignature: callableSignature,
     isConst: isConst ?? this.isConst,
     isConstInt: isConstInt ?? this.isConstInt,
   );
@@ -61,11 +68,14 @@ final class ValueFacts {
         ? const []
         : {...possibleClasses, ...other.possibleClasses}.toList(),
     denotedType: other.denotedType == denotedType ? denotedType : null,
+    callableSignature: other.callableSignature == callableSignature
+        ? callableSignature
+        : null,
     isConst: isConst && other.isConst,
     isConstInt: isConstInt && other.isConstInt,
   );
 
-  /// Facts that survive a value change — nothing. Mirrors `widened`.
+  /// No facts survive an unknown value change, including callable signatures.
   ValueFacts cleared() => const ValueFacts();
 
   /// Facts for the form a value takes once bound to a local: the const-int

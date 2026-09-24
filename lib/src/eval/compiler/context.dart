@@ -123,7 +123,6 @@ mixin ScopeContext on Object implements AbstractScopeContext {
         final binding = frame[key]!;
         final value = binding.current;
         var facts = value.facts;
-        var callable = value.callable;
         var changed = false;
         for (final state in incoming) {
           final other = i < state.locals.length
@@ -132,18 +131,9 @@ mixin ScopeContext on Object implements AbstractScopeContext {
           if (other == null || identical(other, value)) continue;
           changed = true;
           facts = facts.join(other.facts);
-          if (other.callable?.signature != callable?.signature) callable = null;
         }
         if (changed) {
-          binding.rebind(
-            Variable(
-              value.ssa,
-              value.type,
-              rep: value.rep,
-              facts: facts,
-              callable: callable,
-            ),
-          );
+          binding.rebind(value.withFacts(facts));
         }
       }
     }

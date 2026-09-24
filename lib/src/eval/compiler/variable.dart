@@ -13,32 +13,19 @@ import 'errors.dart';
 import 'member/call_signature.dart';
 import 'values/abi.dart';
 
-/// Signature information retained for runtime callable values whose static
-/// type has been widened to `Function` or `dynamic`.
-final class CallableValue {
-  const CallableValue({this.signature});
-  final CallSignature? signature;
-}
-
 /// A compiler value with an SSA identity, a language [type], a
-/// representation ([rep] → [boxed]/[representation]), optional [callable]
-/// metadata, and flow [facts]. [binding] links it to the [LocalBinding]
+/// representation ([rep] → [boxed]/[representation]), and flow [facts].
+/// [binding] links it to the [LocalBinding]
 /// holding it, when bound.
 class Variable {
-  Variable(
-    this.ssa,
-    this.type, {
-    required this.rep,
-    this.callable,
-    ValueFacts? facts,
-  }) : facts = facts ?? ValueFacts.none;
+  Variable(this.ssa, this.type, {required this.rep, ValueFacts? facts})
+    : facts = facts ?? ValueFacts.none;
 
   factory Variable.ssa(
     CompilerContext ctx,
     Operation op,
     TypeRef type, {
     ValueRep? rep,
-    CallableValue? callable,
     ValueFacts? facts,
   }) {
     ctx.pushOp(op);
@@ -55,7 +42,6 @@ class Variable {
       op.writesTo!,
       type,
       rep: rep ?? repForType(type, bank ?? MachineRepresentation.object),
-      callable: callable,
       facts: facts,
     );
   }
@@ -65,10 +51,9 @@ class Variable {
     SSA ssa,
     TypeRef type, {
     required ValueRep rep,
-    CallableValue? callable,
     ValueFacts? facts,
   }) {
-    return Variable(ssa, type, rep: rep, callable: callable, facts: facts);
+    return Variable(ssa, type, rep: rep, facts: facts);
   }
 
   /// A defined but unreachable result slot for a terminating expression.
@@ -114,9 +99,7 @@ class Variable {
   bool get isConst => facts.isConst;
 
   /// Signature information for a runtime callable, when known.
-  final CallableValue? callable;
-
-  CallSignature? get methodSignature => callable?.signature;
+  CallSignature? get methodSignature => facts.callableSignature;
 
   bool get boxed => rep.isBoxed;
 
@@ -147,7 +130,6 @@ class Variable {
         Assign(into, ssa),
         type,
         rep: target,
-        callable: callable,
         facts: facts.copyWith(isConst: false),
       );
     }
@@ -173,7 +155,6 @@ class Variable {
       dest,
       type,
       rep: target,
-      callable: callable,
       facts: facts.copyWith(isConst: false),
     );
   }
@@ -260,7 +241,6 @@ class Variable {
         Assign(ctx.svar('box_copy'), ssa),
         type,
         rep: ValueRep.boxed,
-        callable: callable,
         facts: facts.copyWith(isConst: false),
       );
     }
@@ -319,7 +299,6 @@ class Variable {
       Assign(ctx.svar(svar), ssa),
       type,
       rep: rep,
-      callable: callable,
       facts: facts.copyWith(isConst: false, isConstInt: false),
     );
   }
@@ -338,7 +317,6 @@ class Variable {
   Variable copyWith({
     TypeRef? type,
     ValueRep? rep,
-    CallableValue? callable,
     bool? isConst,
     String? name,
     List<TypeRef>? possibleClasses,
@@ -357,7 +335,6 @@ class Variable {
       name == null ? ssa : SSA(name),
       type ?? this.type,
       rep: rep ?? this.rep,
-      callable: callable ?? this.callable,
       facts: newFacts,
     )..binding = binding;
   }
@@ -398,7 +375,7 @@ class Variable {
   String toString() {
     final varName = '"$name"';
     return 'Variable{$varName, $type, '
-        '${callable == null ? '' : 'signature: ${callable!.signature?.returnType}, '}'
+        '${methodSignature == null ? '' : 'signature: ${methodSignature!.returnType}, '}'
         '${boxed ? 'boxed' : 'unboxed'}, F[${binding?.frameIndex}]}';
   }
 }

@@ -673,7 +673,7 @@ final class DynamicGet extends GetTarget {
     ),
     fieldType,
     rep: ValueRep.boxed,
-    callable: CallableValue(signature: methodSignature),
+    facts: ValueFacts(callableSignature: methodSignature),
   );
 }
 

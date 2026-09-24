@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'value_facts.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
@@ -94,14 +95,7 @@ final class LocalBinding {
   /// metadata. The local's SSA slot, flow type, and representation stay put.
   void clearValueFacts() {
     final value = current;
-    rebind(
-      Variable(
-        value.ssa,
-        value.type,
-        rep: value.rep,
-        facts: value.facts.cleared(),
-      ),
-    );
+    rebind(value.withFacts(value.facts.cleared()));
   }
 
   /// Writes a new value through this binding's storage and replaces the
@@ -174,7 +168,7 @@ final class LocalBinding {
       LoadExceptionSlot(ctx.svar('protected'), s.slot),
       _current.type,
       rep: repForType(_current.type, _current.representation),
-      callable: _current.callable,
+      facts: ValueFacts(callableSignature: _current.methodSignature),
     ),
     ExceptionSlotStorage s => _readCell(ctx, s.cell!),
     CaptureCellStorage s => _readCell(ctx, s.cell),
@@ -186,7 +180,7 @@ final class LocalBinding {
     ReadCaptureCell(ctx.svar('captured'), cell, _current.representation),
     _current.type,
     rep: repForType(_current.type, _current.representation),
-    callable: _current.callable,
+    facts: ValueFacts(callableSignature: _current.methodSignature),
   );
 
   /// Moves the binding's storage behind a capture cell when [declaration]

@@ -3,6 +3,27 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('callable facts merge and clear when a binding changes target', () {
+    expect(
+      eval('''
+      int afterBranch(bool replace) {
+        Function selected = () => 1;
+        if (replace) selected = () => 'ok';
+        return selected().length;
+      }
+      int afterLoop() {
+        Function selected = () => 1;
+        for (var i = 0; i < 1; i++) {
+          selected = () => 'loop';
+        }
+        return selected().length;
+      }
+      bool main() => afterBranch(true) == 2 && afterLoop() == 4;
+    '''),
+      true,
+    );
+  });
+
   test('captured promotions retain the binding declared write type', () {
     expect(
       eval('''

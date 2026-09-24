@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import '../member/call_signature.dart';
 import '../values/abi.dart';
+import '../variable/value_facts.dart';
 import '../member/member_name.dart';
 import '../invocation/deferred.dart';
 import '../../ir/function.dart' as ir;
@@ -304,8 +305,8 @@ Variable materializeTearOff(
       boundCallableTypeArguments: boundCallableTypeArguments,
     ),
     materializedType,
-    callable: CallableValue(
-      signature: CallSignature.returnOnly(
+    facts: ValueFacts(
+      callableSignature: CallSignature.returnOnly(
         materializedType is FunctionTypeRef
             ? materializedType.signature.returnType
             : CoreTypes.dynamic.ref(ctx),
@@ -472,8 +473,10 @@ Variable instantiateRuntimeCallable(
       runtimeTypeId: ctx.runtimeTypes.idOf(instantiated),
     ),
     instantiated,
-    callable: CallableValue(
-      signature: CallSignature.returnOnly(instantiated.signature.returnType),
+    facts: ValueFacts(
+      callableSignature: CallSignature.returnOnly(
+        instantiated.signature.returnType,
+      ),
     ),
   );
 }

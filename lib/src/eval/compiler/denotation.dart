@@ -1849,8 +1849,8 @@ Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
     ctx,
     InvokeExternal(ctx.svar('loadLibrary'), idx, []),
     CoreTypes.function.ref(ctx),
-    callable: CallableValue(
-      signature: CallSignature.returnOnly(
+    facts: ValueFacts(
+      callableSignature: CallSignature.returnOnly(
         CoreTypes.future
             .ref(ctx)
             .copyWith(arguments: [CoreTypes.nullType.ref(ctx)]),
