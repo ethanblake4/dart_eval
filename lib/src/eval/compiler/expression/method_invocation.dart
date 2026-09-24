@@ -3,10 +3,10 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import '../invocation/bound_call.dart';
 import '../invocation/deferred.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 
 import 'dot_shorthand.dart';
@@ -14,7 +14,6 @@ import 'expression.dart';
 import '../reference.dart';
 import 'identifier.dart';
 import 'null_aware.dart';
-import '../values/abi.dart';
 import '../member/member_name.dart';
 import '../invocation/call.dart';
 import '../invocation/binder.dart';
@@ -184,18 +183,20 @@ Variable invokeMethodWithTarget(
   TypeRef? bound,
 }) => CallResolver(ctx).invokeMethod(L, e, bound: bound);
 
-/// Emits a call to a resolved extension member: `E.m(receiver, args...)` —
-/// the receiver prepended to the argument vector, the extension's `on`
-/// bindings plus the method's resolved type arguments passed in the type
-/// environment.
+/// Emits a call to a resolved extension member: `x.m(args)` and the
+/// explicit `E.m(x, args)` both land here — the receiver binds through the
+/// vector's leading slot and is skipped in the arg list for the explicit
+/// form ([argIndexOffset]); the extension's `on` bindings plus the
+/// method's resolved type arguments go in the type environment.
 Variable invokeExtensionMethod(
   CompilerContext ctx,
   Variable receiver,
   MethodInvocation call,
   EvalExtension ext,
   MethodDeclaration member,
-  List<TypeRef> bindings,
-) {
+  List<TypeRef> bindings, {
+  int argIndexOffset = 0,
+}) {
   final extParams =
       ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
   final result = ArgumentBinder(ctx).bindDeclaration(
@@ -208,16 +209,18 @@ Variable invokeExtensionMethod(
       for (var i = 0; i < bindings.length && i < extParams.length; i++)
         extParams[i].name.lexeme: bindings[i],
     },
+    argIndexOffset: argIndexOffset,
     source: call,
   );
 
-  final s = ctx.svar('method_result');
-  ctx.pushOp(
-    Call(
-      DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
-      result.vector(),
-      result: s,
-      typeArguments:
+  return StaticCall(
+    DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+  ).emit(
+    ctx,
+    BoundCall(
+      positional: const [],
+      named: const [],
+      runtimeTypeArguments:
           extensionCallTypeArguments(
             ctx,
             ext,
@@ -226,13 +229,9 @@ Variable invokeExtensionMethod(
             result.typeArguments,
           ) ??
           runtimeTypeArguments(ctx, call),
+      returnType: result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
+      vectorOverride: result.vector(),
     ),
-  );
-  return Variable.of(
-    ctx,
-    s,
-    result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
-    rep: ValueRep.boxed,
   );
 }
 

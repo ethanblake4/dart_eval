@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart' show TypeParameter;
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/values/abi.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 /// Whether a member *value* call evaluates the read or the arguments first.
@@ -28,6 +29,7 @@ final class BoundCall {
     this.runtimeTypeArguments = const [],
     required this.returnType,
     this.trusted = false,
+    this.rep,
     this.vectorOverride,
     this.declaredReturn,
     this.genericReturnBoxed,
@@ -51,6 +53,11 @@ final class BoundCall {
   /// ClosureCall: every supplied argument proven against the static
   /// signature, so the runtime skips per-argument checks.
   final bool trusted;
+
+  /// The result variable's representation; null defaults to
+  /// [ValueRep.boxed] at the call boundary. Source-level calls to
+  /// scalar-returning functions carry [Abi.unboxedAcrossCalls].
+  final ValueRep? rep;
 
   /// A precomputed call vector for legacy arg machinery whose ordering
   /// doesn't decompose into positional-then-named (dynamic source order,

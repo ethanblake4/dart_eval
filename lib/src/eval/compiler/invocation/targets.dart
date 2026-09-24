@@ -48,9 +48,15 @@ final class StaticCall extends CallTarget {
     this.typeEnvironmentReceiver,
     this.signature,
     this.declaringLink,
+    this.externalIndex,
   });
 
-  final DeferredOrOffset offset;
+  /// The resolved call offset; null only when [externalIndex] is set —
+  /// bridge members call through `bridgeStaticFunctionIndices`.
+  final DeferredOrOffset? offset;
+
+  /// A host-side function: emits `InvokeExternal` rather than `Call`.
+  final int? externalIndex;
   final Member? member;
 
   /// For devirtualized methods: the chain link declaring the
@@ -76,10 +82,20 @@ final class StaticCall extends CallTarget {
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     final s = ctx.svar('method_result');
+    final index = externalIndex;
+    if (index != null) {
+      ctx.pushOp(InvokeExternal(s, index, call.vector()));
+      return Variable.of(
+        ctx,
+        s,
+        call.returnType,
+        rep: call.rep ?? ValueRep.boxed,
+      );
+    }
     final link = ownerLink;
     ctx.pushOp(
       Call(
-        offset,
+        offset!,
         [
           if (receiver != null)
             link != null
@@ -92,7 +108,12 @@ final class StaticCall extends CallTarget {
         typeEnvironmentReceiver: typeEnvironmentReceiver?.boxIfNeeded(ctx).ssa,
       ),
     );
-    return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
+    return Variable.of(
+      ctx,
+      s,
+      call.returnType,
+      rep: call.rep ?? ValueRep.boxed,
+    );
   }
 }
 

@@ -7,7 +7,6 @@ import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import '../member/call_signature.dart';
@@ -17,7 +16,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
-import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/expression/function.dart';
@@ -33,7 +31,6 @@ import 'accessors.dart';
 import 'devirtualizer.dart';
 import 'intrinsics.dart';
 import 'targets.dart';
-import '../variable/value_facts.dart';
 
 /// Turns a [CallSite] into a [CallTarget] and emits the call. Resolution
 /// consults only the receiver's static type and facts plus the syntactic
@@ -269,48 +266,14 @@ final class CallResolver {
               e,
             );
           }
-          final extParams =
-              memberExt.declaration.typeParameters?.typeParameters ??
-              const <TypeParameter>[];
-          final result = ArgumentBinder(ctx).bindDeclaration(
-            memberExt.library,
-            memberDecl,
-            e.argumentList,
-            before: [receiver.boxIfNeeded(ctx)],
-            typeArguments: e.typeArguments,
-            seedGenerics: {
-              for (var i = 0; i < bindings.length && i < extParams.length; i++)
-                extParams[i].name.lexeme: bindings[i],
-            },
-            argIndexOffset: 1,
-            source: e,
-          );
-
-          final s = ctx.svar('method_result');
-          ctx.pushOp(
-            Call(
-              DeferredOrOffset(
-                file: memberExt.library,
-                name: memberExt.memberKey(memberDecl),
-              ),
-              result.vector(),
-              result: s,
-              typeArguments:
-                  extensionCallTypeArguments(
-                    ctx,
-                    memberExt,
-                    memberDecl,
-                    bindings,
-                    result.typeArguments,
-                  ) ??
-                  runtimeTypeArguments(ctx, e),
-            ),
-          );
-          return Variable.of(
+          return invokeExtensionMethod(
             ctx,
-            s,
-            result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
-            rep: ValueRep.boxed,
+            receiver,
+            e,
+            memberExt,
+            memberDecl,
+            bindings,
+            argIndexOffset: 1,
           );
         }
       }
@@ -545,7 +508,7 @@ final class CallResolver {
             MemberName(e.methodName.name, MemberKind.method),
           );
           if (member is SourceMember) {
-            bindingLib = refined.offset.file ?? memberLibrary;
+            bindingLib = refined.offset!.file ?? memberLibrary;
             bindingDec = member.sourceDeclaration;
             bindingMember = member;
             bindingView = refined.declaringLink!;
@@ -582,55 +545,51 @@ final class CallResolver {
     final returnType = mReturnType ?? CoreTypes.dynamic.ref(ctx);
 
     if (isStatic) {
-      var result = ctx.svar('method_result');
-      if (resolved?.member is BridgeMember) {
-        ctx.pushOp(
-          InvokeExternal(
-            result,
-            ctx.bridgeStaticFunctionIndices[staticType!
-                .file]!['${staticType.name}.$staticMemberName']!,
-            argsPair.vector(),
+      final declaration = resolved?.member is SourceMember
+          ? (resolved!.member as SourceMember).node
+          : null;
+      final boundCall = BoundCall(
+        positional: const [],
+        named: const [],
+        runtimeTypeArguments: runtimeTypeArguments(ctx, e).isNotEmpty
+            ? runtimeTypeArguments(ctx, e)
+            : argsPair.runtimeTypeArguments,
+        returnType: returnType,
+        vectorOverride: argsPair.vector(),
+      );
+      if (declaration is ConstructorDeclaration) {
+        return ConstructorCall(
+          staticType: staticType!,
+          instantiatedType: returnType,
+          name: staticMemberName,
+          offset: DeferredOrOffset.lookupStatic(
+            ctx,
+            staticType.file,
+            staticType.name,
+            staticMemberName,
           ),
-        );
-      } else {
-        final offset = DeferredOrOffset.lookupStatic(
+          constructor: declaration,
+          isConst: e.inConstantContext,
+        ).emit(ctx, boundCall);
+      }
+      if (resolved?.member is BridgeMember) {
+        return StaticCall(
+          null,
+          externalIndex:
+              ctx.bridgeStaticFunctionIndices[staticType!
+                  .file]!['${staticType.name}.$staticMemberName']!,
+          member: resolved?.member,
+        ).emit(ctx, boundCall);
+      }
+      return StaticCall(
+        DeferredOrOffset.lookupStatic(
           ctx,
           staticType!.file,
           staticType.name,
           staticMemberName,
-        );
-        final callArguments = [...argsPair.vector()];
-        final declaration = resolved?.member is SourceMember
-            ? (resolved!.member as SourceMember).node
-            : null;
-        // Enum constructors carry two synthetic leading parameters (index,
-        // name); direct calls — only factories are reachable — bind them null.
-        if (declaration is ConstructorDeclaration &&
-            declaration.parent?.parent is EnumDeclaration) {
-          callArguments.insertAll(0, [
-            BuiltinValue().push(ctx).ssa,
-            BuiltinValue().push(ctx).ssa,
-          ]);
-        }
-        if (declaration is ConstructorDeclaration &&
-            declaration.factoryKeyword == null) {
-          callArguments.add(pushRuntimeTypeId(ctx, staticType));
-        }
-        ctx.pushOp(
-          Call(
-            offset,
-            callArguments,
-            result: result,
-            typeArguments: runtimeTypeArguments(ctx, e).isNotEmpty
-                ? runtimeTypeArguments(ctx, e)
-                : argsPair.runtimeTypeArguments,
-          ),
-        );
-        if (declaration is ConstructorDeclaration && e.inConstantContext) {
-          result = pushInternConst(ctx, result, staticType);
-        }
-      }
-      return Variable.of(ctx, result, returnType, rep: ValueRep.boxed);
+        ),
+        member: resolved?.member,
+      ).emit(ctx, boundCall);
     }
 
     final boundCall = BoundCall(
@@ -934,7 +893,6 @@ final class CallResolver {
         namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
       );
     }
-    final target = ctx.svar('call_result');
     final returnType =
         callResultType(
           ctx,
@@ -945,19 +903,20 @@ final class CallResolver {
               namedArgs?.map((key, arg) => MapEntry(key, arg.type)) ?? {},
         ) ??
         CoreTypes.dynamic.ref(ctx);
-    ctx.pushOp(
-      Call(callee.methodOffset!, [
-        ...args.map((arg) => arg.ssa),
-        ...?namedArgs?.values.map((arg) => arg.ssa),
-      ], result: target),
-    );
     return (
       target: callee,
-      result: Variable.of(
+      result: StaticCall(callee.methodOffset!).emit(
         ctx,
-        target,
-        returnType,
-        rep: Abi.unboxedAcrossCalls(returnType),
+        BoundCall(
+          positional: const [],
+          named: const [],
+          returnType: returnType,
+          rep: Abi.unboxedAcrossCalls(returnType),
+          vectorOverride: [
+            ...args.map((arg) => arg.ssa),
+            ...?namedArgs?.values.map((arg) => arg.ssa),
+          ],
+        ),
       ),
       args: args,
       namedArgs: namedArgs ?? {},
@@ -1005,20 +964,6 @@ final class CallResolver {
         ),
       );
     }
-    final target = ctx.svar('method_result');
-    ctx.pushOp(
-      Call(
-        DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
-        [
-          receiver.boxIfNeeded(ctx).ssa,
-          for (final a in convertedArgs) a.boxIfNeeded(ctx).ssa,
-        ],
-        result: target,
-        typeArguments:
-            extensionCallTypeArguments(ctx, ext, member, bindings, const {}) ??
-            const [],
-      ),
-    );
     final returnType = member.returnType == null
         ? CoreTypes.dynamic.ref(ctx)
         : TypeRef.fromAnnotation(
@@ -1029,7 +974,30 @@ final class CallResolver {
           );
     return (
       target: receiver,
-      result: Variable.of(ctx, target, returnType, rep: ValueRep.boxed),
+      result:
+          StaticCall(
+            DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+            receiver: receiver.boxIfNeeded(ctx),
+          ).emit(
+            ctx,
+            BoundCall(
+              positional: const [],
+              named: const [],
+              runtimeTypeArguments:
+                  extensionCallTypeArguments(
+                    ctx,
+                    ext,
+                    member,
+                    bindings,
+                    const {},
+                  ) ??
+                  const [],
+              returnType: returnType,
+              vectorOverride: [
+                for (final a in convertedArgs) a.boxIfNeeded(ctx).ssa,
+              ],
+            ),
+          ),
       args: convertedArgs,
       namedArgs: const {},
     );
@@ -1187,18 +1155,18 @@ final class CallResolver {
           if (dec0 == null) {
             // The aliased class has an implicit default constructor — call
             // the synthesized body with just the runtime-type argument.
-            final callResult = ctx.svar('constructor');
-            ctx.pushOp(
-              Call(offset, [
-                pushRuntimeTypeId(ctx, resolved),
-              ], result: callResult),
-            );
-            return Variable.of(
+            return ConstructorCall(
+              staticType: resolved,
+              instantiatedType: resolved,
+              offset: offset,
+              implicitDefault: true,
+            ).emit(
               ctx,
-              callResult,
-              resolved,
-              rep: ValueRep.boxed,
-              facts: ValueFacts(exact: resolved, possibleClasses: [resolved]),
+              BoundCall(
+                positional: const [],
+                named: const [],
+                returnType: resolved,
+              ),
             );
           }
           break;
@@ -1208,22 +1176,19 @@ final class CallResolver {
         sigReturn = type;
         if (dec0 == null) {
           // Call to an implicit default constructor.
-          final result = ctx.svar('constructor');
           mReturnType = type;
           final instantiatedType = instantiateConstructorType(ctx, e, type);
-          ctx.pushOp(
-            Call(offset, [
-              pushRuntimeTypeId(ctx, instantiatedType),
-            ], result: result),
-          );
-          return Variable.of(
+          return ConstructorCall(
+            staticType: type,
+            instantiatedType: instantiatedType,
+            offset: offset,
+            implicitDefault: true,
+          ).emit(
             ctx,
-            result,
-            instantiatedType,
-            rep: Abi.unboxedAcrossCalls(type),
-            facts: ValueFacts(
-              exact: instantiatedType,
-              possibleClasses: [instantiatedType],
+            BoundCall(
+              positional: const [],
+              named: const [],
+              returnType: instantiatedType,
             ),
           );
         }
@@ -1377,82 +1342,45 @@ final class CallResolver {
               instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
         : returnType;
     final declaration = dec0.isBridge ? null : dec0.declaration;
-    final effectiveCallArgs = [...callArgs];
-    if (isConstructor &&
-        declaration is ConstructorDeclaration &&
-        declaration.factoryKeyword == null) {
-      effectiveCallArgs.add(pushRuntimeTypeId(ctx, instantiatedReturnType));
-    }
-
-    var result = ctx.svar('call');
-    if (dec0.isBridge) {
-      final bridge = dec0.bridge!;
-      if (bridge is BridgeClassDef && !bridge.wrap) {
-        final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-        final subclass = BuiltinValue().push(ctx);
-        ctx.pushOp(
-          BridgeInstantiate(
-            result,
-            ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
-            subclass.ssa,
-            effectiveCallArgs,
-            runtimeTypeId: ctx.runtimeTypes.idOf(type),
-          ),
-        );
-      } else {
-        ctx.pushOp(
-          InvokeExternal(
-            result,
-            ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!,
-            effectiveCallArgs,
-          ),
-        );
-      }
-    } else {
-      ctx.pushOp(
-        Call(
-          offset,
-          effectiveCallArgs,
-          result: result,
-          // Factories have no receiver, so the class's instantiated type
-          // arguments are delivered through the callable-type-argument
-          // channel.
-          typeArguments:
-              declaration is ConstructorDeclaration &&
-                  declaration.factoryKeyword != null
-              ? [
-                  for (final arg in instantiatedReturnType.typeArguments)
-                    ctx.runtimeTypes.idOf(arg),
-                ]
-              : isConstructor
-              ? const []
-              : runtimeTypeArguments(ctx, e).isNotEmpty
-              ? runtimeTypeArguments(ctx, e)
-              : inferredTypeArgs,
-        ),
-      );
-    }
-
-    final generativeCtor =
-        declaration is ConstructorDeclaration &&
-        declaration.factoryKeyword == null;
-    if (isConstructor && e.inConstantContext) {
-      result = pushInternConst(ctx, result, instantiatedReturnType);
-    }
-    final v = Variable.of(
-      ctx,
-      result,
-      instantiatedReturnType,
+    final boundCall = BoundCall(
+      positional: const [],
+      named: const [],
+      runtimeTypeArguments: runtimeTypeArguments(ctx, e).isNotEmpty
+          ? runtimeTypeArguments(ctx, e)
+          : inferredTypeArgs,
+      returnType: instantiatedReturnType,
       rep: resultRep,
-      facts: ValueFacts(
-        // A factory may return any subtype — the result is not exactly the
-        // declared class.
-        exact: generativeCtor ? instantiatedReturnType : null,
-        possibleClasses: [if (isConstructor) instantiatedReturnType],
-      ),
+      vectorOverride: callArgs,
     );
-
-    return v;
+    if (isConstructor) {
+      if (dec0.isBridge) {
+        final bridge = dec0.bridge as BridgeClassDef;
+        final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
+        return ConstructorCall(
+          staticType: type,
+          instantiatedType: instantiatedReturnType,
+          externalIndex:
+              ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
+          classBridge: bridge,
+          isConst: e.inConstantContext,
+        ).emit(ctx, boundCall);
+      }
+      return ConstructorCall(
+        staticType: instantiatedReturnType,
+        instantiatedType: instantiatedReturnType,
+        offset: offset,
+        constructor: declaration as ConstructorDeclaration,
+        isConst: e.inConstantContext,
+      ).emit(ctx, boundCall);
+    }
+    if (dec0.isBridge) {
+      return StaticCall(
+        null,
+        externalIndex:
+            ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!,
+      ).emit(ctx, boundCall);
+    }
+    return StaticCall(offset).emit(ctx, boundCall);
   }
 }
 
