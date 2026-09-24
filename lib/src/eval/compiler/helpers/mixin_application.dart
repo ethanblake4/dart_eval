@@ -71,7 +71,7 @@ Map<String, TypeRef>? findMixinApplication(
           Substitution.of({
             ...substitutions.bindings,
             for (var i = 0; i < mixinParams.length; i++)
-              (ref.decl?.typeParameters[i] ??
+              (nominalDeclOf(ref)?.typeParameters[i] ??
                       ctx.typeParameterDefs.key(
                         TypeParameterOwner(
                           TypeParameterOwnerKind.classLike,

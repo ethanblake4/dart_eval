@@ -170,7 +170,7 @@ sealed class TypeDecl {
     if (clauseName.typeArguments != null || interfaceArgumentsOf(mixin).isNotEmpty) {
       return mixin;
     }
-    final mixinDeclRef = mixin.decl;
+    final mixinDeclRef = nominalDeclOf(mixin);
     if (mixinDeclRef == null) return mixin;
     final mixinDecl = ctx
         .topLevelDeclarationsMap[mixinDeclRef.library]?[mixinDeclRef.name]
@@ -193,7 +193,7 @@ sealed class TypeDecl {
         typeParameters: mixinParams,
       );
       for (final sup in chainSoFar) {
-        final found = ctx.typeSystem.asInstanceOf(sup, pattern.decl);
+        final found = ctx.typeSystem.asInstanceOf(sup, nominalDeclOf(pattern));
         if (found != null) {
           ctx.typeSystem.unify(pattern, found, bindings);
         }
@@ -447,5 +447,5 @@ final class TypeDeclRegistry {
   /// The declaration for a type visible in [library] under [name] —
   /// [name] may be prefixed (`prefix.Name`).
   TypeDecl? visible(int library, String name) =>
-      _ctx.visibleTypes[library]?[name]?.decl;
+      nominalDeclOf(_ctx.visibleTypes[library]?[name]);
 }

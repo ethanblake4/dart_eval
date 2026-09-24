@@ -179,7 +179,7 @@ final class SourceMember extends Member {
   ) {
     if (!seen.add(decl)) return null;
     for (final sup in decl.supertypes.all) {
-      final d = sup.decl ?? _ctx.types.find(sup.file, sup.name);
+      final d = nominalDeclOf(sup) ?? _ctx.types.find(sup.file, sup.name);
       if (d is! SourceTypeDecl) continue;
       if (identical(d.node, target)) return d;
       final found = _findDeclaringDecl(d, target, seen);

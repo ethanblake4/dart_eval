@@ -25,7 +25,7 @@ final class TypeSystem {
   TypeRef? superclassOf(TypeRef type) {
     if (type.isTypeParameter) return null;
     if (type.isRecord) return CoreTypes.record.ref(_ctx);
-    final decl = type.decl ?? _ctx.types.find(type.file, type.name);
+    final decl = nominalDeclOf(type) ?? _ctx.types.find(type.file, type.name);
     if (decl == null) return null;
     final superclass = decl.supertypes.superclass;
     if (superclass == null) return null;
@@ -37,7 +37,7 @@ final class TypeSystem {
 
   /// The `implements` interfaces of [type], instantiated.
   List<TypeRef> interfacesOf(TypeRef type) {
-    final decl = type.decl ?? _ctx.types.find(type.file, type.name);
+    final decl = nominalDeclOf(type) ?? _ctx.types.find(type.file, type.name);
     if (decl == null || type.isTypeParameter || type.isRecord) {
       return const [];
     }
@@ -50,7 +50,7 @@ final class TypeSystem {
 
   /// The `with` mixins of [type], instantiated.
   List<TypeRef> mixinsOf(TypeRef type) {
-    final decl = type.decl ?? _ctx.types.find(type.file, type.name);
+    final decl = nominalDeclOf(type) ?? _ctx.types.find(type.file, type.name);
     if (decl == null || type.isTypeParameter || type.isRecord) {
       return const [];
     }
@@ -112,7 +112,7 @@ final class TypeSystem {
       final current = queue.removeLast();
       if (!seen.add(current)) continue;
       final currentDecl =
-          current.decl ?? _ctx.types.find(current.file, current.name);
+          nominalDeclOf(current) ?? _ctx.types.find(current.file, current.name);
       if (currentDecl != null &&
           (identical(currentDecl, target) ||
               (currentDecl.library == target.library &&
@@ -157,7 +157,7 @@ final class TypeSystem {
       unify(ps.returnType, cs.returnType, substitutions);
       return;
     }
-    if (!identical(pattern.decl, concrete.decl)) {
+    if (!identical(nominalDeclOf(pattern), nominalDeclOf(concrete))) {
       _unifyViaSupertypes(pattern, concrete, substitutions);
       return;
     }
@@ -182,7 +182,7 @@ final class TypeSystem {
     while (queue.isNotEmpty) {
       final current = queue.removeLast();
       if (!seen.add(current)) continue;
-      if (identical(current.decl, concrete.decl)) {
+      if (identical(nominalDeclOf(current), nominalDeclOf(concrete))) {
         if (interfaceArgumentsOf(current).isEmpty &&
             !identical(current, pattern) &&
             interfaceArgumentsOf(pattern).length == interfaceArgumentsOf(concrete).length) {
@@ -324,7 +324,7 @@ final class TypeSystem {
     while (worklist.isNotEmpty) {
       final current = worklist.removeLast();
       if (!seen.add('${current.file}:${current.name}')) continue;
-      final decl = current.decl;
+      final decl = nominalDeclOf(current);
       final classDef = decl is BridgeTypeDecl ? decl.classDef : null;
       if (classDef != null) {
         final names = classDef.type.generics.keys.toList();
@@ -393,7 +393,7 @@ final class TypeSystem {
         }
         final types0 = chain[i];
         for (final type in types0) {
-          final key = type.decl ?? type;
+          final key = nominalDeclOf(type) ?? type;
           if (refCount[key] == null) {
             refCount[key] = 1;
             layer[key] = i;
@@ -602,7 +602,7 @@ final class TypeSystem {
     // to [from]'s applied arguments for the recursion.
     final supertypes = from.isRecord
         ? const <TypeRef>[]
-        : from.decl?.supertypes.all.toList() ?? const <TypeRef>[];
+        : nominalDeclOf(from)?.supertypes.all.toList() ?? const <TypeRef>[];
     for (final type in supertypes) {
       final inheritedGenerics = interfaceArgumentsOf(type).isEmpty
           ? generics

@@ -106,7 +106,7 @@ sealed class TypeRef {
     );
     // Inside the class, `this` is self-instantiated: `C<T>` where `T` is the
     // class's own parameter — not the raw declaration type `C<dynamic>`.
-    final decl = ref.decl;
+    final decl = nominalDeclOf(ref);
     if (decl != null && decl.typeParameters.isNotEmpty) {
       final params = classLikeClauses(currentClass).$4;
       final refs = classTypeParameterRefs(ctx, ref.file, ref.name, params);
@@ -133,10 +133,10 @@ sealed class TypeRef {
 
   /// Whether this type names the declaration [spec] refers to. Nullability
   /// and type arguments are ignored, matching today's nominal `==`.
-  bool isSpec(BridgeTypeSpec spec) => decl?.isSpec(spec) ?? false;
+  bool isSpec(BridgeTypeSpec spec) => nominalDeclOf(this)?.isSpec(spec) ?? false;
 
   /// Whether this type's declaration lives in `dart:core`.
-  bool get isDartCore => decl?.isDartCore ?? false;
+  bool get isDartCore => nominalDeclOf(this)?.isDartCore ?? false;
 
   /// Records have no declaration — the canonical `@record` name is the only
   /// identity.
@@ -479,8 +479,8 @@ bool sameDeclaration(TypeRef a, TypeRef b) {
         b is TypeParameterTypeRef &&
         a.parameter == b.parameter;
   }
-  final da = a.decl;
-  final db = b.decl;
+  final da = nominalDeclOf(a);
+  final db = nominalDeclOf(b);
   if (da != null && db != null) {
     return _sameDecl(da, db);
   }
@@ -734,15 +734,15 @@ final class FunctionTypeRef extends TypeRef {
   late final int hashCode = Object.hash(signature, nullable);
 }
 
-/// The nominal view of a [TypeRef] — which library declared it, what it's
-/// called, its declaration when it has one, and its type arguments. Every
-/// variant answers these, but they are classifications over the sealed
-/// set, not shared fields: a record has no library, a type parameter has
-/// no declaration, and only an interface type has arguments.
+/// The nominal view of a [TypeRef] — which library declared it and what
+/// it's called. Every variant answers these as classifications over the
+/// sealed set, not shared fields (a record's library is -1, its name the
+/// canonical `@record`). Declarations and arguments are NOT here:
+/// [nominalDeclOf] and [interfaceArgumentsOf] narrow explicitly.
 extension TypeRefNominal on TypeRef {
   /// The declaring library — the declaration's library for interface and
-  /// function types, the owner library for type parameters, the
-  /// extension's library for its namespace, and -1 for records.
+  /// function types, the owner library for type parameters, and -1 for
+  /// records.
   int get file => switch (this) {
     InterfaceTypeRef ref => ref.file,
     FunctionTypeRef ref => ref.file,
@@ -751,8 +751,7 @@ extension TypeRefNominal on TypeRef {
   };
 
   /// The simple name — the declaration's name, the parameter's name for
-  /// type parameters, the canonical `@record` name for records, and the
-  /// registration name for extension namespaces.
+  /// type parameters, and the canonical `@record` name for records.
   String get name => switch (this) {
     InterfaceTypeRef ref => ref.name,
     FunctionTypeRef ref => ref.name,
@@ -760,14 +759,15 @@ extension TypeRefNominal on TypeRef {
     RecordTypeRef ref => ref.name,
   };
 
-  /// The declaration this type names — null for type parameters, records,
-  /// and extension namespaces.
-  TypeDecl? get decl => switch (this) {
-    InterfaceTypeRef(:final decl) || FunctionTypeRef(:final decl) => decl,
-    _ => null,
-  };
-
 }
+
+/// The declaration [type] names when it's a nominal type — null for
+/// type parameters and records. (The former `TypeRefNominal.decl` getter,
+/// removed so callers opt into the nominal narrowing by name.)
+TypeDecl? nominalDeclOf(TypeRef? type) => switch (type) {
+  InterfaceTypeRef(:final decl) || FunctionTypeRef(:final decl) => decl,
+  _ => null,
+};
 
 /// [InterfaceTypeRef.arguments] when [type] is an interface type, empty
 /// otherwise — the explicit narrowing the removed `TypeRefNominal

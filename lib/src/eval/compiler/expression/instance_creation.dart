@@ -196,7 +196,7 @@ Variable compileInstanceOf(
         final concrete =
             ctx.typeSystem.asInstanceOf(
               arguments.positionalValues[i].type,
-              pattern.decl,
+              nominalDeclOf(pattern),
             ) ??
             arguments.positionalValues[i].type;
         ctx.typeSystem.unify(pattern, concrete, bindings);

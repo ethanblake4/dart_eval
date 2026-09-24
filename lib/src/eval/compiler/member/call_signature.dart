@@ -340,10 +340,9 @@ final class CallSignature {
       ownerParams = scope;
     } else if (host is Declaration) {
       ownerParams =
-          ctx
-              .visibleTypes[library]?[declarationName(host)]
-              ?.decl
-              ?.ownTypeParams ??
+          nominalDeclOf(
+                ctx.visibleTypes[library]?[declarationName(host)],
+              )?.ownTypeParams ??
           const {};
     }
     return CallSignature.source(

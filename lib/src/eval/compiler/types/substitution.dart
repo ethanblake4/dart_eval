@@ -20,7 +20,7 @@ final class Substitution {
   /// arguments use the bound, or `dynamic` when unbounded — the rule
   /// `appliedArguments` applies today.
   factory Substitution.forInterface(TypeRef type) {
-    final decl = type.decl;
+    final decl = nominalDeclOf(type);
     final params = decl?.typeParameters ?? const <TypeParameterDef>[];
     if (params.isEmpty) {
       if (interfaceArgumentsOf(type).isEmpty) return empty;

@@ -103,7 +103,7 @@ TypeRef instantiateConstructorType(
     return base.substituteTypeParameters(
       Substitution.of({
         for (var i = 0; i < inferredArgs.length; i++)
-          (base.decl?.typeParameters[i] ??
+          (nominalDeclOf(base)?.typeParameters[i] ??
                   ctx.typeParameterDefs.key(
                     TypeParameterOwner(
                       TypeParameterOwnerKind.classLike,

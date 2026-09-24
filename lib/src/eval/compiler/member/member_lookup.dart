@@ -77,7 +77,7 @@ final class MemberLookup {
         chain: chain,
       );
     }
-    final decl = type.decl ?? ctx.types.find(type.file, type.name);
+    final decl = nominalDeclOf(type) ?? ctx.types.find(type.file, type.name);
     if (decl == null) {
       // Structural types (records, function types) have no declaration of
       // their own; their members come from the nominal supertype.
@@ -239,7 +239,7 @@ final class MemberLookup {
   /// A static member of [type] by name. Returns null when absent —
   /// `resolveStaticMethod`'s callers throw their own error messages.
   Member? staticMember(TypeRef type, String name, MemberKind kind) {
-    final decl = type.decl ?? ctx.types.find(type.file, type.name);
+    final decl = nominalDeclOf(type) ?? ctx.types.find(type.file, type.name);
     if (decl != null) return decl.staticMember(name, kind);
     // Extensions have no TypeDecl; `E.name` keys live in the static
     // namespace — resolve against the extension's own member list.

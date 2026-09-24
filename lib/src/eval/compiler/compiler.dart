@@ -494,7 +494,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             if (child.isBridge) {
               final bridge = child.bridge!;
               final type0 = BridgeTypeRef.type(
-                _ctx.runtimeTypes.indexMap[cached.decl!],
+                _ctx.runtimeTypes.indexMap[nominalDeclOf(cached)!],
               );
               if (bridge is BridgeClassDef) {
                 child.bridge = bridge.copyWith(
@@ -526,7 +526,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         if (declarationOrBridge.isBridge) {
           final bridge = declarationOrBridge.bridge!;
           final type0 = BridgeTypeRef.type(
-            _ctx.runtimeTypes.indexMap[type.decl!],
+            _ctx.runtimeTypes.indexMap[nominalDeclOf(type)!],
           );
           if (bridge is BridgeClassDef) {
             declarationOrBridge.bridge = bridge.copyWith(
