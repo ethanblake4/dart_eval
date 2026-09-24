@@ -326,7 +326,13 @@ _mixinMembers(
             c.namePart.typeName.lexeme,
           ),
           c.namePart.typeParameters?.typeParameters,
-          () => _mixinMembers(ctx, c.withClause!.mixinTypes, c, visited, ref.file),
+          () => _mixinMembers(
+            ctx,
+            c.withClause!.mixinTypes,
+            c,
+            visited,
+            ref.file,
+          ),
         );
         memberLibraries.addAll(l0);
         final (_, cf, cm) = partitionClassMembers(c.body.members);
@@ -344,7 +350,8 @@ _mixinMembers(
             a.name.lexeme,
           ),
           a.typeParameters?.typeParameters,
-          () => _mixinMembers(ctx, a.withClause.mixinTypes, a, visited, ref.file),
+          () =>
+              _mixinMembers(ctx, a.withClause.mixinTypes, a, visited, ref.file),
         );
         memberLibraries.addAll(l);
         return (<ConstructorDeclaration>[], f, m);

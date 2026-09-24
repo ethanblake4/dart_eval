@@ -1233,6 +1233,7 @@ TypeRef? callResultType(
   required DirectCall? dispatch,
   required List<TypeRef> argTypes,
   required Map<String, TypeRef> namedArgTypes,
+  TypeDecl? signatureOwner,
 }) {
   final voidType = CoreTypes.voidType.ref(ctx);
   final signature = dispatch?.signature ?? callee?.methodSignature;
@@ -1240,9 +1241,10 @@ TypeRef? callResultType(
     final resolved = resolveCallResultType(
       ctx,
       signature: signature,
-      targetType: dispatch == null ? callee?.type : null,
+      targetType: callee?.type,
       argTypes: argTypes,
       namedArgTypes: namedArgTypes,
+      signatureOwner: signatureOwner,
     );
     if (resolved != null) return resolved;
   }
@@ -1265,6 +1267,12 @@ TypeRef? resolveCallResultType(
   required TypeRef? targetType,
   required List<TypeRef> argTypes,
   required Map<String, TypeRef> namedArgTypes,
+  // The declaration the signature's type parameters are keyed on. When it
+  // differs from [targetType]'s own declaration (an inherited member), the
+  // receiver is viewed as an instance of that declaration so its type
+  // parameters still substitute — `appliedArguments(targetType)` alone
+  // would leave them at their bounds.
+  TypeDecl? signatureOwner,
 }) {
   final voidType = CoreTypes.voidType.ref(ctx);
   final overridden = signature.returnOverride?.call(argTypes, namedArgTypes);
@@ -1272,9 +1280,14 @@ TypeRef? resolveCallResultType(
     return overridden == voidType ? null : overridden;
   }
   var resolved = signature.returnType;
-  final targetSubs = targetType == null
+  var receiver = targetType;
+  if (receiver != null && signatureOwner != null) {
+    receiver =
+        ctx.typeSystem.asInstanceOf(receiver, signatureOwner) ?? receiver;
+  }
+  final targetSubs = receiver == null
       ? null
-      : ctx.typeSystem.appliedArguments(targetType);
+      : ctx.typeSystem.appliedArguments(receiver);
   if (targetSubs != null && targetSubs.isNotEmpty) {
     resolved = resolved.substituteTypeParameters(targetSubs);
   }
@@ -1338,28 +1351,29 @@ TypeRef? memberCallResultType(
         ctx.memberLookup.staticMember(lookupType, method, MemberKind.method) ??
         (throw CompileError('Cannot find static method $lookupType.$method'));
     if (member is BridgeMember) {
-      final fd = switch (member.def) {
-        BridgeMethodDef(:final functionDescriptor) => functionDescriptor,
-        BridgeConstructorDef(:final functionDescriptor) => functionDescriptor,
-        _ => null,
-      };
-      if (fd == null) return CoreTypes.dynamic.ref(ctx);
+      if (member.isField) return CoreTypes.dynamic.ref(ctx);
+      // member.signature is in the declaring class's parameter space —
+      // signatureOwner lets resolveCallResultType view the receiver as an
+      // instance of that declaration so inherited parameters still bind.
       return resolveCallResultType(
         ctx,
-        signature: CallSignature.bridge(
-          ctx,
-          fd,
-          returnFallback: CoreTypes.dynamic.ref(ctx),
-          owner: lookupType,
-        ),
+        signature: member.signature,
         targetType: lookupType,
+        signatureOwner: member.ownerDecl,
         argTypes: argTypes,
         namedArgTypes: namedArgTypes,
       );
     }
     final node = (member as SourceMember).node;
     if (node is ConstructorDeclaration) return lookupType;
-    return member.signature.returnType;
+    return resolveCallResultType(
+      ctx,
+      signature: member.signature,
+      targetType: lookupType,
+      signatureOwner: member.ownerDecl,
+      argTypes: argTypes,
+      namedArgTypes: namedArgTypes,
+    );
   }
   if (method == 'noSuchMethod') {
     // `Object.noSuchMethod` is implicit — absent from declaration metadata.
@@ -1370,30 +1384,19 @@ TypeRef? memberCallResultType(
     ctx.memberNameOf(method, MemberKind.method),
     source: source,
   );
-  if (resolved.member is BridgeMember) {
-    final fd = switch ((resolved.member as BridgeMember).def) {
-      BridgeMethodDef(:final functionDescriptor) => functionDescriptor,
-      BridgeConstructorDef(:final functionDescriptor) => functionDescriptor,
-      _ => null,
-    };
-    if (fd == null) return CoreTypes.dynamic.ref(ctx);
-    return resolveCallResultType(
-      ctx,
-      signature: CallSignature.bridge(
-        ctx,
-        fd,
-        returnFallback: CoreTypes.dynamic.ref(ctx),
-        owner: lookupType,
-      ),
-      targetType: lookupType,
-      argTypes: argTypes,
-      namedArgTypes: namedArgTypes,
-    );
-  }
-  final node = (resolved.member as SourceMember).node;
-  if (node is! MethodDeclaration) {
+  if (resolved.member.isField) {
     // A field holding a callable — its call signature isn't modelled here.
     return CoreTypes.dynamic.ref(ctx);
   }
-  return resolved.signature.returnType;
+  // resolved.signature is already instantiated at the receiver's view of
+  // the declaring class (asInstanceOf inside interfaceMember), so no
+  // targetType substitution is needed — remaining unbound type parameters
+  // are the member's own and lower to their bounds.
+  return resolveCallResultType(
+    ctx,
+    signature: resolved.signature,
+    targetType: null,
+    argTypes: argTypes,
+    namedArgTypes: namedArgTypes,
+  );
 }
