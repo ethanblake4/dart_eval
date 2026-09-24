@@ -218,23 +218,17 @@ Variable patternMatchAndBind(
               pat.keyword!.keyword == Keyword.FINAL);
       // A `_` pattern variable is a wildcard: it matches but binds nothing.
       final bindsVariable = variableName != '_';
-      if (V.name != null) {
-        if (Abi.unboxedAcrossCalls(V.type).isBoxed) {
-          V = V.boxIfNeeded(ctx);
-        }
-        final v = Variable.ssa(
-          ctx,
-          Assign(ctx.svar(variableName), V.ssa),
-          V.type,
-          rep: V.rep,
-          isFinal: isFinal,
-        );
-        if (bindsVariable) ctx.setLocal(variableName, v);
-      } else {
-        if (bindsVariable) {
-          ctx.setLocal(variableName, V.copyWith(isFinal: isFinal));
-        }
+      if (Abi.unboxedAcrossCalls(V.type).isBoxed) {
+        V = V.boxIfNeeded(ctx);
       }
+      final v = Variable.ssa(
+        ctx,
+        Assign(ctx.svar(variableName), V.ssa),
+        V.type,
+        rep: V.rep,
+        isFinal: isFinal,
+      );
+      if (bindsVariable) ctx.setLocal(variableName, v);
 
       if (pat is DeclaredVariablePattern) {
         return _typeTest(ctx, pat.type, V);

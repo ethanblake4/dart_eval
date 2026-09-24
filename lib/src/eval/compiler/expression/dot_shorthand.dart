@@ -8,14 +8,12 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import '../invocation/deferred.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../values/value_rep.dart';
 import '../invocation/call.dart';
 import '../invocation/resolver.dart';
-import '../variable/value_facts.dart';
 
 /// Resolves the context type a `.member` shorthand selects: the bound type
 /// with nullability stripped and `FutureOr` unwrapped. Throws when the
@@ -60,14 +58,6 @@ bool containsLeadingShorthand(Expression e) => switch (e) {
   _ => false,
 };
 
-/// A type-namespace variable for [type], standing in for the `C` of `C.member`
-/// so [IdentifierReference] resolves the shorthand's static members.
-Variable _typeNamespace(CompilerContext ctx, TypeRef type) => Variable(
-  CoreTypes.type.ref(ctx),
-  rep: ValueRep.boxed,
-  facts: ValueFacts(denotedType: type, possibleClasses: [type]),
-);
-
 /// `.member` — a static member (enum value, static field, getter, method
 /// tear-off) of the context type.
 Variable compileDotShorthandPropertyAccess(
@@ -76,8 +66,8 @@ Variable compileDotShorthandPropertyAccess(
   TypeRef? bound,
 ) {
   final type = _shorthandContextType(ctx, bound, e);
-  return IdentifierReference(
-    _typeNamespace(ctx, type),
+  return IdentifierReference.receiver(
+    TypeLiteralReceiver(type),
     e.propertyName.name,
   ).getValue(ctx, e);
 }
@@ -229,15 +219,10 @@ Variable _invokeShorthandMember(
       source: source,
     );
   }
-  var fn = IdentifierReference(
-    _typeNamespace(ctx, type),
+  final fn = IdentifierReference.receiver(
+    TypeLiteralReceiver(type),
     memberName,
   ).getValue(ctx, source);
-  // A static method resolves lazily (no SSA value) — materialize its
-  // tear-off so it can be invoked like any other function value.
-  if (fn.unmaterializedCallable != null) {
-    fn = fn.tearOff(ctx);
-  }
   return CallResolver(ctx).invokeValue(
     CallSite(
       shape: CallShape.fromArgumentList(

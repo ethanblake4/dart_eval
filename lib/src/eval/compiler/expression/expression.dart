@@ -32,7 +32,6 @@ import 'package:dart_eval/src/eval/compiler/expression/throw.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 
 Variable compileExpression(
   Expression e,
@@ -44,11 +43,7 @@ Variable compileExpression(
   } else if (e is AssignmentExpression) {
     return compileAssignmentExpression(e, ctx);
   } else if (e is Identifier) {
-    final value = compileIdentifier(e, ctx);
-    if (value.unmaterializedCallable != null && value.type.isFunctionLike) {
-      return value.tearOff(ctx, boundContext: bound);
-    }
-    return value;
+    return compileIdentifier(e, ctx, bound);
   } else if (e is MethodInvocation) {
     return compileMethodInvocation(ctx, e, bound: bound);
   } else if (e is DotShorthandPropertyAccess) {
@@ -74,7 +69,7 @@ Variable compileExpression(
   } else if (e is FunctionExpression) {
     return compileFunctionExpression(e, ctx, bound);
   } else if (e is FunctionExpressionInvocation) {
-    return compileFunctionExpressionInvocation(e, ctx);
+    return compileFunctionExpressionInvocation(e, ctx, bound);
   } else if (e is AwaitExpression) {
     return compileAwaitExpression(e, ctx);
   } else if (e is InstanceCreationExpression) {

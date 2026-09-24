@@ -8,8 +8,12 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../member/member_name.dart';
 
-Variable compileIdentifier(Identifier id, CompilerContext ctx) {
-  return compileIdentifierAsReference(id, ctx).getValue(ctx, id);
+Variable compileIdentifier(
+  Identifier id,
+  CompilerContext ctx, [
+  TypeRef? bound,
+]) {
+  return compileIdentifierAsReference(id, ctx).getValue(ctx, id, bound);
 }
 
 Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
@@ -22,8 +26,10 @@ Reference compileIdentifierAsReference(Identifier id, CompilerContext ctx) {
     if (prefixRef.denotation(ctx, source: id) case PrefixDenotation()) {
       return PrefixedIdentifierReference(id.prefix.name, id.identifier.name);
     }
-    final L = prefixRef.getValue(ctx, id);
-    return IdentifierReference(L, id.identifier.name);
+    return IdentifierReference.receiver(
+      compileReceiver(ctx, id.prefix),
+      id.identifier.name,
+    );
   }
   throw CompileError('Unknown identifier ${id.runtimeType}');
 }

@@ -32,7 +32,7 @@ Variable compilePropertyAccess(
       (t) => IdentifierReference.receiver(
         receiver.withValue(t),
         pa.propertyName.name,
-      ).getValue(ctx, pa),
+      ).getValue(ctx, pa, bound),
       source: pa,
     );
   }
@@ -40,7 +40,7 @@ Variable compilePropertyAccess(
   return IdentifierReference.receiver(
     receiver,
     pa.propertyName.name,
-  ).getValue(ctx, pa);
+  ).getValue(ctx, pa, bound);
 }
 
 Reference compilePropertyAccessAsReference(

@@ -1,4 +1,3 @@
-import 'package:dart_eval/src/eval/compiler/helpers/eval_extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 /// Compile-time facts known about the value a [Variable] holds: what its
@@ -12,7 +11,6 @@ final class ValueFacts {
     this.exact,
     this.possibleClasses = const [],
     this.denotedType,
-    this.denotedExtension,
     this.isConst = false,
     this.isConstInt = false,
   });
@@ -25,18 +23,12 @@ final class ValueFacts {
   /// it justifies devirtualization even for classes that are subclassed.
   final TypeRef? exact;
 
-  /// The possible runtime classes of the value; empty means unknown. A
-  /// single entry is the denotation marker for a `Type` value.
+  /// The possible runtime classes of the value; empty means unknown.
   final List<TypeRef> possibleClasses;
 
   /// For a `Type`-typed value, the type it denotes (type literals, type
-  /// parameter values, function return types).
+  /// parameter values).
   final TypeRef? denotedType;
-
-  /// For an `E` expression, the extension whose namespace the value
-  /// denotes — member accesses on it resolve through [EvalExtension]'s
-  /// members.
-  final EvalExtension? denotedExtension;
 
   /// Whether this value is the result of a compile-time-constant
   /// expression — a literal or a `const`-declared binding.
@@ -56,7 +48,6 @@ final class ValueFacts {
     exact: exact,
     possibleClasses: possibleClasses ?? this.possibleClasses,
     denotedType: denotedType,
-    denotedExtension: denotedExtension,
     isConst: isConst ?? this.isConst,
     isConstInt: isConstInt ?? this.isConstInt,
   );
@@ -70,9 +61,6 @@ final class ValueFacts {
         ? const []
         : {...possibleClasses, ...other.possibleClasses}.toList(),
     denotedType: other.denotedType == denotedType ? denotedType : null,
-    denotedExtension: identical(other.denotedExtension, denotedExtension)
-        ? denotedExtension
-        : null,
     isConst: isConst && other.isConst,
     isConstInt: isConstInt && other.isConstInt,
   );

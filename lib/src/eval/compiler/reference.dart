@@ -1,6 +1,5 @@
 import 'helpers/global.dart';
 import 'helpers/conversion.dart';
-import 'member/call_signature.dart';
 import 'member/member.dart';
 import 'member/member_name.dart';
 import 'backend/representation.dart' show MachineRepresentation;
@@ -40,7 +39,12 @@ abstract class Reference {
 
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]);
 
-  Variable getValue(CompilerContext ctx, [AstNode? source]);
+  Variable getValue(
+    CompilerContext ctx, [
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  ]);
 
   CallTarget? getDirectCall(CompilerContext ctx, [AstNode? source]);
 }
@@ -114,8 +118,17 @@ class IdentifierReference implements Reference {
       ).write(ctx, value, source: source);
 
   @override
-  Variable getValue(CompilerContext ctx, [AstNode? source]) =>
-      denotation(ctx, source: source).read(ctx, source: source);
+  Variable getValue(
+    CompilerContext ctx, [
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  ]) => denotation(ctx, source: source).read(
+    ctx,
+    source: source,
+    boundContext: boundContext,
+    typeArguments: typeArguments,
+  );
 
   @override
   CallTarget? getDirectCall(CompilerContext ctx, [AstNode? source]) =>
@@ -152,8 +165,17 @@ class PrefixedIdentifierReference implements Reference {
       denotation(ctx, source: source).call(ctx, source: source);
 
   @override
-  Variable getValue(CompilerContext ctx, [AstNode? source]) =>
-      denotation(ctx, source: source).read(ctx, source: source);
+  Variable getValue(
+    CompilerContext ctx, [
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  ]) => denotation(ctx, source: source).read(
+    ctx,
+    source: source,
+    boundContext: boundContext,
+    typeArguments: typeArguments,
+  );
 
   @override
   TypeRef resolveType(
@@ -255,7 +277,12 @@ class IndexedReference implements Reference {
   }
 
   @override
-  Variable getValue(CompilerContext ctx, [AstNode? source]) {
+  Variable getValue(
+    CompilerContext ctx, [
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  ]) {
     _variable = _variable.updated(ctx);
     _index = _index.updated(ctx);
 
@@ -420,10 +447,6 @@ Variable typeLiteral(CompilerContext ctx, TypeRef type, String constructorKey) {
     operation,
     CoreTypes.type.ref(ctx),
     facts: ValueFacts(denotedType: type, possibleClasses: [type]),
-    callable: CallableValue(
-      offset: DeferredOrOffset(file: type.file, name: constructorKey),
-      signature: CallSignature.returnOnly(type),
-    ),
   );
 }
 

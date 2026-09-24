@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
     show clauseNamedType;
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/member/resolved_member.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -26,6 +27,62 @@ final class MemberLookup {
   const MemberLookup(this.ctx);
 
   final CompilerContext ctx;
+
+  /// The exact earlier mixin body visible from the current member's lexical
+  /// layer. Runtime member lookup on the host would see a later override.
+  FoldedMemberBody? lexicalSuperBody(String name, MemberKind kind) =>
+      ctx.lexicalSuperMembers[MemberName(name, kind).key];
+
+  /// Resolve a folded body's source declaration without consulting the
+  /// host's dispatch table, which may already contain a later override.
+  Member? lexicalSuperMember(FoldedMemberBody body) {
+    final owner = body.declaration.parent?.parent;
+    if (owner is! Declaration) return null;
+    final type = TypeRef.lookupDeclaration(ctx, body.library, owner);
+    final kind = body.declaration.isGetter
+        ? MemberKind.getter
+        : body.declaration.isSetter
+        ? MemberKind.setter
+        : MemberKind.method;
+    return concreteMemberOn(
+      type,
+      MemberName(body.declaration.name.lexeme, kind),
+    );
+  }
+
+  TypeRef lexicalSuperResultType(FoldedMemberBody body) {
+    final annotation = body.declaration.returnType;
+    if (annotation == null) return CoreTypes.dynamic.ref(ctx);
+    return TypeRef.fromAnnotation(
+      ctx,
+      body.library,
+      annotation,
+      typeParameters: lexicalSuperTypeParameters(body),
+    );
+  }
+
+  TypeRef lexicalSuperSetterType(FoldedMemberBody body) {
+    final parameters = body.declaration.parameters?.parameters;
+    final parameter = parameters == null || parameters.isEmpty
+        ? null
+        : parameters.first;
+    if (parameter?.type == null) return CoreTypes.dynamic.ref(ctx);
+    return ctx.typeFactory.formalParameterAnnotationType(
+      body.library,
+      parameter!,
+      typeParameters: lexicalSuperTypeParameters(body),
+    );
+  }
+
+  Map<String, TypeRef> lexicalSuperTypeParameters(FoldedMemberBody body) =>
+      foldedMemberTypeParams(
+        ctx,
+        ctx.currentClass!,
+        body.declaration,
+        body.library,
+        ctx.enclosingLibrary ?? ctx.library,
+      ) ??
+      const {};
 
   /// The target of a lexical `super.name` access. [hops] are the superclass
   /// links between the initial super receiver and [owner]. A mixin member

@@ -7,10 +7,54 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import '../variable/value_facts.dart';
+import '../errors.dart';
 
 /// Handles `List<num>`, `Map<String, int>` etc. as expressions.
 Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
-  final inner = compileExpression(e.function, ctx);
+  final typeArguments = e.typeArguments?.arguments;
+  Variable? read;
+  if (typeArguments != null &&
+      (e.function is Identifier || e.function is PropertyAccess)) {
+    final reference = compileExpressionAsReference(e.function, ctx);
+    final type = reference.resolveType(ctx, source: e);
+    if (type is FunctionTypeRef) {
+      final signature = type.signature;
+      if (signature.typeParameters.length != typeArguments.length) {
+        throw CompileError('Wrong number of function type arguments', e);
+      }
+      final arguments = [
+        for (final arg in typeArguments)
+          TypeRef.fromAnnotation(ctx, ctx.library, arg),
+      ];
+      final substitution = Substitution.of({
+        for (var i = 0; i < typeArguments.length; i++)
+          signature.typeParameters[i]: arguments[i],
+      });
+      final instantiated = FunctionTypeRef(
+        FunctionSignature(
+          positional: [
+            for (final parameter in signature.positional)
+              parameter.substituteTypeParameters(substitution),
+          ],
+          requiredPositional: signature.requiredPositional,
+          named: {
+            for (final entry in signature.named.entries)
+              entry.key: (
+                type: entry.value.type.substituteTypeParameters(substitution),
+                required: entry.value.required,
+              ),
+          },
+          returnType: signature.returnType.substituteTypeParameters(
+            substitution,
+          ),
+        ),
+        decl: type.decl,
+      );
+      return reference.getValue(ctx, e, instantiated, arguments);
+    }
+    read = reference.getValue(ctx, e);
+  }
+  final inner = read ?? compileExpression(e.function, ctx);
 
   if (receiverOf(ctx, inner) case TypeLiteralReceiver(:final type)) {
     final baseType = type;

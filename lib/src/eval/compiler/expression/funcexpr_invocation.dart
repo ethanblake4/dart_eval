@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../invocation/call.dart';
 import '../invocation/resolver.dart';
@@ -10,6 +11,7 @@ import '../invocation/resolver.dart';
 Variable compileFunctionExpressionInvocation(
   FunctionExpressionInvocation e,
   CompilerContext ctx,
+  TypeRef? bound,
 ) {
   Variable invoke(Variable fn) => CallResolver(ctx).invokeValue(
     CallSite(
@@ -18,6 +20,7 @@ Variable compileFunctionExpressionInvocation(
         e.typeArguments?.arguments.toList(),
       ),
       source: e,
+      context: bound,
     ),
     callee: fn,
   );
@@ -29,8 +32,7 @@ Variable compileFunctionExpressionInvocation(
     return emitNullGuard(ctx, fn, invoke, source: e);
   }
 
-  // Using a reference allows us to potentially optimize to static dispatch, if the exact function
-  // is known at compile-time
+  // Preserve the reference's static type when invoking a named function value.
   if (canReference(e.function)) {
     return CallResolver(ctx).invokeValue(
       CallSite(
@@ -39,6 +41,7 @@ Variable compileFunctionExpressionInvocation(
           e.typeArguments?.arguments.toList(),
         ),
         source: e,
+        context: bound,
       ),
       ref: compileExpressionAsReference(e.function, ctx),
     );

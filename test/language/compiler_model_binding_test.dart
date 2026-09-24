@@ -110,4 +110,86 @@ void main() {
       7,
     );
   });
+
+  test('function values convert supplied arguments to the closure ABI', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          double accepts(double x) => x;
+          int main() {
+            final f = accepts;
+            return f(2).toInt();
+          }
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      2,
+    );
+  });
+
+  test('parenthesized function refs bind defaults through the closure', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          double f([double x = 2.5]) => x;
+          int main() => (f)().toInt();
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      2,
+    );
+  });
+
+  test('parenthesized generic refs retain explicit type arguments', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          T identity<T>(T value) => value;
+          int main() => (identity)<int>(3);
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      3,
+    );
+  });
+
+  test(
+    'generic function values infer type arguments from args and context',
+    () {
+      final program = Compiler().compile({
+        'binding': {
+          'main.dart': '''
+          Type selected<T>(T value) => T;
+          T make<T>() => 2 as T;
+          int main() {
+            final select = selected;
+            final create = make;
+            if (select(1) != int) return -1;
+            int value = create();
+            int parenthesized = (create)();
+            return value + parenthesized;
+          }
+        ''',
+        },
+      });
+      expect(
+        Runtime.ofProgram(
+          program,
+        ).executeLib('package:binding/main.dart', 'main'),
+        4,
+      );
+    },
+  );
 }

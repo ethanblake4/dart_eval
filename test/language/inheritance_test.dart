@@ -251,6 +251,126 @@ void main() {
     ''', 3);
   });
 
+  test('super method in a later mixin calls the earlier mixin body', () {
+    check('''
+      mixin First { int m() => 1; }
+      mixin Second on First { int m() => super.m() + 1; }
+      class Combined extends Object with First, Second {}
+      int main() => Combined().m();
+    ''', 2);
+  });
+
+  test('super method uses the earlier mixin default', () {
+    check('''
+      mixin First { int m([int n = 3]) => n; }
+      mixin Second on First { int m([int n = 7]) => super.m(); }
+      class Combined extends Object with First, Second {}
+      int main() => Combined().m();
+    ''', 3);
+  });
+
+  test('super method follows each mixin layer', () {
+    check('''
+      mixin First { int m() => 1; }
+      mixin Second on First { int m() => super.m() + 1; }
+      mixin Third on Second { int m() => super.m() + 1; }
+      class Combined extends Object with First, Second, Third {}
+      int main() => Combined().m();
+    ''', 3);
+  });
+
+  test('super mixin method retains applied type arguments', () {
+    check('''
+      mixin First<T> { T m(T value) => value; }
+      mixin Second<T> on First<T> { T m(T value) => super.m(value); }
+      class Combined extends Object with First<int>, Second<int> {}
+      int main() => Combined().m(5);
+    ''', 5);
+  });
+
+  test('super method distinguishes repeated mixin applications', () {
+    check('''
+      mixin First { int m() => 1; }
+      mixin Second on First { int m() => super.m() + 1; }
+      class Combined extends Object with First, Second, Second {}
+      int main() => Combined().m();
+    ''', 3);
+  });
+
+  test('super method skips sibling members of its own mixin', () {
+    check('''
+      mixin First { int n() => 1; }
+      mixin Second on First {
+        int n() => 2;
+        int m() => super.n();
+      }
+      class Combined extends Object with First, Second {}
+      int main() => Combined().m();
+    ''', 1);
+  });
+
+  test('super getter in a mixin calls the earlier getter body', () {
+    check('''
+      mixin First { int get value => 1; }
+      mixin Second on First { int get value => super.value + 1; }
+      class Combined extends Object with First, Second, Second {}
+      int main() => Combined().value;
+    ''', 3);
+  });
+
+  test('super getter invocation reads the earlier function value', () {
+    check('''
+      mixin First { int Function() get value => () => 1; }
+      mixin Second on First {
+        int Function() get value => () => super.value() + 1;
+      }
+      class Combined extends Object with First, Second {}
+      int main() => Combined().value();
+    ''', 2);
+  });
+
+  test('super setter in a mixin calls the earlier setter body', () {
+    check('''
+      mixin First {
+        int value = 0;
+        set update(int n) { value = n; }
+      }
+      mixin Second on First {
+        set update(int n) { super.update = n + 1; }
+      }
+      class Combined extends Object with First, Second, Second {}
+      int main() {
+        final c = Combined();
+        c.update = 2;
+        return c.value;
+      }
+    ''', 4);
+  });
+
+  test('super method tear-off binds the earlier mixin body', () {
+    check('''
+      mixin First { int m() => 1; }
+      mixin Second on First {
+        int m() => 2;
+        int read() { final f = super.m; return f(); }
+      }
+      class Combined extends Object with First, Second {}
+      int main() => Combined().read();
+    ''', 1);
+  });
+
+  test('super method tear-off retains applied mixin type arguments', () {
+    check('''
+      mixin First<T> { T m(T value) => value; }
+      mixin Second<T> on First<T> {
+        T m(T value) => value;
+        T read(T value) { final f = super.m; return f(value); }
+      }
+      class Combined extends Object with First<int>, Second<int> {}
+      int main() => Combined().read(5);
+    ''', 5);
+  });
+
   test('virtual receiver survives loop phis across different classes', () {
     check('''
       class First { int value(int n) => n + 1; }

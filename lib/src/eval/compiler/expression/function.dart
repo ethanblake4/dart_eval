@@ -418,12 +418,9 @@ Variable compileFunctionExpression(
     ),
     closureType,
     callable: CallableValue(
-      offset: target,
       signature: CallSignature.returnOnly(
         inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
       ),
-      convention: CallingConvention.dynamic,
-      materialized: true,
     ),
   );
 }

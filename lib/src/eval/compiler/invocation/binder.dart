@@ -95,8 +95,98 @@ final class ArgumentBinder {
       );
     }
 
-    Variable snapshot(Variable argument) =>
-        argument.copyIntoFreshSlot(ctx, 'closure_argument').boxIfNeeded(ctx);
+    final declaredSignature = callee?.type is FunctionTypeRef
+        ? (callee!.type as FunctionTypeRef).signature
+        : null;
+    final suppliedTypeArguments = [
+      for (final annotation
+          in site.shape.typeArguments ?? const <TypeAnnotation>[])
+        TypeRef.fromAnnotation(ctx, ctx.library, annotation),
+    ];
+    if (declaredSignature != null &&
+        site.shape.typeArguments != null &&
+        suppliedTypeArguments.length !=
+            declaredSignature.typeParameters.length) {
+      throw CompileError(
+        'Expected ${declaredSignature.typeParameters.length} type arguments, '
+        'but found ${suppliedTypeArguments.length}',
+        site.source,
+      );
+    }
+    final substitutions =
+        declaredSignature == null || site.shape.typeArguments == null
+        ? Substitution.empty
+        : Substitution.of({
+            for (var i = 0; i < declaredSignature.typeParameters.length; i++)
+              declaredSignature.typeParameters[i]: suppliedTypeArguments[i],
+          });
+    final ownParameters =
+        declaredSignature?.typeParameters.toSet() ?? const <TypeParameterDef>{};
+    final inferredArguments = <TypeParameterDef, Set<TypeRef>>{};
+    TypeRef formalType(TypeRef type) {
+      final instantiated = type.substituteTypeParameters(substitutions);
+      return declaredSignature != null &&
+              site.shape.typeArguments == null &&
+              _usesParameter(instantiated, ownParameters)
+          ? instantiated.lowerTypeParameters(ctx)
+          : instantiated;
+    }
+
+    if (declaredSignature != null) {
+      if (site.shape.positional.length > declaredSignature.positional.length) {
+        throw CompileError('Too many positional arguments', site.source);
+      }
+      if (site.shape.positional.length < declaredSignature.requiredPositional) {
+        throw CompileError('Not enough positional arguments', site.source);
+      }
+      final suppliedNames = <String>{};
+      for (final (name, _) in site.shape.named) {
+        if (!declaredSignature.named.containsKey(name)) {
+          throw CompileError('Unknown named argument $name', site.source);
+        }
+        suppliedNames.add(name);
+      }
+      for (final entry in declaredSignature.named.entries) {
+        if (entry.value.required && !suppliedNames.contains(entry.key)) {
+          throw CompileError(
+            'Missing required argument ${entry.key}',
+            site.source,
+          );
+        }
+      }
+    }
+
+    Variable bindArgument(ArgSource source, TypeRef? declaredType) {
+      final parameterType = declaredType == null
+          ? null
+          : formalType(declaredType);
+      var argument = _compileArg(ctx, source, parameterType);
+      if (declaredType != null &&
+          site.shape.typeArguments == null &&
+          ownParameters.isNotEmpty) {
+        final bindings = <TypeParameterDef, TypeRef>{};
+        ctx.typeSystem.unify(declaredType, argument.type, bindings);
+        for (final entry in bindings.entries) {
+          if (ownParameters.contains(entry.key)) {
+            inferredArguments
+                .putIfAbsent(entry.key, () => <TypeRef>{})
+                .add(entry.value);
+          }
+        }
+      }
+      if (parameterType != null) {
+        argument = convertForAssignment(
+          ctx,
+          argument,
+          parameterType,
+          representation: MachineRepresentation.object,
+          source: site.source,
+        );
+      }
+      return argument
+          .copyIntoFreshSlot(ctx, 'closure_argument')
+          .boxIfNeeded(ctx);
+    }
 
     final positional = List<BoundArgument?>.filled(
       site.shape.positional.length,
@@ -110,30 +200,90 @@ final class ArgumentBinder {
     for (final i in site.shape.sourceOrder) {
       if (i >= 0) {
         positional[i] = BoundArgument(
-          snapshot(_compileArg(ctx, site.shape.positional[i])),
+          bindArgument(
+            site.shape.positional[i],
+            declaredSignature?.positional[i],
+          ),
         );
       } else {
         final (name, source) = site.shape.named[-1 - i];
         named[-1 - i] = (
           name,
-          BoundArgument(snapshot(_compileArg(ctx, source))),
+          BoundArgument(
+            bindArgument(source, declaredSignature?.named[name]?.type),
+          ),
         );
       }
     }
     final positionalArgs = positional.cast<BoundArgument>();
     final namedArgs = named.cast<(String, BoundArgument)>();
 
-    final runtimeTypeArguments =
-        site.shape.typeArguments
-            ?.map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
-            .map((type) => ctx.runtimeTypes.idOf(type))
-            .toList() ??
-        const <int>[];
+    final inferredSubstitutions = <TypeParameterDef, TypeRef>{};
+    if (declaredSignature != null && site.shape.typeArguments == null) {
+      for (final parameter in declaredSignature.typeParameters) {
+        final candidates = inferredArguments[parameter];
+        if (candidates != null && candidates.isNotEmpty) {
+          inferredSubstitutions[parameter] = TypeRef.commonBaseType(
+            ctx,
+            candidates,
+          );
+        }
+      }
+      if (site.context != null &&
+          inferredSubstitutions.length < ownParameters.length) {
+        final bindings = <TypeParameterDef, TypeRef>{};
+        ctx.typeSystem.unify(
+          declaredSignature.returnType.substituteTypeParameters(
+            Substitution.of(inferredSubstitutions),
+          ),
+          site.context!,
+          bindings,
+        );
+        for (final parameter in declaredSignature.typeParameters) {
+          if (!inferredSubstitutions.containsKey(parameter) &&
+              bindings[parameter] != null) {
+            inferredSubstitutions[parameter] = bindings[parameter]!;
+          }
+        }
+      }
+      for (final parameter in declaredSignature.typeParameters) {
+        inferredSubstitutions.putIfAbsent(
+          parameter,
+          () => (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
+              .substituteTypeParameters(Substitution.of(inferredSubstitutions))
+              .lowerTypeParameters(ctx),
+        );
+      }
+    }
+    final resolvedSubstitutions = site.shape.typeArguments == null
+        ? Substitution.of(inferredSubstitutions)
+        : substitutions;
+    final runtimeTypeArguments = [
+      for (final type
+          in site.shape.typeArguments == null && declaredSignature != null
+              ? [
+                  for (final parameter in declaredSignature.typeParameters)
+                    inferredSubstitutions[parameter]!,
+                ]
+              : suppliedTypeArguments)
+        ctx.runtimeTypes.idOf(type),
+    ];
 
     final dispatch = target is ClosureCall ? target.known : null;
     final argTypes = [for (final a in positionalArgs) a.value.type];
     final namedArgTypes = {for (final e in namedArgs) e.$1: e.$2.value.type};
+    final inferredReturn =
+        declaredSignature != null &&
+            _usesParameter(declaredSignature.returnType, ownParameters)
+        ? declaredSignature.returnType.substituteTypeParameters(
+            resolvedSubstitutions,
+          )
+        : null;
+    final inferredResult = inferredReturn?.lowerTypeParameters(ctx);
     final resultType =
+        (inferredResult != null && !inferredResult.isSpec(CoreTypes.voidType)
+            ? inferredResult
+            : null) ??
         callResultType(
           ctx,
           callee: callee,
@@ -157,9 +307,17 @@ final class ArgumentBinder {
     );
   }
 
-  Variable _compileArg(CompilerContext ctx, ArgSource source) {
+  Variable _compileArg(
+    CompilerContext ctx,
+    ArgSource source, [
+    TypeRef? bound,
+  ]) {
     return switch (source) {
-      ExpressionArg(:final expression) => compileExpression(expression, ctx),
+      ExpressionArg(:final expression) => compileExpression(
+        expression,
+        ctx,
+        bound,
+      ),
       ValueArg(:final value) => value,
       ForwardedLocal(:final localName) =>
         ctx.lookupBinding(localName)?.read(ctx) ??

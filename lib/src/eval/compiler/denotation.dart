@@ -12,6 +12,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'invocation/deferred.dart';
 import 'invocation/targets.dart';
+import 'invocation/bound_call.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -27,7 +28,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'values/abi.dart';
 import 'invocation/accessors.dart';
-import 'invocation/resolver.dart';
 import 'variable/value_facts.dart';
 import 'reference.dart';
 
@@ -46,7 +46,29 @@ sealed class Denotation {
       readType(ctx, source: source);
 
   /// Emits the read.
-  Variable read(CompilerContext ctx, {AstNode? source});
+  Variable read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => instantiateRuntimeCallable(
+    ctx,
+    _read(
+      ctx,
+      source: source,
+      boundContext: boundContext,
+      typeArguments: typeArguments,
+    ),
+    boundContext: boundContext,
+    typeArguments: typeArguments,
+  );
+
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  });
 
   /// Emits `this denotation = value`; returns the stored variable.
   Variable write(CompilerContext ctx, Variable value, {AstNode? source});
@@ -59,13 +81,13 @@ sealed class Denotation {
 sealed class Receiver {
   const Receiver();
 
-  /// The runtime receiver, absent only for an import namespace.
+  /// The runtime receiver, absent for compile-time namespaces.
   Variable? get value => switch (this) {
     ValueReceiver(:final value) => value,
     SuperReceiver(:final self) => self,
     TypeLiteralReceiver(:final value) => value,
     ExtensionApplicationReceiver(:final value) => value,
-    ExtensionNamespaceReceiver(:final value) => value,
+    ExtensionNamespaceReceiver() => null,
     PrefixReceiver() => null,
   };
 
@@ -76,10 +98,7 @@ sealed class Receiver {
     TypeLiteralReceiver(:final type) => TypeLiteralReceiver(type, value),
     ExtensionApplicationReceiver(:final ext, :final onBindings) =>
       ExtensionApplicationReceiver(ext, onBindings, value),
-    ExtensionNamespaceReceiver(:final ext) => ExtensionNamespaceReceiver(
-      ext,
-      value,
-    ),
+    ExtensionNamespaceReceiver() => this,
     PrefixReceiver() => this,
   };
 }
@@ -104,11 +123,11 @@ final class SuperReceiver extends Receiver {
 /// `Type` object itself, needed when the denotation is a type parameter
 /// (`T.name` dispatches dynamically on the runtime Type).
 final class TypeLiteralReceiver extends Receiver {
-  const TypeLiteralReceiver(this.type, this.value);
+  const TypeLiteralReceiver(this.type, [this.value]);
 
   final TypeRef type;
   @override
-  final Variable value;
+  final Variable? value;
 }
 
 /// `E(x).name` — member resolution pinned to [ext]'s members.
@@ -121,15 +140,11 @@ final class ExtensionApplicationReceiver extends Receiver {
   final Variable value;
 }
 
-/// `E.name` — an extension's namespace value: `E.m(recv)` explicit
-/// application and `E.staticM` resolve through [ext]'s members. [value] is
-/// the marker `Type` object carried at runtime.
+/// `E.name` — an extension namespace, with no runtime value.
 final class ExtensionNamespaceReceiver extends Receiver {
-  const ExtensionNamespaceReceiver(this.ext, this.value);
+  const ExtensionNamespaceReceiver(this.ext);
 
   final EvalExtension ext;
-  @override
-  final Variable value;
 }
 
 /// `p.name` — member access into an import prefix's namespace.
@@ -145,8 +160,6 @@ Receiver receiverOf(CompilerContext ctx, Variable v, {BoundExtension? pin}) {
   if (pin case final bound?) {
     return ExtensionApplicationReceiver(bound.ext, bound.onBindings, v);
   }
-  final ext = v.denotedExtension;
-  if (ext != null) return ExtensionNamespaceReceiver(ext, v);
   final denoted = v.denotedType;
   if (denoted != null) return TypeLiteralReceiver(denoted, v);
   return ValueReceiver(v);
@@ -167,24 +180,16 @@ final class LocalDenotation extends Denotation {
       binding.current.declaredType;
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) => binding.read(ctx);
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => binding.read(ctx);
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
       binding.write(ctx, value, source: source);
-
-  @override
-  CallTarget? call(CompilerContext ctx, {AstNode? source}) {
-    final current = binding.current;
-    if (current.methodOffset != null &&
-        current.callingConvention != CallingConvention.dynamic) {
-      return StaticCall(
-        current.methodOffset!,
-        signature: current.methodSignature!,
-      );
-    }
-    return null;
-  }
 }
 
 /// A top-level or static-field global: `x`, `p.x`, `C.x`, `E.x` (static
@@ -202,8 +207,12 @@ final class GlobalDenotation extends Denotation {
       resolveGlobalType(ctx, library, name);
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) =>
-      loadGlobalVariable(ctx, library, name, displayName);
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => loadGlobalVariable(ctx, library, name, displayName);
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
@@ -232,6 +241,16 @@ final class FunctionDenotation extends Denotation {
           ? TypeRef.fromAnnotation(ctx, _file, decl.returnType!)
           : CoreTypes.dynamic.ref(ctx);
     }
+    if (decl is FunctionDeclaration) {
+      return CallSignature.forDeclaration(ctx, _file, decl).toFunctionType(ctx);
+    }
+    if (target.bridge case BridgeFunctionDeclaration bridge) {
+      return CallSignature.bridge(
+        ctx,
+        bridge.function,
+        returnFallback: CoreTypes.dynamic.ref(ctx),
+      ).toFunctionType(ctx);
+    }
     return CoreTypes.type.ref(ctx);
   }
 
@@ -246,8 +265,19 @@ final class FunctionDenotation extends Denotation {
   }
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) =>
-      _declarationToVariable(target, name, ctx, source);
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => _declarationToVariable(
+    target,
+    name,
+    ctx,
+    source,
+    boundContext,
+    typeArguments,
+  );
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) {
@@ -327,18 +357,30 @@ final class StaticMemberDenotation extends Denotation {
       );
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) {
-    final fn = Variable(
-      CoreTypes.function.ref(ctx),
-      rep: ValueRep.boxed,
-      callable: CallableValue(offset: _offset(ctx)),
-    );
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) {
     if (member.isGetter) {
       // A getter reference invokes it (the member's value, not its
       // tear-off).
-      return CallResolver(ctx).invokeOperator(fn, null, []).result;
+      return StaticCall(_offset(ctx)).emit(
+        ctx,
+        BoundCall(
+          positional: const [],
+          named: const [],
+          returnType: readType(ctx),
+        ),
+      );
     }
-    return fn;
+    return materializeTearOff(
+      ctx,
+      _offset(ctx),
+      boundContext: boundContext,
+      typeArguments: typeArguments,
+    );
   }
 
   @override
@@ -403,12 +445,38 @@ final class InstanceMemberDenotation extends Denotation {
     AstNode? source,
   }) {
     final receiver = this.receiver;
+    if (receiver is SuperReceiver) {
+      final body = ctx.memberLookup.lexicalSuperBody(
+        name,
+        forSet ? MemberKind.setter : MemberKind.getter,
+      );
+      if (body != null) {
+        return forSet
+            ? ctx.memberLookup.lexicalSuperSetterType(body)
+            : ctx.memberLookup.lexicalSuperResultType(body);
+      }
+    }
     final object = switch (receiver) {
       SuperReceiver(:final self) => self,
       ValueReceiver(:final value) => value,
       _ => ctx.lookupLocal('#this'),
     };
     if (object == null) return null;
+    if (!forSet) {
+      final method = ctx.memberLookup.tryInterfaceMember(
+        object.type,
+        MemberName.method(name),
+        source: source,
+      );
+      final declaration = method?.member;
+      if (declaration is SourceMember &&
+          declaration.node is MethodDeclaration) {
+        final node = declaration.node as MethodDeclaration;
+        if (!node.isGetter && !node.isSetter) {
+          return method!.signature.toFunctionType(ctx);
+        }
+      }
+    }
     var fieldType = ctx.memberLookup.fieldType(
       object.type,
       name,
@@ -491,7 +559,12 @@ final class InstanceMemberDenotation extends Denotation {
 
   /// `receiver.name` where the member is declared on the enclosing class
   /// itself — the bare-identifier-in-class-body path.
-  Variable _readDeclared(CompilerContext ctx, AstNode? source) {
+  Variable _readDeclared(
+    CompilerContext ctx,
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  ) {
     final resolvedMember = declared!;
     final $type = resolvedMember.viewedAs;
     final member = resolvedMember.member;
@@ -507,17 +580,16 @@ final class InstanceMemberDenotation extends Denotation {
       if (declaration is MethodDeclaration &&
           !declaration.isGetter &&
           !declaration.isSetter) {
-        return Variable(
-          CoreTypes.function.ref(ctx),
-          rep: ValueRep.boxed,
-          callable: CallableValue(
-            offset: DeferredOrOffset(
-              file: ctx.library,
-              className: ctx.currentClassName!,
-              name: refName,
-            ),
-            implicitReceiver: $this,
+        return materializeTearOff(
+          ctx,
+          DeferredOrOffset(
+            file: ctx.library,
+            className: ctx.currentClassName!,
+            name: refName,
           ),
+          implicitReceiver: $this,
+          boundContext: boundContext,
+          typeArguments: typeArguments,
         );
       }
     }
@@ -537,7 +609,46 @@ final class InstanceMemberDenotation extends Denotation {
   }
 
   /// `super.name` read — method reads tear off bound to the super receiver.
-  Variable _readSuper(CompilerContext ctx, AstNode? source) {
+  Variable _readSuper(
+    CompilerContext ctx,
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  ) {
+    final foldedMethod = ctx.memberLookup.lexicalSuperBody(
+      name,
+      MemberKind.method,
+    );
+    if (foldedMethod != null) {
+      final owner = foldedMethod.declaration.parent?.parent;
+      if (owner is Declaration) {
+        return materializeTearOff(
+          ctx,
+          DeferredOrOffset(
+            offset: foldedMethod.offset,
+            file: foldedMethod.library,
+            className: declarationName(owner),
+            name: name,
+          ),
+          implicitReceiver: ctx.lookupLocal('#this')!,
+          boundContext: boundContext,
+          typeArguments: typeArguments,
+          memberTypeParameters: ctx.memberLookup.lexicalSuperTypeParameters(
+            foldedMethod,
+          ),
+        );
+      }
+    }
+    final foldedGetter = ctx.memberLookup.lexicalSuperBody(
+      name,
+      MemberKind.getter,
+    );
+    if (foldedGetter != null) {
+      return FoldedMixinGetterCall(
+        foldedGetter,
+        ctx.lookupLocal('#this')!,
+      ).emit(ctx);
+    }
     final owner = _superOwner(ctx, false);
     // A method member read is a tear-off bound to the super receiver.
     final memberDecl =
@@ -545,18 +656,17 @@ final class InstanceMemberDenotation extends Denotation {
     if (memberDecl is MethodDeclaration &&
         !memberDecl.isGetter &&
         !memberDecl.isSetter) {
-      return Variable(
-        CoreTypes.function.ref(ctx),
-        rep: ValueRep.boxed,
-        callable: CallableValue(
-          offset: DeferredOrOffset(
-            file: owner.type.file,
-            className: owner.type.name,
-            name: name,
-          ),
-          implicitReceiver: owner,
+      return materializeTearOff(
+        ctx,
+        DeferredOrOffset(
+          file: owner.type.file,
+          className: owner.type.name,
+          name: name,
         ),
-      ).tearOff(ctx);
+        implicitReceiver: owner,
+        boundContext: boundContext,
+        typeArguments: typeArguments,
+      );
     }
     if (ctx
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
@@ -580,6 +690,16 @@ final class InstanceMemberDenotation extends Denotation {
   /// `super.name = v` — write through the owning layer's setter; a bridged
   /// owner falls back to the ambient setter machinery.
   Variable _writeSuper(CompilerContext ctx, Variable value, AstNode? source) {
+    final foldedSetter = ctx.memberLookup.lexicalSuperBody(
+      name,
+      MemberKind.setter,
+    );
+    if (foldedSetter != null) {
+      return FoldedMixinSetterCall(
+        foldedSetter,
+        ctx.lookupLocal('#this')!,
+      ).emit(ctx, value);
+    }
     final owner = _superOwner(ctx, true);
     if (ctx
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
@@ -602,12 +722,17 @@ final class InstanceMemberDenotation extends Denotation {
   }
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) {
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) {
     if (receiver is SuperReceiver) {
-      return _readSuper(ctx, source);
+      return _readSuper(ctx, source, boundContext, typeArguments);
     }
     if (declared != null) {
-      return _readDeclared(ctx, source);
+      return _readDeclared(ctx, source, boundContext, typeArguments);
     }
     final r = receiver;
     final object = r is ValueReceiver
@@ -618,7 +743,14 @@ final class InstanceMemberDenotation extends Denotation {
     if (object == null) {
       throw CompileError('Cannot access instance member $name', source);
     }
-    return GetTarget.read(ctx, object, name, source: source);
+    return GetTarget.read(
+      ctx,
+      object,
+      name,
+      source: source,
+      boundContext: boundContext,
+      typeArguments: typeArguments,
+    );
   }
 
   @override
@@ -732,6 +864,15 @@ final class ExtensionMemberDenotation extends Denotation {
   final bool applied;
 
   @override
+  CallTarget? call(CompilerContext ctx, {AstNode? source}) {
+    if (!member.isStatic || member.isGetter || member.isSetter) return null;
+    return StaticCall(
+      DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+      signature: CallSignature.forDeclaration(ctx, ext.library, member),
+    );
+  }
+
+  @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) {
     if (member.isGetter) {
       return member.returnType == null
@@ -751,7 +892,12 @@ final class ExtensionMemberDenotation extends Denotation {
   }
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) {
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) {
     final recv = receiver;
     final offset = DeferredOrOffset(
       file: ext.library,
@@ -780,10 +926,11 @@ final class ExtensionMemberDenotation extends Denotation {
           source,
         );
       }
-      return Variable(
-        CoreTypes.function.ref(ctx),
-        rep: ValueRep.boxed,
-        callable: CallableValue(offset: offset),
+      return materializeTearOff(
+        ctx,
+        offset,
+        boundContext: boundContext,
+        typeArguments: typeArguments,
       );
     }
     if (member.isGetter) {
@@ -803,18 +950,12 @@ final class ExtensionMemberDenotation extends Denotation {
         source,
       );
     }
-    return Variable(
-      CoreTypes.function.ref(ctx),
-      rep: ValueRep.boxed,
-      callable: CallableValue(
-        offset: offset,
-        signature: CallSignature.returnOnly(
-          member.returnType == null
-              ? CoreTypes.dynamic.ref(ctx)
-              : TypeRef.fromAnnotation(ctx, ext.library, member.returnType!),
-        ),
-        implicitReceiver: recv,
-      ),
+    return materializeTearOff(
+      ctx,
+      offset,
+      implicitReceiver: recv,
+      boundContext: boundContext,
+      typeArguments: typeArguments,
     );
   }
 
@@ -910,8 +1051,12 @@ final class TypeLiteralDenotation extends Denotation {
       CoreTypes.type.ref(ctx);
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) =>
-      typeLiteral(ctx, type, constructorKey);
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => typeLiteral(ctx, type, constructorKey);
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
@@ -936,7 +1081,12 @@ final class TypeParameterDenotation extends Denotation {
       CoreTypes.type.ref(ctx);
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) => Variable.ssa(
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => Variable.ssa(
     ctx,
     LoadTypeParameter(ctx.svar('type'), ctx.runtimeTypes.idOf(typeParameter)),
     CoreTypes.type.ref(ctx),
@@ -963,8 +1113,12 @@ final class PrefixDenotation extends Denotation {
       throw CompileError('Import prefix "$prefix" is not a type', source);
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) =>
-      throw CompileError('Import prefix "$prefix" is not a value', source);
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => throw CompileError('Import prefix "$prefix" is not a value', source);
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
@@ -1006,7 +1160,12 @@ final class _SyntheticDenotation extends Denotation {
   TypeRef readType(CompilerContext ctx, {AstNode? source}) => value.type;
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) => value;
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => value;
 
   @override
   Variable write(CompilerContext ctx, Variable v, {AstNode? source}) =>
@@ -1025,7 +1184,12 @@ final class EnumValueDenotation extends Denotation {
   TypeRef readType(CompilerContext ctx, {AstNode? source}) => enumType;
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) => Variable.ssa(
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => Variable.ssa(
     ctx,
     LoadGlobal(ctx.svar(name), index),
     enumType,
@@ -1037,8 +1201,7 @@ final class EnumValueDenotation extends Denotation {
       throw CompileError('Cannot assign to enum value $name', source);
 }
 
-/// An extension used as a namespace — `E` evaluates to a marker variable
-/// whose member accesses resolve through the extension's members.
+/// An extension used as a compile-time namespace.
 final class ExtensionNamespaceDenotation extends Denotation {
   const ExtensionNamespaceDenotation(this.ext, this.markerName);
 
@@ -1050,19 +1213,12 @@ final class ExtensionNamespaceDenotation extends Denotation {
       CoreTypes.type.ref(ctx);
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) {
-    // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
-    // (explicit application) and `E.staticM(...)` resolve through it. The
-    // pseudo-type `E` exists only in the declarations map, never as a class.
-    return Variable(
-      CoreTypes.type.ref(ctx),
-      rep: ValueRep.boxed,
-      facts: ValueFacts(denotedExtension: ext),
-      callable: CallableValue(
-        offset: DeferredOrOffset(file: ext.library, name: '${ext.name}.'),
-      ),
-    );
-  }
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => throw CompileError('An extension namespace is not a value', source);
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
@@ -1121,12 +1277,30 @@ final class BridgeDenotation extends Denotation {
     if (bridge is BridgeClassDef || bridge is BridgeEnumDef) {
       return CoreTypes.type.ref(ctx);
     }
+    if (bridge is BridgeFunctionDeclaration) {
+      return CallSignature.bridge(
+        ctx,
+        bridge.function,
+        returnFallback: CoreTypes.dynamic.ref(ctx),
+      ).toFunctionType(ctx);
+    }
     return CoreTypes.function.ref(ctx);
   }
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) =>
-      _declarationToVariable(target, name, ctx, source);
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) => _declarationToVariable(
+    target,
+    name,
+    ctx,
+    source,
+    boundContext,
+    typeArguments,
+  );
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
@@ -1367,9 +1541,23 @@ Denotation resolveMemberAccess(
     case ValueReceiver(:final value):
       return InstanceMemberDenotation(ValueReceiver(value), name);
     case ExtensionNamespaceReceiver(:final ext):
+      for (final field in ext.members.whereType<FieldDeclaration>()) {
+        if (field.isStatic &&
+            field.fields.variables.any(
+              (variable) => variable.name.lexeme == name,
+            )) {
+          return GlobalDenotation(
+            ext.library,
+            '${ext.name}.$name',
+            displayName: name,
+          );
+        }
+      }
       final member = ext.members
           .whereType<MethodDeclaration>()
-          .firstWhereOrNull((m) => m.name.lexeme == name);
+          .firstWhereOrNull(
+            (m) => m.name.lexeme == name && (forSet ? m.isSetter : !m.isSetter),
+          );
       if (member == null) {
         throw CompileError(
           'Extension member not found: ${ext.name}.$name',
@@ -1396,7 +1584,10 @@ Denotation resolveMemberAccess(
       if (type.isTypeParameter) {
         // `T.member` is an instance access on T's runtime `Type` object,
         // not a static access — dispatch dynamically.
-        return InstanceMemberDenotation(ValueReceiver(value), name);
+        return InstanceMemberDenotation(
+          ValueReceiver(value ?? typeLiteral(ctx, type, type.name)),
+          name,
+        );
       }
       final superclass = ctx.typeSystem.superclassOf(type);
       if (!forSet &&
@@ -1444,7 +1635,12 @@ final class _StaticBridgeDenotation extends Denotation {
   }
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) {
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) {
     final br = owner.bridge;
     if (br is BridgeClassDef) {
       final getter = br.getters[name];
@@ -1503,7 +1699,11 @@ final class _TypeMemberDenotation extends Denotation {
     }
     final member = ctx.topLevelDeclarationsMap[type.file]?[fqName]?.declaration;
     if (member is MethodDeclaration && !member.isGetter && !member.isSetter) {
-      return CoreTypes.function.ref(ctx);
+      return CallSignature.forDeclaration(
+        ctx,
+        type.file,
+        member,
+      ).toFunctionType(ctx);
     }
     return resolveGlobalType(ctx, type.file, fqName);
   }
@@ -1521,7 +1721,12 @@ final class _TypeMemberDenotation extends Denotation {
   }
 
   @override
-  Variable read(CompilerContext ctx, {AstNode? source}) {
+  Variable _read(
+    CompilerContext ctx, {
+    AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) {
     // Static accessors register under `*g`/`*s` keys — a getter reference
     // invokes it.
     final getterMember =
@@ -1544,16 +1749,23 @@ final class _TypeMemberDenotation extends Denotation {
             ? MemberName.getter(fqName).key
             : fqName,
       );
-      final fn = Variable(
-        CoreTypes.function.ref(ctx),
-        rep: ValueRep.boxed,
-        callable: CallableValue(offset: memberOffset),
-      );
       if (memberDecl is MethodDeclaration && memberDecl.isGetter) {
-        return CallResolver(ctx).invokeOperator(fn, null, []).result;
+        return StaticCall(memberOffset).emit(
+          ctx,
+          BoundCall(
+            positional: const [],
+            named: const [],
+            returnType: readType(ctx),
+          ),
+        );
       }
       // Static method tear-off.
-      return fn;
+      return materializeTearOff(
+        ctx,
+        memberOffset,
+        boundContext: boundContext,
+        typeArguments: typeArguments,
+      );
     }
     return loadGlobalVariable(ctx, type.file, fqName, name);
   }
@@ -1593,14 +1805,26 @@ Receiver compileReceiver(
   if (target is SuperExpression) {
     return SuperReceiver(compileExpression(target, ctx));
   }
-  if (target is SimpleIdentifier) {
-    final denotation = resolveIdentifier(
-      ctx,
-      target.name,
-      forSet: false,
-      source: target,
-    );
+  if (target is Identifier) {
+    final reference = compileIdentifierAsReference(target, ctx);
+    final denotation = switch (reference) {
+      IdentifierReference() => reference.denotation(ctx, source: target),
+      PrefixedIdentifierReference() => reference.denotation(
+        ctx,
+        source: target,
+      ),
+      _ => null,
+    };
     if (denotation is PrefixDenotation) return PrefixReceiver(denotation);
+    if (denotation is ExtensionNamespaceDenotation) {
+      return ExtensionNamespaceReceiver(denotation.ext);
+    }
+    if (denotation != null) {
+      return receiverOf(
+        ctx,
+        denotation.read(ctx, source: target, boundContext: bound),
+      );
+    }
   }
   // The expression compiler already distinguishes p.name from value.name,
   // materializes function references, and preserves contextual typing.
@@ -1641,6 +1865,8 @@ Variable _declarationToVariable(
   String name,
   CompilerContext ctx, [
   AstNode? source,
+  TypeRef? boundContext,
+  List<TypeRef>? typeArguments,
 ]) {
   if (decOrBridge.isBridge) {
     final bridge = decOrBridge.bridge!;
@@ -1656,17 +1882,11 @@ Variable _declarationToVariable(
     }
 
     if (bridge is BridgeFunctionDeclaration) {
-      final returnType = TypeRef.fromBridgeAnnotation(
+      return materializeTearOff(
         ctx,
-        bridge.function.returns,
-      );
-      return Variable(
-        CoreTypes.function.ref(ctx),
-        rep: ValueRep.boxed,
-        callable: CallableValue(
-          offset: DeferredOrOffset(file: decOrBridge.sourceLib, name: name),
-          signature: CallSignature.returnOnly(returnType),
-        ),
+        DeferredOrOffset(file: decOrBridge.sourceLib, name: name),
+        boundContext: boundContext,
+        typeArguments: typeArguments,
       );
     }
 
@@ -1683,24 +1903,7 @@ Variable _declarationToVariable(
   }
 
   if (decl is ExtensionDeclaration) {
-    // `E` as an expression is the extension's namespace: `E.m(recv, ...)`
-    // (explicit application) and `E.staticM(...)` resolve through it.
-    final ext = ctx.extensions.firstWhere(
-      (e) => e.declaration == decl,
-      orElse: () =>
-          EvalExtension(decOrBridge.sourceLib, decl, declarationName(decl)),
-    );
-    return Variable(
-      CoreTypes.type.ref(ctx),
-      rep: ValueRep.boxed,
-      facts: ValueFacts(denotedExtension: ext),
-      callable: CallableValue(
-        offset: DeferredOrOffset(
-          file: decOrBridge.sourceLib,
-          name: '${declarationName(decl)}.',
-        ),
-      ),
-    );
+    throw CompileError('An extension namespace is not a value', source);
   }
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
@@ -1743,24 +1946,23 @@ Variable _declarationToVariable(
         : name,
   );
 
-  final fn = Variable(
-    decl is FunctionDeclaration
-        ? CoreTypes.function.ref(ctx)
-        : CoreTypes.type.ref(ctx),
-    rep: ValueRep.boxed,
-    facts: decl is FunctionDeclaration
-        ? ValueFacts(possibleClasses: [returnType])
-        : ValueFacts(denotedType: returnType, possibleClasses: [returnType]),
-    callable: CallableValue(
-      offset: offset,
-      signature: CallSignature.returnOnly(returnType),
-    ),
-  );
-
   if (decl is FunctionDeclaration && decl.isGetter) {
-    return CallResolver(ctx).invokeOperator(fn, null, []).result;
+    return StaticCall(offset).emit(
+      ctx,
+      BoundCall(
+        positional: const [],
+        named: const [],
+        returnType: returnType,
+        rep: Abi.unboxedAcrossCalls(returnType),
+      ),
+    );
   }
-  return fn;
+  return materializeTearOff(
+    ctx,
+    offset,
+    boundContext: boundContext,
+    typeArguments: typeArguments,
+  );
 }
 
 CallTarget? _declarationToCallTarget(

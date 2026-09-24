@@ -20,6 +20,15 @@ abstract class AbstractScopeContext {
   List<Map<String, LocalBinding>> get locals;
 }
 
+/// A concrete mixin member compiled into one application layer. Its offset
+/// remains callable after a later layer replaces the dispatch-table entry.
+typedef FoldedMemberBody = ({
+  MethodDeclaration declaration,
+  int library,
+  int offset,
+  int layer,
+});
+
 mixin ScopeContext on Object implements AbstractScopeContext {
   @override
   List<Map<String, LocalBinding>> locals = [];
@@ -253,6 +262,10 @@ class CompilerContext with ScopeContext {
   /// member resolve statically against this declaration's scope, not the
   /// applying class's; null for members declared directly by [currentClass].
   Declaration? memberDeclaringClass;
+
+  /// Earlier mixin bodies visible to a lexical `super` in the member
+  /// currently being compiled. Set by [compileClassMembers] for each body.
+  Map<String, FoldedMemberBody> lexicalSuperMembers = const {};
 
   String libraryUri(int index) =>
       libraryMap.entries.firstWhere((e) => e.value == index).key;

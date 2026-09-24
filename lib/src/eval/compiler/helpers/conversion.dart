@@ -4,7 +4,6 @@ import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -117,11 +116,6 @@ Variable convertForAssignment(
   }
 
   var converted = value;
-  // Bound method tear-offs (e.g. `x.m<T>` used as a value) have no SSA slot
-  // until materialized as a closure value.
-  if (converted.unmaterializedCallable != null) {
-    converted = converted.tearOff(ctx, boundContext: target);
-  }
   if (conversion == AssignmentConversion.intToDouble) {
     final intVar = converted.unboxIfNeeded(ctx, false);
     var widened = Variable.ssa(

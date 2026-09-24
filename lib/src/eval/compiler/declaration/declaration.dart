@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/function.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/variable.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 
 int? compileDeclaration(
   Declaration d,
@@ -90,9 +91,14 @@ void compileClassMembers(
   Map<ClassMember, int> memberLibraries = const {},
 }) {
   var fieldIndex = firstFieldIndex;
+  final foldedBodies = <FoldedMemberBody>[];
+  Declaration? layerOwner;
+  final layerMembers = <MethodDeclaration>{};
+  var layer = 0;
   for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
     ctx.currentClass = parent;
     final previousLibrary = ctx.library;
+    final previousSuperMembers = ctx.lexicalSuperMembers;
     final memberLibrary = memberLibraries[m];
     ctx.library = memberLibrary ?? previousLibrary;
     final memberOwner = m.parent?.parent;
@@ -100,9 +106,38 @@ void compileClassMembers(
         memberLibrary != null && memberOwner is Declaration
         ? memberOwner
         : null;
+    if (m is MethodDeclaration) {
+      // The same AST member can be folded more than once (for example
+      // `with B, B`). A repeated declaration starts a new application
+      // layer, while sibling members in one layer share its identity.
+      if (!identical(layerOwner, memberOwner) || !layerMembers.add(m)) {
+        layer++;
+        layerOwner = memberOwner is Declaration ? memberOwner : null;
+        layerMembers
+          ..clear()
+          ..add(m);
+      }
+      // `super` in a mixin body starts below that mixin's entire layer;
+      // `super` in an applying class starts at the last folded layer.
+      ctx.lexicalSuperMembers = {
+        for (final body in foldedBodies)
+          if (body.layer < layer &&
+              (!body.declaration.name.lexeme.startsWith('_') ||
+                  body.library == ctx.library))
+            MemberName(
+              body.declaration.name.lexeme,
+              body.declaration.isGetter
+                  ? MemberKind.getter
+                  : body.declaration.isSetter
+                  ? MemberKind.setter
+                  : MemberKind.method,
+            ).key: body,
+      };
+    }
+    int? position;
     try {
       if (memberLibrary == null) {
-        compileDeclaration(
+        position = compileDeclaration(
           m,
           ctx,
           parent: parent,
@@ -117,18 +152,20 @@ void compileClassMembers(
         // resolves against the applying class's type environment. The
         // seed lives in a pushed frame of the member's declaring-library
         // scope — it pops when the member finishes compiling.
-        ctx.withTypeParameters(memberLibrary, null, const [], () {
-          ctx.typeParameterScope(memberLibrary).addAll(
-            foldedMemberTypeParams(
-                  ctx,
-                  parent,
-                  m,
-                  memberLibrary,
-                  previousLibrary,
-                ) ??
-                const {},
-          );
-          compileDeclaration(
+        position = ctx.withTypeParameters(memberLibrary, null, const [], () {
+          ctx
+              .typeParameterScope(memberLibrary)
+              .addAll(
+                foldedMemberTypeParams(
+                      ctx,
+                      parent,
+                      m,
+                      memberLibrary,
+                      previousLibrary,
+                    ) ??
+                    const {},
+              );
+          return compileDeclaration(
             m,
             ctx,
             parent: parent,
@@ -141,6 +178,20 @@ void compileClassMembers(
     } finally {
       ctx.library = previousLibrary;
       ctx.memberDeclaringClass = null;
+      ctx.lexicalSuperMembers = previousSuperMembers;
+    }
+    if (m is MethodDeclaration &&
+        memberLibrary != null &&
+        !m.isStatic &&
+        m.isComplete &&
+        position != null &&
+        position >= 0) {
+      foldedBodies.add((
+        declaration: m,
+        library: memberLibrary,
+        offset: position,
+        layer: layer,
+      ));
     }
     if (m is FieldDeclaration) {
       fieldIndex += m.fields.variables.length;

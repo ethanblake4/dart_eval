@@ -3,54 +3,21 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/eval_extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable/value_facts.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart' show LoadNull;
 
 import 'errors.dart';
-import 'invocation/deferred.dart';
 import 'member/call_signature.dart';
 import 'values/abi.dart';
 
-/// How a call reaches its callee — `static` skips runtime member lookup,
-/// `dynamic` dispatches through the receiver's runtime type.
-enum CallingConvention { static, dynamic }
-
-/// Compile-time metadata for a [Variable] denoting a statically known
-/// function: the link-time [offset], the [signature] used to bind and
-/// type the call, the [convention] used to reach it, and — for
-/// extension-method tear-offs — the [implicitReceiver] prepended as the
-/// first argument. An offset-less instance carries only signature hints
-/// (a dynamic member value whose type is `Function`).
+/// Signature information retained for runtime callable values whose static
+/// type has been widened to `Function` or `dynamic`.
 final class CallableValue {
-  const CallableValue({
-    this.offset,
-    this.signature,
-    this.convention = CallingConvention.static,
-    this.implicitReceiver,
-    this.materialized = false,
-  });
-
-  /// The known function's link target — null when only signature hints are
-  /// carried (e.g. a dynamic `Function`-typed member read).
-  final DeferredOrOffset? offset;
-
-  /// The callee's calling shape — parameter specs drive binding, and
-  /// [CallSignature.returnType]/[CallSignature.returnOverride] resolve
-  /// the call's result type.
+  const CallableValue({this.signature});
   final CallSignature? signature;
-  final CallingConvention convention;
-
-  /// The receiver to prepend as the first argument when this reference is
-  /// materialized or invoked — set on references to a member of the
-  /// enclosing extension inside its own body.
-  final Variable? implicitReceiver;
-
-  /// True once the reference's tear-off has been materialized into a
-  /// closure value — unmaterialized references lack it.
-  final bool materialized;
 }
 
 /// A compiler value with an SSA identity, a language [type], a
@@ -59,14 +26,14 @@ final class CallableValue {
 /// holding it, when bound.
 class Variable {
   Variable(
-    TypeRef type, {
+    this.ssa,
+    this.type, {
     TypeRef? declaredType,
     required this.rep,
     this.callable,
     bool isFinal = false,
     ValueFacts? facts,
-  }) : type = type,
-       _declaredType = declaredType,
+  }) : _declaredType = declaredType,
        _isFinal = isFinal,
        facts = facts ?? ValueFacts.none;
 
@@ -91,13 +58,14 @@ class Variable {
       'cannot infer rep for $op — pass rep: explicitly',
     );
     return Variable(
+      op.writesTo!,
       type,
       declaredType: declaredType,
       rep: rep ?? repForType(type, bank ?? MachineRepresentation.object),
       callable: callable,
       isFinal: isFinal,
       facts: facts,
-    )..name = op.writesTo!.name;
+    );
   }
 
   factory Variable.of(
@@ -111,14 +79,23 @@ class Variable {
     ValueFacts? facts,
   }) {
     return Variable(
+      ssa,
       type,
       declaredType: declaredType,
       rep: rep,
       callable: callable,
       isFinal: isFinal,
       facts: facts,
-    )..name = ssa.name;
+    );
   }
+
+  /// A defined but unreachable result slot for a terminating expression.
+  factory Variable.never(CompilerContext ctx) => Variable.ssa(
+    ctx,
+    LoadNull(ctx.svar('never')),
+    CoreTypes.never.ref(ctx),
+    rep: ValueRep.nativeNull,
+  );
 
   final TypeRef type;
 
@@ -157,10 +134,6 @@ class Variable {
   /// For a `Type`-typed value, the type it denotes.
   TypeRef? get denotedType => facts.denotedType;
 
-  /// For an `E` expression, the extension whose namespace the value
-  /// denotes.
-  EvalExtension? get denotedExtension => facts.denotedExtension;
-
   /// Whether this value is a compile-time-constant int expression —
   /// enables the `int → double` literal coercion. Dropped as soon as the
   /// value is bound or transformed.
@@ -169,39 +142,14 @@ class Variable {
   /// Whether this value is a compile-time-constant expression.
   bool get isConst => facts.isConst;
 
-  /// Compile-known function this value denotes, if any — an unmaterialized
-  /// function reference when [CallableValue.materialized] is false.
+  /// Signature information for a runtime callable, when known.
   final CallableValue? callable;
 
   /// Whether reassignment of this value's binding is forbidden — bound
   /// values read the [LocalBinding]'s flag; temporaries keep their own.
   bool get isFinal => binding?.isFinal ?? _isFinal;
 
-  /// The dispatch convention for invoking this value as a function:
-  /// [CallableValue.convention] when callable metadata exists, otherwise
-  /// dynamic for function-typed values and static for the rest.
-  CallingConvention get callingConvention =>
-      callable?.convention ??
-      (type.isFunctionLike
-          ? CallingConvention.dynamic
-          : CallingConvention.static);
-
-  /// Convenience accessors into [callable] for the sites that only read.
-  DeferredOrOffset? get methodOffset => callable?.offset;
   CallSignature? get methodSignature => callable?.signature;
-  Variable? get implicitReceiver => callable?.implicitReceiver;
-
-  /// Non-null when this value is an unmaterialized function reference
-  /// (compile-known target whose closure has not been built). Requires the
-  /// variable to lack an SSA slot — SSA-backed values carrying a callable
-  /// (type literals, method tear-offs after materialization) are already
-  /// runtime values.
-  CallableValue? get unmaterializedCallable {
-    final c = callable;
-    return c != null && c.offset != null && !c.materialized && name == null
-        ? c
-        : null;
-  }
 
   bool get boxed => rep.isBoxed;
 
@@ -210,14 +158,13 @@ class Variable {
   /// info are cleared. All SSA identity and binding metadata is preserved.
   Variable widened() {
     return Variable(
-        type,
-        declaredType: _declaredType,
-        rep: rep,
-        isFinal: _isFinal,
-        facts: facts.cleared(),
-      )
-      ..name = name
-      ..binding = binding;
+      ssa,
+      type,
+      declaredType: _declaredType,
+      rep: rep,
+      isFinal: _isFinal,
+      facts: facts.cleared(),
+    )..binding = binding;
   }
 
   /// Widens this variable's allocation proofs for a control-flow join.
@@ -234,32 +181,30 @@ class Variable {
       if (identical(other, this)) continue;
       changed = true;
       merged = merged.join(other.facts);
-      if (other.callable?.offset != c?.offset ||
-          other.callable?.signature != c?.signature) {
+      if (other.callable?.signature != c?.signature) {
         c = null;
       }
     }
     if (!changed) return this;
     return Variable(
-        type,
-        declaredType: _declaredType,
-        rep: rep,
-        callable: c,
-        isFinal: _isFinal,
-        facts: merged,
-      )
-      ..name = name
-      ..binding = binding;
+      ssa,
+      type,
+      declaredType: _declaredType,
+      rep: rep,
+      callable: c,
+      isFinal: _isFinal,
+      facts: merged,
+    )..binding = binding;
   }
 
-  String? name;
+  final SSA ssa;
+
+  String get name => ssa.name;
 
   /// The [LocalBinding] this value is the current value of, if any —
   /// in-place boxing/unboxing of a bound local must rebind through it
   /// rather than writing back through `ctx.locals`.
   LocalBinding? binding;
-
-  SSA get ssa => SSA(name!);
 
   /// Converts this value to [target] rep.
   ///
@@ -467,14 +412,8 @@ class Variable {
   /// Returns a copy of this variable carrying [facts] instead of its own.
   Variable withFacts(ValueFacts facts) => copyWith(facts: facts);
 
-  /// Returns a variable with the same name from the context locals.
-  /// Iterates over all frames and returns the first found one.
-  /// If not found, returns this instance.
-  Variable updated(ScopeContext ctx) {
-    final b = binding;
-    if (b == null) return this;
-    return ctx.lookupLocal(b.name) ?? this;
-  }
+  /// The binding's latest value after promotion or representation changes.
+  Variable updated(ScopeContext ctx) => binding?.current ?? this;
 
   /// Makes a copy of the variable with some fields updated.
   Variable copyWith({
@@ -498,15 +437,14 @@ class Variable {
           isConstInt: false,
         );
     return Variable(
-        type ?? this.type,
-        declaredType: declaredType ?? _declaredType,
-        rep: rep ?? this.rep,
-        callable: callable ?? this.callable,
-        isFinal: isFinal ?? _isFinal,
-        facts: newFacts,
-      )
-      ..name = name ?? this.name
-      ..binding = binding;
+      name == null ? ssa : SSA(name),
+      type ?? this.type,
+      declaredType: declaredType ?? _declaredType,
+      rep: rep ?? this.rep,
+      callable: callable ?? this.callable,
+      isFinal: isFinal ?? _isFinal,
+      facts: newFacts,
+    )..binding = binding;
   }
 
   void inferType(CompilerContext ctx, TypeRef type) {
@@ -543,9 +481,9 @@ class Variable {
 
   @override
   String toString() {
-    final varName = name == null ? 'unnamed' : '"$name"';
+    final varName = '"$name"';
     return 'Variable{$varName, $type, '
-        '${callable == null ? '' : 'method: ${callable!.signature?.returnType} ${callable!.offset}, '}'
+        '${callable == null ? '' : 'signature: ${callable!.signature?.returnType}, '}'
         '${boxed ? 'boxed' : 'unboxed'}, F[${binding?.frameIndex}]}';
   }
 }

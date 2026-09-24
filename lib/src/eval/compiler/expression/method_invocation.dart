@@ -25,6 +25,20 @@ Variable compileMethodInvocation(
   MethodInvocation e, {
   TypeRef? bound,
 }) {
+  if (e.target is SuperExpression) {
+    final folded = CallResolver(ctx).invokeLexicalSuper(
+      CallSite(
+        shape: CallShape.fromArgumentList(
+          e.argumentList,
+          e.typeArguments?.arguments,
+        ),
+        source: e,
+        inConstContext: e.inConstantContext,
+      ),
+      bound: bound,
+    );
+    if (folded != null) return folded;
+  }
   Receiver? receiver;
   if (e.isCascaded) {
     receiver = ValueReceiver(ctx.cascadeTarget!);
@@ -41,6 +55,11 @@ Variable compileMethodInvocation(
     }
   }
 
+  if (receiver is ExtensionNamespaceReceiver) {
+    return CallResolver(
+      ctx,
+    ).invokeExtensionNamespace(receiver, e, bound: bound);
+  }
   final L = receiver?.value;
   if (L != null) {
     final compiledReceiver = receiver!;

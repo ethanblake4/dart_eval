@@ -3,10 +3,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
-import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../invocation/resolver.dart';
-import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 
 Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
   if (str.strings.every((element) => element is SimpleStringLiteral)) {
@@ -37,7 +35,7 @@ Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
   }
 
   if (build == null) {
-    return Variable(CoreTypes.never.ref(ctx), rep: ValueRep.boxed);
+    return Variable.never(ctx);
   }
   return build;
 }

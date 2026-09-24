@@ -9,18 +9,16 @@ import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../member/call_signature.dart';
 import '../member/resolved_member.dart';
 import 'deferred.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
-import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
-import '../builtins.dart';
 import '../values/abi.dart';
 import 'binder.dart';
 import 'bound_call.dart';
@@ -38,9 +36,154 @@ final class CallResolver {
 
   final CompilerContext ctx;
 
-  /// `value(args)` — a function-expression invocation. When [ref] is given
-  /// a statically-known target short-circuits to a direct [Call] without
-  /// materializing the callee.
+  /// An extension namespace has no runtime receiver. Its instance methods
+  /// consume an explicitly supplied receiver; static members bind normally.
+  Variable invokeExtensionNamespace(
+    ExtensionNamespaceReceiver receiver,
+    MethodInvocation invocation, {
+    TypeRef? bound,
+  }) {
+    final denotation = resolveMemberAccess(
+      ctx,
+      receiver,
+      invocation.methodName.name,
+      forSet: false,
+      source: invocation,
+    );
+    if (denotation is ExtensionMemberDenotation &&
+        !denotation.member.isGetter &&
+        !denotation.member.isSetter) {
+      final member = denotation.member;
+      if (!member.isStatic) {
+        final arguments = invocation.argumentList.arguments;
+        if (arguments.isEmpty || arguments.first is NamedArgument) {
+          throw CompileError(
+            'Extension ${receiver.ext.name} requires a receiver argument',
+            invocation,
+          );
+        }
+        final value = compileExpression(
+          arguments.first.argumentExpression,
+          ctx,
+        );
+        final bindings = matchExtensionOn(ctx, value.type, receiver.ext);
+        if (bindings == null) {
+          throw CompileError(
+            '${value.type} is not assignable to the on clause of extension ${receiver.ext.name}',
+            invocation,
+          );
+        }
+        return invokeExtensionMethod(
+          ctx,
+          value,
+          invocation,
+          receiver.ext,
+          member,
+          bindings,
+          argIndexOffset: 1,
+        );
+      }
+      final arguments = ArgumentBinder(ctx).bindDeclaration(
+        receiver.ext.library,
+        member,
+        invocation.argumentList,
+        typeArguments: invocation.typeArguments,
+        source: invocation,
+        returnContext: bound,
+      );
+      return denotation
+          .call(ctx, source: invocation)!
+          .emit(
+            ctx,
+            BoundCall(
+              positional: arguments.positional,
+              named: arguments.named,
+              vectorOverride: arguments.vector(),
+              runtimeTypeArguments: invocation.typeArguments == null
+                  ? arguments.runtimeTypeArguments
+                  : runtimeTypeArguments(ctx, invocation),
+              returnType:
+                  arguments.declaredReturn ??
+                  CallSignature.forDeclaration(
+                    ctx,
+                    receiver.ext.library,
+                    member,
+                  ).returnType,
+            ),
+          );
+    }
+    return invokeValue(
+      CallSite(
+        shape: CallShape.fromArgumentList(
+          invocation.argumentList,
+          invocation.typeArguments?.arguments,
+        ),
+        context: bound,
+        source: invocation,
+        inConstContext: invocation.inConstantContext,
+      ),
+      callee: denotation.read(ctx, source: invocation),
+    );
+  }
+
+  /// A lexical `super.m()` in a folded mixin calls the body from the
+  /// preceding application layer. The host's dispatch table already points
+  /// at the current override, so its earlier body needs an exact offset.
+  Variable? invokeLexicalSuper(CallSite site, {TypeRef? bound}) {
+    final source = site.source;
+    if (source is! MethodInvocation) return null;
+    final name = source.methodName.name;
+    final body = ctx.memberLookup.lexicalSuperBody(name, MemberKind.method);
+    if (body == null) {
+      final getter = ctx.memberLookup.lexicalSuperBody(name, MemberKind.getter);
+      if (getter == null) return null;
+      final self = ctx.lookupLocal('#this')!;
+      final value = FoldedMixinGetterCall(getter, self).emit(ctx);
+      return invokeValue(site, callee: value);
+    }
+    final member = ctx.memberLookup.lexicalSuperMember(body);
+    if (member == null) return null;
+
+    final bindings = foldedMemberTypeParams(
+      ctx,
+      ctx.currentClass!,
+      body.declaration,
+      body.library,
+      ctx.enclosingLibrary ?? ctx.library,
+    );
+    final args = ArgumentBinder(ctx).bindDeclaration(
+      body.library,
+      body.declaration,
+      source.argumentList,
+      typeArguments: source.typeArguments,
+      source: source,
+      seedGenerics: bindings ?? const {},
+      returnContext: bound,
+    );
+    final returnType =
+        args.declaredReturn ??
+        member.signature.returnType.substituteTypeParameters(
+          member.signature.substitutionFor(args.typeArguments),
+        );
+    final self = ctx.lookupLocal('#this')!;
+    return StaticCall(
+      DeferredOrOffset(offset: body.offset),
+      member: member,
+      receiver: self,
+      typeEnvironmentReceiver: self,
+    ).emit(
+      ctx,
+      BoundCall(
+        positional: const [],
+        named: const [],
+        vectorOverride: args.vector(),
+        runtimeTypeArguments: args.runtimeTypeArguments,
+        returnType: returnType,
+      ),
+    );
+  }
+
+  /// `value(args)` — a function-expression invocation.
   Variable invokeValue(CallSite site, {Reference? ref, Variable? callee}) =>
       invokeValueWithArgs(site, ref: ref, callee: callee).$1;
 
@@ -52,13 +195,16 @@ final class CallResolver {
     Variable? callee,
   }) {
     final known = ref?.getDirectCall(ctx, site.source);
-    final callable = known == null
-        ? (ref?.getValue(ctx, site.source) ?? callee!)
+    final read = ref?.getValue(ctx, site.source);
+    // Function values use the closure ABI and bind their own defaults. A
+    // direct target here often carries only a return type, not the formals
+    // needed to safely emit a source call. Type literals retain their direct
+    // construction path.
+    final direct = known is StaticCall && read?.type.isFunctionLike != true
+        ? known
         : null;
-    final target = ClosureCall(
-      callee: callable,
-      known: known is StaticCall ? known : null,
-    );
+    final callable = direct == null ? (read ?? callee!) : null;
+    final target = ClosureCall(callee: callable, known: direct);
     final bound = ArgumentBinder(
       ctx,
     ).bindSuppliedOnly(target, site, callee: callable);
@@ -123,6 +269,7 @@ final class CallResolver {
         e.typeArguments?.arguments,
       ),
       source: e,
+      context: bound,
       inConstContext: e.inConstantContext,
     );
 
@@ -169,28 +316,7 @@ final class CallResolver {
     // `C.new(...)` invokes the unnamed constructor.
     final staticMemberName = ctorNameOf(e.methodName.name);
 
-    EvalExtension? namespaceExt;
-    if (receiver is ExtensionNamespaceReceiver) {
-      // `E.m(...)` — a member of the extension's namespace: an instance
-      // member applied explicitly (receiver is the first argument) or a
-      // static member.
-      namespaceExt = receiver.ext;
-      final member = ctx.memberLookup.extensionMember(
-        receiver.ext,
-        staticMemberName,
-        MemberKind.method,
-      );
-      resolved = member == null
-          ? null
-          : ResolvedMember(member, CoreTypes.dynamic.ref(ctx));
-      if (resolved == null) {
-        throw CompileError(
-          'Cannot find member ${receiver.ext.name}.$staticMemberName',
-          e,
-        );
-      }
-      isStatic = true;
-    } else if (receiver case TypeLiteralReceiver(:final type)) {
+    if (receiver case TypeLiteralReceiver(:final type)) {
       // Static method
       staticType = type;
       if (ctx.topLevelDeclarationsMap[staticType
@@ -418,7 +544,6 @@ final class CallResolver {
       isStatic: isStatic,
       staticType: staticType,
       staticMemberName: staticMemberName,
-      namespaceExt: namespaceExt,
       argsPair: boundArgs.args,
       mReturnType: boundArgs.returnType,
       resolvedTarget: boundArgs.target,
@@ -590,7 +715,6 @@ final class CallResolver {
     required bool isStatic,
     required TypeRef? staticType,
     required String staticMemberName,
-    required EvalExtension? namespaceExt,
     required BoundCall argsPair,
     required TypeRef? mReturnType,
     required CallTarget? resolvedTarget,
@@ -651,8 +775,8 @@ final class CallResolver {
       return StaticCall(
         DeferredOrOffset.lookupStatic(
           ctx,
-          namespaceExt?.library ?? staticType!.file,
-          namespaceExt?.name ?? staticType!.name,
+          staticType!.file,
+          staticType.name,
           staticMemberName,
         ),
         member: resolved?.member,
@@ -789,28 +913,6 @@ final class CallResolver {
     }
     final values = [...args];
     final equality = (method == '==' || method == '!=') && values.length == 1;
-    if (equality &&
-        recv.unmaterializedCallable != null &&
-        values.single.unmaterializedCallable != null) {
-      // Two unmaterialized references to the same function are identical.
-      final equal = recv.methodOffset == values.single.methodOffset;
-      return (
-        target: recv,
-        result: BuiltinValue(
-          boolval: method == '!=' ? !equal : equal,
-        ).push(ctx),
-        args: values,
-        namedArgs: const {},
-      );
-    }
-    if (recv.unmaterializedCallable != null) {
-      recv = recv.tearOff(ctx);
-    }
-    for (var i = 0; i < values.length; i++) {
-      if (values[i].unmaterializedCallable != null) {
-        values[i] = values[i].tearOff(ctx);
-      }
-    }
     final boxed = Variable.boxUnboxMultiple(ctx, [recv, ...values], true);
     recv = boxed.first;
     final prepared = boxed.sublist(1);
@@ -961,46 +1063,15 @@ final class CallResolver {
         'Cannot invoke variable of type ${callee.type} as it is not a function',
       );
     }
-    if (callee.callingConvention == CallingConvention.dynamic ||
-        callee.methodOffset == null) {
-      final (result, bound) = invokeValueWithArgs(
-        CallSite(shape: CallShape.values(args, namedArgs)),
-        callee: callee,
-      );
-      return (
-        target: null,
-        result: result,
-        args: [for (final a in bound.positional) a.value],
-        namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
-      );
-    }
-    final returnType =
-        callResultType(
-          ctx,
-          callee: callee,
-          dispatch: null,
-          argTypes: args.map((arg) => arg.type).toList(),
-          namedArgTypes:
-              namedArgs?.map((key, arg) => MapEntry(key, arg.type)) ?? {},
-        ) ??
-        CoreTypes.dynamic.ref(ctx);
+    final (result, bound) = invokeValueWithArgs(
+      CallSite(shape: CallShape.values(args, namedArgs)),
+      callee: callee,
+    );
     return (
-      target: callee,
-      result: StaticCall(callee.methodOffset!).emit(
-        ctx,
-        BoundCall(
-          positional: const [],
-          named: const [],
-          returnType: returnType,
-          rep: Abi.unboxedAcrossCalls(returnType),
-          vectorOverride: [
-            ...args.map((arg) => arg.ssa),
-            ...?namedArgs?.values.map((arg) => arg.ssa),
-          ],
-        ),
-      ),
-      args: args,
-      namedArgs: namedArgs ?? {},
+      target: null,
+      result: result,
+      args: [for (final a in bound.positional) a.value],
+      namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
     );
   }
 
@@ -1142,7 +1213,17 @@ final class CallResolver {
         d is TypeParameterDenotation ||
         d is EnumValueDenotation ||
         d is PrefixDenotation) {
-      return invokeValue(site, ref: ref);
+      return invokeValue(
+        CallSite(
+          receiver: site.receiver,
+          name: site.name,
+          shape: site.shape,
+          context: bound,
+          source: site.source,
+          inConstContext: site.inConstContext,
+        ),
+        ref: ref,
+      );
     }
     return _invokeBareDispatch(d, name, ref, site, e, bound: bound);
   }
@@ -1339,6 +1420,7 @@ final class CallResolver {
         e.argumentList,
         typeArguments: e.typeArguments,
         source: e,
+        returnContext: bound,
       );
 
       mReturnType = result.declaredReturn;

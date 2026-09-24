@@ -8,12 +8,9 @@ enum EvalOrder { argumentsFirst, readFirst }
 
 /// A matched, compiled, and coerced argument.
 final class BoundArgument {
-  const BoundArgument(this.value, {this.supplied = true});
+  const BoundArgument(this.value);
 
   final Variable value;
-
-  /// False for defaults filled by the binder.
-  final bool supplied;
 }
 
 /// The binder's output: callee-order arguments, resolved type arguments,

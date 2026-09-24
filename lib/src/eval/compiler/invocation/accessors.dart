@@ -23,6 +23,9 @@ import 'package:dart_eval/src/eval/ir/string.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import '../values/abi.dart';
 import '../variable/value_facts.dart';
+import 'bound_call.dart';
+import 'devirtualizer.dart';
+import 'targets.dart';
 
 /// How a member read `o.name` lowers. [GetTarget.resolve] picks the target
 /// from the receiver's static type, representations, and facts; [emit]
@@ -38,14 +41,11 @@ sealed class GetTarget {
     Variable receiver,
     String name, {
     AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
     BoundExtension? extensionPin,
     bool isSuperReceiver = false,
   }) {
-    // A bare function reference has no SSA value; materialize the tear-off
-    // during emission so members like `hashCode`/`runtimeType` resolve on it.
-    if (receiver.unmaterializedCallable != null) {
-      return MaterializingGet(receiver, name, source: source);
-    }
     if (name == 'length' && !receiver.type.nullable) {
       final isString = receiver.type.isAssignableTo(
         ctx,
@@ -124,7 +124,8 @@ sealed class GetTarget {
         receiver,
         bound.ext,
         member,
-        extBindingsMap(bound.ext, bound.onBindings),
+        boundContext: boundContext,
+        typeArguments: typeArguments,
       );
     }
     final resolved = resolvedReceiver.isSpec(CoreTypes.dynamic)
@@ -147,7 +148,16 @@ sealed class GetTarget {
     // The member is a tear-off/write target only when the read produced
     // no field type — a method member found here means a bound tear-off,
     // while a member that yields a type is read as a field.
-    final member = resolvedField == null ? resolved : null;
+    final resolvedNode = resolved?.member;
+    final methodNode = resolvedNode is SourceMember ? resolvedNode.node : null;
+    final isMethod =
+        methodNode is MethodDeclaration &&
+            !methodNode.isGetter &&
+            !methodNode.isSetter ||
+        resolvedNode is BridgeMember &&
+            resolvedNode.def is BridgeMethodDef &&
+            resolvedNode.name.kind == MemberKind.method;
+    final member = isMethod || resolvedField == null ? resolved : null;
     if (resolvedField == null &&
         member == null &&
         !resolvedReceiver.isSpec(CoreTypes.dynamic)) {
@@ -168,7 +178,8 @@ sealed class GetTarget {
           receiver,
           foundMethod.$1,
           foundMethod.$2,
-          extBindingsMap(foundMethod.$1, foundMethod.$3),
+          boundContext: boundContext,
+          typeArguments: typeArguments,
         );
       }
       throw CompileError(
@@ -181,12 +192,8 @@ sealed class GetTarget {
         ? memberNode.sourceDeclaration
         : null;
     final bridge = memberNode is BridgeMember ? memberNode.def : null;
-    // Generic method signatures can't be resolved outside their own scope.
     final isDeclaredMethod =
-        method is MethodDeclaration &&
-        !method.isGetter &&
-        !method.isSetter &&
-        method.typeParameters == null;
+        method is MethodDeclaration && !method.isGetter && !method.isSetter;
     final isBridgeMethod = bridge is BridgeMethodDef;
 
     // A method member read produces a tear-off; carry its signature so
@@ -194,24 +201,22 @@ sealed class GetTarget {
     final TypeRef fieldType;
     final CallSignature? methodSignature;
     if (isDeclaredMethod) {
-      // The declaring class's type parameters bind to its instantiated
-      // view (`member.$1`) — `b.remove` on `B extends A<int>` sees `T: int`.
-      final methodHost = method.parent?.parent;
-      final hostParams = methodHost is Declaration
-          ? classLikeClauses(methodHost).$4?.typeParameters ?? const []
-          : const <TypeParameter>[];
-      final hostArgs = interfaceArgumentsOf(member!.viewedAs);
-      fieldType = ctx.typeFactory.declaredFunctionType(
-        resolvedReceiver.file,
-        method.parameters,
-        method.returnType,
-        method.typeParameters,
-        memberTypeParameters: {
-          for (var i = 0; i < hostParams.length && i < hostArgs.length; i++)
-            hostParams[i].name.lexeme: hostArgs[i],
-        },
-      );
-      methodSignature = member.signature;
+      methodSignature = member!.signature;
+      fieldType = methodSignature.toFunctionType(ctx);
+      if (boundContext is FunctionTypeRef &&
+          methodSignature.typeParameters.isNotEmpty) {
+        final target = Devirtualizer(ctx).refine(
+          VirtualCall(
+            receiver: receiver,
+            name: name,
+            member: member.member,
+            isSuperReceiver: isSuperReceiver,
+          ),
+        );
+        if (target is StaticCall) {
+          return ContextualMethodTearOff(target, boundContext, typeArguments);
+        }
+      }
     } else if (isBridgeMethod) {
       fieldType = CoreTypes.function.ref(ctx);
       methodSignature = member?.signature;
@@ -307,9 +312,6 @@ sealed class GetTarget {
       name,
       fieldType: fieldType,
       methodSignature: methodSignature,
-      callingConvention: isDeclaredMethod || isBridgeMethod
-          ? CallingConvention.dynamic
-          : CallingConvention.static,
       isSuperReceiver: isSuperReceiver,
     );
   }
@@ -320,6 +322,8 @@ sealed class GetTarget {
     Variable receiver,
     String name, {
     AstNode? source,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
     BoundExtension? extensionPin,
     bool isSuperReceiver = false,
   }) => resolve(
@@ -327,30 +331,13 @@ sealed class GetTarget {
     receiver,
     name,
     source: source,
+    boundContext: boundContext,
+    typeArguments: typeArguments,
     extensionPin: extensionPin,
     isSuperReceiver: isSuperReceiver,
   ).emit(ctx);
 
   Variable emit(CompilerContext ctx);
-}
-
-/// The receiver is an unmaterialized callable (`f.name` where `f` is a
-/// function reference): materialize the tear-off during emission, then
-/// resolve the member on the materialized value.
-final class MaterializingGet extends GetTarget {
-  const MaterializingGet(this.receiver, this.name, {this.source});
-
-  final Variable receiver;
-  final String name;
-  final AstNode? source;
-
-  @override
-  Variable emit(CompilerContext ctx) => GetTarget.resolve(
-    ctx,
-    receiver.tearOff(ctx),
-    name,
-    source: source,
-  ).emit(ctx);
 }
 
 /// A `String.length`, native-`List.length`, or `runtimeType` read.
@@ -544,6 +531,31 @@ final class SuperGetterCall extends GetTarget {
   );
 }
 
+/// A getter in an earlier folded mixin layer. Its current dispatch-table
+/// entry may have been replaced by a later mixin, so call its exact body.
+final class FoldedMixinGetterCall extends GetTarget {
+  const FoldedMixinGetterCall(this.body, this.self);
+
+  final FoldedMemberBody body;
+  final Variable self;
+
+  @override
+  Variable emit(CompilerContext ctx) =>
+      StaticCall(
+        DeferredOrOffset(offset: body.offset),
+        member: ctx.memberLookup.lexicalSuperMember(body),
+        receiver: self,
+        typeEnvironmentReceiver: self,
+      ).emit(
+        ctx,
+        BoundCall(
+          positional: const [],
+          named: const [],
+          returnType: ctx.memberLookup.lexicalSuperResultType(body),
+        ),
+      );
+}
+
 /// `InvokeExternal`-backed extension getter.
 final class ExtensionGetterCall extends GetTarget {
   const ExtensionGetterCall(
@@ -563,59 +575,65 @@ final class ExtensionGetterCall extends GetTarget {
       invokeExtensionGetter(ctx, receiver, ext, member, bindings);
 }
 
-/// A bound tear-off of an extension method; the receiver travels through
-/// [Variable.implicitReceiver] so a direct invocation prepends it.
+/// Materializes an extension method as a closure capturing its receiver.
 final class ExtensionMethodTearOff extends GetTarget {
   const ExtensionMethodTearOff(
     this.receiver,
     this.ext,
-    this.member,
-    this.typeParameters,
-  );
+    this.member, {
+    this.boundContext,
+    this.typeArguments,
+  });
 
   final Variable receiver;
   final EvalExtension ext;
   final MethodDeclaration member;
-  final Map<String, TypeRef> typeParameters;
+  final TypeRef? boundContext;
+  final List<TypeRef>? typeArguments;
 
   @override
   Variable emit(CompilerContext ctx) {
-    return Variable(
-      CoreTypes.function.ref(ctx),
-      rep: ValueRep.boxed,
-      callable: CallableValue(
-        offset: DeferredOrOffset(
-          file: ext.library,
-          name: ext.memberKey(member),
-        ),
-        signature: CallSignature.returnOnly(
-          TypeRef.fromAnnotation(
+    return materializeTearOff(
+      ctx,
+      DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+      implicitReceiver: receiver,
+      boundContext: boundContext,
+      typeArguments: typeArguments,
+    );
+  }
+}
+
+/// A source method whose receiver pins its implementation can be specialized
+/// before its closure is created, preserving the bound callable type arguments.
+final class ContextualMethodTearOff extends GetTarget {
+  const ContextualMethodTearOff(
+    this.target,
+    this.boundContext,
+    this.typeArguments,
+  );
+
+  final StaticCall target;
+  final FunctionTypeRef boundContext;
+  final List<TypeRef>? typeArguments;
+
+  @override
+  Variable emit(CompilerContext ctx) {
+    final receiver = target.receiver!;
+    final link = target.ownerLink;
+    final captured = link == null
+        ? receiver
+        : Variable.of(
             ctx,
-            ext.library,
-            member.returnType!,
-            typeParameters: {
-              ...typeParameters,
-              ...() {
-                final scope = <String, TypeRef>{};
-                declareTypeParameters(
-                  ctx,
-                  TypeParameterOwner(
-                    TypeParameterOwnerKind.method,
-                    ext.library,
-                    '${ext.name}.${member.name.lexeme}',
-                    member.offset,
-                  ),
-                  member.typeParameters?.typeParameters ??
-                      const <TypeParameter>[],
-                  scope,
-                );
-                return scope;
-              }(),
-            },
-          ),
-        ),
-        implicitReceiver: receiver,
-      ),
+            ownerLinkSsa(ctx, receiver.ssa, link.$1, link.$2),
+            link.$2,
+            rep: receiver.rep,
+          );
+    return materializeTearOff(
+      ctx,
+      target.offset!,
+      implicitReceiver: captured,
+      boundContext: boundContext,
+      typeArguments: typeArguments,
     );
   }
 }
@@ -627,7 +645,6 @@ final class DynamicGet extends GetTarget {
     this.name, {
     required this.fieldType,
     this.methodSignature,
-    this.callingConvention = CallingConvention.static,
     this.isSuperReceiver = false,
   });
 
@@ -639,7 +656,6 @@ final class DynamicGet extends GetTarget {
   /// The signature a method read carries so calls through the result stay
   /// typed.
   final CallSignature? methodSignature;
-  final CallingConvention callingConvention;
 
   /// `super.name` read: the receiver is a mid-chain link, so the runtime
   /// resolves the member at-or-below that link, not at the dispatch root.
@@ -657,10 +673,7 @@ final class DynamicGet extends GetTarget {
     ),
     fieldType,
     rep: ValueRep.boxed,
-    callable: CallableValue(
-      signature: methodSignature,
-      convention: callingConvention,
-    ),
+    callable: CallableValue(signature: methodSignature),
   );
 }
 
@@ -968,6 +981,42 @@ final class SuperSetterCall extends SetTarget {
       ),
     );
     return boxed;
+  }
+}
+
+/// A setter in an earlier folded mixin layer, called by its exact body.
+final class FoldedMixinSetterCall extends SetTarget {
+  const FoldedMixinSetterCall(this.body, this.self);
+
+  final FoldedMemberBody body;
+  final Variable self;
+
+  @override
+  Variable emit(CompilerContext ctx, Variable value) {
+    final parameterType = ctx.memberLookup.lexicalSuperSetterType(body);
+    final converted = convertForAssignment(
+      ctx,
+      value,
+      parameterType,
+      representation: MachineRepresentation.object,
+      description:
+          'Cannot assign ${value.type} to super.${body.declaration.name.lexeme} '
+          'of type $parameterType',
+    );
+    StaticCall(
+      DeferredOrOffset(offset: body.offset),
+      member: ctx.memberLookup.lexicalSuperMember(body),
+      receiver: self,
+      typeEnvironmentReceiver: self,
+    ).emit(
+      ctx,
+      BoundCall(
+        positional: [BoundArgument(converted)],
+        named: const [],
+        returnType: CoreTypes.voidType.ref(ctx),
+      ),
+    );
+    return converted;
   }
 }
 

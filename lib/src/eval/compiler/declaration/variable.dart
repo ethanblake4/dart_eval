@@ -1,4 +1,3 @@
-import '../builtins.dart';
 import '../helpers/global.dart';
 import '../helpers/conversion.dart';
 import '../../ir/representation.dart';
@@ -49,7 +48,7 @@ void compileTopLevelVariableDeclaration(
     ctx.runtimeGlobalInitializerMap[index] = pos;
     // An initializer that never produces a value (`throw`, `Never`-typed)
     // still needs a Return operand for the initializer function frame.
-    ctx.pushOp(Return(V.name == null ? BuiltinValue().push(ctx).ssa : V.ssa));
+    ctx.pushOp(Return(V.ssa));
     ctx.endScope();
   }
 }
