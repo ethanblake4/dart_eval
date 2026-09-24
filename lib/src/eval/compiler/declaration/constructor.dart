@@ -943,48 +943,52 @@ Variable _invokeSuperConstructor(
     );
   }
   final constructor = constructor0?.declaration as ConstructorDeclaration?;
-  BoundCall? arguments;
-  if (constructor != null) {
-    // `super()` and the implicit super call bind the callee's declared
-    // defaults; only an implicit target takes no arguments at all.
-    arguments = superInitializer != null
-        ? ArgumentBinder(ctx).bindParameterList(
-            superInitializer.argumentList,
-            extendsDecl.sourceLib,
-            CallSignature.forDeclaration(
-              ctx,
-              extendsDecl.sourceLib,
-              constructor,
-            ),
-            constructor,
-            superParams: superParams,
-            // `extends A<int>` — the superclass's parameters bind to the
-            // clause's arguments so `T z` checks against `int`.
-            resolveGenerics: _superclassGenerics(ctx, extendsDecl, extendsType),
-            source: superInitializer,
-          )
-        : ArgumentBinder(ctx).bindSuperParams(
-            constructor.parameters.parameters,
-            constructor,
-            decLibrary: extendsDecl.sourceLib,
-            superParams: superParams,
-          );
-  }
-
   final methodOffset = DeferredOrOffset.lookupStatic(
     ctx,
     extendsDecl.sourceLib,
     extendsType.name,
     constructorName,
   );
-
-  return ConstructorCall(
+  final target = ConstructorCall(
     staticType: extendsType,
     instantiatedType: extendsType,
+    name: constructorName,
     offset: methodOffset,
     constructor: constructor,
     implicitDefault: constructor == null,
-  ).emit(
+    signature: constructor == null
+        ? null
+        : CallSignature.forDeclaration(ctx, extendsDecl.sourceLib, constructor),
+  );
+  BoundCall? arguments;
+  if (constructor != null) {
+    // `super()` and the implicit super call bind the callee's declared
+    // defaults; only an implicit target takes no arguments at all.
+    final seeds = _superclassGenerics(ctx, extendsDecl, extendsType);
+    arguments =
+        superInitializer != null &&
+            superParams.positional.isEmpty &&
+            superParams.named.isEmpty
+        ? ArgumentBinder(ctx).bindSourceTarget(
+            target,
+            superInitializer.argumentList,
+            seedGenerics: seeds,
+            source: superInitializer,
+          )
+        : ArgumentBinder(ctx).bindParameterList(
+            superInitializer?.argumentList,
+            extendsDecl.sourceLib,
+            target.signature!,
+            constructor,
+            superParams: superParams,
+            // `extends A<int>` — the superclass's parameters bind to the
+            // clause's arguments so `T z` checks against `int`.
+            resolveGenerics: seeds,
+            source: superInitializer,
+            fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
+          );
+  }
+  return target.emit(
     ctx,
     BoundCall(
       positional: arguments?.positional ?? const [],

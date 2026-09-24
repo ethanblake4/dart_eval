@@ -146,33 +146,46 @@ void _compileEnumValue(
   final vName = BuiltinValue(stringval: cName).push(ctx).boxIfNeeded(ctx);
 
   final dec = cstr?.declaration;
-  BoundCall? bound;
-  if (constant.arguments != null && dec != null) {
+  final constructor = dec is ConstructorDeclaration ? dec : null;
+  final target = ConstructorCall(
+    staticType: type,
+    instantiatedType: type,
+    offset: offset,
+    constructor: constructor,
+    implicitDefault: constructor == null,
+    leadingArguments: [vIndex.ssa, vName.ssa],
+    signature: constructor == null
+        ? null
+        : CallSignature.forDeclaration(ctx, ctx.library, constructor),
+  );
+  final BoundCall? bound;
+  if (constructor == null) {
+    bound = null;
+  } else if (constant.arguments case final arguments?) {
+    bound = ArgumentBinder(
+      ctx,
+    ).bindSourceTarget(target, arguments.argumentList, source: constant);
+  } else {
+    // `a` uses the selected constructor's optional defaults just as `a()`
+    // does, although it has no ArgumentList node to pass to bindSourceTarget.
     bound = ArgumentBinder(ctx).bindParameterList(
-      constant.arguments!.argumentList,
+      null,
       ctx.library,
-      CallSignature.forDeclaration(ctx, ctx.library, dec),
-      dec,
+      target.signature!,
+      constructor,
       source: constant,
+      fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
     );
   }
-  final V =
-      ConstructorCall(
-        staticType: type,
-        instantiatedType: type,
-        offset: offset,
-        constructor: dec is ConstructorDeclaration ? dec : null,
-        implicitDefault: dec == null,
-        leadingArguments: [vIndex.ssa, vName.ssa],
-      ).emit(
-        ctx,
-        BoundCall(
-          positional: bound?.positional ?? const [],
-          named: bound?.named ?? const [],
-          vectorOverride: bound?.vector(),
-          returnType: type,
-        ),
-      );
+  final V = target.emit(
+    ctx,
+    BoundCall(
+      positional: bound?.positional ?? const [],
+      named: bound?.named ?? const [],
+      vectorOverride: bound?.vector(),
+      returnType: type,
+    ),
+  );
   final name = '$clsName.$cName';
   final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
   ctx.globalRepresentations[index] = MachineRepresentation.object;
