@@ -25,6 +25,8 @@ typedef _MatchedArgument = ({
   Expression expression,
 });
 
+typedef _MatchedSource = ({int? positional, String? named, ArgSource source});
+
 /// Maps a [CallSite]'s argument shape onto a [CallTarget]'s signature:
 /// match, seed the substitution, compile and coerce, solve inference, fill
 /// omitted arguments per the target's policy.
@@ -347,9 +349,11 @@ final class ArgumentBinder {
     int decLibrary,
     CallSignature signature,
     Declaration parameterHost, {
+    CallShape? suppliedShape,
     List<Variable> before = const [],
     Map<String, TypeRef> resolveGenerics = const {},
     bool inferGenerics = true,
+    Set<String>? inferParameterNames,
     SuperParams superParams = const (positional: [], named: {}),
     AstNode? source,
     // Explicit extension application (`E.m(receiver, ...)`) leads the
@@ -404,16 +408,18 @@ final class ArgumentBinder {
     // resolving AST annotations again here can pick a different scope.
     final parameterDefs = <String, TypeParameterDef>{
       for (final entry in signature.typeParameterRefs.entries)
-        if (entry.value is TypeParameterTypeRef)
+        if (entry.value is TypeParameterTypeRef &&
+            (inferParameterNames == null ||
+                inferParameterNames.contains(entry.key)))
           entry.key: (entry.value as TypeParameterTypeRef).parameter,
     };
     final argumentSubstitution = signature.substitutionFor(resolveGenerics);
 
     final resolveGenericsMap = <String, Set<TypeRef>>{};
 
-    // Compiles the supplied argument [expr] for [spec]: context-typed
-    // compilation, coercion to the formal, and generic-inference recording.
-    Variable compileMatched(ParameterSpec spec, Expression expr) {
+    // Compiles or reads the supplied argument for [spec]: context typing,
+    // coercion to the formal, and generic-inference recording.
+    Variable compileMatched(ParameterSpec spec, ArgSource argument) {
       final param = spec.node!;
       final paramType = spec.type.substituteTypeParameters(
         argumentSubstitution,
@@ -434,7 +440,7 @@ final class ArgumentBinder {
       final argBound = unifyPattern is FunctionTypeRef
           ? unifyPattern
           : paramType;
-      var arg0 = compileExpression(expr, ctx, argBound);
+      var arg0 = _compileArg(ctx, argument, argBound);
       arg0 = coerceArgumentForParameter(
         ctx,
         arg0,
@@ -461,20 +467,43 @@ final class ArgumentBinder {
           }
         }
       }
-      // A following argument can assign to the local slot that produced this
-      // value. Keep the evaluated value independent of that slot.
-      return arg0.copyIntoFreshSlot(ctx, 'source_argument');
+      // A following source expression can assign to the local slot that
+      // produced this value. Already-compiled operands were captured by the
+      // caller before target resolution.
+      return argument is ExpressionArg
+          ? arg0.copyIntoFreshSlot(ctx, 'source_argument')
+          : arg0;
     }
 
-    final matched = argumentList == null
-        ? const <_MatchedArgument>[]
-        : _matchArguments(
-            argumentList,
-            positional.length,
-            named.keys.toSet(),
-            offset: argIndexOffset,
-            leadingPositional: superParams.positional.length,
+    final shape =
+        suppliedShape ??
+        (argumentList == null
+            ? CallShape.values(const [])
+            : CallShape.fromArgumentList(argumentList));
+    final matched = <_MatchedSource>[];
+    var positionalCursor = superParams.positional.length;
+    for (final index in shape.sourceOrder.skip(argIndexOffset)) {
+      if (index >= 0) {
+        if (positionalCursor >= positional.length) {
+          throw CompileError(
+            'Too many positional arguments: ${positional.length} expected, '
+            'but ${positionalCursor + 1} found.',
+            source,
           );
+        }
+        matched.add((
+          positional: positionalCursor++,
+          named: null,
+          source: shape.positional[index],
+        ));
+      } else {
+        final (name, argument) = shape.named[-1 - index];
+        if (!named.containsKey(name)) {
+          throw CompileError('Unknown named argument $name', source);
+        }
+        matched.add((positional: null, named: name, source: argument));
+      }
+    }
     final suppliedNames = {
       for (final argument in matched)
         if (argument.named case final String name) name,
@@ -496,15 +525,12 @@ final class ArgumentBinder {
       if (pi != null) {
         compiledPositional[pi] = compileMatched(
           positional[pi],
-          argument.expression,
+          argument.source,
         );
       } else {
         final name = argument.named;
         if (name != null) {
-          compiledNamed[name] = compileMatched(
-            named[name]!,
-            argument.expression,
-          );
+          compiledNamed[name] = compileMatched(named[name]!, argument.source);
         }
       }
     }
@@ -1061,24 +1087,6 @@ final class ArgumentBinder {
     }
     final declaration = member.sourceDeclaration as MethodDeclaration;
     final signature = target.signature!;
-    if (positionalValues.length > signature.positional.length) {
-      throw CompileError('Too many positional arguments', source);
-    }
-    if (positionalValues.length < signature.requiredPositional) {
-      throw CompileError('Not enough positional arguments', source);
-    }
-    final namedSpecs = {for (final spec in signature.named) spec.name: spec};
-    for (final name in namedValues.keys) {
-      if (!namedSpecs.containsKey(name)) {
-        throw CompileError('Unknown named argument $name', source);
-      }
-    }
-    for (final spec in signature.named) {
-      if (spec.isRequired && !namedValues.containsKey(spec.name)) {
-        throw CompileError('Missing required argument ${spec.name}', source);
-      }
-    }
-
     final resolvedGenerics = <String, TypeRef>{...seedGenerics};
     _resolveInvocationGenerics(
       signature,
@@ -1086,100 +1094,26 @@ final class ArgumentBinder {
       resolvedGenerics,
       source ?? declaration,
     );
-    final substitution = signature.substitutionFor(resolvedGenerics);
-    final classSubstitution = signature.substitutionFor(
-      seedGenerics,
-      includeOwn: false,
+    final args = bindParameterList(
+      null,
+      member.library,
+      signature,
+      declaration,
+      suppliedShape: CallShape.values(positionalValues, namedValues),
+      resolveGenerics: resolvedGenerics,
+      inferParameterNames: {
+        for (final parameter in signature.typeParameters) parameter.name,
+      },
+      fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
+      source: source,
     );
-    final inferred = <String, Set<TypeRef>>{};
-    final ownByDef = {
-      for (final def in signature.typeParameters) def: def.name,
-    };
-    Variable convert(ParameterSpec spec, Variable value) {
-      if (ownByDef.isNotEmpty) {
-        final bindings = <TypeParameterDef, TypeRef>{};
-        ctx.typeSystem.unify(
-          spec.type.substituteTypeParameters(classSubstitution),
-          value.type,
-          bindings,
-        );
-        for (final entry in bindings.entries) {
-          final name = ownByDef[entry.key];
-          if (name != null) {
-            inferred.putIfAbsent(name, () => <TypeRef>{}).add(entry.value);
-          }
-        }
-      }
-      return coerceArgumentForParameter(
-        ctx,
-        value,
-        spec.type.substituteTypeParameters(substitution),
-        spec.node!,
-        declaration,
-        genericParameter: spec.erased,
-        source: source,
-      );
-    }
-
-    final fillDefaults = target.policy == BindingPolicy.callerFillsDefaults;
-    final positional = <BoundArgument>[];
-    for (var i = 0; i < signature.positional.length; i++) {
-      final spec = signature.positional[i];
-      if (i < positionalValues.length) {
-        positional.add(BoundArgument(convert(spec, positionalValues[i])));
-      } else if (fillDefaults) {
-        positional.add(
-          BoundArgument(
-            compileOmittedArgument(
-              ctx,
-              member.library,
-              spec.node!,
-              declaration,
-              defaultSource: spec.defaultValue is SourceDefault
-                  ? spec.defaultValue as SourceDefault
-                  : null,
-              declaredType: spec.type.substituteTypeParameters(substitution),
-            ),
-          ),
-        );
-      }
-    }
-    final named = <(String, BoundArgument)>[];
-    final names = fillDefaults
-        ? [for (final spec in signature.named) spec.name]
-        : namedValues.keys;
-    for (final name in names) {
-      final spec = namedSpecs[name]!;
-      final supplied = namedValues[name];
-      if (supplied != null) {
-        named.add((name, BoundArgument(convert(spec, supplied))));
-      } else if (fillDefaults) {
-        named.add((
-          name,
-          BoundArgument(
-            compileOmittedArgument(
-              ctx,
-              member.library,
-              spec.node!,
-              declaration,
-              defaultSource: spec.defaultValue is SourceDefault
-                  ? spec.defaultValue as SourceDefault
-                  : null,
-              declaredType: spec.type.substituteTypeParameters(substitution),
-            ),
-          ),
-        ));
-      }
-    }
-    for (final entry in inferred.entries) {
-      resolvedGenerics[entry.key] = TypeRef.commonBaseType(ctx, entry.value);
-    }
     final returnType = signature.returnType
         .substituteTypeParameters(signature.substitutionFor(resolvedGenerics))
         .lowerTypeParameters(ctx);
     return BoundCall(
-      positional: positional,
-      named: named,
+      positional: args.positional,
+      named: args.named,
+      vectorOverride: args.vectorOverride,
       returnType: returnType.isSpec(CoreTypes.voidType)
           ? CoreTypes.dynamic.ref(ctx)
           : returnType,
