@@ -45,25 +45,16 @@ abstract class Reference {
   CallTarget? getDirectCall(CompilerContext ctx, [AstNode? source]);
 }
 
-/// A property whose getter and setter resolve from the lexical superclass.
-class SuperPropertyReference extends IdentifierReference {
-  SuperPropertyReference(Variable super.object, super.name);
-
-  @override
-  Denotation denotation(
-    CompilerContext ctx, {
-    bool forSet = false,
-    AstNode? source,
-  }) => InstanceMemberDenotation(SuperReceiver(object!), name);
-
-  @override
-  CallTarget? getDirectCall(CompilerContext ctx, [AstNode? source]) => null;
-}
-
 /// A local, instance, or top-level reference with an optional target object.
 class IdentifierReference implements Reference {
-  IdentifierReference(this.object, this.name, {this.pin});
+  IdentifierReference(this.object, this.name, {this.pin}) : _receiver = null;
 
+  IdentifierReference.receiver(Receiver receiver, this.name)
+    : _receiver = receiver,
+      object = null,
+      pin = null;
+
+  final Receiver? _receiver;
   Variable? object;
   final String name;
 
@@ -80,6 +71,15 @@ class IdentifierReference implements Reference {
     bool forSet = false,
     AstNode? source,
   }) {
+    if (_receiver case final receiver?) {
+      return resolveMemberAccess(
+        ctx,
+        receiver,
+        name,
+        forSet: forSet,
+        source: source,
+      );
+    }
     final object = this.object;
     if (object != null) {
       return resolveMemberAccess(
@@ -410,11 +410,7 @@ Variable loadGlobalVariable(
 /// A `Type` literal variable for [type]. [constructorKey] is the name used in
 /// [DeferredOrOffset] to resolve the constructor (e.g. `ClassName.` or, for
 /// bridged enums, `EnumName#wrap`).
-Variable typeLiteral(
-  CompilerContext ctx,
-  TypeRef type,
-  String constructorKey,
-) {
+Variable typeLiteral(CompilerContext ctx, TypeRef type, String constructorKey) {
   final typeId = ctx.runtimeTypes.idOf(type);
   final operation = type.requiresTypeEnvironment
       ? LoadTypeParameter(ctx.svar('type'), typeId)
@@ -482,14 +478,34 @@ BoundExtension? extensionPinOf(
   TypeRef receiverType,
 ) {
   if (target is! MethodInvocation) return null;
-  // `E(x)` always names the extension as a bare identifier; a member-call
-  // target like `recv.m(...)` fails the lexical lookup and is not a pin.
+  if (target.isCascaded) return null;
   final Denotation d;
   try {
-    d = IdentifierReference(
-      null,
-      target.methodName.name,
-    ).denotation(ctx, source: target);
+    final namespace = target.target;
+    if (namespace == null) {
+      d = resolveIdentifier(
+        ctx,
+        target.methodName.name,
+        forSet: false,
+        source: target,
+      );
+    } else if (namespace is SimpleIdentifier) {
+      final prefix = resolveIdentifier(
+        ctx,
+        namespace.name,
+        forSet: false,
+        source: namespace,
+      );
+      if (prefix is! PrefixDenotation) return null;
+      d = prefix.memberAccess(
+        ctx,
+        target.methodName.name,
+        forSet: false,
+        source: target,
+      );
+    } else {
+      return null;
+    }
   } on CompileError {
     return null;
   }

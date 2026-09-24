@@ -102,21 +102,21 @@ final class CallResolver {
   }
 
   /// The [Variable] behind a [Receiver] that carries a concrete value.
-  Variable _receiverVariable(Receiver r) => switch (r) {
-    ValueReceiver(:final value) => value,
-    ExtensionApplicationReceiver(:final value) => value,
-    TypeLiteralReceiver(:final value) => value,
-    ExtensionNamespaceReceiver(:final value) => value,
-    SuperReceiver(:final self) => self,
-    PrefixReceiver() => throw CompileError('Unresolved import prefix'),
-  };
+  Variable _receiverVariable(Receiver r) =>
+      r.value ?? (throw CompileError('Unresolved import prefix'));
 
   /// `receiver.m(args)` — an instance-target invocation. Member resolution
   /// consults the receiver's static type (bound extensions, type literals,
   /// records, interface members, extensions, `dynamic`); emission routes
   /// through the [CallTarget] pipeline — [VirtualCall] refined by
   /// [Devirtualizer], [DynamicCall], [MemberValueCall], or a bridge path.
-  Variable invokeMethod(Variable L, MethodInvocation e, {TypeRef? bound}) {
+  Variable invokeMethod(
+    Variable L,
+    MethodInvocation e, {
+    TypeRef? bound,
+    Receiver? receiver,
+  }) {
+    receiver ??= receiverOf(ctx, L, pin: extensionPinOf(ctx, e.target, L.type));
     CallSite callSite() => CallSite(
       shape: CallShape.fromArgumentList(
         e.argumentList,
@@ -127,7 +127,7 @@ final class CallResolver {
     );
 
     // `E(x).m(...)` — explicit application pins member resolution to E.
-    if (extensionPinOf(ctx, e.target, L.type) case final boundExt?) {
+    if (receiver case ExtensionApplicationReceiver boundExt) {
       final member = extensionMember(boundExt.ext, e.methodName.name);
       if (member == null) {
         // `E(x).g(...)`: the getter's result is the call target.
@@ -169,11 +169,6 @@ final class CallResolver {
     // `C.new(...)` invokes the unnamed constructor.
     final staticMemberName = ctorNameOf(e.methodName.name);
 
-    final receiver = receiverOf(
-      ctx,
-      L,
-      pin: extensionPinOf(ctx, e.target, L.type),
-    );
     EvalExtension? namespaceExt;
     if (receiver is ExtensionNamespaceReceiver) {
       // `E.m(...)` — a member of the extension's namespace: an instance

@@ -58,12 +58,37 @@ sealed class Denotation {
 /// The special receivers a member access can target.
 sealed class Receiver {
   const Receiver();
+
+  /// The runtime receiver, absent only for an import namespace.
+  Variable? get value => switch (this) {
+    ValueReceiver(:final value) => value,
+    SuperReceiver(:final self) => self,
+    TypeLiteralReceiver(:final value) => value,
+    ExtensionApplicationReceiver(:final value) => value,
+    ExtensionNamespaceReceiver(:final value) => value,
+    PrefixReceiver() => null,
+  };
+
+  /// Retains the receiver's meaning when a null guard narrows its value.
+  Receiver withValue(Variable value) => switch (this) {
+    ValueReceiver() => ValueReceiver(value),
+    SuperReceiver() => SuperReceiver(value),
+    TypeLiteralReceiver(:final type) => TypeLiteralReceiver(type, value),
+    ExtensionApplicationReceiver(:final ext, :final onBindings) =>
+      ExtensionApplicationReceiver(ext, onBindings, value),
+    ExtensionNamespaceReceiver(:final ext) => ExtensionNamespaceReceiver(
+      ext,
+      value,
+    ),
+    PrefixReceiver() => this,
+  };
 }
 
 /// A member access on an ordinary value: `v.name`.
 final class ValueReceiver extends Receiver {
   const ValueReceiver(this.value);
 
+  @override
   final Variable value;
 }
 
@@ -82,6 +107,7 @@ final class TypeLiteralReceiver extends Receiver {
   const TypeLiteralReceiver(this.type, this.value);
 
   final TypeRef type;
+  @override
   final Variable value;
 }
 
@@ -91,6 +117,7 @@ final class ExtensionApplicationReceiver extends Receiver {
 
   final EvalExtension ext;
   final List<TypeRef> onBindings;
+  @override
   final Variable value;
 }
 
@@ -101,6 +128,7 @@ final class ExtensionNamespaceReceiver extends Receiver {
   const ExtensionNamespaceReceiver(this.ext, this.value);
 
   final EvalExtension ext;
+  @override
   final Variable value;
 }
 
@@ -590,7 +618,7 @@ final class InstanceMemberDenotation extends Denotation {
     if (object == null) {
       throw CompileError('Cannot access instance member $name', source);
     }
-    return GetTarget.read(ctx, object.boxIfNeeded(ctx, source), name);
+    return GetTarget.read(ctx, object, name, source: source);
   }
 
   @override
@@ -1557,12 +1585,13 @@ final class _TypeMemberDenotation extends Denotation {
 /// through references; `super` becomes a [SuperReceiver]; `E(x)` becomes
 /// an [ExtensionApplicationReceiver]; the cascade target and everything
 /// else become a [ValueReceiver].
-Receiver compileReceiver(CompilerContext ctx, Expression target) {
+Receiver compileReceiver(
+  CompilerContext ctx,
+  Expression target, {
+  TypeRef? bound,
+}) {
   if (target is SuperExpression) {
-    return SuperReceiver(
-      ctx.lookupLocal('#this') ??
-          (throw CompileError('Invalid super call', target)),
-    );
+    return SuperReceiver(compileExpression(target, ctx));
   }
   if (target is SimpleIdentifier) {
     final denotation = resolveIdentifier(
@@ -1571,39 +1600,12 @@ Receiver compileReceiver(CompilerContext ctx, Expression target) {
       forSet: false,
       source: target,
     );
-    return switch (denotation) {
-      PrefixDenotation p => PrefixReceiver(p),
-      TypeLiteralDenotation t => TypeLiteralReceiver(
-        t.type,
-        t.read(ctx, source: target),
-      ),
-      ExtensionNamespaceDenotation e => ExtensionNamespaceReceiver(
-        e.ext,
-        e.read(ctx, source: target),
-      ),
-      _ => ValueReceiver(denotation.read(ctx, source: target)),
-    };
+    if (denotation is PrefixDenotation) return PrefixReceiver(denotation);
   }
-  if (target is PrefixedIdentifier) {
-    final denotation = resolveIdentifier(
-      ctx,
-      '${target.prefix.name}.${target.identifier.name}',
-      forSet: false,
-      source: target,
-    );
-    return switch (denotation) {
-      TypeLiteralDenotation t => TypeLiteralReceiver(
-        t.type,
-        t.read(ctx, source: target),
-      ),
-      ExtensionNamespaceDenotation e => ExtensionNamespaceReceiver(
-        e.ext,
-        e.read(ctx, source: target),
-      ),
-      _ => ValueReceiver(denotation.read(ctx, source: target)),
-    };
-  }
-  return ValueReceiver(compileExpression(target, ctx));
+  // The expression compiler already distinguishes p.name from value.name,
+  // materializes function references, and preserves contextual typing.
+  final value = compileExpression(target, ctx, bound);
+  return receiverOf(ctx, value, pin: extensionPinOf(ctx, target, value.type));
 }
 
 /// Field-wise equality for shadow comparison of dispatch results.

@@ -25,39 +25,25 @@ Variable compileMethodInvocation(
   MethodInvocation e, {
   TypeRef? bound,
 }) {
-  Variable? L;
-  var isPrefix = false;
+  Receiver? receiver;
   if (e.isCascaded) {
-    L = ctx.cascadeTarget;
+    receiver = ValueReceiver(ctx.cascadeTarget!);
   } else if (e.target != null) {
-    // `p.m(...)` — the target compiles to an import prefix, which has no
-    // runtime value; detect it syntactically instead of catching an error.
-    if (e.target case SimpleIdentifier target) {
-      final d = IdentifierReference(
-        null,
-        target.name,
-      ).denotation(ctx, source: e);
-      if (d is PrefixDenotation) {
-        isPrefix = true;
-      }
-    }
-    if (!isPrefix) {
-      L = compileExpression(
-        e.target!,
-        ctx,
-        // `.member().rest()` — the chain's context type reaches the
-        // leading shorthand through its selector targets.
-        containsLeadingShorthand(e.target!) ? bound : null,
-      );
-      if (e.target is SuperExpression) {
-        final (receiver, dispatched) = _resolveSuperReceiver(ctx, e, L);
-        if (dispatched != null) return dispatched;
-        L = receiver;
-      }
+    receiver = compileReceiver(
+      ctx,
+      e.target!,
+      bound: containsLeadingShorthand(e.target!) ? bound : null,
+    );
+    if (receiver case SuperReceiver(:final self)) {
+      final (owner, dispatched) = _resolveSuperReceiver(ctx, e, self);
+      if (dispatched != null) return dispatched;
+      receiver = SuperReceiver(owner);
     }
   }
 
+  final L = receiver?.value;
   if (L != null) {
+    final compiledReceiver = receiver!;
     // `a?.m()` and calls continuing a null-shorted chain (`a?.b.m()`): a
     // null receiver nulls the whole expression — argument evaluation is
     // skipped.
@@ -65,11 +51,23 @@ Variable compileMethodInvocation(
       return emitNullGuard(
         ctx,
         L,
-        (t) => invokeMethodWithTarget(ctx, t, e, bound: bound),
+        (t) => invokeMethodWithTarget(
+          ctx,
+          t,
+          e,
+          bound: bound,
+          receiver: compiledReceiver.withValue(t),
+        ),
         source: e,
       );
     }
-    return invokeMethodWithTarget(ctx, L, e, bound: bound);
+    return invokeMethodWithTarget(
+      ctx,
+      L,
+      e,
+      bound: bound,
+      receiver: compiledReceiver,
+    );
   }
   return CallResolver(ctx).invokeBare(
     e.methodName.name,
@@ -81,7 +79,7 @@ Variable compileMethodInvocation(
       source: e,
       inConstContext: e.inConstantContext,
     ),
-    prefix: isPrefix ? (e.target as Identifier).name : null,
+    prefix: receiver is PrefixReceiver ? receiver.prefix.prefix : null,
     bound: bound,
   );
 }
@@ -180,7 +178,8 @@ Variable invokeMethodWithTarget(
   Variable L,
   MethodInvocation e, {
   TypeRef? bound,
-}) => CallResolver(ctx).invokeMethod(L, e, bound: bound);
+  Receiver? receiver,
+}) => CallResolver(ctx).invokeMethod(L, e, bound: bound, receiver: receiver);
 
 /// Emits a call to a resolved extension member: `x.m(args)` and the
 /// explicit `E.m(x, args)` both land here — the receiver binds through the
