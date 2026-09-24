@@ -161,9 +161,9 @@ final class TypeSystem {
       _unifyViaSupertypes(pattern, concrete, substitutions);
       return;
     }
-    final args = pattern.typeArguments;
-    for (var i = 0; i < args.length && i < concrete.typeArguments.length; i++) {
-      unify(args[i], concrete.typeArguments[i], substitutions);
+    final args = interfaceArgumentsOf(pattern);
+    for (var i = 0; i < args.length && i < interfaceArgumentsOf(concrete).length; i++) {
+      unify(args[i], interfaceArgumentsOf(concrete)[i], substitutions);
     }
   }
 
@@ -183,14 +183,14 @@ final class TypeSystem {
       final current = queue.removeLast();
       if (!seen.add(current)) continue;
       if (identical(current.decl, concrete.decl)) {
-        if (current.typeArguments.isEmpty &&
+        if (interfaceArgumentsOf(current).isEmpty &&
             !identical(current, pattern) &&
-            pattern.typeArguments.length == concrete.typeArguments.length) {
+            interfaceArgumentsOf(pattern).length == interfaceArgumentsOf(concrete).length) {
           // The declaring class's supertype is raw; bind `pattern`'s
           // arguments positionally instead.
-          final pArgs = pattern.typeArguments;
+          final pArgs = interfaceArgumentsOf(pattern);
           for (var i = 0; i < pArgs.length; i++) {
-            unify(pArgs[i], concrete.typeArguments[i], substitutions);
+            unify(pArgs[i], interfaceArgumentsOf(concrete)[i], substitutions);
           }
         } else {
           unify(current, concrete, substitutions);
@@ -242,7 +242,7 @@ final class TypeSystem {
         );
         return;
       }
-      for (final argument in t.typeArguments) {
+      for (final argument in interfaceArgumentsOf(t)) {
         collect(argument);
       }
       if (t is RecordTypeRef) {
@@ -296,9 +296,9 @@ final class TypeSystem {
     final seen = <TypeRef>{};
     final futureDecl = _ctx.types.bySpec(CoreTypes.future);
     while (seen.add(t)) {
-      if (t.name == 'FutureOr' && t.typeArguments.isNotEmpty) {
+      if (t.name == 'FutureOr' && interfaceArgumentsOf(t).isNotEmpty) {
         nullable = nullable || t.nullable;
-        t = t.typeArguments.first;
+        t = interfaceArgumentsOf(t).first;
         continue;
       }
       final instantiation = asInstanceOf(t, futureDecl);
@@ -306,9 +306,9 @@ final class TypeSystem {
         return t.withNullable(t.nullable || nullable);
       }
       nullable = nullable || t.nullable;
-      t = instantiation.typeArguments.isEmpty
+      t = interfaceArgumentsOf(instantiation).isEmpty
           ? CoreTypes.dynamic.ref(_ctx)
-          : instantiation.typeArguments.first;
+          : interfaceArgumentsOf(instantiation).first;
     }
     return t.withNullable(t.nullable || nullable);
   }
@@ -330,8 +330,8 @@ final class TypeSystem {
         final names = classDef.type.generics.keys.toList();
         final index = names.indexOf(paramName);
         if (index < 0) continue;
-        if (index < current.typeArguments.length) {
-          return current.typeArguments[index];
+        if (index < interfaceArgumentsOf(current).length) {
+          return interfaceArgumentsOf(current)[index];
         }
         final bound = classDef.type.generics[paramName]!.$extends;
         return bound == null
@@ -539,7 +539,7 @@ final class TypeSystem {
       );
     }
 
-    final generics = overrideGenerics ?? from.typeArguments;
+    final generics = overrideGenerics ?? interfaceArgumentsOf(from);
 
     // Records are structural: `hasSameDeclarationAs` alone would require
     // identical field types. A record is assignable when both sides have
@@ -578,17 +578,17 @@ final class TypeSystem {
 
     if (sameDeclaration(from, to) &&
         (!from.nullable || to.nullable || from.isSpec(CoreTypes.nullType))) {
-      if (to.typeArguments.isNotEmpty &&
+      if (interfaceArgumentsOf(to).isNotEmpty &&
           generics.isNotEmpty &&
-          generics.length != to.typeArguments.length) {
+          generics.length != interfaceArgumentsOf(to).length) {
         return false;
       }
       // A raw generic (`Future` for `Future<C>`) acts like
       // `Future<dynamic>`: its missing arguments are assignable both ways.
-      for (var i = 0; i < to.typeArguments.length && i < generics.length; i++) {
+      for (var i = 0; i < interfaceArgumentsOf(to).length && i < generics.length; i++) {
         if (!isAssignable(
           generics[i],
-          to.typeArguments[i],
+          interfaceArgumentsOf(to)[i],
           forceAllowDynamic: false,
         )) {
           return false;
@@ -604,10 +604,10 @@ final class TypeSystem {
         ? const <TypeRef>[]
         : from.decl?.supertypes.all.toList() ?? const <TypeRef>[];
     for (final type in supertypes) {
-      final inheritedGenerics = type.typeArguments.isEmpty
+      final inheritedGenerics = interfaceArgumentsOf(type).isEmpty
           ? generics
           : [
-              for (final argument in type.typeArguments)
+              for (final argument in interfaceArgumentsOf(type))
                 if (argument is TypeParameterTypeRef &&
                     argument.parameter.index < generics.length)
                   generics[argument.parameter.index].withNullable(

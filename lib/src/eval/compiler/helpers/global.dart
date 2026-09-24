@@ -175,8 +175,8 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
           CoreTypes.future.ref(ctx),
           forceAllowDynamic: false,
         ) &&
-        inner.typeArguments.isNotEmpty) {
-      return inner.typeArguments.first;
+        interfaceArgumentsOf(inner).isNotEmpty) {
+      return interfaceArgumentsOf(inner).first;
     }
     return inner;
   }
@@ -196,7 +196,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   if (expression is ThrowExpression) return CoreTypes.never.ref(ctx);
   if (expression is IndexExpression) {
     final target = _infer(ctx, library, expression.target);
-    final args = target.typeArguments;
+    final args = interfaceArgumentsOf(target);
     if (target.isAssignableTo(
           ctx,
           CoreTypes.list.ref(ctx),

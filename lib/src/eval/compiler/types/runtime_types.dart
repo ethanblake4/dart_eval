@@ -122,7 +122,7 @@ final class RuntimeTypes {
     return [
       (type is InterfaceTypeRef ? indexMap[type.decl] : null) ?? idOf(type),
       type.nullable ? 1 : 0,
-      for (final argument in type.typeArguments) idOf(argument),
+      for (final argument in interfaceArgumentsOf(type)) idOf(argument),
     ];
   }
 }

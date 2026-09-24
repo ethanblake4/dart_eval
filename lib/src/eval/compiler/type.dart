@@ -184,7 +184,7 @@ sealed class TypeRef {
   /// so its id must be resolved against the active type environment.
   bool get requiresTypeEnvironment =>
       isTypeParameter ||
-      typeArguments.any((arg) => arg.requiresTypeEnvironment);
+      interfaceArgumentsOf(this).any((arg) => arg.requiresTypeEnvironment);
 
   /// Classifies Dart assignment compatibility of a [this] value into a
   /// [slot] without conflating `dynamic` with a subtype proof.
@@ -767,13 +767,13 @@ extension TypeRefNominal on TypeRef {
     _ => null,
   };
 
-  /// [InterfaceTypeRef.arguments] on interface types, empty everywhere
-  /// else.
-  List<TypeRef> get typeArguments => switch (this) {
-    InterfaceTypeRef(:final arguments) => arguments,
-    _ => const [],
-  };
 }
+
+/// [InterfaceTypeRef.arguments] when [type] is an interface type, empty
+/// otherwise — the explicit narrowing the removed `TypeRefNominal
+/// .typeArguments` hid: callers opt into interface arguments by name.
+List<TypeRef> interfaceArgumentsOf(TypeRef type) =>
+    type is InterfaceTypeRef ? type.arguments : const <TypeRef>[];
 
 /// Maps each parameter of [typeParameters] to a resolvable [TypeRef] belonging
 /// to the declaring class `file:name` — the scope in which clause types like

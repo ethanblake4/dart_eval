@@ -290,7 +290,7 @@ void compileConstructorDeclaration(
             // type arguments go through the callable-type-argument channel.
             typeArguments: ctorDecl?.factoryKeyword != null
                 ? [
-                    for (final arg in targetType.typeArguments)
+                    for (final arg in interfaceArgumentsOf(targetType))
                       ctx.runtimeTypes.idOf(arg),
                   ]
                 : const [],
@@ -1289,7 +1289,7 @@ Map<String, TypeRef> _superclassGenerics(
   DeclarationOrBridge extendsDecl,
   TypeRef? extendsType,
 ) {
-  final args = extendsType?.typeArguments;
+  final args = extendsType == null ? null : interfaceArgumentsOf(extendsType);
   if (args == null || args.isEmpty) return const {};
   final params =
       classLikeClauses(extendsDecl.declaration).$4?.typeParameters ??

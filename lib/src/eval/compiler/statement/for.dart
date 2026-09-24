@@ -124,9 +124,9 @@ StatementInfo compileForEachLoop(
     );
   }
 
-  final elementType = itype.typeArguments.isEmpty
+  final elementType = interfaceArgumentsOf(itype).isEmpty
       ? CoreTypes.dynamic.ref(ctx)
-      : itype.typeArguments[0];
+      : interfaceArgumentsOf(itype)[0];
 
   var iterator = GetTarget.read(ctx, iterable, 'iterator');
   late Reference loopVariable;
@@ -238,9 +238,9 @@ StatementInfo compileAwaitForLoop(
       ctx,
     );
   }
-  final elementType = itype.typeArguments.isEmpty
+  final elementType = interfaceArgumentsOf(itype).isEmpty
       ? CoreTypes.dynamic.ref(ctx)
-      : itype.typeArguments[0];
+      : interfaceArgumentsOf(itype)[0];
   final itType = AsyncTypes.streamIterator.ref(ctx);
   final externalId =
       ctx.bridgeStaticFunctionIndices[itType.file]!['StreamIterator.']!;

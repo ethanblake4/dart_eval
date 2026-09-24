@@ -927,7 +927,7 @@ class TypedBackend {
   /// with such a type is implicitly covariant.
   bool _hasClassTypeParameter(TypeRef type) {
     if (type.isClassTypeParameter) return true;
-    if (type.typeArguments.any(_hasClassTypeParameter)) {
+    if (interfaceArgumentsOf(type).any(_hasClassTypeParameter)) {
       return true;
     }
     if (type is RecordTypeRef &&

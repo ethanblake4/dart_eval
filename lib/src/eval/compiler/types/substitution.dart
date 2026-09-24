@@ -23,7 +23,7 @@ final class Substitution {
     final decl = type.decl;
     final params = decl?.typeParameters ?? const <TypeParameterDef>[];
     if (params.isEmpty) {
-      if (type.typeArguments.isEmpty) return empty;
+      if (interfaceArgumentsOf(type).isEmpty) return empty;
       final owner = TypeParameterOwner(
         TypeParameterOwnerKind.classLike,
         type.file,
@@ -34,15 +34,15 @@ final class Substitution {
       // fresh unbound key only when the owner was never declared.
       final defs = decl?.ctx.typeParameterDefs;
       return Substitution._({
-        for (var i = 0; i < type.typeArguments.length; i++)
+        for (var i = 0; i < interfaceArgumentsOf(type).length; i++)
           (defs?.key(owner, i, '') ?? TypeParameterDef(owner, i, '')):
-              type.typeArguments[i],
+              interfaceArgumentsOf(type)[i],
       });
     }
     return Substitution._({
       for (var i = 0; i < params.length; i++)
-        params[i]: i < type.typeArguments.length
-            ? type.typeArguments[i]
+        params[i]: i < interfaceArgumentsOf(type).length
+            ? interfaceArgumentsOf(type)[i]
             : (params[i].bound ?? CoreTypes.dynamic.ref(decl!.ctx)),
     });
   }

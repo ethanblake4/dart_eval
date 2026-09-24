@@ -63,7 +63,7 @@ final class ResolvedMember {
 Map<String, TypeRef> ownerTypeArgumentsOf(TypeDecl? owner, TypeRef viewedAs) {
   if (owner == null) return const {};
   final params = owner.typeParameters;
-  final args = viewedAs.typeArguments;
+  final args = interfaceArgumentsOf(viewedAs);
   if (params.isEmpty) return const {};
   return {
     for (var i = 0; i < params.length; i++)

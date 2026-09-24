@@ -167,7 +167,7 @@ sealed class TypeDecl {
     TypeRef mixin,
     List<TypeRef> chainSoFar,
   ) {
-    if (clauseName.typeArguments != null || mixin.typeArguments.isNotEmpty) {
+    if (clauseName.typeArguments != null || interfaceArgumentsOf(mixin).isNotEmpty) {
       return mixin;
     }
     final mixinDeclRef = mixin.decl;

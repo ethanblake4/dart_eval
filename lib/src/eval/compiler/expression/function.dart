@@ -342,7 +342,7 @@ Variable compileFunctionExpression(
                 (e) => boundContainsTypeParameter(e.type),
               ) ||
               boundContainsTypeParameter(t.signature.returnType))) ||
-      t.typeArguments.any(boundContainsTypeParameter);
+      interfaceArgumentsOf(t).any(boundContainsTypeParameter);
   final boundIsParametricSignature =
       bound is FunctionTypeRef && boundContainsTypeParameter(bound);
 

@@ -29,7 +29,7 @@ List<TypeRef> compileCollectionSpread(
 }) {
   final collection = source ?? compileExpression(element.expression, ctx);
   if (element.isNullAware && collection.type.isSpec(CoreTypes.nullType)) {
-    return target.type.typeArguments;
+    return interfaceArgumentsOf(target.type);
   }
   final sourceType = collection.type.withNullable(false);
   final requiredType = (isMap ? CoreTypes.map : CoreTypes.iterable).ref(ctx);
@@ -39,15 +39,15 @@ List<TypeRef> compileCollectionSpread(
       element,
     );
   }
-  final sourceArgs = sourceType.typeArguments;
+  final sourceArgs = interfaceArgumentsOf(sourceType);
   final types = [
     for (var i = 0; i < (isMap ? 2 : 1); i++)
       sourceArgs.length > i ? sourceArgs[i] : CoreTypes.dynamic.ref(ctx),
   ];
   for (var i = 0; i < types.length; i++) {
-    if (!types[i].isAssignableTo(ctx, target.type.typeArguments[i])) {
+    if (!types[i].isAssignableTo(ctx, interfaceArgumentsOf(target.type)[i])) {
       throw CompileError(
-        'Spread element type ${types[i]} is not assignable to ${target.type.typeArguments[i]}',
+        'Spread element type ${types[i]} is not assignable to ${interfaceArgumentsOf(target.type)[i]}',
         element,
       );
     }
@@ -69,14 +69,14 @@ List<TypeRef> compileCollectionSpread(
           final key = convertForAssignment(
             ctx,
             GetTarget.read(ctx, current, 'key'),
-            target.type.typeArguments[0],
+            interfaceArgumentsOf(target.type)[0],
             representation: box ? MachineRepresentation.object : null,
             source: element,
           );
           final value = convertForAssignment(
             ctx,
             GetTarget.read(ctx, current, 'value'),
-            target.type.typeArguments[1],
+            interfaceArgumentsOf(target.type)[1],
             representation: box ? MachineRepresentation.object : null,
             source: element,
           );
@@ -85,7 +85,7 @@ List<TypeRef> compileCollectionSpread(
           final value = convertForAssignment(
             ctx,
             current,
-            target.type.typeArguments[0],
+            interfaceArgumentsOf(target.type)[0],
             representation: box ? MachineRepresentation.object : null,
             source: element,
           );

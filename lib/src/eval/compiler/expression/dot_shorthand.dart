@@ -29,8 +29,8 @@ TypeRef _shorthandContextType(
     throw CompileError('Dot shorthand requires a context type', source);
   }
   var type = bound;
-  while (type.name == 'FutureOr' && type.typeArguments.isNotEmpty) {
-    type = type.typeArguments.first;
+  while (type.name == 'FutureOr' && interfaceArgumentsOf(type).isNotEmpty) {
+    type = interfaceArgumentsOf(type).first;
   }
   type = type.withNullable(false);
   if (type.isTypeParameter || type.isSpec(CoreTypes.dynamic)) {

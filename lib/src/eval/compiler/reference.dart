@@ -194,8 +194,8 @@ class IndexedReference implements Reference {
       CoreTypes.list.ref(ctx),
       forceAllowDynamic: false,
     )) {
-      return _variable.type.typeArguments.isNotEmpty
-          ? _variable.type.typeArguments[0]
+      return interfaceArgumentsOf(_variable.type).isNotEmpty
+          ? interfaceArgumentsOf(_variable.type)[0]
           : CoreTypes.dynamic.ref(ctx);
     }
     if (_variable.type.isAssignableTo(
@@ -203,8 +203,8 @@ class IndexedReference implements Reference {
       CoreTypes.map.ref(ctx),
       forceAllowDynamic: false,
     )) {
-      return _variable.type.typeArguments.length >= 2
-          ? _variable.type.typeArguments[1]
+      return interfaceArgumentsOf(_variable.type).length >= 2
+          ? interfaceArgumentsOf(_variable.type)[1]
           : CoreTypes.dynamic.ref(ctx);
     }
     // A write's contextual type must not execute the indexed getter. For a
@@ -271,8 +271,8 @@ class IndexedReference implements Reference {
 
       final list = _variable.unboxIfNeeded(ctx);
       _index = _index.unboxIfNeeded(ctx);
-      final listElementType = _variable.type.typeArguments.isNotEmpty
-          ? _variable.type.typeArguments[0]
+      final listElementType = interfaceArgumentsOf(_variable.type).isNotEmpty
+          ? interfaceArgumentsOf(_variable.type)[0]
           : CoreTypes.dynamic.ref(ctx);
       return Variable.ssa(
         ctx,
@@ -294,9 +294,9 @@ class IndexedReference implements Reference {
       // key travels boxed and a miss must produce a boxed null.
       _index = _index.boxIfNeeded(ctx, source);
 
-      final mapType = _variable.type.typeArguments.length < 2
+      final mapType = interfaceArgumentsOf(_variable.type).length < 2
           ? CoreTypes.dynamic.ref(ctx)
-          : _variable.type.typeArguments[1];
+          : interfaceArgumentsOf(_variable.type)[1];
 
       final mapResult = Variable.ssa(
         ctx,
@@ -337,9 +337,9 @@ class IndexedReference implements Reference {
         );
       }
 
-      final elementType = _variable.type.typeArguments.isEmpty
+      final elementType = interfaceArgumentsOf(_variable.type).isEmpty
           ? CoreTypes.dynamic.ref(ctx)
-          : _variable.type.typeArguments[0];
+          : interfaceArgumentsOf(_variable.type)[0];
       final formattedValue = convertForAssignment(
         ctx,
         value,

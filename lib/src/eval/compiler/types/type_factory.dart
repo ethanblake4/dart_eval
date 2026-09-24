@@ -199,8 +199,8 @@ final class TypeFactory {
         (key) => key == ref,
       );
       if (genericIndex >= 0 &&
-          genericIndex < specifiedType.typeArguments.length) {
-        return specifiedType.typeArguments[genericIndex];
+          genericIndex < interfaceArgumentsOf(specifiedType).length) {
+        return interfaceArgumentsOf(specifiedType)[genericIndex];
       }
       final generic = dec.type.generics[ref];
       if (generic == null) return CoreTypes.dynamic.ref(_ctx);
@@ -217,11 +217,11 @@ final class TypeFactory {
             ].firstWhereOrNull(
               (candidate) =>
                   sameDeclaration(candidate, specifiedType!) &&
-                  genericIndex < candidate.typeArguments.length,
+                  genericIndex < interfaceArgumentsOf(candidate).length,
             );
         if (instantiatedType != null) {
           final resolvedDeclaredType =
-              instantiatedType.typeArguments[genericIndex];
+              interfaceArgumentsOf(instantiatedType)[genericIndex];
           if (!resolvedDeclaredType.isAssignableTo(_ctx, boundType)) {
             throw CompileError(
               "Type argument $resolvedDeclaredType does not conform to type parameter $ref's"

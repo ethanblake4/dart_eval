@@ -20,14 +20,14 @@ StatementInfo doAsyncReturn(
   final completer = ctx.lookupLocal('#completer')!.ssa;
   final boxed = value?.boxIfNeeded(ctx);
   if (boxed != null) {
-    final arguments = expectedReturnType.typeArguments;
+    final arguments = interfaceArgumentsOf(expectedReturnType);
     final expected = arguments.isEmpty
         ? CoreTypes.dynamic.ref(ctx)
         : arguments.first;
     var compatible = boxed.type.isAssignableTo(ctx, expected);
     if (!compatible &&
         boxed.type.isAssignableTo(ctx, CoreTypes.future.ref(ctx))) {
-      final arguments = boxed.type.typeArguments;
+      final arguments = interfaceArgumentsOf(boxed.type);
       final payload = arguments.isEmpty
           ? CoreTypes.dynamic.ref(ctx)
           : arguments.first;

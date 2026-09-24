@@ -270,7 +270,7 @@ final class ConstructorCall extends CallTarget {
           // channel.
           typeArguments: _isFactory
               ? [
-                  for (final arg in instantiatedType.typeArguments)
+                  for (final arg in interfaceArgumentsOf(instantiatedType))
                     ctx.runtimeTypes.idOf(arg),
                 ]
               : const [],

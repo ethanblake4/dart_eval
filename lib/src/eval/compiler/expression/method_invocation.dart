@@ -96,7 +96,7 @@ TypeRef instantiateConstructorType(
   final arguments = invocation.typeArguments?.arguments;
   if (arguments == null || arguments.isEmpty) {
     if (inferredArgs == null) return base;
-    final baseArgs = base.typeArguments;
+    final baseArgs = interfaceArgumentsOf(base);
     if (baseArgs.isEmpty || baseArgs.every((a) => a.isTypeParameter)) {
       return (base as InterfaceTypeRef).copyWith(arguments: inferredArgs);
     }

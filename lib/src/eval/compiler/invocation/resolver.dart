@@ -1157,17 +1157,17 @@ final class CallResolver {
               boundChain != null &&
               boundChain.file == resolved.file &&
               boundChain.name == resolved.name &&
-              boundChain.typeArguments.isNotEmpty) {
+              interfaceArgumentsOf(boundChain).isNotEmpty) {
             final bindings = <TypeParameterDef, TypeRef>{};
             for (
               var i = 0;
-              i < resolved.typeArguments.length &&
-                  i < boundChain.typeArguments.length;
+              i < interfaceArgumentsOf(resolved).length &&
+                  i < interfaceArgumentsOf(boundChain).length;
               i++
             ) {
               ctx.typeSystem.unify(
-                resolved.typeArguments[i],
-                boundChain.typeArguments[i],
+                interfaceArgumentsOf(resolved)[i],
+                interfaceArgumentsOf(boundChain)[i],
                 bindings,
               );
             }
@@ -1316,7 +1316,7 @@ final class CallResolver {
         if (boundChain != null &&
             e.typeArguments == null &&
             boundChain.name == ctorClassName) {
-          final contextArgs = boundChain.typeArguments;
+          final contextArgs = interfaceArgumentsOf(boundChain);
           if (contextArgs.isNotEmpty &&
               contextArgs.every((t) => !t.isTypeParameter)) {
             inferredCtorArgs = contextArgs;
@@ -1332,7 +1332,7 @@ final class CallResolver {
           // references for inference; bind them from what the constructor's
           // arguments gave.
           final bindings = <TypeParameterDef, TypeRef>{};
-          final aliasArgs = aliasType.typeArguments;
+          final aliasArgs = interfaceArgumentsOf(aliasType);
           for (
             var i = 0;
             i < aliasArgs.length && i < inferredCtorArgs.length;
@@ -1439,10 +1439,10 @@ Map<String, TypeRef> _bridgeClassTypeArguments(
   return {
     for (
       var index = 0;
-      index < names.length && index < resolved.typeArguments.length;
+      index < names.length && index < interfaceArgumentsOf(resolved).length;
       index++
     )
-      names[index]: resolved.typeArguments[index],
+      names[index]: interfaceArgumentsOf(resolved)[index],
   };
 }
 
@@ -1467,7 +1467,7 @@ void _inferBridgeTypeParameters(
       return;
     }
     final formalArguments = formal.typeArgs;
-    final actualArguments = actual.typeArguments;
+    final actualArguments = interfaceArgumentsOf(actual);
     for (
       var index = 0;
       index < formalArguments.length && index < actualArguments.length;

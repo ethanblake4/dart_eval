@@ -200,7 +200,7 @@ sealed class GetTarget {
       final hostParams = methodHost is Declaration
           ? classLikeClauses(methodHost).$4?.typeParameters ?? const []
           : const <TypeParameter>[];
-      final hostArgs = member!.viewedAs.typeArguments;
+      final hostArgs = interfaceArgumentsOf(member!.viewedAs);
       fieldType = ctx.typeFactory.declaredFunctionType(
         resolvedReceiver.file,
         method.parameters,

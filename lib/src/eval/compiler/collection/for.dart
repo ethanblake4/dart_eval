@@ -21,7 +21,7 @@ List<TypeRef> compileForElementForList(
   (element) => compileListElement(element, list, ctx, box),
   iterableBound: CoreTypes.iterable
       .ref(ctx)
-      .copyWith(arguments: [list.type.typeArguments.first]),
+      .copyWith(arguments: [interfaceArgumentsOf(list.type).first]),
 );
 
 /// Compiles a collection `for` element, dispatching its body through

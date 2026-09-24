@@ -28,7 +28,7 @@ Variable compileSetOrMapLiteral(
   final resolvedBound = bound;
   TypeRef? boundKey, boundValue;
   if (resolvedBound != null) {
-    final boundArgs = resolvedBound.typeArguments;
+    final boundArgs = interfaceArgumentsOf(resolvedBound);
     if (sameDeclaration(resolvedBound, CoreTypes.map.ref(ctx)) &&
         boundArgs.length == 2) {
       boundKey = boundArgs[0];

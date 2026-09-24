@@ -50,7 +50,7 @@ Variable compileInstanceCreation(
                 as InterfaceTypeRef)
             .copyWith(
               arguments: [
-                if (type.typeArguments == null) ...staticType.typeArguments,
+                if (type.typeArguments == null) ...interfaceArgumentsOf(staticType),
               ],
             );
   }
@@ -67,9 +67,9 @@ Variable compileInstanceCreation(
     final boundChain = bound;
     if (boundChain.file == staticType.file &&
         boundChain.name == staticType.name &&
-        boundChain.typeArguments.isNotEmpty) {
+        interfaceArgumentsOf(boundChain).isNotEmpty) {
       instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
-        arguments: boundChain.typeArguments,
+        arguments: interfaceArgumentsOf(boundChain),
       );
     }
   }
@@ -151,7 +151,7 @@ Variable compileInstanceOf(
         ? classBridge.type.generics.keys.toList()
         : const <String>[];
     Map<String, TypeRef> argTypeParameters = const {};
-    if (genericNames.isNotEmpty && instantiatedType.typeArguments.isEmpty) {
+    if (genericNames.isNotEmpty && interfaceArgumentsOf(instantiatedType).isEmpty) {
       // Parameter annotations compile permissively (`T` → dynamic); the real
       // bindings are inferred from the argument types below.
       argTypeParameters = {
@@ -164,7 +164,7 @@ Variable compileInstanceOf(
       typeParameters: argTypeParameters,
     );
 
-    if (genericNames.isNotEmpty && instantiatedType.typeArguments.isEmpty) {
+    if (genericNames.isNotEmpty && interfaceArgumentsOf(instantiatedType).isEmpty) {
       final paramRefs = {
         for (var i = 0; i < genericNames.length; i++)
           genericNames[i]: TypeParameterTypeRef(
@@ -227,8 +227,8 @@ Variable compileInstanceOf(
           resolvedChain.file == resolved.library &&
               ctorDecl != null &&
               resolvedChain.name == declarationName(ctorDecl as Declaration)
-          ? resolvedChain.typeArguments
-          : instantiatedType.typeArguments;
+          ? interfaceArgumentsOf(resolvedChain)
+          : interfaceArgumentsOf(instantiatedType);
       for (var i = 0; i < classTypeParams.length; i++) {
         final bound = classTypeParams[i].bound;
         seedGenerics[classTypeParams[i].name.lexeme] = i < appliedArgs.length

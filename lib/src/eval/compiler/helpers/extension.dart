@@ -153,8 +153,8 @@ bool _unifyOnPattern(
     if (candidate.file != pattern.file || candidate.name != pattern.name) {
       continue;
     }
-    final args = pattern.typeArguments;
-    final actualArgs = candidate.typeArguments;
+    final args = interfaceArgumentsOf(pattern);
+    final actualArgs = interfaceArgumentsOf(candidate);
     var ok = true;
     for (var i = 0; i < args.length && i < actualArgs.length; i++) {
       if (!_unifyOnPattern(ctx, args[i], actualArgs[i], bound)) ok = false;

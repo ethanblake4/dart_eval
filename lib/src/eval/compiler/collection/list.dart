@@ -31,11 +31,11 @@ Variable compileListLiteral(
   final elements = l.elements;
 
   TypeRef? boundType;
-  if (bound != null && bound.typeArguments.isNotEmpty) {
-    if (bound.typeArguments.length > 1) {
+  if (bound != null && interfaceArgumentsOf(bound).isNotEmpty) {
+    if (interfaceArgumentsOf(bound).length > 1) {
       throw CompileError('Lists can only have one type argument');
     }
-    boundType = bound.typeArguments.first;
+    boundType = interfaceArgumentsOf(bound).first;
   }
   TypeRef? listSpecifiedType;
   final typeArgs = l.typeArguments;
@@ -91,7 +91,7 @@ Variable compileListLiteral(
 }
 
 Variable boxListContents(CompilerContext ctx, Variable list) {
-  final elementType = list.type.typeArguments.first;
+  final elementType = interfaceArgumentsOf(list.type).first;
   final newList = Variable.ssa(
     ctx,
     NewList(ctx.svar('boxed_elements')),
@@ -139,7 +139,7 @@ List<TypeRef> compileListElement(
   CompilerContext ctx,
   bool box,
 ) {
-  final listType = list.type.typeArguments[0];
+  final listType = interfaceArgumentsOf(list.type)[0];
   if (e is Expression) {
     var result = compileExpression(e, ctx, listType);
     result = convertForAssignment(
