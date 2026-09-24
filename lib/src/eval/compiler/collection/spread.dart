@@ -61,7 +61,8 @@ List<TypeRef> compileCollectionSpread(
     return macroLoop(
       ctx,
       null,
-      condition: (ctx) => CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result,
+      condition: (ctx) =>
+          CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result,
       body: (ctx, _) {
         final current = GetTarget.read(ctx, iterator, 'current');
         if (isMap) {

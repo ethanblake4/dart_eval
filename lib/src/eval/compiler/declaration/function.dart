@@ -75,9 +75,8 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     () {
       ctx.functionTypeParameterBounds[pos] = [
         for (final parameter in typeParameters)
-          (ctx
-                      .typeScopes[ctx.library]![parameter.name.lexeme]!
-                  as TypeParameterTypeRef)
+          (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
+                      as TypeParameterTypeRef)
                   .parameter
                   .bound ??
               CoreTypes.dynamic.ref(ctx),
@@ -98,7 +97,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
         TypeRef type = CoreTypes.dynamic.ref(ctx);
         if (p.type != null) {
-          type = ctx.typeFactory.formalParameterAnnotationType( ctx.library, p);
+          type = ctx.typeFactory.formalParameterAnnotationType(ctx.library, p);
         }
         vRep = Variable.of(
           ctx,

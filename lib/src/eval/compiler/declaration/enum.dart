@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import '../invocation/deferred.dart';
+import '../member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
@@ -18,14 +19,12 @@ import 'package:dart_eval/src/eval/ir/string.dart';
 
 void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
-  final $runtimeType = ctx.runtimeTypes.indexMap[type.decl!];
   final clsName = d.namePart.typeName.lexeme;
-  ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
-    {},
-    {},
-    {},
-    $runtimeType,
-  ];
+  ctx.instanceDeclarationPositions[ctx.library]![clsName] = {
+    MemberKind.getter: {},
+    MemberKind.setter: {},
+    MemberKind.method: {},
+  };
   ctx.instanceGetterIndices[ctx.library]![clsName] = {};
   final (constructors, fields, methods) = partitionClassMembers(d.body.members);
   // Enum values materialize through the generative constructor, which is
@@ -77,7 +76,9 @@ void _compileEnumFieldGetter(
   final value = ctx.svar('enum_$fieldName');
   ctx.pushOp(LoadPropertyStatic(value, receiver, fieldIndex));
   ctx.pushOp(Return(value));
-  ctx.instanceDeclarationPositions[ctx.library]![clsName]![0][fieldName] = pos;
+  ctx.instanceDeclarationPositions[ctx.library]![clsName]![MemberKind
+          .getter]![fieldName] =
+      pos;
   ctx.instanceGetterIndices[ctx.library]![clsName]![fieldName] = fieldIndex;
 }
 
@@ -107,7 +108,9 @@ void _compileEnumToString(CompilerContext ctx, String clsName) {
   final boxed = ctx.svar('enum_toString_boxed');
   ctx.pushOp(BoxString(boxed, result));
   ctx.pushOp(Return(boxed));
-  ctx.instanceDeclarationPositions[ctx.library]![clsName]![2]['toString'] = pos;
+  ctx.instanceDeclarationPositions[ctx.library]![clsName]![MemberKind
+          .method]!['toString'] =
+      pos;
 }
 
 /// Generates the initializer function for one enum constant: invokes the
@@ -152,12 +155,7 @@ void _compileEnumValue(
       fpl,
       dec,
       source: constant,
-);
-
-
-
-
-
+    );
 
     arguments.addAll(result.vector());
   }

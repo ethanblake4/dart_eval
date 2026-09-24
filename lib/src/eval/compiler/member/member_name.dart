@@ -1,15 +1,6 @@
-/// Which syntactic slot a member occupies — the `key` suffix and the
-/// position-table index (`0` getter, `1` setter, `2` method/constructor).
+/// Which syntactic slot a member occupies — also the
+/// `instanceDeclarationPositions` key.
 enum MemberKind { method, getter, setter, constructor }
-
-extension MemberKindPosition on MemberKind {
-  /// The `instanceDeclarationPositions` list index for this kind.
-  int get positionIndex => switch (this) {
-    MemberKind.getter => 0,
-    MemberKind.setter => 1,
-    _ => 2,
-  };
-}
 
 /// A member's identity for member-table keys: `name`, `name*g`, `name*s`,
 /// `lib::_name`, and `unary-` for nullary `-`. Replaces `memberKey`,
@@ -26,10 +17,8 @@ final class MemberName {
         MemberKind.method,
       );
 
-  factory MemberName.getter(String name) =>
-      MemberName(name, MemberKind.getter);
-  factory MemberName.setter(String name) =>
-      MemberName(name, MemberKind.setter);
+  factory MemberName.getter(String name) => MemberName(name, MemberKind.getter);
+  factory MemberName.setter(String name) => MemberName(name, MemberKind.setter);
 
   /// The source name: `foo`, `_foo`, or `unary-` for nullary `-`.
   final String name;
@@ -66,11 +55,3 @@ final class MemberName {
   @override
   String toString() => 'MemberName($key)';
 }
-
-/// Maps the legacy integer member kind (0 = getter, 1 = setter,
-/// 2 = method) to its [MemberKind].
-MemberKind memberKindOf(int kind) => switch (kind) {
-  0 => MemberKind.getter,
-  1 => MemberKind.setter,
-  _ => MemberKind.method,
-};

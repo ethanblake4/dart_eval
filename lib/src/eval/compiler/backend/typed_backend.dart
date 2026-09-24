@@ -296,8 +296,8 @@ class TypedBackend {
             classAllocations.add(op);
             final members =
                 context.instanceDeclarationPositions[op.library]![op.name]!;
-            for (var kind = 0; kind < 3; kind++) {
-              for (final target in (members[kind] as Map).values.cast<int>()) {
+            for (final group in members.values) {
+              for (final target in group.values) {
                 if (target >= 0 && seen.add(target)) {
                   reachable.add(target);
                 }
@@ -320,9 +320,9 @@ class TypedBackend {
           allocation.name,
           library: libraries[allocation.library]!,
           valueCount: allocation.valuesLength,
-          getters: _classMembers(allocation, 0, indices),
-          setters: _classMembers(allocation, 1, indices),
-          methods: _classMembers(allocation, 2, indices),
+          getters: _classMembers(allocation, MemberKind.getter, indices),
+          setters: _classMembers(allocation, MemberKind.setter, indices),
+          methods: _classMembers(allocation, MemberKind.method, indices),
         ),
     ];
     final compiled = [
@@ -339,13 +339,12 @@ class TypedBackend {
       final memberGroups = context
           .instanceDeclarationPositions[allocation.library]![allocation.name]!;
       final memberIds = <int>{
-        for (var kind = 0; kind < 3; kind++)
-          ...(memberGroups[kind] as Map).values.cast<int>(),
+        for (final group in memberGroups.values) ...group.values,
       };
-      final memberKinds = <int, (String, int)>{
-        for (var kind = 1; kind < 3; kind++)
-          for (final entry in (memberGroups[kind] as Map).entries)
-            entry.value as int: (entry.key as String, kind),
+      final memberKinds = <int, (String, MemberKind)>{
+        for (final kind in const [MemberKind.setter, MemberKind.method])
+          for (final entry in memberGroups[kind]!.entries)
+            entry.value: (entry.key, kind),
       };
       for (final id in memberIds) {
         if (id < 0 || boundReceiverIds.contains(indices[id])) {
@@ -423,8 +422,7 @@ class TypedBackend {
             ],
             parameterTypeParameterIndices: [
               for (final type in parameterTypes)
-                type is TypeParameterTypeRef &&
-                        type.parameter.owner.isClassLike
+                type is TypeParameterTypeRef && type.parameter.owner.isClassLike
                     ? type.parameter.index
                     : -1,
             ],
@@ -615,10 +613,10 @@ class TypedBackend {
       constructorOwner == null
           ? null
           : TypeParameterOwner(
-            TypeParameterOwnerKind.classLike,
-            libraryId,
-            declarationName(constructorOwner),
-          ),
+              TypeParameterOwnerKind.classLike,
+              libraryId,
+              declarationName(constructorOwner),
+            ),
       typeParameters,
       () {
         final isGenerativeConstructor =
@@ -693,16 +691,15 @@ class TypedBackend {
 
   Map<String, int> _classMembers(
     objects_ir.CreateClass allocation,
-    int kind,
+    MemberKind kind,
     Map<int, int> indices,
   ) {
     final members =
         context.instanceDeclarationPositions[allocation.library]![allocation
-                .name]![kind]
-            as Map;
+            .name]![kind]!;
     return {
       for (final entry in members.entries)
-        if (entry.value as int >= 0) entry.key as String: indices[entry.value]!,
+        if (entry.value >= 0) entry.key: indices[entry.value]!,
     };
   }
 
@@ -714,11 +711,10 @@ class TypedBackend {
       if (members != null) {
         final kind = target.methodType;
         if (kind != null) {
-          id =
-              (members[kind.positionIndex] as Map)[target.name] as int?;
+          id = members[kind]?[target.name];
         } else {
-          for (var kind = 0; kind < 3; kind++) {
-            id ??= (members[kind] as Map)[target.name] as int?;
+          for (final group in members.values) {
+            id ??= group[target.name];
           }
         }
       }
@@ -808,7 +804,7 @@ class TypedBackend {
   TypeRef _tearOffSignature(
     objects_ir.CreateClass allocation,
     String memberName,
-    int kind,
+    MemberKind kind,
     TypeRef signature,
     List<FormalParameter> parameters,
     List<TypeRef> parameterTypes,
@@ -892,13 +888,13 @@ class TypedBackend {
   void _collectCovariantParameters(
     TypeRef type,
     String memberName,
-    int kind,
+    MemberKind kind,
     Set<int> positional,
     Set<String> named,
     Set<String> visited,
   ) {
     if (!visited.add('${type.file}:${type.name}')) return;
-    final key = MemberName(memberName, memberKindOf(kind)).key;
+    final key = MemberName(memberName, kind).key;
     final decl = context.instanceDeclarationsMap[type.file]?[type.name]?[key];
     if (decl is MethodDeclaration) {
       final id =

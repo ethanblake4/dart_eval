@@ -71,12 +71,16 @@ sealed class GetTarget {
       final declaredLocally =
           ctx
               .instanceDeclarationPositions[resolvedReceiver
-                  .file]?[resolvedReceiver.name]?[0]
+                  .file]?[resolvedReceiver.name]?[MemberKind.getter]
               ?.containsKey('runtimeType') ??
           false;
       final overridable =
           declaredLocally ||
-          ctx.memberLookup.implementationOwner(resolvedReceiver, MemberName.getter('runtimeType')) != null ||
+          ctx.memberLookup.implementationOwner(
+                resolvedReceiver,
+                MemberName.getter('runtimeType'),
+              ) !=
+              null ||
           ctx.memberOverriddenInSubclass(
             resolvedReceiver.file,
             resolvedReceiver.name,
@@ -101,8 +105,12 @@ sealed class GetTarget {
     if (extensionPin case final bound?) {
       final getter = extensionMember(bound.ext, name, getter: true);
       if (getter != null) {
-        return ExtensionGetterCall(receiver, bound.ext, getter,
-            bound.onBindings);
+        return ExtensionGetterCall(
+          receiver,
+          bound.ext,
+          getter,
+          bound.onBindings,
+        );
       }
       final member = extensionMember(bound.ext, name);
       if (member == null) {
@@ -119,7 +127,6 @@ sealed class GetTarget {
       );
     }
     final resolvedField = ctx.memberLookup.fieldType(
-      
       resolvedReceiver,
       name,
       source: source,
@@ -127,13 +134,13 @@ sealed class GetTarget {
     final member =
         resolvedField == null && !resolvedReceiver.isSpec(CoreTypes.dynamic)
         ? ctx.memberLookup.tryInterfaceMember(
-              resolvedReceiver,
-              MemberName(name, MemberKind.getter),
-            ) ??
-            ctx.memberLookup.tryInterfaceMember(
-              resolvedReceiver,
-              MemberName(name, MemberKind.setter),
-            )
+                resolvedReceiver,
+                MemberName(name, MemberKind.getter),
+              ) ??
+              ctx.memberLookup.tryInterfaceMember(
+                resolvedReceiver,
+                MemberName(name, MemberKind.setter),
+              )
         : null;
     if (resolvedField == null &&
         !resolvedReceiver.isSpec(CoreTypes.dynamic) &&
@@ -216,8 +223,7 @@ sealed class GetTarget {
       int? fieldIndex;
       for (var i = 0; i < links.length; i++) {
         final link = links[i];
-        final index = ctx.instanceGetterIndices[link.file]?[link
-            .name]?[name];
+        final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
         if (index != null) {
           fieldIndex = index;
           depth = i;
@@ -230,11 +236,16 @@ sealed class GetTarget {
                 privateLibraryUri: ctx.libraryUri(link.file),
               ).nameKey
             : name;
-        if ((ctx.instanceDeclarationPositions[link.file]?[link
-                            .name]?[0] as Map?)
+        if ((ctx.instanceDeclarationPositions[link.file]?[link.name]?[MemberKind
+                            .getter]
+                        as Map?)
                     ?.containsKey(key) ==
                 true &&
-            ctx.memberLookup.concreteMemberOn(link, MemberName(name, MemberKind.getter)) != null) {
+            ctx.memberLookup.concreteMemberOn(
+                  link,
+                  MemberName(name, MemberKind.getter),
+                ) !=
+                null) {
           depth = i;
           break;
         }
@@ -256,7 +267,10 @@ sealed class GetTarget {
             : null;
         final needsLink =
             fieldIndex != null ||
-            ctx.memberLookup.needsOwnerLink(link, MemberName(name, MemberKind.getter));
+            ctx.memberLookup.needsOwnerLink(
+              link,
+              MemberName(name, MemberKind.getter),
+            );
         if (fieldIndex != null) {
           final isLate =
               fieldDecl is FieldDeclaration && fieldDecl.fields.isLate;
@@ -297,7 +311,10 @@ sealed class GetTarget {
         MemberName(name, MemberKind.getter),
       );
       if (owner != null &&
-          !ctx.memberLookup.needsOwnerLink(owner, MemberName(name, MemberKind.getter))) {
+          !ctx.memberLookup.needsOwnerLink(
+            owner,
+            MemberName(name, MemberKind.getter),
+          )) {
         final key = name.startsWith('_')
             ? '${ctx.libraryUri(owner.file)}::$name'
             : name;
@@ -354,9 +371,12 @@ final class MaterializingGet extends GetTarget {
   final AstNode? source;
 
   @override
-  Variable emit(CompilerContext ctx) =>
-      GetTarget.resolve(ctx, receiver.tearOff(ctx), name, source: source)
-          .emit(ctx);
+  Variable emit(CompilerContext ctx) => GetTarget.resolve(
+    ctx,
+    receiver.tearOff(ctx),
+    name,
+    source: source,
+  ).emit(ctx);
 }
 
 /// A `String.length`, native-`List.length`, or `runtimeType` read.
@@ -394,29 +414,29 @@ final class IntrinsicGet extends GetTarget {
     final recv = unbox ? receiver.unboxIfNeeded(ctx, false) : receiver;
     return switch (name) {
       'length' => Variable.ssa(
-          ctx,
-          string
-              ? StringOperation(
-                  ctx.svar('string_length'),
-                  StringOperator.length,
-                  recv.ssa,
-                )
-              : ListLength(ctx.svar('list_length'), recv.ssa),
-          CoreTypes.int.ref(ctx),
-          rep: ValueRep.int,
-        ),
+        ctx,
+        string
+            ? StringOperation(
+                ctx.svar('string_length'),
+                StringOperator.length,
+                recv.ssa,
+              )
+            : ListLength(ctx.svar('list_length'), recv.ssa),
+        CoreTypes.int.ref(ctx),
+        rep: ValueRep.int,
+      ),
       _ when constantType != null => Variable.ssa(
-          ctx,
-          constantType!.$2
-              ? LoadTypeParameter(ctx.svar('var_type'), constantType!.$1)
-              : LoadConstantType(ctx.svar('var_type'), constantType!.$1),
-          CoreTypes.type.ref(ctx),
-        ),
+        ctx,
+        constantType!.$2
+            ? LoadTypeParameter(ctx.svar('var_type'), constantType!.$1)
+            : LoadConstantType(ctx.svar('var_type'), constantType!.$1),
+        CoreTypes.type.ref(ctx),
+      ),
       _ => Variable.ssa(
-          ctx,
-          LoadRuntimeType(ctx.svar('runtime_type'), recv.ssa),
-          CoreTypes.type.ref(ctx),
-        ),
+        ctx,
+        LoadRuntimeType(ctx.svar('runtime_type'), recv.ssa),
+        CoreTypes.type.ref(ctx),
+      ),
     };
   }
 }
@@ -457,12 +477,7 @@ final class FieldSlotGet extends GetTarget {
     }
     return Variable.ssa(
       ctx,
-      LoadPropertyStatic(
-        ctx.svar(name),
-        linkSsa,
-        index,
-        isLate: isLate,
-      ),
+      LoadPropertyStatic(ctx.svar(name), linkSsa, index, isLate: isLate),
       fieldType,
       rep: ValueRep.boxed,
     );
@@ -685,7 +700,6 @@ sealed class SetTarget {
     bool isSuperReceiver = false,
   }) {
     final declaredFieldType = ctx.memberLookup.fieldType(
-      
       object.type,
       name,
       forSet: true,
@@ -720,13 +734,17 @@ sealed class SetTarget {
             ? '${ctx.libraryUri(link.file)}::$name'
             : name;
         final hasSetter =
-            (ctx.instanceDeclarationPositions[link.file]?[link
-                            .name]?[1] as Map?)
+            (ctx.instanceDeclarationPositions[link.file]?[link.name]?[MemberKind
+                            .setter]
+                        as Map?)
                     ?.containsKey(key) ==
                 true &&
-            ctx.memberLookup.concreteMemberOn(link, MemberName(name, MemberKind.setter)) != null;
-        final index = ctx.instanceGetterIndices[link.file]?[link
-            .name]?[name];
+            ctx.memberLookup.concreteMemberOn(
+                  link,
+                  MemberName(name, MemberKind.setter),
+                ) !=
+                null;
+        final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
         if (hasSetter && index != null) {
           fieldIndex = index;
           depth = i;
@@ -739,10 +757,11 @@ sealed class SetTarget {
       }
       if (depth >= 0) {
         final link = links[depth];
-        final resolvedDecl = ctx.memberLookup.tryInterfaceMember(
-          link,
-          MemberName(name, MemberKind.setter),
-        ) ??
+        final resolvedDecl =
+            ctx.memberLookup.tryInterfaceMember(
+              link,
+              MemberName(name, MemberKind.setter),
+            ) ??
             ctx.memberLookup.tryInterfaceMember(
               link,
               MemberName(name, MemberKind.getter),
@@ -756,7 +775,10 @@ sealed class SetTarget {
             : null;
         final needsLink =
             fieldIndex != null ||
-            ctx.memberLookup.needsOwnerLink(link, MemberName(name, MemberKind.setter));
+            ctx.memberLookup.needsOwnerLink(
+              link,
+              MemberName(name, MemberKind.setter),
+            );
         if (fieldIndex != null) {
           final isLateFinal =
               fieldDecl is FieldDeclaration &&
@@ -798,7 +820,10 @@ sealed class SetTarget {
         MemberName(name, MemberKind.setter),
       );
       if (owner != null &&
-          !ctx.memberLookup.needsOwnerLink(owner, MemberName(name, MemberKind.setter))) {
+          !ctx.memberLookup.needsOwnerLink(
+            owner,
+            MemberName(name, MemberKind.setter),
+          )) {
         final key = name.startsWith('_')
             ? '${ctx.libraryUri(owner.file)}::$name'
             : name;
@@ -813,7 +838,12 @@ sealed class SetTarget {
         );
       }
     }
-    return DynamicSet(object, name, fieldType, isSuperReceiver: isSuperReceiver);
+    return DynamicSet(
+      object,
+      name,
+      fieldType,
+      isSuperReceiver: isSuperReceiver,
+    );
   }
 
   /// `this.name = v` where `name` is declared on the enclosing class —
@@ -1005,8 +1035,7 @@ final class ExtensionSetterCall extends SetTarget {
 
   @override
   Variable emit(CompilerContext ctx, Variable value) {
-    final paramType =
-        member.parameters?.parameters.firstOrNull?.type == null
+    final paramType = member.parameters?.parameters.firstOrNull?.type == null
         ? null
         : ctx.typeFactory.formalParameterAnnotationType(
             ext.library,

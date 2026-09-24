@@ -39,10 +39,9 @@ final class Substitution {
     }
     return Substitution._({
       for (var i = 0; i < params.length; i++)
-        params[i]:
-            i < type.typeArguments.length
-                ? type.typeArguments[i]
-                : (params[i].bound ?? CoreTypes.dynamic.ref(decl!.ctx)),
+        params[i]: i < type.typeArguments.length
+            ? type.typeArguments[i]
+            : (params[i].bound ?? CoreTypes.dynamic.ref(decl!.ctx)),
     });
   }
 

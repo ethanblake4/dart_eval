@@ -34,11 +34,7 @@ final class TypeFactory {
     if (typeAnnotation is RecordTypeAnnotation) {
       final positional = <TypeRef>[
         for (final field in typeAnnotation.positionalFields)
-          fromAnnotation(
-            library,
-            field.type,
-            typeParameters: typeParameters,
-          ),
+          fromAnnotation(library, field.type, typeParameters: typeParameters),
       ];
       final named = <String, TypeRef>{
         for (final field
@@ -177,8 +173,8 @@ final class TypeFactory {
         return CoreTypes.dynamic.ref(_ctx);
       }
 
-      final declaration =
-          _ctx.topLevelDeclarationsMap[specifiedType.file]![specifiedType.name]!;
+      final declaration = _ctx
+          .topLevelDeclarationsMap[specifiedType.file]![specifiedType.name]!;
       if (!declaration.isBridge) {
         // `ref` is declared on a bridge type, but [specifiedType] is a plain
         // class — resolve through a bridged ancestor in its chain (e.g. a
@@ -350,11 +346,7 @@ final class TypeFactory {
     if (alias is GenericTypeAlias) {
       final functionType = alias.functionType;
       target = functionType == null
-          ? fromAnnotation(
-              declLibrary,
-              alias.type,
-              typeParameters: bindings,
-            )
+          ? fromAnnotation(declLibrary, alias.type, typeParameters: bindings)
           : functionTypeFromAnnotation(
               declLibrary,
               functionType,
@@ -519,7 +511,8 @@ final class TypeFactory {
                         ),
                         i,
                         '',
-                      )): applied[mixinParams[i].name.lexeme]!,
+                      )):
+                  applied[mixinParams[i].name.lexeme]!,
           }),
         );
         if (inner != null) return inner;
@@ -625,12 +618,8 @@ final class TypeFactory {
     // def — hand out fresh indices beyond the declared range, cached so the
     // same name maps to the same parameter within this signature.
     final extraDefs = <String, TypeParameterDef>{};
-    TypeParameterDef extraDef(String name) =>
-        extraDefs[name] ??= TypeParameterDef(
-          owner,
-          ownDefs.length + extraDefs.length,
-          name,
-        );
+    TypeParameterDef extraDef(String name) => extraDefs[name] ??=
+        TypeParameterDef(owner, ownDefs.length + extraDefs.length, name);
 
     TypeRef resolve(BridgeTypeAnnotation annotation) {
       final type = annotation.type;
@@ -691,22 +680,21 @@ final class TypeFactory {
     final ownParams =
         typeParameterList?.typeParameters ?? const <TypeParameter>[];
     final allTypeParams = <String, TypeRef>{...typeParameters};
-    final ownDefs = declareTypeParameters(_ctx, owner, ownParams, allTypeParams, (
-      bound,
-    ) {
-      return fromAnnotation(
-        library,
-        bound,
-        typeParameters: allTypeParams,
-      );
-    });
+    final ownDefs = declareTypeParameters(
+      _ctx,
+      owner,
+      ownParams,
+      allTypeParams,
+      (bound) {
+        return fromAnnotation(library, bound, typeParameters: allTypeParams);
+      },
+    );
 
     TypeRef resolve(TypeAnnotation? type) => type == null
         ? CoreTypes.dynamic.ref(_ctx)
         : fromAnnotation(library, type, typeParameters: allTypeParams);
 
-    final parameters =
-        parameterList?.parameters ?? const <FormalParameter>[];
+    final parameters = parameterList?.parameters ?? const <FormalParameter>[];
     final positional = <TypeRef>[
       for (final parameter in parameters)
         if (parameter.isPositional && parameter.isRequired)
@@ -782,12 +770,9 @@ final class TypeFactory {
           returnType: returnType,
           typeParameterList: typeParameters,
           parameterList: parameters,
-          owner: ownTypeParameterOwner ??
-              TypeParameterOwner(
-                TypeParameterOwnerKind.function,
-                library,
-                '',
-              ),
+          owner:
+              ownTypeParameterOwner ??
+              TypeParameterOwner(TypeParameterOwnerKind.function, library, ''),
           typeParameters: memberTypeParameters,
         ),
         decl: _ctx.types.bySpec(CoreTypes.function),

@@ -51,16 +51,18 @@ class EvalExtension {
       TypeParameterOwner(TypeParameterOwnerKind.extension, library, name),
       tps,
       () {
-      try {
-        return TypeRef.fromAnnotation(
-          ctx,
-          library,
-          declaration.onClause!.extendedType,
-        );
-      } catch (_) {
-        return null;
-      }
-    }, resolveBounds: false);
+        try {
+          return TypeRef.fromAnnotation(
+            ctx,
+            library,
+            declaration.onClause!.extendedType,
+          );
+        } catch (_) {
+          return null;
+        }
+      },
+      resolveBounds: false,
+    );
   }
 }
 

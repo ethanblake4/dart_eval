@@ -65,8 +65,7 @@ StatementInfo doAsyncReturn(
 /// with `null` if the body falls off the end.
 void setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
   final future = CoreTypes.future.ref(ctx);
-  final runtimeType =
-      returnType != null && sameDeclaration(returnType, future)
+  final runtimeType = returnType != null && sameDeclaration(returnType, future)
       ? returnType
       : future.copyWith(arguments: [CoreTypes.dynamic.ref(ctx)]);
   ctx.setLocal(

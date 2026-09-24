@@ -50,12 +50,7 @@ Variable compilePropertyAccess(
     ).getValue(ctx, pa);
   }
 
-  return GetTarget.read(
-    ctx,
-    L,
-    pa.propertyName.name,
-    extensionPin: pin,
-  );
+  return GetTarget.read(ctx, L, pa.propertyName.name, extensionPin: pin);
 }
 
 Reference compilePropertyAccessAsReference(

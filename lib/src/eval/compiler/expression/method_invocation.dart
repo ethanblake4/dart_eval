@@ -104,15 +104,16 @@ TypeRef instantiateConstructorType(
       Substitution.of({
         for (var i = 0; i < inferredArgs.length; i++)
           (base.decl?.typeParameters[i] ??
-              ctx.typeParameterDefs.key(
-                TypeParameterOwner(
-                  TypeParameterOwnerKind.classLike,
-                  base.file,
-                  base.name,
-                ),
-                i,
-                '',
-              )): inferredArgs[i],
+                  ctx.typeParameterDefs.key(
+                    TypeParameterOwner(
+                      TypeParameterOwnerKind.classLike,
+                      base.file,
+                      base.name,
+                    ),
+                    i,
+                    '',
+                  )):
+              inferredArgs[i],
       }),
     );
   }
@@ -207,17 +208,7 @@ Variable invokeExtensionMethod(
         extParams[i].name.lexeme: bindings[i],
     },
     source: call,
-);
-
-
-
-
-
-
-
-
-
-
+  );
 
   final s = ctx.svar('method_result');
   ctx.pushOp(
@@ -250,8 +241,6 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
         .map((type) => ctx.runtimeTypes.idOf(type))
         .toList() ??
     const [];
-
-
 
 /// Resolves the receiver for a `super.m(args)` call: finds the nearest
 /// concrete member above `this` — mixin-clause members first (below the
@@ -364,9 +353,10 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
     // A getter-shaped `super.m(...)` is a function-expression invocation:
     // the `noSuchMethod` read evaluates before the arguments.
     if (abstractGetter ?? false) {
-      final getterValue =
-          NoSuchMethodCall(name: memberName, getterShaped: true)
-              .emitGetterValue(ctx);
+      final getterValue = NoSuchMethodCall(
+        name: memberName,
+        getterShaped: true,
+      ).emitGetterValue(ctx);
       return (
         L,
         CallResolver(ctx).invokeValue(
@@ -405,4 +395,3 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
   }
   return (L, null);
 }
-

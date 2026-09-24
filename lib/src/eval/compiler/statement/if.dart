@@ -57,7 +57,9 @@ StatementInfo _compileIfCaseStatement(
           ctx,
           CoreTypes.bool.ref(ctx),
         );
-        matches = CallResolver(ctx).invokeOperator(matches, '&&', [guardExpr]).result;
+        matches = CallResolver(
+          ctx,
+        ).invokeOperator(matches, '&&', [guardExpr]).result;
       }
       return matches;
     },

@@ -139,7 +139,7 @@ sealed class TypeDecl {
     if (type == null) {
       final alias = ctx.typeAliases[library]?[name];
       if (alias != null) {
-        type = ctx.typeFactory.resolveTypeAlias( library, alias);
+        type = ctx.typeFactory.resolveTypeAlias(library, alias);
       }
     }
     if (type == null) {
@@ -167,8 +167,7 @@ sealed class TypeDecl {
     TypeRef mixin,
     List<TypeRef> chainSoFar,
   ) {
-    if (clauseName.typeArguments != null ||
-        mixin.typeArguments.isNotEmpty) {
+    if (clauseName.typeArguments != null || mixin.typeArguments.isNotEmpty) {
       return mixin;
     }
     final mixinDeclRef = mixin.decl;
@@ -207,9 +206,7 @@ sealed class TypeDecl {
       arguments: [
         for (var i = 0; i < mixinParams2.length; i++)
           bindings[mixinParams2[i]] ??
-              mixinParams2[i].bound?.substituteTypeParameters(
-                substitution,
-              ) ??
+              mixinParams2[i].bound?.substituteTypeParameters(substitution) ??
               CoreTypes.dynamic.ref(ctx),
       ],
     );
@@ -323,14 +320,15 @@ final class BridgeTypeDecl extends TypeDecl {
     );
     var index = 0;
     final defs = ctx.typeParameterDefs.intern(owner, [
-      for (final g in classDef.type.generics.entries) () {
-        final def = TypeParameterDef(owner, index++, g.key);
-        final extends_ = g.value.$extends;
-        if (extends_ != null) {
-          def.bound = TypeRef.fromBridgeTypeRef(ctx, extends_);
-        }
-        return def;
-      }(),
+      for (final g in classDef.type.generics.entries)
+        () {
+          final def = TypeParameterDef(owner, index++, g.key);
+          final extends_ = g.value.$extends;
+          if (extends_ != null) {
+            def.bound = TypeRef.fromBridgeTypeRef(ctx, extends_);
+          }
+          return def;
+        }(),
     ]);
     return defs;
   }

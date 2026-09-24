@@ -156,7 +156,9 @@ Variable patternMatchAndBind(
         if (result == null) {
           result = fieldResult;
         } else {
-          result = CallResolver(ctx).invokeOperator(result, '&&', [fieldResult]).result;
+          result = CallResolver(
+            ctx,
+          ).invokeOperator(result, '&&', [fieldResult]).result;
         }
       }
       return result ??
@@ -184,7 +186,9 @@ Variable patternMatchAndBind(
         if (result == null) {
           result = elementResult;
         } else {
-          result = CallResolver(ctx).invokeOperator(result, '&&', [elementResult]).result;
+          result = CallResolver(
+            ctx,
+          ).invokeOperator(result, '&&', [elementResult]).result;
         }
       }
       return result ??
@@ -284,7 +288,9 @@ Variable patternMatchAndBind(
           fieldValue,
           patternContext: patternContext,
         );
-        result = CallResolver(ctx).invokeOperator(result, '&&', [fieldResult]).result;
+        result = CallResolver(
+          ctx,
+        ).invokeOperator(result, '&&', [fieldResult]).result;
       }
       return result;
     case CastPattern pat:

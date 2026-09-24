@@ -16,7 +16,6 @@ import '../variable.dart';
 import '../values/abi.dart';
 import '../../ir/types.dart' show ResolveTypeId;
 
-
 /// Converts an already-compiled argument to the representation the callee's
 /// ABI expects for [param]: boxed unless the parameter type crosses the
 /// function boundary unboxed (never for [MethodDeclaration] hosts, whose
@@ -52,8 +51,7 @@ Variable coerceArgumentForParameter(
       ? arg0.boxIfNeeded(ctx)
       : arg0.unboxIfNeeded(ctx);
 
-  if (arg0.type.isFunctionLike &&
-      arg0.unmaterializedCallable != null) {
+  if (arg0.type.isFunctionLike && arg0.unmaterializedCallable != null) {
     arg0 = arg0.tearOff(ctx, boundContext: paramType);
   }
   return arg0;
@@ -181,7 +179,6 @@ TypeRef resolveFieldFormalType(
   }
   final $class = parameterHost.parent!.parent as Declaration;
   return ctx.memberLookup.fieldType(
-        
         TypeRef.lookupDeclaration(ctx, decLibrary, $class),
         param.name.lexeme,
         forFieldFormal: true,

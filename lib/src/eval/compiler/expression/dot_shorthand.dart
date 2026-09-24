@@ -61,10 +61,8 @@ bool containsLeadingShorthand(Expression e) => switch (e) {
 
 /// A type-namespace variable for [type], standing in for the `C` of `C.member`
 /// so [IdentifierReference] resolves the shorthand's static members.
-Variable _typeNamespace(CompilerContext ctx, TypeRef type) => Variable(
-  CoreTypes.type.ref(ctx),
-  concreteTypes: [type],
-);
+Variable _typeNamespace(CompilerContext ctx, TypeRef type) =>
+    Variable(CoreTypes.type.ref(ctx), concreteTypes: [type]);
 
 /// `.member` — a static member (enum value, static field, getter, method
 /// tear-off) of the context type.
@@ -155,13 +153,7 @@ Variable _invokeShorthandMember(
       typeArguments: typeArguments,
       source: source,
       returnContext: bound,
-);
-
-
-
-
-
-
+    );
 
     final s = ctx.svar('method_result');
     ctx.pushOp(
@@ -186,11 +178,9 @@ Variable _invokeShorthandMember(
   }
   if (member != null && member.isBridge && member.bridge is BridgeMethodDef) {
     final fd = (member.bridge as BridgeMethodDef).functionDescriptor;
-    final arguments = ArgumentBinder(ctx).bindBridgeVector(
-      argumentList,
-      fd,
-      typeParameters: const {},
-    );
+    final arguments = ArgumentBinder(
+      ctx,
+    ).bindBridgeVector(argumentList, fd, typeParameters: const {});
     final result = ctx.svar('method_result');
     ctx.pushOp(
       InvokeExternal(
@@ -209,10 +199,10 @@ Variable _invokeShorthandMember(
             owner: type,
           ),
           targetType: type,
-          argTypes:
-              arguments.positionalValues.map((a) => a.type).toList(),
-          namedArgTypes:
-              arguments.namedValues.map((k, v) => MapEntry(k, v.type)),
+          argTypes: arguments.positionalValues.map((a) => a.type).toList(),
+          namedArgTypes: arguments.namedValues.map(
+            (k, v) => MapEntry(k, v.type),
+          ),
         ) ??
         CoreTypes.dynamic.ref(ctx);
     return Variable.of(ctx, result, returnType, rep: ValueRep.boxed);

@@ -96,7 +96,8 @@ final class TypeSystem {
     if (target == null) return null;
     var current0 = type;
     if (current0.isTypeParameter) {
-      current0 = (current0 as TypeParameterTypeRef).parameter.bound ??
+      current0 =
+          (current0 as TypeParameterTypeRef).parameter.bound ??
           CoreTypes.dynamic.ref(_ctx);
     }
     if (current0.isRecord) {
@@ -110,8 +111,8 @@ final class TypeSystem {
     while (queue.isNotEmpty) {
       final current = queue.removeLast();
       if (!seen.add(current)) continue;
-      final currentDecl = current.decl ??
-          _ctx.types.find(current.file, current.name);
+      final currentDecl =
+          current.decl ?? _ctx.types.find(current.file, current.name);
       if (currentDecl != null &&
           (identical(currentDecl, target) ||
               (currentDecl.library == target.library &&
@@ -161,11 +162,7 @@ final class TypeSystem {
       return;
     }
     final args = pattern.typeArguments;
-    for (
-      var i = 0;
-      i < args.length && i < concrete.typeArguments.length;
-      i++
-    ) {
+    for (var i = 0; i < args.length && i < concrete.typeArguments.length; i++) {
       unify(args[i], concrete.typeArguments[i], substitutions);
     }
   }
@@ -188,8 +185,7 @@ final class TypeSystem {
       if (identical(current.decl, concrete.decl)) {
         if (current.typeArguments.isEmpty &&
             !identical(current, pattern) &&
-            pattern.typeArguments.length ==
-                concrete.typeArguments.length) {
+            pattern.typeArguments.length == concrete.typeArguments.length) {
           // The declaring class's supertype is raw; bind `pattern`'s
           // arguments positionally instead.
           final pArgs = pattern.typeArguments;
@@ -430,8 +426,13 @@ final class TypeSystem {
         .toList(growable: false);
     final best = candidates.firstWhere(
       (c) => candidates.every(
-        (o) => c == o ||
-            isAssignable(firstSeen[c]!, firstSeen[o]!, forceAllowDynamic: false),
+        (o) =>
+            c == o ||
+            isAssignable(
+              firstSeen[c]!,
+              firstSeen[o]!,
+              forceAllowDynamic: false,
+            ),
       ),
       orElse: () => candidates.last,
     );
@@ -558,8 +559,7 @@ final class TypeSystem {
       }
       for (final entry in to.named.entries) {
         final sourceField = from.named[entry.key];
-        if (sourceField == null ||
-            !fieldAssignable(sourceField, entry.value)) {
+        if (sourceField == null || !fieldAssignable(sourceField, entry.value)) {
           return false;
         }
       }
@@ -585,11 +585,7 @@ final class TypeSystem {
       }
       // A raw generic (`Future` for `Future<C>`) acts like
       // `Future<dynamic>`: its missing arguments are assignable both ways.
-      for (
-        var i = 0;
-        i < to.typeArguments.length && i < generics.length;
-        i++
-      ) {
+      for (var i = 0; i < to.typeArguments.length && i < generics.length; i++) {
         if (!isAssignable(
           generics[i],
           to.typeArguments[i],
@@ -649,11 +645,7 @@ final class TypeSystem {
     }
     if (from.nullable &&
         !to.nullable &&
-        isAssignable(
-          from.withNullable(false),
-          to,
-          forceAllowDynamic: false,
-        )) {
+        isAssignable(from.withNullable(false), to, forceAllowDynamic: false)) {
       return AssignmentConversion.runtimeCheck;
     }
     if (from.isSpec(CoreTypes.int) && to.isSpec(CoreTypes.double)) {

@@ -139,7 +139,6 @@ void compileConstructorDeclaration(
       }
       if (redirectTargetDecl == null) {
         type0 ??= ctx.memberLookup.fieldType(
-          
           TypeRef.lookupDeclaration(ctx, ctx.library, parent),
           p.name.lexeme,
           source: p,
@@ -311,21 +310,11 @@ void compileConstructorDeclaration(
     StatementInfo? stInfo;
 
     if (b is BlockFunctionBody) {
-      stInfo = compileBlock(
-        b.block,
-        clsType,
-        ctx,
-        name: '$n()',
-      );
+      stInfo = compileBlock(b.block, clsType, ctx, name: '$n()');
     } else if (b is ExpressionFunctionBody) {
       ctx.beginScope();
       final V = compileExpression(b.expression, ctx);
-      stInfo = doReturn(
-        ctx,
-        clsType,
-        V,
-        isAsync: b.isAsynchronous,
-      );
+      stInfo = doReturn(ctx, clsType, V, isAsync: b.isAsynchronous);
       ctx.endScope();
     } else {
       throw CompileError('Unknown function body type ${b.runtimeType}', d);
@@ -345,11 +334,8 @@ void compileConstructorDeclaration(
   // Handle redirecting constructor
   if ($redirectingInitializer != null) {
     final name = ctorNameOf($redirectingInitializer.constructorName?.name);
-    final member = ctx.memberLookup.staticMember(
-          clsType,
-          name,
-          MemberKind.method,
-        ) ??
+    final member =
+        ctx.memberLookup.staticMember(clsType, name, MemberKind.method) ??
         (throw CompileError('Cannot find static method $clsType.$name'));
     final dec = (member as SourceMember).node;
     final fpl = (dec as ConstructorDeclaration).parameters.parameters;
@@ -360,13 +346,7 @@ void compileConstructorDeclaration(
       fpl,
       dec,
       source: $redirectingInitializer.argumentList,
-);
-
-
-
-
-
-
+    );
 
     final offset = DeferredOrOffset.lookupStatic(
       ctx,
@@ -471,7 +451,6 @@ void compileConstructorDeclaration(
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
       final fType = ctx.memberLookup.fieldType(
-        
         TypeRef.lookupDeclaration(ctx, ctx.library, parent),
         init.fieldName.name,
         source: init,
@@ -517,12 +496,7 @@ void compileConstructorDeclaration(
     ctx.beginScope();
     ctx.setLocal('#this', inst);
     if (body is BlockFunctionBody) {
-      compileBlock(
-        body.block,
-        CoreTypes.voidType.ref(ctx),
-        ctx,
-        name: '$n()',
-      );
+      compileBlock(body.block, CoreTypes.voidType.ref(ctx), ctx, name: '$n()');
     } else if (body is ExpressionFunctionBody) {
       final V = compileExpression(body.expression, ctx);
       doReturn(ctx, CoreTypes.voidType.ref(ctx), V);
@@ -747,7 +721,12 @@ Map<String, Variable> _evalUnusedFieldInitializers(
           ? memberOwner
           : null;
       if (memberLibrary != null && parent != null) {
-        ctx.typeFactory.seedFoldedMemberTypeParams( parent, fd, memberLibrary, prevLibrary);
+        ctx.typeFactory.seedFoldedMemberTypeParams(
+          parent,
+          fd,
+          memberLibrary,
+          prevLibrary,
+        );
       }
       final Variable V;
       try {
@@ -757,9 +736,10 @@ Map<String, Variable> _evalUnusedFieldInitializers(
         ctx.memberDeclaringClass = null;
       }
       ctx.inferredFieldTypes
-              .putIfAbsent(ctx.library, () => {})
-              .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] =
-          ctx.typeFactory.widenedInferredType( V.type);
+          .putIfAbsent(ctx.library, () => {})
+          .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] = ctx
+          .typeFactory
+          .widenedInferredType(V.type);
       evaluated[field.name.lexeme] = V;
     }
   }
@@ -964,17 +944,7 @@ Variable _invokeSuperConstructor(
             // clause's arguments so `T z` checks against `int`.
             resolveGenerics: _superclassGenerics(ctx, extendsDecl, extendsType),
             source: superInitializer,
-)
-
-
-
-
-
-
-
-
-
-
+          )
         : ArgumentBinder(ctx).bindSuperParams(
             constructor.parameters.parameters,
             constructor,
@@ -1016,15 +986,19 @@ List<SSA> _bridgeSuperArgs(
   final bridge = extendsDecl.bridge! as BridgeClassDef;
   final constructor = bridge.constructors[constructorName]!;
   return superInitializer != null
-      ? ArgumentBinder(ctx).bindBridgeVector(
-          superInitializer.argumentList,
-          constructor.functionDescriptor,
-        ).vector()
+      ? ArgumentBinder(ctx)
+            .bindBridgeVector(
+              superInitializer.argumentList,
+              constructor.functionDescriptor,
+            )
+            .vector()
       : superParams.positional.isNotEmpty || superParams.named.isNotEmpty
-      ? ArgumentBinder(ctx).bindSuperParamsBridge(
-          constructor.functionDescriptor,
-          superParams: superParams,
-        ).vector()
+      ? ArgumentBinder(ctx)
+            .bindSuperParamsBridge(
+              constructor.functionDescriptor,
+              superParams: superParams,
+            )
+            .vector()
       : <SSA>[];
 }
 
@@ -1176,15 +1150,17 @@ void compileAliasForwardingConstructor(
     parameterRepresentations.add(
       Abi.parameter(type, CallableKind.initializer).bank,
     );
-    ctx.setLocal(
-      p.name!.lexeme,
-      Variable.of(
-        ctx,
-        SSA('arg_$i'),
-        type,
-        rep: Abi.parameter(type, CallableKind.initializer),
-      ),
-    ).captureBinding(ctx, p);
+    ctx
+        .setLocal(
+          p.name!.lexeme,
+          Variable.of(
+            ctx,
+            SSA('arg_$i'),
+            type,
+            rep: Abi.parameter(type, CallableKind.initializer),
+          ),
+        )
+        .captureBinding(ctx, p);
     i++;
   }
   // Generative callees receive the runtime type as a trailing int argument.

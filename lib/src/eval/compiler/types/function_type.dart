@@ -36,10 +36,15 @@ final class FunctionSignature {
       other is FunctionSignature &&
           requiredPositional == other.requiredPositional &&
           returnType == other.returnType &&
-          const ListEquality<TypeParameterDef>().equals(typeParameters, other.typeParameters) &&
+          const ListEquality<TypeParameterDef>().equals(
+            typeParameters,
+            other.typeParameters,
+          ) &&
           const ListEquality<TypeRef>().equals(positional, other.positional) &&
-          const MapEquality<String, ({TypeRef type, bool required})>()
-          .equals(named, other.named);
+          const MapEquality<String, ({TypeRef type, bool required})>().equals(
+            named,
+            other.named,
+          );
 
   @override
   int get hashCode => Object.hash(

@@ -34,7 +34,6 @@ import 'devirtualizer.dart';
 import 'intrinsics.dart';
 import 'targets.dart';
 
-
 /// Turns a [CallSite] into a [CallTarget] and emits the call. Resolution
 /// consults only the receiver's static type and facts plus the syntactic
 /// shape; arguments are compiled by the [ArgumentBinder].
@@ -46,11 +45,8 @@ final class CallResolver {
   /// `value(args)` — a function-expression invocation. When [ref] is given
   /// a statically-known target short-circuits to a direct [Call] without
   /// materializing the callee.
-  Variable invokeValue(
-    CallSite site, {
-    Reference? ref,
-    Variable? callee,
-  }) => invokeValueWithArgs(site, ref: ref, callee: callee).$1;
+  Variable invokeValue(CallSite site, {Reference? ref, Variable? callee}) =>
+      invokeValueWithArgs(site, ref: ref, callee: callee).$1;
 
   /// [invokeValue] plus the bound call — callers needing the post-coercion
   /// argument values read them from the [BoundCall].
@@ -100,8 +96,7 @@ final class CallResolver {
           'call',
           [for (final a in bound.positional) a.value],
           namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
-        )
-            .result;
+        ).result;
       }
     }
     return target.emit(ctx, bound);
@@ -113,8 +108,7 @@ final class CallResolver {
     ExtensionApplicationReceiver(:final value) => value,
     TypeLiteralReceiver(:final value) => value,
     SuperReceiver(:final self) => self,
-    PrefixReceiver() =>
-      throw CompileError('Unresolved import prefix'),
+    PrefixReceiver() => throw CompileError('Unresolved import prefix'),
   };
 
   /// `receiver.m(args)` — an instance-target invocation. Member resolution
@@ -180,11 +174,7 @@ final class CallResolver {
     // `C.new(...)` invokes the unnamed constructor.
     final staticMemberName = ctorNameOf(e.methodName.name);
 
-    if (receiverOf(
-          ctx,
-          L,
-          pin: extensionPinOf(ctx, e.target, L.type),
-        )
+    if (receiverOf(ctx, L, pin: extensionPinOf(ctx, e.target, L.type))
         case TypeLiteralReceiver(:final type)) {
       // Static method
       staticType = type;
@@ -243,10 +233,7 @@ final class CallResolver {
         // value is read first, then the arguments evaluate.
         return invokeValue(
           callSite(),
-          callee: IdentifierReference(
-            L,
-            staticMemberName,
-          ).getValue(ctx, e),
+          callee: IdentifierReference(L, staticMemberName).getValue(ctx, e),
         );
       }
       isStatic = true;
@@ -296,18 +283,7 @@ final class CallResolver {
             },
             argIndexOffset: 1,
             source: e,
-);
-
-
-
-
-
-
-
-
-
-
-
+          );
 
           final s = ctx.svar('method_result');
           ctx.pushOp(
@@ -361,7 +337,6 @@ final class CallResolver {
           L.type,
           ctx.memberNameOf(e.methodName.name, MemberKind.method),
           source: e,
-          superclassFirst: true,
         );
       } on CompileError {
         // No such instance member: an extension member may apply.
@@ -456,7 +431,11 @@ final class CallResolver {
           : (br as BridgeConstructorDef).functionDescriptor;
       final receiverTypeParameters = isStatic
           ? const <String, TypeRef>{}
-          : _bridgeClassTypeArguments(ctx, L.type, resolvedMember.ownerDecl!.library);
+          : _bridgeClassTypeArguments(
+              ctx,
+              L.type,
+              resolvedMember.ownerDecl!.library,
+            );
       argsPair = ArgumentBinder(ctx).bindBridgeVector(
         e.argumentList,
         fd,
@@ -499,9 +478,14 @@ final class CallResolver {
       // null placeholders so generated wrappers keep the legacy flattened
       // ABI. The declared return type (including inferred generics and
       // parameter-type dependencies) still applies to the result.
-      if (!isStatic && e.typeArguments == null && argsPair.namedValues.isEmpty) {
-        final invokeResult =
-            invokeOperator(L, e.methodName.name, argsPair.positionalValues).result;
+      if (!isStatic &&
+          e.typeArguments == null &&
+          argsPair.namedValues.isEmpty) {
+        final invokeResult = invokeOperator(
+          L,
+          e.methodName.name,
+          argsPair.positionalValues,
+        ).result;
         final preciseType = mReturnType;
         if (preciseType != null) {
           return invokeResult.copyWith(type: preciseType);
@@ -509,7 +493,9 @@ final class CallResolver {
         return invokeResult;
       }
     } else if (L.type.isSpec(CoreTypes.dynamic)) {
-      argsPair = ArgumentBinder(ctx).bindDynamicVector( e.argumentList, before: [L]);
+      argsPair = ArgumentBinder(
+        ctx,
+      ).bindDynamicVector(e.argumentList, before: [L]);
     } else {
       final dec = (resolved!.member as SourceMember).node as Declaration;
       final memberLibrary = resolved.member.ownerDecl!.library;
@@ -571,10 +557,7 @@ final class CallResolver {
           typeArguments: e.typeArguments,
           source: e,
           seedGenerics: !isStatic && bindingDec is MethodDeclaration
-              ? ownerTypeArgumentsOf(
-                  bindingMember.ownerDecl,
-                  bindingView,
-                )
+              ? ownerTypeArgumentsOf(bindingMember.ownerDecl, bindingView)
               : const {},
           returnContext: bound,
         );
@@ -637,8 +620,7 @@ final class CallResolver {
             offset,
             callArguments,
             result: result,
-            typeArguments:
-                runtimeTypeArguments(ctx, e).isNotEmpty
+            typeArguments: runtimeTypeArguments(ctx, e).isNotEmpty
                 ? runtimeTypeArguments(ctx, e)
                 : argsPair.runtimeTypeArguments,
           ),
@@ -652,13 +634,14 @@ final class CallResolver {
 
     final boundCall = BoundCall(
       receiver: L,
-      positional: [for (final arg in argsPair.positionalValues) BoundArgument(arg)],
+      positional: [
+        for (final arg in argsPair.positionalValues) BoundArgument(arg),
+      ],
       named: [
         for (final entry in argsPair.namedValues.entries)
           (entry.key, BoundArgument(entry.value)),
       ],
-      runtimeTypeArguments:
-          runtimeTypeArguments(ctx, e).isNotEmpty
+      runtimeTypeArguments: runtimeTypeArguments(ctx, e).isNotEmpty
           ? runtimeTypeArguments(ctx, e)
           : argsPair.runtimeTypeArguments,
       returnType: returnType,
@@ -743,9 +726,9 @@ final class CallResolver {
       // `operator []=` defined in `extension on T`). Instance members win —
       // the extension only applies when instance lookup fails.
       if (!ctx.memberLookup.hasInstanceMember(
-            recv.type,
-            MemberName.method(method),
-          )) {
+        recv.type,
+        MemberName.method(method),
+      )) {
         // `unary-` maps to the extension member `-` of positional arity 0.
         final found = resolveExtensionMember(
           ctx,
@@ -773,7 +756,14 @@ final class CallResolver {
         values.single.unmaterializedCallable != null) {
       // Two unmaterialized references to the same function are identical.
       final equal = recv.methodOffset == values.single.methodOffset;
-      return (target: recv, result: BuiltinValue(boolval: method == '!=' ? !equal : equal).push(ctx), args: values, namedArgs: const {});
+      return (
+        target: recv,
+        result: BuiltinValue(
+          boolval: method == '!=' ? !equal : equal,
+        ).push(ctx),
+        args: values,
+        namedArgs: const {},
+      );
     }
     if (recv.unmaterializedCallable != null) {
       recv = recv.tearOff(ctx);
@@ -787,19 +777,25 @@ final class CallResolver {
     recv = boxed.first;
     final prepared = boxed.sublist(1);
     if (equality) {
-      final result = EqualityCall(
-        left: recv,
-        right: prepared.single,
-        negated: method == '!=',
-      ).emit(
-        ctx,
-        BoundCall(
-          positional: const [],
-          named: const [],
-          returnType: CoreTypes.bool.ref(ctx),
-        ),
+      final result =
+          EqualityCall(
+            left: recv,
+            right: prepared.single,
+            negated: method == '!=',
+          ).emit(
+            ctx,
+            BoundCall(
+              positional: const [],
+              named: const [],
+              returnType: CoreTypes.bool.ref(ctx),
+            ),
+          );
+      return (
+        target: recv,
+        result: result,
+        args: prepared,
+        namedArgs: const {},
       );
-      return (target: recv, result: result, args: prepared, namedArgs: const {});
     }
     final argTypes = prepared.map((arg) => arg.type).toList();
     final namedArgTypes =
@@ -846,7 +842,6 @@ final class CallResolver {
         final opResolved = ctx.memberLookup.interfaceMember(
           recv.type,
           ctx.memberNameOf(method, MemberKind.method),
-          superclassFirst: true,
         );
         final opMember = opResolved.member;
         if (opMember is SourceMember && opMember.node is MethodDeclaration) {
@@ -891,10 +886,15 @@ final class CallResolver {
         // No resolvable declaration — the untyped dispatch applies.
       }
     }
-    final result = Devirtualizer(ctx)
-        .refine(VirtualCall(receiver: recv, name: method))
-        .emit(ctx, boundCall);
-    return (target: recv, result: result, args: prepared, namedArgs: namedArgs ?? {});
+    final result = Devirtualizer(
+      ctx,
+    ).refine(VirtualCall(receiver: recv, name: method)).emit(ctx, boundCall);
+    return (
+      target: recv,
+      result: result,
+      args: prepared,
+      namedArgs: namedArgs ?? {},
+    );
   }
 
   /// `f(args)` where `f` is a function-typed value — or a non-function
@@ -907,7 +907,12 @@ final class CallResolver {
     if (!callee.type.isAssignableTo(ctx, CoreTypes.function.ref(ctx))) {
       // `x(...)` on a non-function is an implicit `x.call(...)`, which may
       // resolve to an extension `call` member.
-      if (resolveExtensionMember(ctx, callee.type, 'call', arity: args.length) !=
+      if (resolveExtensionMember(
+            ctx,
+            callee.type,
+            'call',
+            arity: args.length,
+          ) !=
           null) {
         return invokeOperator(callee, 'call', args, namedArgs: namedArgs);
       }
@@ -921,7 +926,12 @@ final class CallResolver {
         CallSite(shape: CallShape.values(args, namedArgs)),
         callee: callee,
       );
-      return (target: null, result: result, args: [for (final a in bound.positional) a.value], namedArgs: {for (final e in bound.named) e.$1: e.$2.value});
+      return (
+        target: null,
+        result: result,
+        args: [for (final a in bound.positional) a.value],
+        namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
+      );
     }
     final target = ctx.svar('call_result');
     final returnType =
@@ -940,12 +950,17 @@ final class CallResolver {
         ...?namedArgs?.values.map((arg) => arg.ssa),
       ], result: target),
     );
-    return (target: callee, result: Variable.of(
+    return (
+      target: callee,
+      result: Variable.of(
         ctx,
         target,
         returnType,
         rep: Abi.unboxedAcrossCalls(returnType),
-      ), args: args, namedArgs: namedArgs ?? {});
+      ),
+      args: args,
+      namedArgs: namedArgs ?? {},
+    );
   }
 
   /// Emits a static `Call` to an extension member resolved on the operator
@@ -999,13 +1014,7 @@ final class CallResolver {
         ],
         result: target,
         typeArguments:
-            extensionCallTypeArguments(
-              ctx,
-              ext,
-              member,
-              bindings,
-              const {},
-            ) ??
+            extensionCallTypeArguments(ctx, ext, member, bindings, const {}) ??
             const [],
       ),
     );
@@ -1017,7 +1026,12 @@ final class CallResolver {
             member.returnType!,
             typeParameters: typeParams,
           );
-    return (target: receiver, result: Variable.of(ctx, target, returnType, rep: ValueRep.boxed), args: convertedArgs, namedArgs: const {});
+    return (
+      target: receiver,
+      result: Variable.of(ctx, target, returnType, rep: ValueRep.boxed),
+      args: convertedArgs,
+      namedArgs: const {},
+    );
   }
 
   /// `f(args)` / `p.f(args)` — a call whose callee is a bare or
@@ -1120,10 +1134,10 @@ final class CallResolver {
           name: bridgeType != null ? '${bridgeType.name}.' : name,
         );
       case TypeLiteralDenotation(
-          :final type,
-          :final constructorKey,
-          :final declaration,
-        ):
+        :final type,
+        :final constructorKey,
+        :final declaration,
+      ):
         // A class or extension sharing its name with an extension applies as
         // `E(x)` — extension namespaces win over constructor calls.
         final ext = extensionForType(ctx, type);
@@ -1174,11 +1188,9 @@ final class CallResolver {
             // the synthesized body with just the runtime-type argument.
             final callResult = ctx.svar('constructor');
             ctx.pushOp(
-              Call(
-                offset,
-                [pushRuntimeTypeId(ctx, resolved)],
-                result: callResult,
-              ),
+              Call(offset, [
+                pushRuntimeTypeId(ctx, resolved),
+              ], result: callResult),
             );
             return Variable.of(
               ctx,
@@ -1255,10 +1267,9 @@ final class CallResolver {
                 )))
           : (bridge as BridgeFunctionDeclaration).function;
 
-      final argsPair = ArgumentBinder(ctx).bindBridgeVector(
-        e.argumentList,
-        fnDescriptor,
-      );
+      final argsPair = ArgumentBinder(
+        ctx,
+      ).bindBridgeVector(e.argumentList, fnDescriptor);
 
       args = argsPair.positionalValues;
       namedArgs = argsPair.namedValues;
@@ -1274,12 +1285,7 @@ final class CallResolver {
         e.argumentList,
         typeArguments: e.typeArguments,
         source: e,
-);
-
-
-
-
-
+      );
 
       mReturnType = result.declaredReturn;
       genericReturnBoxed = result.genericReturnBoxed;
@@ -1324,11 +1330,7 @@ final class CallResolver {
             i < aliasArgs.length && i < inferredCtorArgs.length;
             i++
           ) {
-            ctx.typeSystem.unify(
-              aliasArgs[i],
-              inferredCtorArgs[i],
-              bindings,
-            );
+            ctx.typeSystem.unify(aliasArgs[i], inferredCtorArgs[i], bindings);
           }
           if (bindings.isNotEmpty) {
             aliasType = aliasType.substituteTypeParameters(
@@ -1354,13 +1356,13 @@ final class CallResolver {
     mReturnType ??= sigReturn == null
         ? null
         : resolveCallResultType(
-            ctx,
-            signature: CallSignature.returnOnly(sigReturn),
-            targetType: thisType,
-            argTypes: argTypes,
-            namedArgTypes: namedArgTypes,
-          ) ??
-          sigReturn;
+                ctx,
+                signature: CallSignature.returnOnly(sigReturn),
+                targetType: thisType,
+                argTypes: argTypes,
+                namedArgTypes: namedArgTypes,
+              ) ??
+              sigReturn;
     final returnType = mReturnType ?? CoreTypes.dynamic.ref(ctx);
     final resultRep =
         dec0.isBridge ||
@@ -1405,7 +1407,6 @@ final class CallResolver {
         );
       }
     } else {
-
       ctx.pushOp(
         Call(
           offset,
@@ -1441,9 +1442,7 @@ final class CallResolver {
       result,
       instantiatedReturnType,
       rep: resultRep,
-      concreteTypes: [
-        if (isConstructor) instantiatedReturnType,
-      ],
+      concreteTypes: [if (isConstructor) instantiatedReturnType],
       // A factory may return any subtype — the result is not exactly the
       // declared class.
       exactType: generativeCtor ? instantiatedReturnType : null,

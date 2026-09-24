@@ -56,9 +56,7 @@ Variable compileListLiteral(
 
   final listType = CoreTypes.list
       .ref(ctx)
-      .copyWith(
-        arguments: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)],
-      );
+      .copyWith(arguments: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)]);
   var list = Variable.ssa(
     ctx,
     NewList(ctx.svar('list')),

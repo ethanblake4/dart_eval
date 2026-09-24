@@ -6,7 +6,6 @@ import '../context.dart';
 import '../helpers/fpl.dart';
 import '../type.dart';
 
-
 /// How a parameter's default is spelled at its declaration.
 sealed class DefaultSource {
   const DefaultSource();
@@ -112,21 +111,26 @@ final class CallSignature {
     final ownParams =
         typeParameterList?.typeParameters ?? const <TypeParameter>[];
     final allTypeParams = <String, TypeRef>{...typeParameters};
-    final ownDefs = declareTypeParameters(ctx, owner, ownParams, allTypeParams, (
-      bound,
-    ) {
-      return TypeRef.fromAnnotation(
-        ctx,
-        library,
-        bound,
-        typeParameters: allTypeParams,
-      );
-    });
+    final ownDefs = declareTypeParameters(
+      ctx,
+      owner,
+      ownParams,
+      allTypeParams,
+      (bound) {
+        return TypeRef.fromAnnotation(
+          ctx,
+          library,
+          bound,
+          typeParameters: allTypeParams,
+        );
+      },
+    );
 
     final positional = <ParameterSpec>[];
     final named = <ParameterSpec>[];
     var requiredCount = 0;
-    for (final param in parameterList?.parameters ?? const <FormalParameter>[]) {
+    for (final param
+        in parameterList?.parameters ?? const <FormalParameter>[]) {
       final (type, _) = getFormalParameterType(
         ctx,
         param,

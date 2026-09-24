@@ -131,7 +131,6 @@ sealed class TypeRef {
         (throw CompileError('Class/enum $name not found'));
   }
 
-
   /// Whether this type names the declaration [spec] refers to. Nullability
   /// and type arguments are ignored, matching today's nominal `==`.
   bool isSpec(BridgeTypeSpec spec) => decl?.isSpec(spec) ?? false;
@@ -174,7 +173,6 @@ sealed class TypeRef {
         isSpec(CoreTypes.nullType);
   }
 
-
   bool get isTypeParameter => this is TypeParameterTypeRef;
 
   bool get isClassTypeParameter {
@@ -187,7 +185,6 @@ sealed class TypeRef {
   bool get requiresTypeEnvironment =>
       isTypeParameter ||
       typeArguments.any((arg) => arg.requiresTypeEnvironment);
-
 
   /// Classifies Dart assignment compatibility of a [this] value into a
   /// [slot] without conflating `dynamic` with a subtype proof.
@@ -234,7 +231,6 @@ sealed class TypeRef {
   TypeRef lowerTypeParameters(CompilerContext ctx) =>
       ctx.typeSystem.lowerTypeParameters(this);
 
-
   @override
   String toString() {
     return name;
@@ -271,9 +267,7 @@ sealed class TypeRef {
       owner ?? TypeParameterOwner.scope(ctx.currentFunctionId ?? -1),
       typeParams,
       temps,
-      resolveBounds
-          ? (bound) => TypeRef.fromAnnotation(ctx, lib, bound)
-          : null,
+      resolveBounds ? (bound) => TypeRef.fromAnnotation(ctx, lib, bound) : null,
     );
   }
 }
@@ -492,9 +486,7 @@ bool sameDeclaration(TypeRef a, TypeRef b) {
   }
   // Decl-less shapes match by canonical name within the same library —
   // records by shape, extension namespaces by (library, name).
-  return a.runtimeType == b.runtimeType &&
-      a.file == b.file &&
-      a.name == b.name;
+  return a.runtimeType == b.runtimeType && a.file == b.file && a.name == b.name;
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {
@@ -591,24 +583,22 @@ final class RecordTypeRef extends TypeRef {
   int get file => -1;
 
   @override
-  RecordTypeRef withNullable(bool nullable) =>
-      nullable == this.nullable
-          ? this
-          : RecordTypeRef(positional, named, nullable: nullable);
+  RecordTypeRef withNullable(bool nullable) => nullable == this.nullable
+      ? this
+      : RecordTypeRef(positional, named, nullable: nullable);
 
   @override
-  TypeRef substituteTypeParameters(Substitution substitutions) =>
-      RecordTypeRef(
-        [
-          for (final type in positional)
-            type.substituteTypeParameters(substitutions),
-        ],
-        {
-          for (final entry in named.entries)
-            entry.key: entry.value.substituteTypeParameters(substitutions),
-        },
-        nullable: nullable,
-      );
+  TypeRef substituteTypeParameters(Substitution substitutions) => RecordTypeRef(
+    [
+      for (final type in positional)
+        type.substituteTypeParameters(substitutions),
+    ],
+    {
+      for (final entry in named.entries)
+        entry.key: entry.value.substituteTypeParameters(substitutions),
+    },
+    nullable: nullable,
+  );
 
   /// The canonical `@record` name: positionals in order, then named
   /// fields sorted — the single identity every record producer shares.
@@ -682,11 +672,7 @@ bool _mapEquals<K, V>(Map<K, V> a, Map<K, V> b) {
 /// The `Function` declaration stays attached so supertypes
 /// (`Function <: Object`) resolve as before.
 final class FunctionTypeRef extends TypeRef {
-  FunctionTypeRef(
-    this.signature, {
-    required this.decl,
-    super.nullable = false,
-  });
+  FunctionTypeRef(this.signature, {required this.decl, super.nullable = false});
 
   final FunctionSignature signature;
 
@@ -753,7 +739,9 @@ final class FunctionTypeRef extends TypeRef {
 /// type: it exists only to route member resolution and equality through
 /// the extension's namespace.
 final class ExtensionNamespaceTypeRef extends TypeRef {
-  ExtensionNamespaceTypeRef(this.library, this.extensionName, {
+  ExtensionNamespaceTypeRef(
+    this.library,
+    this.extensionName, {
     super.nullable = false,
   });
 
@@ -773,12 +761,8 @@ final class ExtensionNamespaceTypeRef extends TypeRef {
   @override
   ExtensionNamespaceTypeRef withNullable(bool nullable) =>
       nullable == this.nullable
-          ? this
-          : ExtensionNamespaceTypeRef(
-              library,
-              extensionName,
-              nullable: nullable,
-            );
+      ? this
+      : ExtensionNamespaceTypeRef(library, extensionName, nullable: nullable);
 
   @override
   TypeRef substituteTypeParameters(Substitution substitutions) => this;
@@ -837,7 +821,6 @@ extension TypeRefNominal on TypeRef {
     _ => const [],
   };
 }
-
 
 /// Maps each parameter of [typeParameters] to a resolvable [TypeRef] belonging
 /// to the declaring class `file:name` — the scope in which clause types like

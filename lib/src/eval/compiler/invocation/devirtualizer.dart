@@ -26,7 +26,10 @@ final class Devirtualizer {
     };
     final name = target.name;
     var directOwner = linkType != null
-        ? ctx.memberLookup.implementationOwner(linkType, MemberName(name, MemberKind.method))
+        ? ctx.memberLookup.implementationOwner(
+            linkType,
+            MemberName(name, MemberKind.method),
+          )
         : null;
     if (directOwner == null &&
         !target.isSuperReceiver &&
@@ -37,13 +40,20 @@ final class Devirtualizer {
         L.concreteTypes.length == 1) {
       // The receiver may hold a subclass: the fixed target must not be
       // overridden by any descendant of its static type.
-      directOwner = ctx.memberLookup.directImplementationOwner(L.concreteTypes.first, MemberName(name, MemberKind.method));
+      directOwner = ctx.memberLookup.directImplementationOwner(
+        L.concreteTypes.first,
+        MemberName(name, MemberKind.method),
+      );
     }
     // A callee needs `this` bound to its declaring link only when its body
     // uses `super`; otherwise any link — including the dispatch root —
     // works, which also allows devirtualizing non-exact receivers.
     final needsLink =
-        directOwner != null && ctx.memberLookup.needsOwnerLink(directOwner, MemberName(name, MemberKind.method));
+        directOwner != null &&
+        ctx.memberLookup.needsOwnerLink(
+          directOwner,
+          MemberName(name, MemberKind.method),
+        );
     if (directOwner != null && (linkType != null || !needsLink)) {
       return StaticCall(
         DeferredOrOffset(
@@ -63,4 +73,3 @@ final class Devirtualizer {
     return target;
   }
 }
-

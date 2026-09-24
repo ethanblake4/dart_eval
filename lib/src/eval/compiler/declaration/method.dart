@@ -61,9 +61,8 @@ int compileMethodDeclaration(
           ...extensionTypeParameters,
           ...methodTypeParameters,
         ])
-          (ctx
-                      .typeScopes[ctx.library]![parameter.name.lexeme]!
-                  as TypeParameterTypeRef)
+          (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
+                      as TypeParameterTypeRef)
                   .parameter
                   .bound ??
               CoreTypes.dynamic.ref(ctx),
@@ -158,22 +157,24 @@ int compileMethodDeclaration(
       for (final p in resolvedParams) {
         TypeRef type = CoreTypes.dynamic.ref(ctx);
         if (p.type != null) {
-          type = ctx.typeFactory.formalParameterAnnotationType( ctx.library, p);
+          type = ctx.typeFactory.formalParameterAnnotationType(ctx.library, p);
         }
 
         // `_` parameters are wildcards: non-binding and repeatable.
         if (p.name!.lexeme != '_') {
-          ctx.setLocal(
-            p.name!.lexeme,
-            // Method args are always boxed to allow for bridge interop to have
-            // a consistent interface
-            Variable.of(
-              ctx,
-              SSA('arg_$i'),
-              type,
-              rep: Abi.parameter(type, CallableKind.method),
-            ),
-          ).captureBinding(ctx, p);
+          ctx
+              .setLocal(
+                p.name!.lexeme,
+                // Method args are always boxed to allow for bridge interop to have
+                // a consistent interface
+                Variable.of(
+                  ctx,
+                  SSA('arg_$i'),
+                  type,
+                  rep: Abi.parameter(type, CallableKind.method),
+                ),
+              )
+              .captureBinding(ctx, p);
         }
 
         i++;
@@ -193,8 +194,7 @@ int compileMethodDeclaration(
           resolvedParams.length + (hasReceiver ? 1 : 0),
           MachineRepresentation.object,
         ),
-        returnType.isSpec(CoreTypes.voidType) &&
-                !b.isAsynchronous
+        returnType.isSpec(CoreTypes.voidType) && !b.isAsynchronous
             ? null
             : unboxedOperatorReturn
             ? Abi.result(
@@ -258,14 +258,11 @@ int compileMethodDeclaration(
     // the instance-member key convention so a pair can't collide.
     final key = isExtensionMember
         ? extensionMemberKey(parentName, d)
-        : '$parentName.${MemberName(
-            methodName,
-            d.isGetter
-                ? MemberKind.getter
-                : d.isSetter
-                ? MemberKind.setter
-                : MemberKind.method,
-          ).key}';
+        : '$parentName.${MemberName(methodName, d.isGetter
+              ? MemberKind.getter
+              : d.isSetter
+              ? MemberKind.setter
+              : MemberKind.method).key}';
     ctx.topLevelDeclarationPositions.putIfAbsent(ctx.library, () => {})[key] =
         pos;
     if (isExtensionMember) {
@@ -274,13 +271,13 @@ int compileMethodDeclaration(
       ctx.extensionMemberFunctions.putIfAbsent(ctx.library, () => {}).add(key);
     }
   } else {
-    final mapIndex = d.isGetter
-        ? 0
+    final kind = d.isGetter
+        ? MemberKind.getter
         : d.isSetter
-        ? 1
-        : 2;
+        ? MemberKind.setter
+        : MemberKind.method;
     ctx.instanceDeclarationPositions[ctx.enclosingLibrary ??
-            ctx.library]![parentName]![mapIndex][ctx.instanceMethodKey(
+            ctx.library]![parentName]![kind]![ctx.instanceMethodKey(
           methodName,
           positionalArityOf(d),
         )] =

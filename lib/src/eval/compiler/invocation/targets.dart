@@ -132,7 +132,8 @@ final class ClosureCall extends CallTarget {
       // sits in object position at the call boundary: boxing in place
       // would double-define the SSA, so unboxed values box into a fresh
       // slot.
-      final closure = call.callee ??
+      final closure =
+          call.callee ??
           () {
             final boxed = callee!.boxed
                 ? callee!
@@ -148,9 +149,7 @@ final class ClosureCall extends CallTarget {
           target,
           closure.ssa,
           [for (final arg in call.positional) arg.value.ssa],
-          {
-            for (final entry in call.named) entry.$1: entry.$2.value.ssa,
-          },
+          {for (final entry in call.named) entry.$1: entry.$2.value.ssa},
           typeArguments: call.runtimeTypeArguments,
           trusted: call.trusted,
         ),
@@ -436,7 +435,11 @@ final class DynamicCall extends CallTarget {
 
 /// `==`/`!=` without an applicable extension member.
 final class EqualityCall extends CallTarget {
-  const EqualityCall({required this.left, required this.right, this.negated = false});
+  const EqualityCall({
+    required this.left,
+    required this.right,
+    this.negated = false,
+  });
 
   final Variable left;
   final Variable right;
@@ -466,7 +469,10 @@ final class EqualityCall extends CallTarget {
 /// Calling the *value* held by a field, getter, or record field: read the
 /// member, then invoke the result as a closure.
 final class MemberValueCall extends CallTarget {
-  const MemberValueCall({required this.read, this.order = EvalOrder.argumentsFirst});
+  const MemberValueCall({
+    required this.read,
+    this.order = EvalOrder.argumentsFirst,
+  });
 
   /// Reads the member value (a getter invocation or field load).
   final Variable Function(CompilerContext ctx) read;
@@ -530,9 +536,11 @@ final class NoSuchMethodCall extends CallTarget {
       ]),
       CoreTypes.invocation.ref(ctx),
     );
-    return CallResolver(ctx)
-        .invokeOperator(ctx.lookupLocal('#this')!, 'noSuchMethod', [invocation])
-        .result;
+    return CallResolver(ctx).invokeOperator(
+      ctx.lookupLocal('#this')!,
+      'noSuchMethod',
+      [invocation],
+    ).result;
   }
 
   @override
@@ -576,10 +584,7 @@ final class NoSuchMethodCall extends CallTarget {
       final mapType = CoreTypes.map
           .ref(ctx)
           .copyWith(
-            arguments: [
-              CoreTypes.symbol.ref(ctx),
-              CoreTypes.dynamic.ref(ctx),
-            ],
+            arguments: [CoreTypes.symbol.ref(ctx), CoreTypes.dynamic.ref(ctx)],
           );
       final map = Variable.ssa(
         ctx,
@@ -603,8 +608,8 @@ final class NoSuchMethodCall extends CallTarget {
       InvokeExternal(ctx.svar('inv'), bridge['Invocation.method']!, invArgs),
       CoreTypes.invocation.ref(ctx),
     );
-    return CallResolver(ctx)
-        .invokeOperator($this, 'noSuchMethod', [invocation])
-        .result;
+    return CallResolver(
+      ctx,
+    ).invokeOperator($this, 'noSuchMethod', [invocation]).result;
   }
 }

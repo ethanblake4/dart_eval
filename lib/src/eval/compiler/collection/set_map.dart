@@ -57,7 +57,7 @@ Variable compileSetOrMapLiteral(
               // A bare `{}` is a Set only when the context says Set;
               // otherwise it is a Map.
               ? resolvedBound == null ||
-                  !sameDeclaration(resolvedBound, CoreTypes.set.ref(ctx))
+                    !sameDeclaration(resolvedBound, CoreTypes.set.ref(ctx))
               : literal.elements.first is MapLiteralEntry ||
                     (firstSpread?.type
                             .withNullable(false)

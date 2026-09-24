@@ -99,9 +99,8 @@ Variable compileFunctionExpression(
     () {
       ctx.functionTypeParameterBounds[fnOffset] = [
         for (final parameter in typeParameters)
-          (ctx
-                      .typeScopes[ctx.library]![parameter.name.lexeme]!
-                  as TypeParameterTypeRef)
+          (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
+                      as TypeParameterTypeRef)
                   .parameter
                   .bound ??
               CoreTypes.dynamic.ref(ctx),
@@ -127,7 +126,6 @@ Variable compileFunctionExpression(
             ctx,
             loaded,
             capture.value.type,
-            representation: capture.value.representation,
             rep: capture.value.rep,
             isFinal: capture.value.isFinal,
             callable: capture.value.callable,
@@ -207,8 +205,7 @@ Variable compileFunctionExpression(
         _ => null,
       };
       final boundSignature = bound is FunctionTypeRef ? bound.signature : null;
-      final boundReturnType =
-          boundSignature?.returnType ?? declaredReturnType;
+      final boundReturnType = boundSignature?.returnType ?? declaredReturnType;
 
       // Block-bodied closures collect the static type of each `return` so the
       // closure's return type can be inferred (`asyncClosureReturnTypes` serves
@@ -277,9 +274,7 @@ Variable compileFunctionExpression(
         inferredClosureReturnType = b.isAsynchronous
             ? CoreTypes.future
                   .ref(ctx)
-                  .copyWith(
-                    arguments: [ctx.typeSystem.flatten(inferred)],
-                  )
+                  .copyWith(arguments: [ctx.typeSystem.flatten(inferred)])
             : inferred;
       }
 

@@ -66,10 +66,8 @@ class SuperPropertyReference extends IdentifierReference {
     AstNode? source,
   }) => InstanceMemberDenotation(SuperReceiver(object!), name);
 
-
   @override
-  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) =>
-      null;
+  DirectCall? getDirectCall(CompilerContext ctx, [AstNode? source]) => null;
 }
 
 /// A local, instance, or top-level reference with an optional target object.
@@ -119,8 +117,11 @@ class IdentifierReference implements Reference {
 
   @override
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) =>
-      denotation(ctx, forSet: true, source: source)
-          .write(ctx, value, source: source);
+      denotation(
+        ctx,
+        forSet: true,
+        source: source,
+      ).write(ctx, value, source: source);
 
   @override
   Variable getValue(CompilerContext ctx, [AstNode? source]) =>
@@ -176,12 +177,10 @@ class PrefixedIdentifierReference implements Reference {
     if (dec.declaration != null) {
       throw CompileError('Cannot use a declaration as a prefix', source);
     }
-    return PrefixDenotation(prefix, dec.children!).memberAccess(
-      ctx,
-      identifier,
-      forSet: forSet,
-      source: source,
-    );
+    return PrefixDenotation(
+      prefix,
+      dec.children!,
+    ).memberAccess(ctx, identifier, forSet: forSet, source: source);
   }
 
   @override
@@ -197,15 +196,19 @@ class PrefixedIdentifierReference implements Reference {
     CompilerContext ctx, {
     bool forSet = false,
     AstNode? source,
-  }) => denotation(ctx, forSet: forSet, source: source).readType(
+  }) => denotation(
     ctx,
+    forSet: forSet,
     source: source,
-  );
+  ).readType(ctx, source: source);
 
   @override
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) =>
-      denotation(ctx, forSet: true, source: source)
-          .write(ctx, value, source: source);
+      denotation(
+        ctx,
+        forSet: true,
+        source: source,
+      ).write(ctx, value, source: source);
 }
 
 /// A [Reference] with a variable that can be indexed into and a variable index. Accessing its value may use [IndexList]
@@ -257,7 +260,6 @@ class IndexedReference implements Reference {
         _variable.type,
         MemberName.method('[]='),
         source: source,
-        superclassFirst: true,
       );
       final member = resolved.member;
       final decl = member is SourceMember ? member.node : null;
@@ -384,7 +386,9 @@ class IndexedReference implements Reference {
       // Keep the reified wrapper for writes. A List<num> reference can point
       // at a List<int>; writing directly to its raw backing list would bypass
       // the actual instance's checked element type.
-      final result = CallResolver(ctx).invokeOperator(_variable, '[]=', [_index, formattedValue]);
+      final result = CallResolver(
+        ctx,
+      ).invokeOperator(_variable, '[]=', [_index, formattedValue]);
       _variable = result.target!;
       _index = result.args[0];
       return result.args[1];
@@ -405,7 +409,9 @@ class IndexedReference implements Reference {
             source: source,
           );
 
-    final result = CallResolver(ctx).invokeOperator(_variable, '[]=', [_index, converted]);
+    final result = CallResolver(
+      ctx,
+    ).invokeOperator(_variable, '[]=', [_index, converted]);
     _variable = result.target!;
     _index = result.args[0];
     return result.args[1];
@@ -484,7 +490,7 @@ Variable _declarationToVariable(
 
   if (decl is! FunctionDeclaration && decl is! ConstructorDeclaration) {
     final type = decl is TypeAlias && decl is! ClassTypeAlias
-        ? ctx.typeFactory.resolveTypeAlias( decOrBridge.sourceLib, decl)
+        ? ctx.typeFactory.resolveTypeAlias(decOrBridge.sourceLib, decl)
         : TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
     return _typeLiteral(ctx, type, '${declarationName(decl)}.');
   }
@@ -575,11 +581,8 @@ DirectCall? _declarationToDirectCall(
       decOrBridge.sourceLib,
       null,
       decl.functionExpression.typeParameters?.typeParameters,
-      () => TypeRef.fromAnnotation(
-        ctx,
-        decOrBridge.sourceLib,
-        decl.returnType!,
-      ),
+      () =>
+          TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!),
     );
   } else if (decl is ConstructorDeclaration) {
     returnType = TypeRef.lookupDeclaration(
@@ -605,10 +608,7 @@ DirectCall? _declarationToDirectCall(
         : name,
   );
 
-  return DirectCall(
-    offset,
-    CallSignature.returnOnly(returnType),
-  );
+  return DirectCall(offset, CallSignature.returnOnly(returnType));
 }
 
 /// Loads a top-level (or static field) global by its qualified [globalName],
@@ -668,7 +668,6 @@ TypeRef? _resolveInstanceFieldType(
     return null;
   }
   return ctx.memberLookup.fieldType(
-        
         selfDecl.thisType,
         name,
         forSet: forSet,
@@ -710,12 +709,17 @@ DeclarationOrBridge _lookupVisibleValue(
         : children[MemberName.getter(key).key] ?? children[key];
   } else {
     found = forSet
-        ? visible[MemberName.setter(key).key]?.declaration ?? visible[key]?.declaration
-        : visible[MemberName.getter(key).key]?.declaration ?? visible[key]?.declaration;
+        ? visible[MemberName.setter(key).key]?.declaration ??
+              visible[key]?.declaration
+        : visible[MemberName.getter(key).key]?.declaration ??
+              visible[key]?.declaration;
   }
   if (found == null) {
     if (children == null && visible[key] != null) {
-      throw CompileError('"$name" is an import prefix, not a declaration', source);
+      throw CompileError(
+        '"$name" is an import prefix, not a declaration',
+        source,
+      );
     }
     throw CompileError('Could not find declaration "$name"', source);
   }
@@ -731,7 +735,7 @@ TypeRef? _setterValueType(
 ) {
   final param = parameters?.parameters.firstOrNull;
   if (param == null || param.type == null) return null;
-  return ctx.typeFactory.formalParameterAnnotationType( file, param);
+  return ctx.typeFactory.formalParameterAnnotationType(file, param);
 }
 
 /// Emits a `Call` to a setter taking [value] as its argument. The value is
@@ -808,13 +812,13 @@ bool hasInstanceMember(
 }) {
   final member = forSet
       ? ctx.memberLookup.tryInterfaceMember(
-            type,
-            MemberName(name, MemberKind.setter),
-          ) ??
-          ctx.memberLookup.tryInterfaceMember(
-            type,
-            MemberName(name, MemberKind.getter),
-          )
+              type,
+              MemberName(name, MemberKind.setter),
+            ) ??
+            ctx.memberLookup.tryInterfaceMember(
+              type,
+              MemberName(name, MemberKind.getter),
+            )
       : ctx.memberLookup.tryInterfaceMember(
           type,
           MemberName(name, MemberKind.getter),
@@ -832,7 +836,6 @@ bool _hasReceiverMember(
   final resolvedReceiver = ctx.typeSystem.throughTypeParameters(receiver.type);
   if (resolvedReceiver.isSpec(CoreTypes.dynamic)) return true;
   if (ctx.memberLookup.fieldType(
-        
         resolvedReceiver,
         name,
         forSet: forSet,

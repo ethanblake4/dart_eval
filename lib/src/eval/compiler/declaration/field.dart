@@ -1,5 +1,6 @@
 import '../helpers/conversion.dart';
 import '../helpers/global.dart';
+import '../member/member_name.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -53,7 +54,7 @@ void compileFieldDeclaration(
                 '${V.type} does not conform to type $type',
           );
         } else {
-          type = ctx.typeFactory.widenedInferredType( V.type);
+          type = ctx.typeFactory.widenedInferredType(V.type);
         }
         V = Abi.storageSlot(storageType).isBoxed
             ? V.boxIfNeeded(ctx)
@@ -92,7 +93,9 @@ void compileFieldDeclaration(
       );
       ctx.pushOp(Return(value));
       ctx.instanceDeclarationPositions[ctx.enclosingLibrary ??
-              ctx.library]![parentName]![0][ctx.memberNameKey(fieldName)] =
+              ctx.library]![parentName]![MemberKind.getter]![ctx.memberNameKey(
+            fieldName,
+          )] =
           pos;
       ctx.instanceGetterIndices[ctx.enclosingLibrary ??
               ctx.library]![parentName]![fieldName] =
@@ -120,7 +123,8 @@ void compileFieldDeclaration(
         );
         ctx.pushOp(Return(value));
         ctx.instanceDeclarationPositions[ctx.enclosingLibrary ??
-                ctx.library]![parentName]![1][ctx.memberNameKey(fieldName)] =
+                ctx.library]![parentName]![MemberKind.setter]![ctx
+                .memberNameKey(fieldName)] =
             setterPos;
       }
 

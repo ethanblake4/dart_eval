@@ -47,7 +47,8 @@ final class ExtensionDecl extends MemberOwner {
   /// The extension's type parameters keyed by name — instance members
   /// resolve `T` against these; static members can't see them.
   late final Map<String, TypeRef> ownTypeParams = () {
-    final nodes = extension.declaration.typeParameters?.typeParameters ??
+    final nodes =
+        extension.declaration.typeParameters?.typeParameters ??
         const <TypeParameter>[];
     final scope = <String, TypeRef>{};
     declareTypeParameters(
@@ -107,14 +108,12 @@ sealed class Member {
 }
 
 /// The [MemberKind] a [MethodDeclaration] declares.
-MemberKind memberKind(MethodDeclaration method) => switch ((
-  method.isGetter,
-  method.isSetter,
-)) {
-  (true, _) => MemberKind.getter,
-  (_, true) => MemberKind.setter,
-  _ => MemberKind.method,
-};
+MemberKind memberKind(MethodDeclaration method) =>
+    switch ((method.isGetter, method.isSetter)) {
+      (true, _) => MemberKind.getter,
+      (_, true) => MemberKind.setter,
+      _ => MemberKind.method,
+    };
 
 /// A member declared in compiled source — its declaration is an AST node
 /// and its position lives in the context's member tables.
@@ -206,7 +205,7 @@ final class SourceMember extends Member {
             TypeParameterOwnerKind.method,
             library,
             methodName,
-            ctx.instanceMethodKey(m.name.lexeme, 0).hashCode & 0x7fffffff,
+            m.offset,
           ),
           returnAnnotation: m.returnType,
           returnFallback: switch (m.body) {
@@ -222,12 +221,7 @@ final class SourceMember extends Member {
         if (name.kind == MemberKind.setter) {
           return CallSignature(
             positional: [
-              ParameterSpec(
-                fieldName,
-                resolved,
-                isRequired: true,
-                node: null,
-              ),
+              ParameterSpec(fieldName, resolved, isRequired: true, node: null),
             ],
             requiredPositional: 1,
             returnType: CoreTypes.voidType.ref(ctx),
@@ -285,8 +279,7 @@ final class SourceMember extends Member {
       // `lookupFieldType` returned null here rather than dynamic — a field
       // with neither an annotation nor an inferred entry is left
       // unresolved (callers degrade to dynamic themselves).
-      final inferred =
-          ctx.inferredFieldTypes[library]?[_ownerName]?[name.name];
+      final inferred = ctx.inferredFieldTypes[library]?[_ownerName]?[name.name];
       if (inferred == null) return null;
       return inferred;
     }
@@ -315,9 +308,7 @@ final class SourceMember extends Member {
       case FieldDeclaration _:
         final key = ctx.memberNameKey(name.name);
         final table = ctx.instanceDeclarationPositions[library]?[_ownerName];
-        final pos = table == null
-            ? null
-            : (table[name.kind.positionIndex] as Map?)?[key] as int?;
+        final pos = table == null ? null : table[name.kind]?[key];
         return pos != null
             ? DeferredOrOffset(offset: pos, file: library)
             : DeferredOrOffset(
@@ -339,8 +330,7 @@ final class SourceMember extends Member {
         final table = ctx.instanceDeclarationPositions[library]?[_ownerName];
         final pos = table == null
             ? null
-            : (table[memberName.kind.positionIndex] as Map?)?[memberName.nameKey]
-                  as int?;
+            : table[memberName.kind]?[memberName.nameKey];
         return pos != null
             ? DeferredOrOffset(offset: pos, file: library)
             : DeferredOrOffset(
@@ -419,9 +409,7 @@ final class BridgeMember extends Member {
         );
         if (name.kind == MemberKind.setter) {
           return CallSignature(
-            positional: [
-              ParameterSpec(name.name, resolved, isRequired: true),
-            ],
+            positional: [ParameterSpec(name.name, resolved, isRequired: true)],
             requiredPositional: 1,
             returnType: CoreTypes.voidType.ref(ctx),
           );
@@ -471,14 +459,16 @@ extension TypeDeclMembers on TypeDecl {
         final sep = key.lastIndexOf('::');
         return sep < 0 ? null : map?[key.substring(sep + 2)];
       }
+
       Object? found;
       switch (name.kind) {
         case MemberKind.method:
           found = probe(name.nameKey);
           if (found == null && !forImplementation) {
             final prefix = '${name.name}@';
-            for (final entry in map?.entries ??
-                const Iterable<MapEntry<String, Declaration>>.empty()) {
+            for (final entry
+                in map?.entries ??
+                    const Iterable<MapEntry<String, Declaration>>.empty()) {
               if (entry.key.startsWith(prefix)) {
                 found = entry.value;
                 break;
@@ -489,18 +479,26 @@ extension TypeDeclMembers on TypeDecl {
             found = probe(MemberName.getter(name.name).key);
           }
         case MemberKind.getter:
-          found = probe(MemberName(name.name, MemberKind.getter,
-                  privateLibraryUri: name.privateLibraryUri)
-              .key);
+          found = probe(
+            MemberName(
+              name.name,
+              MemberKind.getter,
+              privateLibraryUri: name.privateLibraryUri,
+            ).key,
+          );
           if (found == null && !forImplementation) {
             found = probe(name.nameKey);
           }
         case MemberKind.setter:
           // `x*s` only — a field's setter slot is resolved through the
           // GetSet machinery, not the member map.
-          found = probe(MemberName(name.name, MemberKind.setter,
-                  privateLibraryUri: name.privateLibraryUri)
-              .key);
+          found = probe(
+            MemberName(
+              name.name,
+              MemberKind.setter,
+              privateLibraryUri: name.privateLibraryUri,
+            ).key,
+          );
         case MemberKind.constructor:
           found = null;
       }
@@ -519,7 +517,8 @@ extension TypeDeclMembers on TypeDecl {
         final def = classDef?.methods[name.name] ?? enumDef?.methods[name.name];
         if (def == null || def.isStatic) {
           if (forImplementation) return null;
-          final getter = classDef?.getters[name.name] ?? enumDef?.getters[name.name];
+          final getter =
+              classDef?.getters[name.name] ?? enumDef?.getters[name.name];
           if (getter == null || getter.isStatic) return null;
           return BridgeMember(
             owner: memberOwner,
@@ -533,9 +532,11 @@ extension TypeDeclMembers on TypeDecl {
           def: def,
         );
       case MemberKind.getter || MemberKind.setter:
-        var def = (name.kind == MemberKind.getter
+        var def =
+            (name.kind == MemberKind.getter
                 ? classDef?.getters[name.name] ?? enumDef?.getters[name.name]
-                : classDef?.setters[name.name] ?? enumDef?.setters[name.name]) ??
+                : classDef?.setters[name.name] ??
+                      enumDef?.setters[name.name]) ??
             classDef?.fields[name.name] ??
             enumDef?.fields[name.name];
         if (def == null && name.kind == MemberKind.getter) {
@@ -549,11 +550,7 @@ extension TypeDeclMembers on TypeDecl {
             (def is BridgeFieldDef && def.isStatic)) {
           return null;
         }
-        return BridgeMember(
-          owner: memberOwner,
-          name: name,
-          def: def,
-        );
+        return BridgeMember(owner: memberOwner, name: name, def: def);
       case MemberKind.constructor:
         return null;
     }
@@ -605,11 +602,11 @@ extension TypeDeclMembers on TypeDecl {
       final map = ctx.topLevelDeclarationsMap[library];
       final prefix = '${this.name}.';
       final memberName = MemberName(name, kind);
-      final entry = switch (kind) {
-            MemberKind.method =>
-              map?['$prefix$name'] ?? map?['$prefix$name*g'],
-            MemberKind.getter || MemberKind.setter =>
-              map?['$prefix${memberName.key}'],
+      final entry =
+          switch (kind) {
+            MemberKind.method => map?['$prefix$name'] ?? map?['$prefix$name*g'],
+            MemberKind.getter ||
+            MemberKind.setter => map?['$prefix${memberName.key}'],
             MemberKind.constructor => null,
           } ??
           map?['$prefix$name'];
@@ -647,10 +644,9 @@ extension TypeDeclMembers on TypeDecl {
           def: ctor,
         );
       case MemberKind.getter || MemberKind.setter:
-        final def =
-            (kind == MemberKind.getter
-                ? classDef?.getters[name] ?? enumDef?.getters[name]
-                : classDef?.setters[name] ?? enumDef?.setters[name]);
+        final def = (kind == MemberKind.getter
+            ? classDef?.getters[name] ?? enumDef?.getters[name]
+            : classDef?.setters[name] ?? enumDef?.setters[name]);
         if (def != null && def.isStatic) {
           return BridgeMember(
             owner: memberOwner,
@@ -691,10 +687,7 @@ extension TypeDeclMembers on TypeDecl {
         if ((member.name?.lexeme ?? '') == name) {
           return SourceMember(
             owner: memberOwner,
-            name: MemberName(
-              '${this.name}.$name',
-              MemberKind.constructor,
-            ),
+            name: MemberName('${this.name}.$name', MemberKind.constructor),
             node: member,
             library: library,
           );

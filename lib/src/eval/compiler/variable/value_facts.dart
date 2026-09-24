@@ -58,8 +58,7 @@ final class ValueFacts {
   /// const markers require both.
   ValueFacts join(ValueFacts other) => ValueFacts(
     exact: other.exact == exact ? exact : null,
-    possibleClasses:
-        possibleClasses.isEmpty || other.possibleClasses.isEmpty
+    possibleClasses: possibleClasses.isEmpty || other.possibleClasses.isEmpty
         ? const []
         : {...possibleClasses, ...other.possibleClasses}.toList(),
     denotedType: other.denotedType == denotedType ? denotedType : null,
@@ -73,6 +72,5 @@ final class ValueFacts {
   /// Facts for the form a value takes once bound to a local: the const-int
   /// literal marker never survives binding (only literal expressions
   /// coerce `int → double`), everything else does.
-  ValueFacts forBinding() =>
-      isConstInt ? copyWith(isConstInt: false) : this;
+  ValueFacts forBinding() => isConstInt ? copyWith(isConstInt: false) : this;
 }

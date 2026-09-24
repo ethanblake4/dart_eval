@@ -62,12 +62,7 @@ final class CallShape {
         sourceOrder.add(posIndex++);
       }
     }
-    return CallShape._(
-      positional,
-      named,
-      sourceOrder,
-      typeArguments,
-    );
+    return CallShape._(positional, named, sourceOrder, typeArguments);
   }
 
   /// A shape from already-compiled operands — operators, `x.call(...)`-style

@@ -78,7 +78,9 @@ Variable _assignWithReference(
       null,
       condition: (ctx) {
         readValue = L.getValue(ctx);
-        return CallResolver(ctx).invokeOperator(readValue!, '==', [BuiltinValue().push(ctx)]).result;
+        return CallResolver(
+          ctx,
+        ).invokeOperator(readValue!, '==', [BuiltinValue().push(ctx)]).result;
       },
       thenBranch: (ctx, rt) {
         // The RHS is evaluated only inside the branch — `x ??= e` must not

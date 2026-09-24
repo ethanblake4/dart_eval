@@ -21,16 +21,12 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
     ),
     d.namePart.typeParameters?.typeParameters,
     () {
-      final $runtimeType = ctx
-          .runtimeTypes
-          .indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d).decl!];
       final clsName = d.namePart.typeName.lexeme;
-      ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
-        {},
-        {},
-        {},
-        $runtimeType,
-      ];
+      ctx.instanceDeclarationPositions[ctx.library]![clsName] = {
+        MemberKind.getter: {},
+        MemberKind.setter: {},
+        MemberKind.method: {},
+      };
       ctx.instanceGetterIndices[ctx.library]![clsName] = {};
       final (constructors, fields, methods) = partitionClassMembers(
         d.body.members,
@@ -103,16 +99,12 @@ void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
     ),
     d.typeParameters?.typeParameters,
     () {
-      final $runtimeType = ctx
-          .runtimeTypes
-          .indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d).decl!];
       final clsName = d.name.lexeme;
-      ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
-        {},
-        {},
-        {},
-        $runtimeType,
-      ];
+      ctx.instanceDeclarationPositions[ctx.library]![clsName] = {
+        MemberKind.getter: {},
+        MemberKind.setter: {},
+        MemberKind.method: {},
+      };
       ctx.instanceGetterIndices[ctx.library]![clsName] = {};
       final (mixinFields, mixinMethods, memberLibraries) = _mixinMembers(
         ctx,
@@ -209,15 +201,12 @@ TypeRef _resolveSuperclass(CompilerContext ctx, NamedType superclass) {
 /// instantiated — its members are compiled per application site (see
 /// [compileClassDeclaration]), so this only registers its name.
 void compileMixinDeclaration(CompilerContext ctx, MixinDeclaration d) {
-  final $runtimeType =
-      ctx.runtimeTypes.indexMap[TypeRef.lookupDeclaration(ctx, ctx.library, d).decl!];
   final clsName = d.name.lexeme;
-  ctx.instanceDeclarationPositions[ctx.library]![clsName] = [
-    {},
-    {},
-    {},
-    $runtimeType,
-  ];
+  ctx.instanceDeclarationPositions[ctx.library]![clsName] = {
+    MemberKind.getter: {},
+    MemberKind.setter: {},
+    MemberKind.method: {},
+  };
   ctx.instanceGetterIndices[ctx.library]![clsName] = {};
   // Instance members fold into applying classes and never compile here;
   // statics keep the mixin's name (`M.x`) and compile in place.
@@ -331,12 +320,7 @@ _mixinMembers(
             c.namePart.typeName.lexeme,
           ),
           c.namePart.typeParameters?.typeParameters,
-          () => _mixinMembers(
-            ctx,
-            c.withClause!.mixinTypes,
-            c,
-            visited,
-          ),
+          () => _mixinMembers(ctx, c.withClause!.mixinTypes, c, visited),
         );
         memberLibraries.addAll(l0);
         final (_, cf, cm) = partitionClassMembers(c.body.members);
@@ -354,12 +338,7 @@ _mixinMembers(
             a.name.lexeme,
           ),
           a.typeParameters?.typeParameters,
-          () => _mixinMembers(
-            ctx,
-            a.withClause.mixinTypes,
-            a,
-            visited,
-          ),
+          () => _mixinMembers(ctx, a.withClause.mixinTypes, a, visited),
         );
         memberLibraries.addAll(l);
         return (<ConstructorDeclaration>[], f, m);

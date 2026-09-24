@@ -43,7 +43,6 @@ Reference compilePrefixedIdentifierAsReference(
   return PrefixedIdentifierReference(prefix, identifier);
 }
 
-
 /// Resolves a `NamedType` appearing in an extends/with/implements/on clause to
 /// the instantiated [TypeRef] — type arguments applied, typedefs expanded.
 /// [typeParameters] supplies the declaring class's parameter bindings when the
@@ -103,10 +102,7 @@ DeclarationOrBridge<Declaration, BridgeDeclaration>? resolveStaticDeclaration(
     forSet ? MemberKind.setter : MemberKind.getter,
   );
   if (member is SourceMember) {
-    return DeclarationOrBridge(
-      library,
-      declaration: member.sourceDeclaration,
-    );
+    return DeclarationOrBridge(library, declaration: member.sourceDeclaration);
   }
   if (member is BridgeMember) {
     return DeclarationOrBridge(

@@ -33,9 +33,7 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
   return Variable.ssa(
     ctx,
     Await(ctx.svar('await_result'), completer.ssa, subject.ssa),
-    resultType.withNullable(
-      resultType.nullable || isFuture && type.nullable,
-    ),
+    resultType.withNullable(resultType.nullable || isFuture && type.nullable),
     rep: ValueRep.boxed,
   );
 }

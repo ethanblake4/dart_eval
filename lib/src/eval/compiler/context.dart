@@ -52,12 +52,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       existing.rebind(v);
       return existing;
     }
-    final nb = LocalBinding(
-      name,
-      v,
-      frameIndex: f,
-      initialized: initialized,
-    );
+    final nb = LocalBinding(name, v, frameIndex: f, initialized: initialized);
     locals[f][name] = nb;
     return nb;
   }
@@ -111,11 +106,13 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       final frame = locals[i];
       for (final key in frame.keys.toList()) {
         final binding = frame[key]!;
-        binding.rebind(binding.current.joinedWith([
-          for (final state in incoming)
-            if (i < state.locals.length && state.locals[i][key] != null)
-              state.locals[i][key]!.current,
-        ]));
+        binding.rebind(
+          binding.current.joinedWith([
+            for (final state in incoming)
+              if (i < state.locals.length && state.locals[i][key] != null)
+                state.locals[i][key]!.current,
+          ]),
+        );
       }
     }
   }
@@ -284,11 +281,10 @@ class CompilerContext with ScopeContext {
   /// `operator -` is the only arity-overloadable operator: the nullary form
   /// is keyed `unary-` (the analyzer's element name) so it can't collide
   /// with binary `-` in member tables and runtime descriptors.
-  String instanceMethodKey(String name, int positionalArity) =>
-      memberNameOf(
-        name == '-' && positionalArity == 0 ? 'unary-' : name,
-        MemberKind.method,
-      ).nameKey;
+  String instanceMethodKey(String name, int positionalArity) => memberNameOf(
+    name == '-' && positionalArity == 0 ? 'unary-' : name,
+    MemberKind.method,
+  ).nameKey;
 
   String? get currentClassName {
     final currentClass = this.currentClass;
@@ -382,7 +378,8 @@ class CompilerContext with ScopeContext {
   Map<int, Set<String>> deferredPrefixes = {};
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
   Map<int, Map<String, int>> bridgeStaticFunctionIndices = {};
-  Map<int, Map<String, List>> instanceDeclarationPositions = {};
+  Map<int, Map<String, Map<MemberKind, Map<String, int>>>>
+  instanceDeclarationPositions = {};
 
   /// Direct superinterface edges: descendant 'file:class' → ancestor keys.
   Map<String, List<String>> subclassEdges = {};

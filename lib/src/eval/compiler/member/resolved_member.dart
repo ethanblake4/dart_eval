@@ -29,10 +29,8 @@ final class ResolvedMember {
   /// arguments — `classTypeArguments`'s seed map. Since [viewedAs] is already
   /// the owner decl instantiated from the receiver, this is a zip of
   /// parameter names to arguments.
-  Map<String, TypeRef> get ownerTypeArguments => ownerTypeArgumentsOf(
-    member.ownerDecl,
-    viewedAs,
-  );
+  Map<String, TypeRef> get ownerTypeArguments =>
+      ownerTypeArgumentsOf(member.ownerDecl, viewedAs);
 
   /// The field's declared/inferred type through the receiver's view —
   /// null when the field has neither, matching `lookupFieldType`.
@@ -69,8 +67,8 @@ Map<String, TypeRef> ownerTypeArgumentsOf(TypeDecl? owner, TypeRef viewedAs) {
   if (params.isEmpty) return const {};
   return {
     for (var i = 0; i < params.length; i++)
-      params[i].name:
-          i < args.length ? args[i] : CoreTypes.dynamic.ref(owner.ctx),
+      params[i].name: i < args.length
+          ? args[i]
+          : CoreTypes.dynamic.ref(owner.ctx),
   };
 }
-

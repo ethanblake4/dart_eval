@@ -117,10 +117,7 @@ final class RuntimeTypes {
       // Generic function types collapse to `Function` at runtime — the old
       // nominal lookup hit the `Function` declaration because equality was
       // class-blind; subclass-aware equality needs the same fallthrough.
-      return [
-        idOf(CoreTypes.function.ref(_ctx)),
-        type.nullable ? 1 : 0,
-      ];
+      return [idOf(CoreTypes.function.ref(_ctx)), type.nullable ? 1 : 0];
     }
     return [
       (type is InterfaceTypeRef ? indexMap[type.decl] : null) ?? idOf(type),

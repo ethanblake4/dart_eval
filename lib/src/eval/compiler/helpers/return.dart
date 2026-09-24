@@ -36,8 +36,7 @@ StatementInfo doReturn(
   // `=> f()` where `f` returns `Never` still terminates the block.
   if (value != null && value.type.isSpec(CoreTypes.never)) {
     if (!ctx.blockEndsControlFlow) {
-      final isVoid =
-          expectedReturnType.isSpec(CoreTypes.voidType);
+      final isVoid = expectedReturnType.isSpec(CoreTypes.voidType);
       ctx.pushOp(Return(isVoid ? null : value.boxIfNeeded(ctx).ssa));
     }
     return StatementInfo(willAlwaysThrow: true);

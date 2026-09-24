@@ -20,7 +20,11 @@ final class Intrinsics {
 
   final CompilerContext ctx;
 
-  OperatorResult? tryEmit(Variable receiver, String method, List<Variable> args) {
+  OperatorResult? tryEmit(
+    Variable receiver,
+    String method,
+    List<Variable> args,
+  ) {
     final type = receiver.type;
     final boolType = CoreTypes.bool.ref(ctx);
     if (args.length == 1 &&
@@ -50,7 +54,9 @@ final class Intrinsics {
         'codeUnitAt' => StringOperator.codeUnitAt,
         _ => StringOperator.indexAt,
       };
-      return (target: receiverUnboxed, result: Variable.ssa(
+      return (
+        target: receiverUnboxed,
+        result: Variable.ssa(
           ctx,
           StringOperation(
             ctx.svar('string_result'),
@@ -65,7 +71,10 @@ final class Intrinsics {
           rep: operator == StringOperator.codeUnitAt
               ? ValueRep.int
               : ValueRep.string,
-        ), args: [argument], namedArgs: const {});
+        ),
+        args: [argument],
+        namedArgs: const {},
+      );
     }
 
     if (method == '!' &&
@@ -75,12 +84,17 @@ final class Intrinsics {
           forceAllowDynamic: false,
         )) {
       final receiverUnboxed = receiver.unboxIfNeeded(ctx);
-      return (target: receiverUnboxed, result: Variable.ssa(
+      return (
+        target: receiverUnboxed,
+        result: Variable.ssa(
           ctx,
           LogicalNot(ctx.svar('not_result'), receiverUnboxed.ssa),
           boolType,
           rep: ValueRep.bool,
-        ), args: [], namedArgs: const {});
+        ),
+        args: [],
+        namedArgs: const {},
+      );
     }
     if (args.length == 1 &&
         type.isAssignableTo(
@@ -108,12 +122,17 @@ final class Intrinsics {
         '>=' => IntGreaterThanOrEqual(target, receiverUnboxed.ssa, right.ssa),
         _ => throw StateError('Unknown numeric intrinsic $method'),
       };
-      return (target: receiverUnboxed, result: Variable.ssa(
+      return (
+        target: receiverUnboxed,
+        result: Variable.ssa(
           ctx,
           operation,
           method == '+' || method == '-' ? CoreTypes.int.ref(ctx) : boolType,
           rep: method == '+' || method == '-' ? ValueRep.int : ValueRep.bool,
-        ), args: [right], namedArgs: const {});
+        ),
+        args: [right],
+        namedArgs: const {},
+      );
     }
     const numericOperators = {
       '+': NumericOperator.add,
@@ -197,12 +216,17 @@ final class Intrinsics {
             : operandRepresentation == MachineRepresentation.integer
             ? CoreTypes.int.ref(ctx)
             : CoreTypes.double.ref(ctx);
-        return (target: receiverUnboxed, result: Variable.ssa(
+        return (
+          target: receiverUnboxed,
+          result: Variable.ssa(
             ctx,
             operation,
             resultType,
             rep: unboxedRepOf(resultType),
-          ), args: [right], namedArgs: const {});
+          ),
+          args: [right],
+          namedArgs: const {},
+        );
       }
     }
     return null;

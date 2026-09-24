@@ -83,7 +83,9 @@ StatementInfo _compileSwitchCases(
       if (currentCase is SwitchCase) {
         final caseVar = compileExpression(currentCase.expression, ctx);
         _checkPrimitiveEquality(ctx, caseVar, currentCase.expression);
-        return CallResolver(ctx).invokeOperator(subject, '==', [caseVar]).result;
+        return CallResolver(
+          ctx,
+        ).invokeOperator(subject, '==', [caseVar]).result;
       } else if (currentCase is SwitchPatternCase) {
         final matches = patternMatchAndBind(
           ctx,
@@ -98,7 +100,9 @@ StatementInfo _compileSwitchCases(
             ctx,
             CoreTypes.bool.ref(ctx),
           );
-          return CallResolver(ctx).invokeOperator(matches, '&&', [guardExpr]).result;
+          return CallResolver(
+            ctx,
+          ).invokeOperator(matches, '&&', [guardExpr]).result;
         }
         return matches;
       } else {

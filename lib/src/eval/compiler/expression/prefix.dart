@@ -113,14 +113,16 @@ Variable compilePrefixExpression(
       ctx,
       Negate(ctx.svar('numeric_result'), operand.ssa),
       operand.type,
-      representation: operand.representation,
+      rep: operand.rep,
     );
   }
   if (method == '~' || method == '-') {
     return CallResolver(ctx).invokeOperator(V, member, []).result;
   }
 
-  return CallResolver(ctx).invokeOperator(_zeroForType(V.type, ctx).push(ctx), method, [V]).result;
+  return CallResolver(
+    ctx,
+  ).invokeOperator(_zeroForType(V.type, ctx).push(ctx), method, [V]).result;
 }
 
 BuiltinValue _zeroForType(TypeRef type, CompilerContext ctx) =>

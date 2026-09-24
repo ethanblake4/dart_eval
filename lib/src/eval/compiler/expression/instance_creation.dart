@@ -41,17 +41,17 @@ Variable compileInstanceCreation(
   if (aliasDecl is TypeAlias && aliasDecl is! ClassTypeAlias) {
     instantiatedType = staticType =
         (ctx.typeFactory.resolveTypeAlias(
-              staticType.file,
-              aliasDecl,
-              nullable: type.question != null,
-              typeArgs: type.typeArguments?.arguments,
-            )
+                  staticType.file,
+                  aliasDecl,
+                  nullable: type.question != null,
+                  typeArgs: type.typeArguments?.arguments,
+                )
                 as InterfaceTypeRef)
             .copyWith(
-          arguments: [
-            if (type.typeArguments == null) ...staticType.typeArguments,
-          ],
-        );
+              arguments: [
+                if (type.typeArguments == null) ...staticType.typeArguments,
+              ],
+            );
   }
   if (type.typeArguments != null) {
     instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
@@ -126,11 +126,8 @@ Variable compileInstanceOf(
     );
   }
 
-  final resolved = ctx.memberLookup.staticMember(
-        staticType,
-        name,
-        MemberKind.method,
-      ) ??
+  final resolved =
+      ctx.memberLookup.staticMember(staticType, name, MemberKind.method) ??
       (throw CompileError('Cannot find static method $staticType.$name'));
 
   final BoundCall arguments;
@@ -196,7 +193,10 @@ Variable compileInstanceOf(
           typeParameters: paramRefs,
         );
         final concrete =
-            ctx.typeSystem.asInstanceOf(arguments.positionalValues[i].type, pattern.decl) ??
+            ctx.typeSystem.asInstanceOf(
+              arguments.positionalValues[i].type,
+              pattern.decl,
+            ) ??
             arguments.positionalValues[i].type;
         ctx.typeSystem.unify(pattern, concrete, bindings);
       }
@@ -251,13 +251,7 @@ Variable compileInstanceOf(
       dec,
       source: source,
       resolveGenerics: seedGenerics,
-);
-
-
-
-
-
-
+    );
 
     //_args = argsPair.first;
     //_namedArgs = argsPair.second;
@@ -283,7 +277,7 @@ Variable compileInstanceOf(
     isConst: isConst,
     externalIndex: resolved is BridgeMember
         ? ctx.bridgeStaticFunctionIndices[staticType
-            .file]!['${staticType.name}.$name']!
+              .file]!['${staticType.name}.$name']!
         : null,
     classBridge: classBridge is BridgeClassDef ? classBridge : null,
   );

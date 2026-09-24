@@ -232,7 +232,6 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     if (!receiver.isSpec(CoreTypes.dynamic)) {
       try {
         return ctx.memberLookup.fieldType(
-              
               receiver,
               expression.propertyName.name,
             ) ??

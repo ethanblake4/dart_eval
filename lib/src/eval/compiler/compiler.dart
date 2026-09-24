@@ -525,7 +525,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         if (type == null) continue;
         if (declarationOrBridge.isBridge) {
           final bridge = declarationOrBridge.bridge!;
-          final type0 = BridgeTypeRef.type(_ctx.runtimeTypes.indexMap[type.decl!]);
+          final type0 = BridgeTypeRef.type(
+            _ctx.runtimeTypes.indexMap[type.decl!],
+          );
           if (bridge is BridgeClassDef) {
             declarationOrBridge.bridge = bridge.copyWith(
               type: bridge.type.copyWith(type: type0),
@@ -1014,8 +1016,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     // Top-level accessors use the `*g`/`*s` suffix (same keying as class
     // members) so a getter and setter of the same name don't collide.
     final name = switch (declaration) {
-      FunctionDeclaration d when d.isGetter => MemberName.getter(declarationName(d)).key,
-      FunctionDeclaration d when d.isSetter => MemberName.setter(declarationName(d)).key,
+      FunctionDeclaration d when d.isGetter => MemberName.getter(
+        declarationName(d),
+      ).key,
+      FunctionDeclaration d when d.isSetter => MemberName.setter(
+        declarationName(d),
+      ).key,
       _ => declarationName(declaration),
     };
     _declareTopLevel(
@@ -1122,7 +1128,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final spec = type.spec!;
       // `types.find` may have already materialized the decl for member
       // lookup — keep one canonical decl per (library, name).
-      final decl = _ctx.types.find(libraryIndex, spec.name) ??
+      final decl =
+          _ctx.types.find(libraryIndex, spec.name) ??
           BridgeTypeDecl(
             _ctx,
             libraryIndex,
@@ -1142,7 +1149,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         return null;
       }
       final name = declarationName(declaration);
-      final decl = _ctx.types.find(libraryIndex, name) ??
+      final decl =
+          _ctx.types.find(libraryIndex, name) ??
           SourceTypeDecl(
             _ctx,
             libraryIndex,
@@ -1161,8 +1169,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   TypeRef _registerTypeRef(int libraryIndex, String name, TypeDecl decl) {
     final type = InterfaceTypeRef(decl);
     _ctx.runtimeTypes.indexMap[decl] = _ctx.runtimeTypes.names.length;
-    _ctx.runtimeTypes.descriptorIds[type] =
-        _ctx.runtimeTypes.names.length;
+    _ctx.runtimeTypes.descriptorIds[type] = _ctx.runtimeTypes.names.length;
     _ctx.runtimeTypes.list.add(type);
     _ctx.runtimeTypes.names.add(name);
     return type;
@@ -1185,10 +1192,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (method.isStatic) _assignBridgeIndex(lib, '${type.name}.$name');
     });
     classDef.getters.forEach((name, getter) {
-      if (getter.isStatic) _assignBridgeIndex(lib, '${type.name}.${MemberName.getter(name).key}');
+      if (getter.isStatic)
+        _assignBridgeIndex(lib, '${type.name}.${MemberName.getter(name).key}');
     });
     classDef.setters.forEach((name, setter) {
-      if (setter.isStatic) _assignBridgeIndex(lib, '${type.name}.${MemberName.setter(name).key}');
+      if (setter.isStatic)
+        _assignBridgeIndex(lib, '${type.name}.${MemberName.setter(name).key}');
     });
     classDef.fields.forEach((name, field) {
       if (field.isStatic) {

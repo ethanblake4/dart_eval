@@ -70,7 +70,9 @@ StatementInfo compileTryStatement(
               _ => null,
             };
         if (slot == null) continue;
-        final loaded = cellSlot == null ? current.ssa : entry.value.captureCell!;
+        final loaded = cellSlot == null
+            ? current.ssa
+            : entry.value.captureCell!;
         ctx.pushOp(LoadExceptionSlot(loaded, slot));
       }
     }
@@ -225,7 +227,10 @@ void _bindException(
       clause.exceptionParameter!.name.lexeme,
       Variable.ssa(
         ctx,
-        Assign(ctx.svar('catch_parameter'), (exception.binding?.read(ctx) ?? exception).ssa),
+        Assign(
+          ctx.svar('catch_parameter'),
+          (exception.binding?.read(ctx) ?? exception).ssa,
+        ),
         type,
         rep: ValueRep.boxed,
       ),

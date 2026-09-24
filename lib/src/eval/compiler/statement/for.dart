@@ -154,9 +154,7 @@ StatementInfo compileForEachLoop(
         }
 
         iterator = iterator.copyWith(
-          type: CoreTypes.iterator
-              .ref(ctx)
-              .copyWith(arguments: [elementType]),
+          type: CoreTypes.iterator.ref(ctx).copyWith(arguments: [elementType]),
         );
 
         final name = parts.loopVariable.name.lexeme;
@@ -189,12 +187,15 @@ StatementInfo compileForEachLoop(
         }
       }
     },
-    condition: (ctx) => CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result,
+    condition: (ctx) =>
+        CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result,
     body: body,
     assignedNamesScan: assignedNamesScan,
     update: (ctx) {
       if (parts is ForEachPartsWithDeclaration) {
-        ctx.lookupBinding(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
+        ctx
+            .lookupBinding(parts.loopVariable.name.lexeme)!
+            .renewCaptureCell(ctx);
       }
       loopVariable.setValue(ctx, GetTarget.read(ctx, iterator, 'current'));
     },
@@ -306,7 +307,9 @@ StatementInfo compileAwaitForLoop(
       }
     },
     condition: (ctx) {
-      final moveNext = CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result;
+      final moveNext = CallResolver(
+        ctx,
+      ).invokeOperator(iterator, 'moveNext', []).result;
       return Variable.ssa(
         ctx,
         Await(
@@ -321,7 +324,9 @@ StatementInfo compileAwaitForLoop(
     assignedNamesScan: [node],
     update: (ctx) {
       if (parts is ForEachPartsWithDeclaration) {
-        ctx.lookupBinding(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
+        ctx
+            .lookupBinding(parts.loopVariable.name.lexeme)!
+            .renewCaptureCell(ctx);
       }
       loopVariable.setValue(ctx, GetTarget.read(ctx, iterator, 'current'));
     },

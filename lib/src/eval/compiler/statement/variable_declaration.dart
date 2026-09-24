@@ -4,7 +4,6 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
-import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 
 import '../errors.dart';
@@ -66,8 +65,8 @@ void compileVariableDeclarationList(
       }
       final local = res.copyWith(
         name: ctx.svar(li.name.lexeme).name,
-        type: type ?? ctx.typeFactory.widenedInferredType( res.type),
-        declaredType: type ?? ctx.typeFactory.widenedInferredType( res.type),
+        type: type ?? ctx.typeFactory.widenedInferredType(res.type),
+        declaredType: type ?? ctx.typeFactory.widenedInferredType(res.type),
         isFinal: l.isFinal || l.isConst,
         isConst: l.isConst,
       );
@@ -84,7 +83,7 @@ void compileVariableDeclarationList(
                 .copyWith(
                   type: type ?? CoreTypes.dynamic.ref(ctx),
                   declaredType: type ?? CoreTypes.dynamic.ref(ctx),
-                  representation: MachineRepresentation.object,
+                  rep: ValueRep.boxed,
                   isFinal: l.isFinal || l.isConst,
                 ),
             // An uninitialized `final`/`const` binding accepts its first

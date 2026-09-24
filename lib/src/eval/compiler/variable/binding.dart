@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/captures.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
@@ -42,6 +43,8 @@ final class LocalBinding {
     this.frameIndex = -1,
     this.initialized = true,
   }) : storage = SsaStorage(),
+       declaredType = current.declaredType,
+       isFinal = current.isFinal,
        _current = current {
     current.binding = this;
   }
@@ -55,6 +58,8 @@ final class LocalBinding {
       binding.name,
       binding.current.copyWith(),
       binding.frameIndex,
+      binding.declaredType,
+      binding.isFinal,
     );
     snapshot.storage = binding.storage;
     snapshot.initialized = binding.initialized;
@@ -62,8 +67,13 @@ final class LocalBinding {
     return snapshot;
   }
 
-  LocalBinding._raw(this.name, this._current, this.frameIndex)
-    : storage = SsaStorage(),
+  LocalBinding._raw(
+    this.name,
+    this._current,
+    this.frameIndex,
+    this.declaredType,
+    this.isFinal,
+  ) : storage = SsaStorage(),
       initialized = true;
 
   final String name;
@@ -79,10 +89,10 @@ final class LocalBinding {
   Variable get current => _current;
 
   /// The stable source-level type of the binding.
-  TypeRef get declaredType => _current.declaredType;
+  final TypeRef declaredType;
 
   /// Whether reassignment of this binding is forbidden.
-  bool get isFinal => _current.isFinal;
+  final bool isFinal;
 
   /// Whether the binding has received its first value. Only meaningful
   /// alongside [isFinal]: an uninitialized `final` binding accepts exactly
@@ -110,9 +120,9 @@ final class LocalBinding {
       ctx,
       LoadExceptionSlot(ctx.svar('protected'), s.slot),
       _current.type,
-      declaredType: _current.declaredType,
-      representation: _current.representation,
-      isFinal: _current.isFinal,
+      declaredType: declaredType,
+      rep: repForType(_current.type, _current.representation),
+      isFinal: isFinal,
       callable: _current.callable,
     ),
     ExceptionSlotStorage s => _readCell(ctx, s.cell!),
@@ -124,9 +134,9 @@ final class LocalBinding {
     ctx,
     ReadCaptureCell(ctx.svar('captured'), cell, _current.representation),
     _current.type,
-    declaredType: _current.declaredType,
-    representation: _current.representation,
-    isFinal: _current.isFinal,
+    declaredType: declaredType,
+    rep: repForType(_current.type, _current.representation),
+    isFinal: isFinal,
     callable: _current.callable,
   );
 
@@ -165,4 +175,3 @@ final class LocalBinding {
     _current = _current.copyWith(type: type);
   }
 }
-

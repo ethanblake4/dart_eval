@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import '../member/call_signature.dart';
 import '../values/abi.dart';
+import '../member/member_name.dart';
 
 extension TearOff on Variable {
   /// Materializes this function reference. When [boundContext] supplies a
@@ -65,7 +66,7 @@ extension TearOff on Variable {
         final memberGroups = classes == null ? null : classes[offset.className];
         functionId = memberGroups == null
             ? null
-            : (memberGroups[2] as Map)[offset.name] as int?;
+            : memberGroups[MemberKind.method]?[offset.name];
       }
     }
     final parameterTypes = functionId == null
@@ -203,9 +204,7 @@ extension TearOff on Variable {
             final bound = bindings[def];
             if (bound == null || bound.isTypeParameter) {
               fullyBound = false;
-              return ctx.runtimeTypes.idOf(
-                bound ?? CoreTypes.dynamic.ref(ctx),
-              );
+              return ctx.runtimeTypes.idOf(bound ?? CoreTypes.dynamic.ref(ctx));
             }
             return ctx.runtimeTypes.idOf(bound);
           }(),

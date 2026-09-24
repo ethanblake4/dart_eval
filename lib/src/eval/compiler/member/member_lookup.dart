@@ -26,45 +26,42 @@ final class MemberLookup {
   final CompilerContext ctx;
 
   /// The member named [name] in [type]'s public interface. Throws
-  /// [CompileError] when no member exists — callers wanting a probe use
-  /// [tryInterfaceMember].
-  /// [superclassFirst] matches `resolveInstanceMethod`'s walk order
-  /// (superclass, then mixins and interfaces); the default matches
-  /// `resolveInstanceDeclaration` (mixins first — a mixin's declaration
-  /// shadows the superclass's, mirroring real override semantics).
+  /// [UnknownMemberError] when no member exists — callers wanting a
+  /// probe use [tryInterfaceMember]. Mixins walk before the superclass,
+  /// mirroring mixin-application override semantics.
   ResolvedMember interfaceMember(
     TypeRef type,
     MemberName name, {
     AstNode? source,
     TypeRef? bottomType,
-    bool superclassFirst = false,
-  }) =>
-      _interfaceMember(
-        type,
-        name,
-        source: source,
-        bottomType: bottomType,
-        superclassFirst: superclassFirst,
-        chain: const [],
-      );
+  }) => _interfaceMember(
+    type,
+    name,
+    source: source,
+    bottomType: bottomType,
+    chain: const [],
+  );
 
   ResolvedMember _interfaceMember(
     TypeRef type,
     MemberName name, {
     AstNode? source,
     TypeRef? bottomType,
-    required bool superclassFirst,
     required List<String> chain,
   }) {
     final marker = '${type.file}:${type.name}';
     if (chain.contains(marker)) {
       // A hierarchy cycle (the bridge model's `Object extends dynamic`
       // edge) means the member isn't declared anywhere reachable.
-      throw CompileError('Unknown method ${type.name}.${name.name}', source);
+      throw UnknownMemberError(
+        'Unknown method ${type.name}.${name.name}',
+        source,
+      );
     }
     chain = [...chain, marker];
     if (type.isTypeParameter) {
-      final bound = (type as TypeParameterTypeRef).parameter.bound ??
+      final bound =
+          (type as TypeParameterTypeRef).parameter.bound ??
           CoreTypes.dynamic.ref(ctx);
       if (bound.isSpec(CoreTypes.dynamic)) {
         throw CompileError(
@@ -77,7 +74,6 @@ final class MemberLookup {
         name,
         source: source,
         bottomType: bottomType ?? type,
-        superclassFirst: superclassFirst,
         chain: chain,
       );
     }
@@ -92,7 +88,6 @@ final class MemberLookup {
           name,
           source: source,
           bottomType: bottomType ?? type,
-          superclassFirst: superclassFirst,
           chain: chain,
         );
       }
@@ -117,7 +112,6 @@ final class MemberLookup {
         name,
         source: source,
         bottomType: bottomType0,
-        superclassFirst: superclassFirst,
         chain: chain,
       );
     }
@@ -125,20 +119,6 @@ final class MemberLookup {
     // The interface walk: mixins (application order), then the superclass,
     // then implemented interfaces — members folded from mixins already
     // answered above through the declaration's own member table.
-    if (superclassFirst) {
-      final superclass = ctx.typeSystem.superclassOf(type);
-      if (superclass != null) {
-        final result = _tryInterfaceMember(
-          superclass,
-          name,
-          source,
-          bottomType0,
-          chain,
-          superclassFirst,
-        );
-        if (result != null) return result;
-      }
-    }
     for (final mixin in ctx.typeSystem.mixinsOf(type)) {
       final result = _tryInterfaceMember(
         mixin,
@@ -146,23 +126,19 @@ final class MemberLookup {
         source,
         bottomType0,
         chain,
-        superclassFirst,
       );
       if (result != null) return result;
     }
-    if (!superclassFirst) {
-      final superclass = ctx.typeSystem.superclassOf(type);
-      if (superclass != null) {
-        final result = _tryInterfaceMember(
-          superclass,
-          name,
-          source,
-          bottomType0,
-          chain,
-          superclassFirst,
-        );
-        if (result != null) return result;
-      }
+    final superclass = ctx.typeSystem.superclassOf(type);
+    if (superclass != null) {
+      final result = _tryInterfaceMember(
+        superclass,
+        name,
+        source,
+        bottomType0,
+        chain,
+      );
+      if (result != null) return result;
     }
     for (final interface in ctx.typeSystem.interfacesOf(type)) {
       final result = _tryInterfaceMember(
@@ -171,19 +147,20 @@ final class MemberLookup {
         source,
         bottomType0,
         chain,
-        superclassFirst,
       );
       if (result != null) return result;
     }
     if (type.isSpec(CoreTypes.object)) {
-      throw CompileError('Unknown method ${bottomType0.name}.${name.name}', source);
+      throw UnknownMemberError(
+        'Unknown method ${bottomType0.name}.${name.name}',
+        source,
+      );
     }
     return _interfaceMember(
       CoreTypes.object.ref(ctx),
       name,
       source: source,
       bottomType: bottomType0,
-      superclassFirst: superclassFirst,
       chain: chain,
     );
   }
@@ -197,10 +174,14 @@ final class MemberLookup {
     TypeRef? bottomType,
   }) {
     try {
-      return interfaceMember(type, name, source: source, bottomType: bottomType);
-    } on CompileError catch (e) {
-      if (e.message.startsWith('Unknown method')) return null;
-      rethrow;
+      return interfaceMember(
+        type,
+        name,
+        source: source,
+        bottomType: bottomType,
+      );
+    } on UnknownMemberError {
+      return null;
     }
   }
 
@@ -210,7 +191,6 @@ final class MemberLookup {
     AstNode? source,
     TypeRef bottomType0,
     List<String> chain,
-    bool superclassFirst,
   ) {
     try {
       return _interfaceMember(
@@ -218,12 +198,10 @@ final class MemberLookup {
         name,
         source: source,
         bottomType: bottomType0,
-        superclassFirst: superclassFirst,
         chain: chain,
       );
-    } on CompileError catch (e) {
-      if (e.message.startsWith('Unknown method')) return null;
-      rethrow;
+    } on UnknownMemberError {
+      return null;
     }
   }
 
@@ -257,11 +235,7 @@ final class MemberLookup {
 
   /// A static member of [type] by name. Returns null when absent —
   /// `resolveStaticMethod`'s callers throw their own error messages.
-  Member? staticMember(
-    TypeRef type,
-    String name,
-    MemberKind kind,
-  ) {
+  Member? staticMember(TypeRef type, String name, MemberKind kind) {
     final decl = type.decl ?? ctx.types.find(type.file, type.name);
     if (decl != null) return decl.staticMember(name, kind);
     // Extensions have no TypeDecl; `E.name` keys live in the static
@@ -308,10 +282,7 @@ final class MemberLookup {
   /// The class at-or-above [type] (in superclass order) that supplies the
   /// concrete implementation of [name] — null when the member is only
   /// reachable through a bridged ancestor or isn't on the chain.
-  Member? implementation(
-    TypeRef type,
-    MemberName name,
-  ) {
+  Member? implementation(TypeRef type, MemberName name) {
     return _implementationAt(type, name)?.$2;
   }
 
@@ -331,9 +302,9 @@ final class MemberLookup {
     }
     for (final link in [type, ...ctx.typeSystem.superclassChain(type)]) {
       final positions =
-          ctx.instanceDeclarationPositions[link.file]?[link.name]
-              ?[name.kind.positionIndex] as Map?;
-      final positionsHit = positions != null &&
+          ctx.instanceDeclarationPositions[link.file]?[link.name]?[name.kind];
+      final positionsHit =
+          positions != null &&
           (positions.containsKey(name.name) ||
               (name.name.startsWith('_') &&
                   positions.containsKey(
@@ -352,19 +323,18 @@ final class MemberLookup {
   Member? concreteMemberOn(TypeRef link, MemberName name) {
     final decl = ctx.types.find(link.file, link.name);
     if (decl is! SourceTypeDecl) return null;
-    return decl.declaredMember(_linkName(name, link),
-        forImplementation: true);
+    return decl.declaredMember(_linkName(name, link), forImplementation: true);
   }
 
   /// [name] qualified with [link]'s library: a private member folded in
   /// from another library is stored under `uri::_name`.
   MemberName _linkName(MemberName name, TypeRef link) => MemberName(
-        name.name,
-        name.kind,
-        privateLibraryUri: name.name.startsWith('_')
-            ? name.privateLibraryUri ?? ctx.libraryUri(link.file)
-            : null,
-      );
+    name.name,
+    name.kind,
+    privateLibraryUri: name.name.startsWith('_')
+        ? name.privateLibraryUri ?? ctx.libraryUri(link.file)
+        : null,
+  );
 
   /// Like [implementation], but for a receiver statically typed [type]
   /// that may hold a subclass instance: a fixed target exists only while
@@ -387,10 +357,7 @@ final class MemberLookup {
   /// Whether calling [name] implemented on [owner] requires `this` bound
   /// to the declaring link — bodies that never touch `super` run on any
   /// link; synthesized field accessors always need theirs.
-  bool needsOwnerLink(
-    TypeRef owner,
-    MemberName name,
-  ) {
+  bool needsOwnerLink(TypeRef owner, MemberName name) {
     final decl = ctx.types.find(owner.file, owner.name);
     final member = decl is SourceTypeDecl
         ? decl.declaredMember(name, forImplementation: true)
@@ -458,11 +425,12 @@ final class MemberLookup {
         final private = name.startsWith('_') ? decl.libraryUri : null;
         Object? entry;
         if (forSet) {
-          entry = map[MemberName(
-            name,
-            MemberKind.setter,
-            privateLibraryUri: private,
-          ).key];
+          entry =
+              map[MemberName(
+                name,
+                MemberKind.setter,
+                privateLibraryUri: private,
+              ).key];
           if (entry != null && entry is! MethodDeclaration) {
             throw CompileError(
               'Cannot query setter type of F${decl.library}:${decl.name}.$name, '
@@ -501,11 +469,12 @@ final class MemberLookup {
           }
         }
         if (entry == null && !forFieldFormal) {
-          entry = map[MemberName(
-            name,
-            MemberKind.getter,
-            privateLibraryUri: private,
-          ).key];
+          entry =
+              map[MemberName(
+                name,
+                MemberKind.getter,
+                privateLibraryUri: private,
+              ).key];
           if (entry != null && entry is! MethodDeclaration) {
             throw CompileError(
               'Cannot query getter type of F${decl.library}:${decl.name}.$name, '
@@ -519,11 +488,7 @@ final class MemberLookup {
             ? null
             : decl.sourceMemberOf(
                 entry,
-                MemberName(
-                  name,
-                  memberKind,
-                  privateLibraryUri: private,
-                ),
+                MemberName(name, memberKind, privateLibraryUri: private),
               );
       }
     } else {

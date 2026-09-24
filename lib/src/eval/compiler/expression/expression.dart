@@ -45,8 +45,7 @@ Variable compileExpression(
     return compileAssignmentExpression(e, ctx);
   } else if (e is Identifier) {
     final value = compileIdentifier(e, ctx);
-    if (value.unmaterializedCallable != null &&
-        value.type.isFunctionLike) {
+    if (value.unmaterializedCallable != null && value.type.isFunctionLike) {
       return value.tearOff(ctx, boundContext: bound);
     }
     return value;

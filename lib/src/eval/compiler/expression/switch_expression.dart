@@ -59,7 +59,9 @@ Variable compileSwitchExpression(
             ctx,
             CoreTypes.bool.ref(ctx),
           );
-          return CallResolver(ctx).invokeOperator(matches, '&&', [guardExpr]).result;
+          return CallResolver(
+            ctx,
+          ).invokeOperator(matches, '&&', [guardExpr]).result;
         }
         return matches;
       },

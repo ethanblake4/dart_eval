@@ -24,12 +24,7 @@ enum TypeParameterOwnerKind {
 /// Identifies which declaration's parameter space a [TypeParameterDef]
 /// belongs to, without name-resolution or string parsing.
 final class TypeParameterOwner {
-  const TypeParameterOwner(
-    this.kind,
-    this.library,
-    this.name, [
-    this.position,
-  ]);
+  const TypeParameterOwner(this.kind, this.library, this.name, [this.position]);
 
   /// The default owner for parameters declared inside a function body that
   /// has no richer owner — scopes keyed by the enclosing function id.
@@ -62,8 +57,7 @@ final class TypeParameterOwner {
     TypeParameterOwnerKind.classLike => 'class:$library:$name',
     TypeParameterOwnerKind.function => 'function:$library:$name:$position',
     TypeParameterOwnerKind.method => 'method:$library:$name:$position',
-    TypeParameterOwnerKind.closure =>
-      'function:$library:<anonymous>:$position',
+    TypeParameterOwnerKind.closure => 'function:$library:<anonymous>:$position',
     TypeParameterOwnerKind.scope => 'function:$position',
     TypeParameterOwnerKind.callSite => 'call:$library:$name:$position',
     TypeParameterOwnerKind.tearOff => 'tearoff:$library:$name',
@@ -118,9 +112,7 @@ final class TypeParameterDef {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is TypeParameterDef &&
-          owner == other.owner &&
-          index == other.index;
+      other is TypeParameterDef && owner == other.owner && index == other.index;
 
   @override
   int get hashCode => Object.hash(owner, index);
@@ -146,19 +138,18 @@ final class TypeParameterDefs {
   List<TypeParameterDef> declare(
     TypeParameterOwner owner,
     List<TypeParameter> nodes,
-  ) => _owners.putIfAbsent(owner, () => [
-    for (var i = 0; i < nodes.length; i++)
-      TypeParameterDef(owner, i, nodes[i].name.lexeme),
-  ]);
+  ) => _owners.putIfAbsent(
+    owner,
+    () => [
+      for (var i = 0; i < nodes.length; i++)
+        TypeParameterDef(owner, i, nodes[i].name.lexeme),
+    ],
+  );
 
   /// The interned def for (`owner`, `index`) — the shared def when the
   /// owner was declared, or a fresh unbound key for substitution maps
   /// whose nominal's declaration has not resolved (or never will).
-  TypeParameterDef key(
-    TypeParameterOwner owner,
-    int index,
-    String name,
-  ) {
+  TypeParameterDef key(TypeParameterOwner owner, int index, String name) {
     final defs = _owners[owner];
     if (defs != null && index < defs.length) return defs[index];
     return TypeParameterDef(owner, index, name);
@@ -200,4 +191,3 @@ List<TypeParameterDef> declareTypeParameters(
 /// A [TypeRef] that names a type parameter. The [TypeRef.parameter] def is
 /// shared by every reference to the same `(owner, index)`, so a bound
 /// resolved after seeding is visible through every copy.
-

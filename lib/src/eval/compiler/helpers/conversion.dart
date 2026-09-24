@@ -176,23 +176,19 @@ Variable convertForAssignment(
     converted = targetRep == ValueRep.boxed
         ? converted.boxIfNeeded(ctx, source)
         : converted.boxed
-            ? converted.toRep(
-              ctx,
-              targetRep,
-              into: ctx.svar('unboxed'),
-              source: source,
-            )
-            : converted;
-    return converted.copyWith(
-      declaredType: target,
-      representation: targetRepresentation,
-    );
+        ? converted.toRep(
+            ctx,
+            targetRep,
+            into: ctx.svar('unboxed'),
+            source: source,
+          )
+        : converted;
+    return converted.copyWith(declaredType: target, rep: targetRep);
   }
   converted = converted.copyWith(
     type: target,
     rep: ValueRep.boxed,
     declaredType: target,
-    representation: MachineRepresentation.object,
   );
   if (targetRep == ValueRep.boxed) return converted;
   return converted.toRep(

@@ -30,7 +30,9 @@ Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
     } else {
       vStr = CallResolver(ctx).invokeOperator(V, 'toString', []).result;
     }
-    build = build == null ? vStr : CallResolver(ctx).invokeOperator(build, '+', [vStr]).result;
+    build = build == null
+        ? vStr
+        : CallResolver(ctx).invokeOperator(build, '+', [vStr]).result;
   }
 
   if (build == null) {

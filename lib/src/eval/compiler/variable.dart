@@ -55,25 +55,18 @@ class Variable {
   Variable(
     TypeRef type, {
     TypeRef? declaredType,
-    MachineRepresentation? representation,
     ValueRep? rep,
     this.callable,
-    this.isFinal = false,
+    bool isFinal = false,
     List<TypeRef> concreteTypes = const [],
     TypeRef? exactType,
     bool isConstInt = false,
     bool isConst = false,
     ValueFacts? facts,
   }) : type = type,
-       declaredType = declaredType ?? type,
-       representation =
-           representation ?? rep?.bank ?? representationForType(type),
-       rep =
-           rep ??
-           repForType(
-             type,
-             representation ?? rep?.bank ?? representationForType(type),
-           ),
+       _declaredType = declaredType,
+       _isFinal = isFinal,
+       rep = rep ?? repForType(type, representationForType(type)),
        facts =
            facts ??
            ValueFacts(
@@ -97,7 +90,6 @@ class Variable {
     Operation op,
     TypeRef type, {
     TypeRef? declaredType,
-    MachineRepresentation? representation,
     ValueRep? rep,
     CallableValue? callable,
     bool isFinal = false,
@@ -111,7 +103,6 @@ class Variable {
     return Variable(
       type,
       declaredType: declaredType,
-      representation: representation,
       rep: rep,
       callable: callable,
       isFinal: isFinal,
@@ -128,7 +119,6 @@ class Variable {
     SSA ssa,
     TypeRef type, {
     TypeRef? declaredType,
-    MachineRepresentation? representation,
     ValueRep? rep,
     CallableValue? callable,
     bool isFinal = false,
@@ -141,7 +131,6 @@ class Variable {
     return Variable(
       type,
       declaredType: declaredType,
-      representation: representation,
       rep: rep,
       callable: callable,
       isFinal: isFinal,
@@ -155,16 +144,22 @@ class Variable {
 
   final TypeRef type;
 
-  /// The stable source-level type of a binding. For temporaries this is the
-  /// same as [type]; local reads may carry a narrower flow type.
-  final TypeRef declaredType;
+  final TypeRef? _declaredType;
+  final bool _isFinal;
 
-  /// Physical representation of this SSA value.
-  final MachineRepresentation representation;
+  /// The stable source-level type of the binding — for temporaries, the
+  /// declared type recorded at construction ([type] when none was given).
+  /// Bound values defer to the [LocalBinding]'s copy.
+  TypeRef get declaredType => binding?.declaredType ?? _declaredType ?? type;
+
+  /// Physical representation of this SSA value — always [rep]'s bank, so
+  /// the two cannot disagree.
+  MachineRepresentation get representation => rep.bank;
 
   /// Which value representation the SSA slot holds. Owns the boxing
   /// decision that used to live on `TypeRef.boxed`.
   final ValueRep rep;
+
   /// Compile-time facts known about this value: provable runtime types
   /// ([ValueFacts.exact], [ValueFacts.possibleClasses]) and constness.
   /// Mutable: reassignment replaces (not merges) the allocation proofs.
@@ -189,10 +184,14 @@ class Variable {
 
   /// Whether this value is a compile-time-constant expression.
   bool get isConst => facts.isConst;
+
   /// Compile-known function this value denotes, if any — an unmaterialized
   /// function reference when [CallableValue.materialized] is false.
   final CallableValue? callable;
-  final bool isFinal;
+
+  /// Whether reassignment of this value's binding is forbidden — bound
+  /// values read the [LocalBinding]'s flag; temporaries keep their own.
+  bool get isFinal => binding?.isFinal ?? _isFinal;
 
   /// The dispatch convention for invoking this value as a function:
   /// [CallableValue.convention] when callable metadata exists, otherwise
@@ -228,10 +227,9 @@ class Variable {
   Variable widened() {
     return Variable(
         type,
-        declaredType: declaredType,
-        representation: representation,
+        declaredType: _declaredType,
         rep: rep,
-        isFinal: isFinal,
+        isFinal: _isFinal,
         facts: facts.cleared(),
       )
       ..name = name
@@ -260,11 +258,10 @@ class Variable {
     if (!changed) return this;
     return Variable(
         type,
-        declaredType: declaredType,
-        representation: representation,
+        declaredType: _declaredType,
         rep: rep,
         callable: c,
-        isFinal: isFinal,
+        isFinal: _isFinal,
         facts: merged,
       )
       ..name = name
@@ -277,7 +274,6 @@ class Variable {
   /// in-place boxing/unboxing of a bound local must rebind through it
   /// rather than writing back through `ctx.locals`.
   LocalBinding? binding;
-
 
   SSA get ssa => SSA(name!);
 
@@ -389,7 +385,6 @@ class Variable {
       return copyWith(
         name: converted.name,
         type: converted.type,
-        representation: converted.representation,
         rep: converted.rep,
         facts: converted.facts,
       );
@@ -397,7 +392,6 @@ class Variable {
     return copyWithUpdate(
       ctx,
       type: converted.type,
-      representation: converted.representation,
       rep: converted.rep,
       facts: converted.facts,
     );
@@ -449,7 +443,6 @@ class Variable {
       return copyWith(
         name: converted.name,
         type: converted.type,
-        representation: converted.representation,
         rep: converted.rep,
         facts: converted.facts,
       );
@@ -457,7 +450,6 @@ class Variable {
     return copyWithUpdate(
       ctx,
       type: converted.type,
-      representation: converted.representation,
       rep: converted.rep,
       facts: converted.facts,
     );
@@ -502,7 +494,6 @@ class Variable {
   Variable copyWith({
     TypeRef? type,
     TypeRef? declaredType,
-    MachineRepresentation? representation,
     ValueRep? rep,
     CallableValue? callable,
     bool? isFinal,
@@ -513,7 +504,8 @@ class Variable {
     TypeRef? exactType,
     ValueFacts? facts,
   }) {
-    final newFacts = facts ??
+    final newFacts =
+        facts ??
         this.facts.copyWith(
           possibleClasses: concreteTypes,
           exact: exactType,
@@ -524,11 +516,10 @@ class Variable {
         );
     return Variable(
         type ?? this.type,
-        declaredType: declaredType ?? this.declaredType,
-        representation: representation ?? this.representation,
+        declaredType: declaredType ?? _declaredType,
         rep: rep ?? this.rep,
         callable: callable ?? this.callable,
-        isFinal: isFinal ?? this.isFinal,
+        isFinal: isFinal ?? _isFinal,
         facts: newFacts,
       )
       ..name = name ?? this.name
@@ -541,7 +532,6 @@ class Variable {
     ScopeContext? ctx, {
     TypeRef? type,
     TypeRef? declaredType,
-    MachineRepresentation? representation,
     ValueRep? rep,
     CallableValue? callable,
     String? name,
@@ -552,7 +542,6 @@ class Variable {
     var uV = copyWith(
       type: type,
       declaredType: declaredType,
-      representation: representation,
       rep: rep,
       callable: callable,
       name: name,
@@ -567,8 +556,7 @@ class Variable {
       // since replaced in the locals map — rebind whichever binding
       // actually occupies the slot.
       if (b != null) {
-        final live =
-            b.frameIndex >= 0 && b.frameIndex < ctx.locals.length
+        final live = b.frameIndex >= 0 && b.frameIndex < ctx.locals.length
             ? ctx.locals[b.frameIndex][b.name] ?? b
             : b;
         live.rebind(uV);

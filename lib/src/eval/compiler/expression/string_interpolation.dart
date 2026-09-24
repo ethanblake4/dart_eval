@@ -19,7 +19,9 @@ Variable compileStringInterpolation(
       final sval = element.value;
       if (sval.isNotEmpty) {
         final el = BuiltinValue(stringval: element.value).push(ctx);
-        build = build == null ? el : CallResolver(ctx).invokeOperator(build, '+', [el]).result;
+        build = build == null
+            ? el
+            : CallResolver(ctx).invokeOperator(build, '+', [el]).result;
       }
     } else if (element is InterpolationExpression) {
       final V = compileExpression(element.expression, ctx);
@@ -35,7 +37,9 @@ Variable compileStringInterpolation(
       } else {
         vStr = CallResolver(ctx).invokeOperator(V, 'toString', []).result;
       }
-      build = build == null ? vStr : CallResolver(ctx).invokeOperator(build, '+', [vStr]).result;
+      build = build == null
+          ? vStr
+          : CallResolver(ctx).invokeOperator(build, '+', [vStr]).result;
     }
   }
 

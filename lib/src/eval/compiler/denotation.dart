@@ -21,8 +21,7 @@ sealed class Denotation {
   Variable write(CompilerContext ctx, Variable value, {AstNode? source});
 
   /// Compile-time call dispatch when this denotation is invoked directly.
-  DirectCall? call(CompilerContext ctx, {AstNode? source}) =>
-      null;
+  DirectCall? call(CompilerContext ctx, {AstNode? source}) => null;
 }
 
 /// The special receivers a member access can target.
@@ -312,16 +311,17 @@ final class StaticMemberDenotation extends Denotation {
     return readType(ctx, source: source);
   }
 
-  DeferredOrOffset _offset(CompilerContext ctx) => DeferredOrOffset.lookupStatic(
-    ctx,
-    file,
-    ownerName,
-    member.isGetter
-        ? MemberName.getter(member.name.lexeme).key
-        : member.isSetter
-        ? MemberName.setter(member.name.lexeme).key
-        : member.name.lexeme,
-  );
+  DeferredOrOffset _offset(CompilerContext ctx) =>
+      DeferredOrOffset.lookupStatic(
+        ctx,
+        file,
+        ownerName,
+        member.isGetter
+            ? MemberName.getter(member.name.lexeme).key
+            : member.isSetter
+            ? MemberName.setter(member.name.lexeme).key
+            : member.name.lexeme,
+      );
 
   @override
   Variable read(CompilerContext ctx, {AstNode? source}) {
@@ -350,7 +350,10 @@ final class StaticMemberDenotation extends Denotation {
         source: source,
       );
     }
-    throw CompileError('Cannot find value to set: $ownerName.${member.name.lexeme}', source);
+    throw CompileError(
+      'Cannot find value to set: $ownerName.${member.name.lexeme}',
+      source,
+    );
   }
 
   @override
@@ -403,7 +406,6 @@ final class InstanceMemberDenotation extends Denotation {
     };
     if (object == null) return null;
     var fieldType = ctx.memberLookup.fieldType(
-      
       object.type,
       name,
       forSet: forSet,
@@ -469,7 +471,7 @@ final class InstanceMemberDenotation extends Denotation {
       );
     }
     var type = owner.type;
-    final kind = forSet ? 1 : 0;
+    final kind = forSet ? MemberKind.setter : MemberKind.getter;
     while (true) {
       // Abstract re-declarations have no body — skip them like runtime
       // dispatch does; the concrete implementation lives deeper.
@@ -479,10 +481,7 @@ final class InstanceMemberDenotation extends Denotation {
                 MemberName(name, MemberKind.method),
               ) !=
               null ||
-          ctx.memberLookup.concreteMemberOn(
-                type,
-                MemberName(name, memberKindOf(kind)),
-              ) !=
+          ctx.memberLookup.concreteMemberOn(type, MemberName(name, kind)) !=
               null;
       if (hit) {
         return owner;
@@ -534,7 +533,7 @@ final class InstanceMemberDenotation extends Denotation {
     return Variable.of(
       ctx,
       resvar,
-      ctx.memberLookup.fieldType( $type, name, source: source) ??
+      ctx.memberLookup.fieldType($type, name, source: source) ??
           CoreTypes.dynamic.ref(ctx),
       rep: ValueRep.boxed,
     );
@@ -545,9 +544,7 @@ final class InstanceMemberDenotation extends Denotation {
     final owner = _superOwner(ctx, false);
     // A method member read is a tear-off bound to the super receiver.
     final memberDecl =
-        ctx.instanceDeclarationsMap[owner.type.file]?[owner
-            .type
-            .name]?[name];
+        ctx.instanceDeclarationsMap[owner.type.file]?[owner.type.name]?[name];
     if (memberDecl is MethodDeclaration &&
         !memberDecl.isGetter &&
         !memberDecl.isSetter) {
@@ -692,7 +689,8 @@ final class InstanceMemberDenotation extends Denotation {
       ...ctx.typeSystem.superclassChain(actualType),
     ]) {
       final methodsMap =
-          ctx.instanceDeclarationPositions[link.file]?[link.name]?[2];
+          ctx.instanceDeclarationPositions[link.file]?[link.name]?[MemberKind
+              .method];
       if (methodsMap?.containsKey(name) != true) continue;
       if (exact == null &&
           ctx.memberOverriddenInSubclass(
@@ -765,7 +763,9 @@ final class ExtensionMemberDenotation extends Denotation {
       // Static members resolve through the extension's namespace — no
       // receiver.
       if (member.isGetter) {
-        final resvar = ctx.svar(member.isStatic ? 'call_result' : 'getter_result');
+        final resvar = ctx.svar(
+          member.isStatic ? 'call_result' : 'getter_result',
+        );
         ctx.pushOp(Call(offset, const [], result: resvar));
         return Variable.of(
           ctx,
@@ -830,8 +830,7 @@ final class ExtensionMemberDenotation extends Denotation {
     if (applied && recv != null) {
       // An applied setter (`E(x).s = v` or `x.s = v` through an applicable
       // extension) converts to the parameter's declared type.
-      final paramType =
-          member.parameters?.parameters.firstOrNull?.type == null
+      final paramType = member.parameters?.parameters.firstOrNull?.type == null
           ? null
           : ctx.typeFactory.formalParameterAnnotationType(
               ext.library,
@@ -893,7 +892,11 @@ final class ExtensionMemberDenotation extends Denotation {
 /// [DeferredOrOffset] to resolve the constructor (e.g. `ClassName.` or, for
 /// bridged enums, `EnumName#wrap`).
 final class TypeLiteralDenotation extends Denotation {
-  const TypeLiteralDenotation(this.type, this.constructorKey, {this.declaration});
+  const TypeLiteralDenotation(
+    this.type,
+    this.constructorKey, {
+    this.declaration,
+  });
 
   final TypeRef type;
   final String constructorKey;
@@ -915,11 +918,10 @@ final class TypeLiteralDenotation extends Denotation {
       throw CompileError('Cannot assign to a type literal', source);
 
   @override
-  DirectCall? call(CompilerContext ctx, {AstNode? source}) =>
-      DirectCall(
-        DeferredOrOffset(file: type.file, name: constructorKey),
-        CallSignature.returnOnly(type),
-      );
+  DirectCall? call(CompilerContext ctx, {AstNode? source}) => DirectCall(
+    DeferredOrOffset(file: type.file, name: constructorKey),
+    CallSignature.returnOnly(type),
+  );
 }
 
 /// A type parameter in scope — evaluates to its bound `Type` object.
@@ -936,10 +938,7 @@ final class TypeParameterDenotation extends Denotation {
   @override
   Variable read(CompilerContext ctx, {AstNode? source}) => Variable.ssa(
     ctx,
-    LoadTypeParameter(
-      ctx.svar('type'),
-      ctx.runtimeTypes.idOf(typeParameter),
-    ),
+    LoadTypeParameter(ctx.svar('type'), ctx.runtimeTypes.idOf(typeParameter)),
     CoreTypes.type.ref(ctx),
     concreteTypes: [typeParameter],
   );
@@ -958,17 +957,11 @@ final class PrefixDenotation extends Denotation {
 
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) =>
-      throw CompileError(
-        'Import prefix "$prefix" is not a type',
-        source,
-      );
+      throw CompileError('Import prefix "$prefix" is not a type', source);
 
   @override
   Variable read(CompilerContext ctx, {AstNode? source}) =>
-      throw CompileError(
-        'Import prefix "$prefix" is not a value',
-        source,
-      );
+      throw CompileError('Import prefix "$prefix" is not a value', source);
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
@@ -986,7 +979,9 @@ final class PrefixDenotation extends Denotation {
       if (stub != null) return _SyntheticDenotation(stub);
     }
     final child =
-        children[forSet ? MemberName.setter(name).key : MemberName.getter(name).key] ??
+        children[forSet
+            ? MemberName.setter(name).key
+            : MemberName.getter(name).key] ??
         children[name] ??
         children[name.split('.')[0]] ??
         (throw CompileError(
@@ -1061,10 +1056,7 @@ final class ExtensionNamespaceDenotation extends Denotation {
       CoreTypes.type.ref(ctx),
       concreteTypes: [extType],
       callable: CallableValue(
-        offset: DeferredOrOffset(
-          file: ext.library,
-          name: '${ext.name}.',
-        ),
+        offset: DeferredOrOffset(file: ext.library, name: '${ext.name}.'),
       ),
     );
   }
@@ -1098,18 +1090,19 @@ Denotation _denotationOf(
   if (decl is ExtensionDeclaration) {
     final ext = ctx.extensions.firstWhere(
       (e) => e.declaration == decl,
-      orElse: () => EvalExtension(
-        decOrBridge.sourceLib,
-        decl,
-        declarationName(decl),
-      ),
+      orElse: () =>
+          EvalExtension(decOrBridge.sourceLib, decl, declarationName(decl)),
     );
     return ExtensionNamespaceDenotation(ext, name);
   }
   final type = decl is TypeAlias && decl is! ClassTypeAlias
-      ? ctx.typeFactory.resolveTypeAlias( decOrBridge.sourceLib, decl)
+      ? ctx.typeFactory.resolveTypeAlias(decOrBridge.sourceLib, decl)
       : TypeRef.lookupDeclaration(ctx, decOrBridge.sourceLib, decl);
-  return TypeLiteralDenotation(type, '${declarationName(decl)}.', declaration: decl);
+  return TypeLiteralDenotation(
+    type,
+    '${declarationName(decl)}.',
+    declaration: decl,
+  );
 }
 
 /// A bridge-visible entity (external class, method, or accessor).
@@ -1257,8 +1250,7 @@ Denotation resolveIdentifier(
           ctx.library,
           currentDecl,
         );
-        final gIndex =
-            ctx.enumValueIndices[ctx.library]?[enumType.name]?[name];
+        final gIndex = ctx.enumValueIndices[ctx.library]?[enumType.name]?[name];
         if (gIndex != null) {
           return EnumValueDenotation(enumType, gIndex, name);
         }
@@ -1270,12 +1262,12 @@ Denotation resolveIdentifier(
       name,
       forSet: forSet,
     );
-    if (staticDeclaration != null &&
-        staticDeclaration.$1.declaration != null) {
+    if (staticDeclaration != null && staticDeclaration.$1.declaration != null) {
       final (staticDecl, scopeFile, scopeName) = staticDeclaration;
       final staticDec = staticDecl.declaration!;
       if (staticDec is MethodDeclaration) {
-        if ((forSet && staticDec.isSetter) || (!forSet && staticDec.isGetter) ||
+        if ((forSet && staticDec.isSetter) ||
+            (!forSet && staticDec.isGetter) ||
             (!staticDec.isGetter && !staticDec.isSetter)) {
           return StaticMemberDenotation(scopeFile, scopeName, staticDec);
         }
@@ -1392,7 +1384,9 @@ Denotation resolveMemberAccess(
         return InstanceMemberDenotation(ValueReceiver(value), name);
       }
       final superclass = ctx.typeSystem.superclassOf(type);
-      if (!forSet && superclass != null && superclass.isSpec(CoreTypes.enumType)) {
+      if (!forSet &&
+          superclass != null &&
+          superclass.isSpec(CoreTypes.enumType)) {
         final gIndex = ctx.enumValueIndices[type.file]?[type.name]?[name];
         if (gIndex != null) {
           return EnumValueDenotation(type, gIndex, name);
@@ -1451,7 +1445,8 @@ final class _StaticBridgeDenotation extends Denotation {
           ctx,
           InvokeExternal(
             ctx.svar(name),
-            ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.${MemberName.getter(name).key}']!,
+            ctx.bridgeStaticFunctionIndices[type
+                .file]!['${type.name}.${MemberName.getter(name).key}']!,
             [],
           ),
           type,
@@ -1483,21 +1478,16 @@ final class _TypeMemberDenotation extends Denotation {
 
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) {
-    final accessor =
-        ctx
-            .topLevelDeclarationsMap[type
-                .file]?[MemberName.getter(fqName).key]
-            ?.declaration;
+    final accessor = ctx
+        .topLevelDeclarationsMap[type.file]?[MemberName.getter(fqName).key]
+        ?.declaration;
     if (accessor is MethodDeclaration) {
       return accessor.returnType != null
           ? TypeRef.fromAnnotation(ctx, type.file, accessor.returnType!)
           : CoreTypes.dynamic.ref(ctx);
     }
-    final member =
-        ctx.topLevelDeclarationsMap[type.file]?[fqName]?.declaration;
-    if (member is MethodDeclaration &&
-        !member.isGetter &&
-        !member.isSetter) {
+    final member = ctx.topLevelDeclarationsMap[type.file]?[fqName]?.declaration;
+    if (member is MethodDeclaration && !member.isGetter && !member.isSetter) {
       return CoreTypes.function.ref(ctx);
     }
     return resolveGlobalType(ctx, type.file, fqName);
@@ -1505,11 +1495,9 @@ final class _TypeMemberDenotation extends Denotation {
 
   @override
   TypeRef writeType(CompilerContext ctx, {AstNode? source}) {
-    final setter =
-        ctx
-            .topLevelDeclarationsMap[type
-                .file]?[MemberName.setter(fqName).key]
-            ?.declaration;
+    final setter = ctx
+        .topLevelDeclarationsMap[type.file]?[MemberName.setter(fqName).key]
+        ?.declaration;
     if (setter is MethodDeclaration && setter.isSetter) {
       return _setterValueType(ctx, type.file, setter.parameters) ??
           CoreTypes.dynamic.ref(ctx);
@@ -1522,8 +1510,7 @@ final class _TypeMemberDenotation extends Denotation {
     // Static accessors register under `*g`/`*s` keys — a getter reference
     // invokes it.
     final getterMember =
-        ctx.topLevelDeclarationsMap[type
-            .file]?[MemberName.getter(fqName).key];
+        ctx.topLevelDeclarationsMap[type.file]?[MemberName.getter(fqName).key];
     final member =
         getterMember ?? ctx.topLevelDeclarationsMap[type.file]![fqName];
     final memberDecl = member?.declaration;
@@ -1560,16 +1547,12 @@ final class _TypeMemberDenotation extends Denotation {
     // A static setter (`C.x*s`) takes precedence over a static field
     // global of the same base name.
     final setter = ctx
-        .topLevelDeclarationsMap[type
-            .file]?[MemberName.setter(fqName).key]
+        .topLevelDeclarationsMap[type.file]?[MemberName.setter(fqName).key]
         ?.declaration;
     if (setter is MethodDeclaration && setter.isSetter) {
       return _invokeSetter(
         ctx,
-        DeferredOrOffset(
-          file: type.file,
-          name: MemberName.setter(fqName).key,
-        ),
+        DeferredOrOffset(file: type.file, name: MemberName.setter(fqName).key),
         value,
         type.file,
         setter.parameters,

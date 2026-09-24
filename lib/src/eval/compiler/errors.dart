@@ -48,3 +48,8 @@ class NotReferencableError extends CompileError {
   }
 }
 
+/// A member lookup found no declaration — caught by `tryX` probes that
+/// map "absent" to `null` rather than failing compilation.
+class UnknownMemberError extends CompileError {
+  const UnknownMemberError(super.message, [super.node]);
+}
