@@ -195,6 +195,7 @@ final class ConstructorCall extends CallTarget {
     this.externalIndex,
     this.classBridge,
     this.implicitDefault = false,
+    this.leadingArguments,
   });
 
   /// The declaring class.
@@ -220,6 +221,10 @@ final class ConstructorCall extends CallTarget {
   /// A class with no declared constructors gets a synthesized `Name.` body
   /// taking only the runtime-type argument.
   final bool implicitDefault;
+
+  /// Arguments supplied by the caller before declared parameters, such as
+  /// an enum constant's index and name.
+  final List<SSA>? leadingArguments;
 
   bool get _isFactory => constructor?.factoryKeyword != null;
 
@@ -249,7 +254,9 @@ final class ConstructorCall extends CallTarget {
         // Enum constructors carry two synthetic leading parameters (index,
         // name) bound by the enum's own value materialization; direct calls
         // — only factories are reachable — bind them to null.
-        if (constructor != null &&
+        if (leadingArguments != null)
+          ...leadingArguments!
+        else if (constructor != null &&
             constructor!.parent?.parent is EnumDeclaration) ...[
           BuiltinValue().push(ctx).ssa,
           BuiltinValue().push(ctx).ssa,

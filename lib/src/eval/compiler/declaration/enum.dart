@@ -1,23 +1,22 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import '../invocation/binder.dart';
+import '../invocation/bound_call.dart';
+import '../invocation/targets.dart';
 import '../member/call_signature.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import '../invocation/deferred.dart';
 import '../member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/string.dart';
-import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 
 void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
@@ -146,28 +145,34 @@ void _compileEnumValue(
   final vIndex = BuiltinValue(intval: valueIndex).push(ctx).boxIfNeeded(ctx);
   final vName = BuiltinValue(stringval: cName).push(ctx).boxIfNeeded(ctx);
 
-  final arguments = <SSA>[vIndex.ssa, vName.ssa];
-
   final dec = cstr?.declaration;
+  BoundCall? bound;
   if (constant.arguments != null && dec != null) {
-    final result = ArgumentBinder(ctx).bindParameterList(
+    bound = ArgumentBinder(ctx).bindParameterList(
       constant.arguments!.argumentList,
       ctx.library,
       CallSignature.forDeclaration(ctx, ctx.library, dec),
       dec,
       source: constant,
     );
-
-    arguments.addAll(result.vector());
   }
-  arguments.add(pushRuntimeTypeId(ctx, type));
-
-  final V = Variable.ssa(
-    ctx,
-    Call(offset, arguments, result: ctx.svar('enum_value')),
-    type,
-    rep: ValueRep.boxed,
-  );
+  final V =
+      ConstructorCall(
+        staticType: type,
+        instantiatedType: type,
+        offset: offset,
+        constructor: dec is ConstructorDeclaration ? dec : null,
+        implicitDefault: dec == null,
+        leadingArguments: [vIndex.ssa, vName.ssa],
+      ).emit(
+        ctx,
+        BoundCall(
+          positional: bound?.positional ?? const [],
+          named: bound?.named ?? const [],
+          vectorOverride: bound?.vector(),
+          returnType: type,
+        ),
+      );
   final name = '$clsName.$cName';
   final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
   ctx.globalRepresentations[index] = MachineRepresentation.object;
