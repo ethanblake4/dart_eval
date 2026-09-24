@@ -11,6 +11,8 @@ import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../invocation/binder.dart';
+import '../invocation/bound_call.dart';
+import '../invocation/targets.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
@@ -925,10 +927,6 @@ Variable _invokeSuperConstructor(
     prefix: prefix?.name.lexeme,
   );
 
-  final ssa = <SSA>[];
-  final argTypes = <TypeRef?>[];
-  final namedArgTypes = <String, TypeRef?>{};
-
   final superCtors = ctx.topLevelDeclarationsMap[extendsDecl.sourceLib]!;
   final constructor0 = superCtors['${extendsType.name}.$constructorName'];
   if (constructor0 == null &&
@@ -945,10 +943,11 @@ Variable _invokeSuperConstructor(
     );
   }
   final constructor = constructor0?.declaration as ConstructorDeclaration?;
+  BoundCall? arguments;
   if (constructor != null) {
     // `super()` and the implicit super call bind the callee's declared
     // defaults; only an implicit target takes no arguments at all.
-    final argres = superInitializer != null
+    arguments = superInitializer != null
         ? ArgumentBinder(ctx).bindParameterList(
             superInitializer.argumentList,
             extendsDecl.sourceLib,
@@ -970,11 +969,6 @@ Variable _invokeSuperConstructor(
             decLibrary: extendsDecl.sourceLib,
             superParams: superParams,
           );
-    ssa.addAll(argres.vector());
-    argTypes.addAll(argres.positionalValues.map((e) => e.type));
-    namedArgTypes.addAll(
-      argres.namedValues.map((key, value) => MapEntry(key, value.type)),
-    );
   }
 
   final methodOffset = DeferredOrOffset.lookupStatic(
@@ -984,13 +978,20 @@ Variable _invokeSuperConstructor(
     constructorName,
   );
 
-  // A `super(...)` call produces the superclass's instance.
-  final superRuntimeType = pushRuntimeTypeId(ctx, extendsType);
-  return Variable.ssa(
+  return ConstructorCall(
+    staticType: extendsType,
+    instantiatedType: extendsType,
+    offset: methodOffset,
+    constructor: constructor,
+    implicitDefault: constructor == null,
+  ).emit(
     ctx,
-    Call(methodOffset, [...ssa, superRuntimeType], result: ctx.svar('super')),
-    extendsType,
-    rep: ValueRep.boxed,
+    BoundCall(
+      positional: arguments?.positional ?? const [],
+      named: arguments?.named ?? const [],
+      vectorOverride: arguments?.vector(),
+      returnType: extendsType,
+    ),
   );
 }
 
