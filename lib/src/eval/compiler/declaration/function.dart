@@ -16,7 +16,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
-import 'package:dart_eval/src/eval/ir/representation.dart';
 import '../values/abi.dart';
 import '../member/member_name.dart';
 
@@ -89,29 +88,32 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
         allowUnboxed: true,
       );
 
+      final expectedReturnType = d.returnType == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!);
+      final parameterTypes = ctx.functionParameterTypes[pos]!;
+      final abi = CallableAbi.fromParameterTypes(
+        parameterTypes,
+        expectedReturnType,
+        CallableKind.function,
+        isAsync: b.isAsynchronous,
+        returnsVoid: expectedReturnType.isSpec(CoreTypes.voidType),
+      );
       var i = 0;
-      final parameterRepresentations = <MachineRepresentation>[];
 
       for (final p in resolvedParams) {
-        Variable vRep;
-
-        TypeRef type = CoreTypes.dynamic.ref(ctx);
-        if (p.type != null) {
-          type = ctx.typeFactory.formalParameterAnnotationType(ctx.library, p);
-        }
-        vRep = Variable.of(
+        final type = parameterTypes[i];
+        final vRep = Variable.of(
           ctx,
           SSA('arg_$i'),
           type,
-          rep: Abi.parameter(type, CallableKind.function),
+          rep: abi.parameters[i],
         );
 
         // `_` parameters are wildcards: non-binding and repeatable.
         if (p.name!.lexeme != '_') {
           ctx.setLocal(p.name!.lexeme, vRep).captureBinding(ctx, p);
         }
-        parameterRepresentations.add(vRep.rep.bank);
-
         i++;
       }
 
@@ -124,20 +126,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
         );
       }
 
-      final expectedReturnType = d.returnType == null
-          ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!);
-      final returnType = expectedReturnType;
-      ctx.functionSignatures[pos] = MachineFunctionSignature(
-        parameterRepresentations,
-        returnType.isSpec(CoreTypes.voidType) && !b.isAsynchronous
-            ? null
-            : Abi.result(
-                returnType,
-                CallableKind.function,
-                isAsync: b.isAsynchronous,
-              ).bank,
-      );
+      ctx.functionSignatures[pos] = abi.machine;
       StatementInfo? stInfo;
       if (b is BlockFunctionBody) {
         stInfo = compileBlock(

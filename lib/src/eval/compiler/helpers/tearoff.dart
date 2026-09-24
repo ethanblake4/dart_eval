@@ -244,6 +244,20 @@ extension TearOff on Variable {
       }
       captures.add(receiver);
     }
+    final callableAbi = CallableAbi.fromParameterTypes(
+      [for (final parameter in allParameters) parameterType(parameter)],
+      functionType is FunctionTypeRef
+          ? functionType.signature.returnType
+          : CoreTypes.dynamic.ref(ctx),
+      declaration is FunctionDeclaration
+          ? CallableKind.function
+          : CallableKind.method,
+      leadingBoxed: declaration is MethodDeclaration && !declaration.isStatic
+          ? 1
+          : 0,
+    );
+    final parameterOffset =
+        declaration is MethodDeclaration && !declaration.isStatic ? 1 : 0;
     final positionalDefaults = positional.map(parameterDefault).toList();
     final namedDefaults = named.map(parameterDefault).toList();
     final created = Variable.ssa(
@@ -270,20 +284,16 @@ extension TearOff on Variable {
         ],
         boundReceiver:
             declaration is MethodDeclaration && !declaration.isStatic,
-        positionalUnboxed: positional
-            .map(
-              (param) =>
-                  declaration is FunctionDeclaration &&
-                  !Abi.unboxedAcrossCalls(parameterType(param)).isBoxed,
-            )
-            .toList(),
-        namedUnboxed: named
-            .map(
-              (param) =>
-                  declaration is FunctionDeclaration &&
-                  !Abi.unboxedAcrossCalls(parameterType(param)).isBoxed,
-            )
-            .toList(),
+        positionalUnboxed: [
+          for (var i = 0; i < positional.length; i++)
+            !callableAbi.parameters[i + parameterOffset].isBoxed,
+        ],
+        namedUnboxed: [
+          for (var i = 0; i < named.length; i++)
+            !callableAbi
+                .parameters[i + positional.length + parameterOffset]
+                .isBoxed,
+        ],
         runtimeTypeId: ctx.runtimeTypes.idOf(materializedType),
         boundCallableTypeArguments: boundCallableTypeArguments,
       ),

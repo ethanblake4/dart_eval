@@ -111,11 +111,16 @@ void compileConstructorDeclaration(
         : d,
     decLibrary: redirectTarget?.$2.file,
   );
+  final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
+  final abi = CallableAbi.fromParameterTypes(
+    ctx.functionParameterTypes[ctx.currentFunctionId!]!,
+    clsType,
+    CallableKind.constructor,
+    leadingBoxed: isEnum ? 2 : 0,
+    hiddenTypeId: d.factoryKeyword == null,
+  );
 
   final superParams = (positional: <String>[], named: <String>{});
-  final parameterRepresentations = <MachineRepresentation>[
-    if (isEnum) ...[MachineRepresentation.object, MachineRepresentation.object],
-  ];
   var i = parent is EnumDeclaration ? 2 : 0;
 
   for (final p in resolvedParams) {
@@ -147,28 +152,21 @@ void compileConstructorDeclaration(
         );
       }
       type0 ??= CoreTypes.dynamic.ref(ctx);
-      parameterRepresentations.add(
-        Abi.parameter(type0, CallableKind.initializer).bank,
-      );
-
       vrep = Variable.of(
         ctx,
         SSA('arg_$i'),
         type0,
-        rep: Abi.parameter(type0, CallableKind.initializer),
+        rep: abi.parameters[i],
       ).boxIfNeeded(ctx);
 
       fieldFormalNames.add(p.name.lexeme);
     } else if (p is SuperFormalParameter) {
       final type = resolveSuperFormalType(ctx, ctx.library, p, d);
-      parameterRepresentations.add(
-        Abi.parameter(type, CallableKind.initializer).bank,
-      );
       vrep = Variable.of(
         ctx,
         SSA('arg_$i'),
         type,
-        rep: Abi.parameter(type, CallableKind.initializer),
+        rep: abi.parameters[i],
       ).boxIfNeeded(ctx);
       if (p.isNamed) {
         superParams.named.add(p.name.lexeme);
@@ -184,15 +182,7 @@ void compileConstructorDeclaration(
           p.type!,
         );
       }
-      vrep = Variable.of(
-        ctx,
-        SSA('arg_$i'),
-        type,
-        rep: Abi.parameter(type, CallableKind.constructor),
-      );
-      parameterRepresentations.add(
-        Abi.parameter(type, CallableKind.constructor).bank,
-      );
+      vrep = Variable.of(ctx, SSA('arg_$i'), type, rep: abi.parameters[i]);
     }
 
     ctx.setLocal(p.name!.lexeme, vrep).captureBinding(ctx, p);
@@ -200,7 +190,6 @@ void compileConstructorDeclaration(
     i++;
   }
 
-  final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
   SSA? runtimeTypeArgument;
   if (d.factoryKeyword == null) {
     runtimeTypeArgument = SSA('arg_$i');
@@ -212,13 +201,9 @@ void compileConstructorDeclaration(
       ),
     );
     ctx.pushOp(SetTypeEnvironment(runtimeTypeArgument));
-    parameterRepresentations.add(MachineRepresentation.integer);
   }
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
-      MachineFunctionSignature(
-        parameterRepresentations,
-        MachineRepresentation.object,
-      );
+      abi.machine;
 
   // Handle factory constructor
   if (d.factoryKeyword != null) {
@@ -541,11 +526,14 @@ void compileDefaultConstructor(
   ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction('$n()');
 
   final isEnum = parent is EnumDeclaration;
-  ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx
-      .library]![n]!] = MachineFunctionSignature([
-    if (isEnum) ...[MachineRepresentation.object, MachineRepresentation.object],
-    MachineRepresentation.integer,
-  ], MachineRepresentation.object);
+  ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
+      CallableAbi.fromParameterTypes(
+        const <TypeRef>[],
+        TypeRef.lookupDeclaration(ctx, ctx.library, parent),
+        CallableKind.constructor,
+        leadingBoxed: isEnum ? 2 : 0,
+        hiddenTypeId: true,
+      ).machine;
   ctx.beginScope();
   if (isEnum) {
     ctx.pushOp(Parameter(SSA('arg_0'), 0));
@@ -731,16 +719,18 @@ Map<String, Variable> _evalUnusedFieldInitializers(
           // parameters against this application's arguments — seeded in a
           // pushed frame of the declaring-library scope, popped on exit.
           V = ctx.withTypeParameters(memberLibrary, null, const [], () {
-            ctx.typeParameterScope(memberLibrary).addAll(
-              foldedMemberTypeParams(
-                    ctx,
-                    parent,
-                    fd,
-                    memberLibrary,
-                    prevLibrary,
-                  ) ??
-                  const {},
-            );
+            ctx
+                .typeParameterScope(memberLibrary)
+                .addAll(
+                  foldedMemberTypeParams(
+                        ctx,
+                        parent,
+                        fd,
+                        memberLibrary,
+                        prevLibrary,
+                      ) ??
+                      const {},
+                );
             return _compileFieldInitializer(ctx, fd, field);
           });
         }
@@ -802,16 +792,18 @@ void _compileUnusedFields(
               // Same folded-initializer scoping as
               // _evalUnusedFieldInitializers.
               v0 = ctx.withTypeParameters(memberLibrary, null, const [], () {
-                ctx.typeParameterScope(memberLibrary).addAll(
-                  foldedMemberTypeParams(
-                        ctx,
-                        parent,
-                        fd,
-                        memberLibrary,
-                        prevLibrary,
-                      ) ??
-                      const {},
-                );
+                ctx
+                    .typeParameterScope(memberLibrary)
+                    .addAll(
+                      foldedMemberTypeParams(
+                            ctx,
+                            parent,
+                            fd,
+                            memberLibrary,
+                            prevLibrary,
+                          ) ??
+                          const {},
+                    );
                 return _compileFieldInitializer(ctx, fd, field);
               });
             }
@@ -1162,7 +1154,12 @@ void compileAliasForwardingConstructor(
   } finally {
     ctx.library = previousLibrary;
   }
-  final parameterRepresentations = <MachineRepresentation>[];
+  final aliasAbi = CallableAbi.fromParameterTypes(
+    ctx.functionParameterTypes[ctx.currentFunctionId!]!,
+    TypeRef.lookupDeclaration(ctx, ctx.library, parent),
+    CallableKind.constructor,
+    hiddenTypeId: targetDecl.factoryKeyword == null,
+  );
   var i = 0;
   for (final p in resolvedParams) {
     final (fieldOrDeclType, _) = getFormalParameterType(
@@ -1175,18 +1172,10 @@ void compileAliasForwardingConstructor(
     final type =
         fieldOrDeclType ??
         ctx.functionParameterTypes[ctx.currentFunctionId!]![i];
-    parameterRepresentations.add(
-      Abi.parameter(type, CallableKind.initializer).bank,
-    );
     ctx
         .setLocal(
           p.name!.lexeme,
-          Variable.of(
-            ctx,
-            SSA('arg_$i'),
-            type,
-            rep: Abi.parameter(type, CallableKind.initializer),
-          ),
+          Variable.of(ctx, SSA('arg_$i'), type, rep: aliasAbi.parameters[i]),
         )
         .captureBinding(ctx, p);
     i++;
@@ -1195,7 +1184,6 @@ void compileAliasForwardingConstructor(
   final result = ctx.svar('instance');
   final isFactory = targetDecl.factoryKeyword != null;
   if (!isFactory) {
-    parameterRepresentations.add(MachineRepresentation.integer);
     ctx.pushOp(
       Parameter(
         SSA('arg_$i'),
@@ -1205,10 +1193,7 @@ void compileAliasForwardingConstructor(
     );
   }
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
-      MachineFunctionSignature(
-        parameterRepresentations,
-        MachineRepresentation.object,
-      );
+      aliasAbi.machine;
   final argSsa = <SSA>[];
   for (final p in resolvedParams) {
     final (paramType, _) = getFormalParameterType(

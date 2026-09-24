@@ -16,7 +16,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
-import 'package:dart_eval/src/eval/ir/representation.dart';
 import '../values/abi.dart';
 import '../member/member_name.dart';
 
@@ -143,6 +142,27 @@ int compileMethodDeclaration(
               allowUnboxed: false,
             );
 
+      final expectedReturnType = d.returnType == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!);
+      final parameterTypes = d.parameters == null
+          ? const <TypeRef>[]
+          : ctx.functionParameterTypes[pos]!;
+      final unboxedOperatorReturn =
+          b is ExpressionFunctionBody &&
+          !b.isAsynchronous &&
+          (methodName == '==' || methodName == '!=') &&
+          !Abi.unboxedAcrossCalls(expectedReturnType).isBoxed;
+      final abi = CallableAbi.fromParameterTypes(
+        parameterTypes,
+        expectedReturnType,
+        CallableKind.method,
+        leadingBoxed: hasReceiver ? 1 : 0,
+        isAsync: b.isAsynchronous,
+        returnsVoid: expectedReturnType.isSpec(CoreTypes.voidType),
+        unboxedBoolResult: unboxedOperatorReturn,
+      );
+
       if (b.isAsynchronous) {
         setupAsyncFunction(
           ctx,
@@ -155,24 +175,14 @@ int compileMethodDeclaration(
       var i = hasReceiver ? 1 : 0;
 
       for (final p in resolvedParams) {
-        TypeRef type = CoreTypes.dynamic.ref(ctx);
-        if (p.type != null) {
-          type = ctx.typeFactory.formalParameterAnnotationType(ctx.library, p);
-        }
+        final type = parameterTypes[i - (hasReceiver ? 1 : 0)];
 
         // `_` parameters are wildcards: non-binding and repeatable.
         if (p.name!.lexeme != '_') {
           ctx
               .setLocal(
                 p.name!.lexeme,
-                // Method args are always boxed to allow for bridge interop to have
-                // a consistent interface
-                Variable.of(
-                  ctx,
-                  SSA('arg_$i'),
-                  type,
-                  rep: Abi.parameter(type, CallableKind.method),
-                ),
+                Variable.of(ctx, SSA('arg_$i'), type, rep: abi.parameters[i]),
               )
               .captureBinding(ctx, p);
         }
@@ -180,30 +190,8 @@ int compileMethodDeclaration(
         i++;
       }
 
-      final expectedReturnType = d.returnType == null
-          ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!);
       final returnType = expectedReturnType;
-      final unboxedOperatorReturn =
-          b is ExpressionFunctionBody &&
-          !b.isAsynchronous &&
-          (methodName == '==' || methodName == '!=') &&
-          !Abi.unboxedAcrossCalls(returnType).isBoxed;
-      ctx.functionSignatures[pos] = MachineFunctionSignature(
-        List.filled(
-          resolvedParams.length + (hasReceiver ? 1 : 0),
-          MachineRepresentation.object,
-        ),
-        returnType.isSpec(CoreTypes.voidType) && !b.isAsynchronous
-            ? null
-            : unboxedOperatorReturn
-            ? Abi.result(
-                returnType,
-                CallableKind.method,
-                unboxedBoolResult: true,
-              ).bank
-            : MachineRepresentation.object,
-      );
+      ctx.functionSignatures[pos] = abi.machine;
 
       StatementInfo? stInfo;
       if (b is BlockFunctionBody) {

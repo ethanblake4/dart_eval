@@ -1,7 +1,14 @@
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
     show representationForType;
+import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
+import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
 
 export 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 
@@ -102,4 +109,130 @@ abstract final class Abi {
 
   /// Collection elements are always boxed.
   static const collectionElement = ValueRep.boxed;
+}
+
+/// The machine layout of one callable. The parameter list includes any
+/// receiver and hidden runtime-type slot, in the order the callee receives
+/// them. A null result means a synchronous void function.
+final class CallableAbi {
+  CallableAbi(Iterable<ValueRep> parameters, this.result)
+    : parameters = List<ValueRep>.unmodifiable(parameters);
+
+  final List<ValueRep> parameters;
+  final ValueRep? result;
+
+  MachineFunctionSignature get machine => MachineFunctionSignature([
+    for (final parameter in parameters) parameter.bank,
+  ], result?.bank);
+
+  /// Builds the ABI from the declared parameter types, before any call-site
+  /// substitution. Substituting a type parameter with `int` must not change
+  /// the callee's erased object slot into an integer slot.
+  factory CallableAbi.fromParameterTypes(
+    Iterable<TypeRef> parameterTypes,
+    TypeRef returnType,
+    CallableKind kind, {
+    int leadingBoxed = 0,
+    bool hiddenTypeId = false,
+    bool isAsync = false,
+    bool returnsVoid = false,
+    bool unboxedBoolResult = false,
+  }) => CallableAbi(
+    [
+      for (var i = 0; i < leadingBoxed; i++) ValueRep.boxed,
+      for (final type in parameterTypes) Abi.parameter(type, kind),
+      if (hiddenTypeId) ValueRep.int,
+    ],
+    returnsVoid && !isAsync
+        ? null
+        : kind == CallableKind.constructor
+        ? ValueRep.boxed
+        : Abi.result(
+            returnType,
+            kind,
+            isAsync: isAsync,
+            unboxedBoolResult: unboxedBoolResult,
+          ),
+  );
+
+  /// A member's declaration ABI, including its implicit receiver and the
+  /// trailing runtime type id of a generative constructor.
+  factory CallableAbi.of(Member member) {
+    final signature = member.signature;
+    final node = member is SourceMember ? member.node : null;
+    final isConstructor = member.name.kind == MemberKind.constructor;
+    if (member is BridgeMember) {
+      return CallableAbi(
+        [
+          if (!member.isStatic && !isConstructor) ValueRep.boxed,
+          for (final _ in signature.positional) ValueRep.boxed,
+          for (final _ in signature.named) ValueRep.boxed,
+        ],
+        ValueRep.boxed,
+      );
+    }
+    if (member.isField && !member.isStatic) {
+      return CallableAbi([
+        ValueRep.boxed,
+        if (member.name.kind == MemberKind.setter) ValueRep.boxed,
+      ], ValueRep.boxed);
+    }
+    final method = node is MethodDeclaration ? node : null;
+    final isAsync = method?.body.isAsynchronous ?? false;
+    final unboxedBoolResult =
+        method != null &&
+        method.body is ExpressionFunctionBody &&
+        !isAsync &&
+        (method.name.lexeme == '==' || method.name.lexeme == '!=') &&
+        !Abi.unboxedAcrossCalls(signature.returnType).isBoxed;
+    final kind = isConstructor
+        ? CallableKind.constructor
+        : method != null
+        ? CallableKind.method
+        : CallableKind.function;
+    return CallableAbi.fromParameterTypes(
+      [
+        for (final parameter in signature.positional) parameter.type,
+        for (final parameter in signature.named) parameter.type,
+      ],
+      signature.returnType,
+      kind,
+      leadingBoxed: isConstructor && node?.parent?.parent is EnumDeclaration
+          ? 2
+          : method != null && !method.isStatic
+          ? 1
+          : 0,
+      hiddenTypeId:
+          isConstructor &&
+          (node is ClassDeclaration ||
+              node is ConstructorDeclaration && node.factoryKeyword == null),
+      isAsync: isAsync,
+      returnsVoid: signature.returnType.isSpec(CoreTypes.voidType),
+      unboxedBoolResult: unboxedBoolResult,
+    );
+  }
+
+  /// A top-level function's ABI, available before it has a function id.
+  factory CallableAbi.ofFunction(
+    CompilerContext ctx,
+    int library,
+    FunctionDeclaration declaration,
+  ) {
+    final signature = CallSignature.forDeclaration(ctx, library, declaration);
+    return CallableAbi.fromParameterTypes(
+      [
+        for (final parameter in signature.positional) parameter.type,
+        for (final parameter in signature.named) parameter.type,
+      ],
+      signature.returnType,
+      CallableKind.function,
+      isAsync: declaration.functionExpression.body.isAsynchronous,
+      returnsVoid: signature.returnType.isSpec(CoreTypes.voidType),
+    );
+  }
+
+  factory CallableAbi.closure(int parameterCount) => CallableAbi(
+    List<ValueRep>.filled(parameterCount + 1, ValueRep.boxed),
+    ValueRep.boxed,
+  );
 }
