@@ -6,8 +6,6 @@ import 'member/call_signature.dart';
 import 'member/member.dart';
 import 'member/member_name.dart';
 import 'member/resolved_member.dart';
-import '../ir/closures.dart';
-import '../ir/exception.dart';
 import 'backend/representation.dart' show MachineRepresentation;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -21,7 +19,6 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
-import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
@@ -33,7 +30,6 @@ import 'invocation/accessors.dart';
 import 'invocation/resolver.dart';
 import 'variable/value_facts.dart';
 import 'reference.dart';
-
 
 /// What a name refers to — the compile-time meaning of an identifier,
 /// independent of how the reference is used (read, written, or called).
@@ -146,78 +142,8 @@ final class LocalDenotation extends Denotation {
   Variable read(CompilerContext ctx, {AstNode? source}) => binding.read(ctx);
 
   @override
-  Variable write(CompilerContext ctx, Variable value, {AstNode? source}) {
-    final local = binding.current;
-    if (local.isFinal && binding.initialized) {
-      throw CompileError(
-        'Cannot modify value of final variable ${binding.name}',
-        source,
-      );
-    }
-
-    value = convertForAssignment(
-      ctx,
-      value,
-      local.declaredType,
-      representation: local.representation,
-      source: source,
-      description:
-          'Cannot assign value of type ${value.type} to variable '
-          '"${binding.name}" of type ${local.declaredType}',
-    );
-
-    final stored = local.representation == MachineRepresentation.object
-        ? value.boxIfNeeded(ctx)
-        : value.unboxIfNeeded(ctx, false);
-    if (local.isFinal) {
-      binding.initialized = true;
-    }
-    final storage = binding.storage;
-    // A binding whose cell is preserved in an exception slot still
-    // receives writes through the cell — only the cell itself is
-    // restore-loaded by the trampoline.
-    if (storage is ExceptionSlotStorage && storage.cell != null) {
-      ctx.pushOp(
-        WriteCaptureCell(storage.cell!, stored.ssa, local.representation),
-      );
-      binding.rebind(local.widened());
-      return stored;
-    }
-    if (storage is ExceptionSlotStorage) {
-      ctx.pushOp(StoreExceptionSlot(storage.slot, stored.ssa));
-      // Slot reads after a handler edge can observe a value written before
-      // the exception — allocation proofs can't be trusted across it.
-      binding.rebind(local.widened());
-      return stored;
-    }
-    final cell = binding.captureCell;
-    if (cell != null) {
-      ctx.pushOp(WriteCaptureCell(cell, stored.ssa, local.representation));
-      // The cell can also be written by a closure invocation — allocation
-      // proofs can't be trusted across it.
-      binding.rebind(local.widened());
-      return stored;
-    }
-    ctx.pushOp(Assign(local.ssa, stored.ssa));
-    // Assignment keeps the promoted type only when the stored value still
-    // conforms to it; otherwise the variable is demoted to its declared
-    // type (a `dynamic` local stays dynamic).
-    final storedType = stored.type;
-    final localType = local.declaredType.isSpec(CoreTypes.dynamic)
-        ? local.declaredType
-        : storedType.isAssignableTo(ctx, local.type)
-        ? local.type
-        : local.declaredType;
-    local
-            .copyWithUpdate(
-              ctx,
-              type: localType,
-              possibleClasses: stored.concreteTypes,
-            )
-            .exactType =
-        stored.exactType;
-    return stored;
-  }
+  Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
+      binding.write(ctx, value, source: source);
 
   @override
   CallTarget? call(CompilerContext ctx, {AstNode? source}) {
@@ -1145,8 +1071,11 @@ Denotation _denotationOf(
   if (decl is ExtensionDeclaration) {
     final ext = ctx.extensions.firstWhere(
       (e) => e.declaration == decl,
-      orElse: () =>
-          EvalExtension(decOrBridge.sourceLib, decl, declarationName(decl)),
+      orElse: () => EvalExtension(
+        decOrBridge.sourceLib,
+        decl,
+        declarationName(decl),
+      ),
     );
     return ExtensionNamespaceDenotation(ext, name);
   }
@@ -1688,7 +1617,6 @@ Receiver compileReceiver(CompilerContext ctx, Expression target) {
 
 /// Field-wise equality for shadow comparison of dispatch results.
 
-
 /// A deferred import prefix exposes an implicit `loadLibrary` member. Since
 /// all libraries are compiled eagerly, it resolves to a stub closure
 /// returning an already-completed `Future<Null>` — and it shadows any
@@ -1766,11 +1694,8 @@ Variable _declarationToVariable(
     // (explicit application) and `E.staticM(...)` resolve through it.
     final ext = ctx.extensions.firstWhere(
       (e) => e.declaration == decl,
-      orElse: () => EvalExtension(
-        decOrBridge.sourceLib,
-        decl,
-        declarationName(decl),
-      ),
+      orElse: () =>
+          EvalExtension(decOrBridge.sourceLib, decl, declarationName(decl)),
     );
     return Variable(
       CoreTypes.type.ref(ctx),

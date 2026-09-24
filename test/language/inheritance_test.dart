@@ -43,6 +43,19 @@ void main() {
     ''', 16);
   });
 
+  test('reassignment clears the previous exact receiver type', () {
+    check('''
+      class A { int m() => 1; }
+      class B extends A { int m() => 2; }
+      A choose() => B();
+      int main() {
+        A a = A();
+        a = choose();
+        return a.m();
+      }
+    ''', 2);
+  });
+
   test('unrelated methods with the same name keep their own arity', () {
     check('''
       class First { int value(int n) => n + 1; }

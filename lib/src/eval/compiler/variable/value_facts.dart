@@ -46,18 +46,17 @@ final class ValueFacts {
   /// expression — enables the `int → double` literal coercion.
   final bool isConstInt;
 
+  /// Copies scalar markers and possible classes. Nullable denotation facts
+  /// stay unchanged; replace the whole object when a value is overwritten.
   ValueFacts copyWith({
-    TypeRef? exact,
     List<TypeRef>? possibleClasses,
-    TypeRef? denotedType,
-    EvalExtension? denotedExtension,
     bool? isConst,
     bool? isConstInt,
   }) => ValueFacts(
-    exact: exact ?? this.exact,
+    exact: exact,
     possibleClasses: possibleClasses ?? this.possibleClasses,
-    denotedType: denotedType ?? this.denotedType,
-    denotedExtension: denotedExtension ?? this.denotedExtension,
+    denotedType: denotedType,
+    denotedExtension: denotedExtension,
     isConst: isConst ?? this.isConst,
     isConstInt: isConstInt ?? this.isConstInt,
   );

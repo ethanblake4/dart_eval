@@ -28,6 +28,25 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
     });
 
+    test('reassignment replaces a known callable with a runtime value', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            class First { int call() => 1; }
+            int second() => 2;
+            int Function() choose() => second;
+            int main() {
+              int Function() fn = First().call;
+              fn = choose();
+              return fn();
+            }
+          ''',
+        },
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
+    });
+
     test('Tearoff as argument', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

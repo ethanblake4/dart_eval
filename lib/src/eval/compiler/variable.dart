@@ -154,7 +154,6 @@ class Variable {
   /// can never be a subclass instance, so it justifies devirtualization
   /// even for classes that are subclassed.
   TypeRef? get exactType => facts.exact;
-  set exactType(TypeRef? v) => facts = facts.copyWith(exact: v);
 
   /// For a `Type`-typed value, the type it denotes.
   TypeRef? get denotedType => facts.denotedType;
@@ -486,14 +485,12 @@ class Variable {
     bool? isConst,
     String? name,
     List<TypeRef>? possibleClasses,
-    TypeRef? exact,
     ValueFacts? facts,
   }) {
     final newFacts =
         facts ??
         this.facts.copyWith(
           possibleClasses: possibleClasses,
-          exact: exact,
           isConst: isConst,
           // The literal-int marker only applies to the literal expression
           // itself; any copy drops it.

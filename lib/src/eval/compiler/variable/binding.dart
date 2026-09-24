@@ -1,11 +1,15 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/captures.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 
 /// How a local binding's value is stored at runtime: directly in its SSA
@@ -119,6 +123,69 @@ final class LocalBinding {
   /// rebinding never moves the value in or out of a cell or slot.
   void rebind(Variable value) {
     _current = value..binding = this;
+  }
+
+  /// Writes a new value through this binding's storage and replaces the
+  /// previous value's flow facts with the stored value's facts.
+  Variable write(CompilerContext ctx, Variable value, {AstNode? source}) {
+    final local = current;
+    if (isFinal && initialized) {
+      throw CompileError('Cannot modify value of final variable $name', source);
+    }
+
+    value = convertForAssignment(
+      ctx,
+      value,
+      declaredType,
+      representation: local.representation,
+      source: source,
+      description:
+          'Cannot assign value of type ${value.type} to variable '
+          '"$name" of type $declaredType',
+    );
+
+    final stored = local.representation == MachineRepresentation.object
+        ? value.boxIfNeeded(ctx)
+        : value.unboxIfNeeded(ctx, false);
+    if (isFinal) initialized = true;
+
+    // A binding whose cell is preserved in an exception slot still writes
+    // through the cell. The trampoline restores the cell itself.
+    if (storage case ExceptionSlotStorage(:final cell?)) {
+      ctx.pushOp(WriteCaptureCell(cell, stored.ssa, local.representation));
+      rebind(local.widened());
+      return stored;
+    }
+    if (storage case ExceptionSlotStorage(:final slot)) {
+      ctx.pushOp(StoreExceptionSlot(slot, stored.ssa));
+      rebind(local.widened());
+      return stored;
+    }
+    if (captureCell case final cell?) {
+      ctx.pushOp(WriteCaptureCell(cell, stored.ssa, local.representation));
+      rebind(local.widened());
+      return stored;
+    }
+
+    ctx.pushOp(Assign(local.ssa, stored.ssa));
+    // Keep a promotion only if the new value still conforms to it.
+    final localType = declaredType.isSpec(CoreTypes.dynamic)
+        ? declaredType
+        : stored.type.isAssignableTo(ctx, local.type)
+        ? local.type
+        : declaredType;
+    // Build the bound value from what was stored so callable metadata is
+    // replaced too, including when the new value has no known call target.
+    rebind(
+      stored.copyWith(
+        name: local.name,
+        type: localType,
+        declaredType: declaredType,
+        rep: local.rep,
+        facts: stored.facts.forBinding(),
+      ),
+    );
+    return stored;
   }
 
   /// The binding's value as a read: capture-cell / exception-slot loads
