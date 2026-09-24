@@ -3,6 +3,7 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
@@ -337,13 +338,12 @@ void compileConstructorDeclaration(
     final member =
         ctx.memberLookup.staticMember(clsType, name, MemberKind.method) ??
         (throw CompileError('Cannot find static method $clsType.$name'));
-    final dec = (member as SourceMember).node;
-    final fpl = (dec as ConstructorDeclaration).parameters.parameters;
+    final dec = (member as SourceMember).node as ConstructorDeclaration;
 
     final result = ArgumentBinder(ctx).bindParameterList(
       $redirectingInitializer.argumentList,
       clsType.file,
-      fpl,
+      CallSignature.forDeclaration(ctx, clsType.file, dec),
       dec,
       source: $redirectingInitializer.argumentList,
     );
@@ -938,7 +938,11 @@ Variable _invokeSuperConstructor(
         ? ArgumentBinder(ctx).bindParameterList(
             superInitializer.argumentList,
             extendsDecl.sourceLib,
-            constructor.parameters.parameters,
+            CallSignature.forDeclaration(
+              ctx,
+              extendsDecl.sourceLib,
+              constructor,
+            ),
             constructor,
             superParams: superParams,
             // `extends A<int>` — the superclass's parameters bind to the

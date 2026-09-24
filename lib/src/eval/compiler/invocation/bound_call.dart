@@ -1,4 +1,3 @@
-import 'package:analyzer/dart/ast/ast.dart' show TypeParameter;
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/values/abi.dart';
@@ -33,7 +32,6 @@ final class BoundCall {
     this.vectorOverride,
     this.declaredReturn,
     this.genericReturnBoxed,
-    this.classTypeParameters,
   });
 
   /// The receiver after coercion — compound assignments and indexed
@@ -72,10 +70,6 @@ final class BoundCall {
   /// Whether generic substitution narrowed the language return type without
   /// changing the callee's compiled ABI, forcing the result to stay boxed.
   final bool? genericReturnBoxed;
-
-  /// The declaring class's type parameters, in order, when the bound call
-  /// targets a constructor declaration.
-  final List<TypeParameter>? classTypeParameters;
 
   /// The provided positional arguments as plain variables.
   List<Variable> get positionalValues => [

@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
+import '../member/call_signature.dart';
 import '../invocation/deferred.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -210,7 +211,6 @@ Variable compileInstanceOf(
     }
   } else {
     final dec = (resolved as SourceMember).node;
-    final fpl = (dec as ConstructorDeclaration).parameters.parameters;
 
     // Constructor signatures reference the declaring class's type parameters —
     // the callee's class (`B2` for `P1 = B2<int> with M`), not necessarily the
@@ -247,7 +247,11 @@ Variable compileInstanceOf(
     arguments = ArgumentBinder(ctx).bindParameterList(
       argumentList,
       staticType.file,
-      fpl,
+      CallSignature.forDeclaration(
+        ctx,
+        staticType.file,
+        dec as ConstructorDeclaration,
+      ),
       dec,
       source: source,
       resolveGenerics: seedGenerics,

@@ -144,10 +144,14 @@ final class ArgumentBinder {
     );
   }
 
+  /// Binds an argument list against a [CallSignature]: the signature owns
+  /// the callee's shape (arity, requiredness, names); each
+  /// [ParameterSpec]'s `node` supplies the AST bits defaults and field /
+  /// super formals still resolve from.
   BoundCall bindParameterList(
     ArgumentList argumentList,
     int decLibrary,
-    List<FormalParameter> fpl,
+    CallSignature signature,
     Declaration parameterHost, {
     List<Variable> before = const [],
     Map<String, TypeRef> resolveGenerics = const {},
@@ -186,7 +190,7 @@ final class ArgumentBinder {
                 ?.declaration;
       if (targetDecl is ConstructorDeclaration) {
         decLibrary = targetRef!.file;
-        fpl = targetDecl.parameters.parameters;
+        signature = CallSignature.forDeclaration(ctx, decLibrary, targetDecl);
         parameterHost = targetDecl;
       }
     }
@@ -196,16 +200,8 @@ final class ArgumentBinder {
     final push = <Variable>[...before];
     final namedArgs = <String, Variable>{};
 
-    final positional = <FormalParameter>[];
-    final named = <String, FormalParameter>{};
-
-    for (final param in fpl) {
-      if (param.isNamed) {
-        named[param.name!.lexeme] = param;
-      } else {
-        positional.add(param);
-      }
-    }
+    final positional = signature.positional;
+    final named = {for (final spec in signature.named) spec.name: spec};
 
     var i = 0;
 
@@ -260,9 +256,10 @@ final class ArgumentBinder {
 
     final resolveGenericsMap = <String, Set<TypeRef>>{};
 
-    // Compiles the supplied argument [expr] for [param]: context-typed
+    // Compiles the supplied argument [expr] for [spec]: context-typed
     // compilation, coercion to the formal, and generic-inference recording.
-    Variable compileMatched(FormalParameter param, Expression expr) {
+    Variable compileMatched(ParameterSpec spec, Expression expr) {
+      final param = spec.node!;
       var (paramType, typeAnnotation) = getFormalParameterType(
         ctx,
         param,
@@ -280,10 +277,10 @@ final class ArgumentBinder {
           (resolveGenerics.containsKey(typeAnnotation.name.lexeme) ||
               ctorClassParamNames.contains(typeAnnotation.name.lexeme));
 
-      // The placeholder-rich parameter shape under [InferenceMode.unify]:
-      // built before argument compilation so context-sensitive arguments
-      // (closures, generic tear-offs) see the generic form rather than the
-      // erased formal type.
+      // The placeholder-rich parameter shape used for deep generic
+      // inference: built before argument compilation so context-sensitive
+      // arguments (closures, generic tear-offs) see the generic form
+      // rather than the erased formal type.
       TypeRef? unifyPattern;
       final unifyPlaceholders = <String, TypeRef>{};
       final unifyDefs = <String, TypeParameterDef>{};
@@ -348,11 +345,8 @@ final class ArgumentBinder {
       return arg0;
     }
 
-    // **Match.** Map arguments to formals without emitting. Under `legacy` a
-    // positional parameter consumes the argument at its own index — a named
-    // argument in that slot counts as missing, reproducing today's failure.
-    // Under `allowNamedBeforePositional` named arguments are skipped during
-    // positional matching, as Dart requires.
+    // **Match.** Map arguments to formals without emitting. Named
+    // arguments are skipped during positional matching, as Dart requires.
     final rawArguments = argumentList.arguments;
     final matchPositional = List<Expression?>.filled(positional.length, null);
     final matchNamed = <String, Expression>{};
@@ -404,12 +398,12 @@ final class ArgumentBinder {
 
     // **Emit** the vector in declaration order.
     for (var pi = 0; pi < positional.length; pi++) {
-      final param = positional[pi];
+      final spec = positional[pi];
       // First check super params. Super params do not contain an expression;
       // positional ones bind to the callee's positional parameters in order.
       if (i < superParams.positional.length) {
         final V = _forwardedSuperParam(
-          param,
+          spec.node!,
           parameterHost,
           decLibrary,
           superParams.positional[i],
@@ -431,13 +425,13 @@ final class ArgumentBinder {
         args.add(arg0);
         push.add(arg0);
       } else {
-        if (param.isRequired) {
+        if (spec.isRequired) {
           throw CompileError('Not enough positional arguments');
         } else if (fillOmitted) {
           final value = compileOmittedArgument(
             ctx,
             decLibrary,
-            param,
+            spec.node!,
             parameterHost,
             typeParameters: paramTypeParameters,
           );
@@ -450,10 +444,10 @@ final class ArgumentBinder {
 
     for (final n in named.entries) {
       final name = n.key;
-      final param0 = n.value;
+      final spec0 = n.value;
       if (superParams.named.contains(name)) {
         final V = _forwardedSuperParam(
-          param0,
+          spec0.node!,
           parameterHost,
           decLibrary,
           name,
@@ -478,7 +472,7 @@ final class ArgumentBinder {
         final value = compileOmittedArgument(
           ctx,
           decLibrary,
-          param0,
+          spec0.node!,
           parameterHost,
           typeParameters: paramTypeParameters,
         );
@@ -1074,7 +1068,7 @@ final class ArgumentBinder {
     /// See [bindParameterList.fillOmitted].
     bool fillOmitted = true,
   }) {
-    final (fpl, typeParams, returnAnnotation) = _invocationSignature(dec);
+    final (_, typeParams, returnAnnotation) = _invocationSignature(dec);
     final isCallableDecl =
         dec is FunctionDeclaration || dec is MethodDeclaration;
     final resolveGenerics = <String, TypeRef>{...seedGenerics};
@@ -1135,7 +1129,7 @@ final class ArgumentBinder {
     final argsPair = bindParameterList(
       argumentList,
       sourceLib,
-      fpl,
+      CallSignature.forDeclaration(ctx, sourceLib, dec),
       dec,
       before: before,
       source: source,
@@ -1213,7 +1207,6 @@ final class ArgumentBinder {
       typeArguments: resolveGenerics,
       runtimeTypeArguments: inferredRuntimeTypeArguments,
       genericReturnBoxed: boxedBySubstitution,
-      classTypeParameters: classParams,
     );
   }
 }

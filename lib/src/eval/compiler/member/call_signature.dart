@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
 import '../context.dart';
+import '../errors.dart';
 import '../helpers/fpl.dart';
 import '../type.dart';
 
@@ -274,6 +275,96 @@ final class CallSignature {
     requiredPositional: 0,
     returnType: returnType,
   );
+
+  /// The binding signature of a source function, method, or constructor
+  /// declaration — the shape an argument list binds against. The
+  /// type-parameter owner mirrors `SourceMember._buildSignature`'s scheme
+  /// (`method:` for members, `function:` for top-level functions) so a
+  /// signature built either way identifies the same parameters.
+  factory CallSignature.forDeclaration(
+    CompilerContext ctx,
+    int library,
+    Declaration dec,
+  ) {
+    final host = dec.thisOrAncestorMatching(
+      (node) =>
+          node is ClassDeclaration ||
+          node is MixinDeclaration ||
+          node is ClassTypeAlias ||
+          node is ExtensionDeclaration,
+    );
+    final prefix = host is Declaration ? '${declarationName(host)}.' : '';
+    final memberName = switch (dec) {
+      FunctionDeclaration d => d.name.lexeme,
+      MethodDeclaration d => d.name.lexeme,
+      ConstructorDeclaration d => d.name?.lexeme ?? '',
+      _ => '',
+    };
+    final (typeParams, params, returnAnnotation) = switch (dec) {
+      FunctionDeclaration() => (
+        dec.functionExpression.typeParameters,
+        dec.functionExpression.parameters,
+        dec.returnType,
+      ),
+      MethodDeclaration() => (
+        dec.typeParameters,
+        dec.parameters,
+        dec.returnType,
+      ),
+      ConstructorDeclaration() => (
+        null as TypeParameterList?,
+        dec.parameters as FormalParameterList?,
+        null as TypeAnnotation?,
+      ),
+      _ => throw CompileError('Invalid declaration type ${dec.runtimeType}'),
+    };
+    // Parameter annotations may name the declaring class's (or extension's)
+    // own type parameters — seed them like `SourceMember._buildSignature`.
+    var ownerParams = const <String, TypeRef>{};
+    if (host is ExtensionDeclaration) {
+      final nodes =
+          host.typeParameters?.typeParameters ?? const <TypeParameter>[];
+      final scope = <String, TypeRef>{};
+      declareTypeParameters(
+        ctx,
+        TypeParameterOwner(
+          TypeParameterOwnerKind.extension,
+          library,
+          host.name?.lexeme ?? '',
+        ),
+        nodes,
+        scope,
+        (bound) =>
+            TypeRef.fromAnnotation(ctx, library, bound, typeParameters: scope),
+      );
+      ownerParams = scope;
+    } else if (host is Declaration) {
+      ownerParams =
+          ctx
+              .visibleTypes[library]?[declarationName(host)]
+              ?.decl
+              ?.ownTypeParams ??
+          const {};
+    }
+    return CallSignature.source(
+      ctx,
+      library,
+      typeParams,
+      params,
+      owner: TypeParameterOwner(
+        dec is FunctionDeclaration
+            ? TypeParameterOwnerKind.function
+            : TypeParameterOwnerKind.method,
+        library,
+        '$prefix$memberName',
+        dec is FunctionDeclaration ? dec.functionExpression.offset : dec.offset,
+      ),
+      returnAnnotation: returnAnnotation,
+      returnFallback: CoreTypes.dynamic.ref(ctx),
+      typeParameters: ownerParams,
+      parameterHost: dec,
+    );
+  }
 
   /// This signature as a [FunctionTypeRef] — parameter names are not part
   /// of the type, but arity/requiredness and types are.

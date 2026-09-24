@@ -1264,11 +1264,16 @@ final class CallResolver {
       // Upward inference for constructors: the class type arguments inferred
       // from the argument list (or the parameters' bounds), in declaration
       // order.
-      if (isConstructor && result.classTypeParameters != null) {
+      final ctorDecl = isConstructor ? dec.parent?.parent : null;
+      final ctorClassParams = switch (ctorDecl) {
+        ClassDeclaration() || MixinDeclaration() || ClassTypeAlias() =>
+          classLikeClauses(ctorDecl as Declaration).$4?.typeParameters,
+        _ => null,
+      };
+      if (ctorClassParams != null) {
         // Downward inference wins: a context type naming the constructed
         // class pins its type arguments (`A<int> get g => A(1)`).
         final boundChain = bound;
-        final ctorDecl = dec.parent?.parent;
         final ctorClassName = ctorDecl is Declaration
             ? declarationName(ctorDecl)
             : null;
@@ -1282,7 +1287,7 @@ final class CallResolver {
           }
         }
         inferredCtorArgs ??= [
-          for (final param in result.classTypeParameters!)
+          for (final param in ctorClassParams)
             result.typeArguments[param.name.lexeme] ??
                 CoreTypes.dynamic.ref(ctx),
         ];
