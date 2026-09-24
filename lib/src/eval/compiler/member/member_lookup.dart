@@ -339,14 +339,15 @@ final class MemberLookup {
   /// Like [implementation], but for a receiver statically typed [type]
   /// that may hold a subclass instance: a fixed target exists only while
   /// no descendant of [type] redeclares [name].
-  Member? directImplementation(TypeRef type, MemberName name) {
-    if (overriddenBelow(type, name.name)) return null;
-    return implementation(type, name);
-  }
+  Member? directImplementation(TypeRef type, MemberName name) =>
+      _directImplementationAt(type, name)?.$2;
 
-  TypeRef? directImplementationOwner(TypeRef type, MemberName name) {
+  TypeRef? directImplementationOwner(TypeRef type, MemberName name) =>
+      _directImplementationAt(type, name)?.$1;
+
+  (TypeRef, Member)? _directImplementationAt(TypeRef type, MemberName name) {
     if (overriddenBelow(type, name.name)) return null;
-    return implementationOwner(type, name);
+    return _implementationAt(type, name);
   }
 
   /// Whether a subclass of [type] redeclares the member — the
