@@ -52,6 +52,8 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   LocalBinding setLocal(
     String name,
     Variable v, {
+    TypeRef? declaredType,
+    bool isFinal = false,
     int? frame,
     bool initialized = true,
   }) {
@@ -61,7 +63,14 @@ mixin ScopeContext on Object implements AbstractScopeContext {
       existing.rebind(v);
       return existing;
     }
-    final nb = LocalBinding(name, v, frameIndex: f, initialized: initialized);
+    final nb = LocalBinding(
+      name,
+      v,
+      declaredType: declaredType ?? v.type,
+      isFinal: isFinal,
+      frameIndex: f,
+      initialized: initialized,
+    );
     locals[f][name] = nb;
     return nb;
   }

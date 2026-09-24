@@ -226,9 +226,8 @@ Variable patternMatchAndBind(
         Assign(ctx.svar(variableName), V.ssa),
         V.type,
         rep: V.rep,
-        isFinal: isFinal,
       );
-      if (bindsVariable) ctx.setLocal(variableName, v);
+      if (bindsVariable) ctx.setLocal(variableName, v, isFinal: isFinal);
 
       if (pat is DeclaredVariablePattern) {
         return _typeTest(ctx, pat.type, V);

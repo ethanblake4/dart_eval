@@ -206,6 +206,14 @@ class IndexedReference implements Reference {
   Variable _variable;
   Variable _index;
 
+  // Representation changes can rebind either local while an indexed
+  // reference is retained for a compound assignment. Refresh that compiler
+  // state without evaluating either operand again.
+  void _refreshBindings() {
+    _variable = _variable.binding?.current ?? _variable;
+    _index = _index.binding?.current ?? _index;
+  }
+
   @override
   TypeRef resolveType(
     CompilerContext ctx, {
@@ -283,8 +291,7 @@ class IndexedReference implements Reference {
     TypeRef? boundContext,
     List<TypeRef>? typeArguments,
   ]) {
-    _variable = _variable.updated(ctx);
-    _index = _index.updated(ctx);
+    _refreshBindings();
 
     if (_variable.type.isAssignableTo(
       ctx,
@@ -350,8 +357,7 @@ class IndexedReference implements Reference {
 
   @override
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
-    _variable = _variable.updated(ctx);
-    _index = _index.updated(ctx);
+    _refreshBindings();
 
     if (_variable.type.isAssignableTo(
       ctx,

@@ -84,7 +84,7 @@ Variable? _implicitCallTearOff(
       effectiveTarget,
       forceAllowDynamic: false,
     )) {
-      return tearOff.copyWith(declaredType: target);
+      return tearOff;
     }
   } on CompileError {
     return null;
@@ -123,7 +123,6 @@ Variable convertForAssignment(
       IntToDouble(ctx.svar('toDouble'), intVar.ssa),
       CoreTypes.double.ref(ctx),
       rep: ValueRep.double,
-      declaredType: target,
     );
     if ((representation ?? representationForType(target)) ==
         MachineRepresentation.object) {
@@ -177,13 +176,9 @@ Variable convertForAssignment(
             source: source,
           )
         : converted;
-    return converted.copyWith(declaredType: target, rep: targetRep);
+    return converted.copyWith(rep: targetRep);
   }
-  converted = converted.copyWith(
-    type: target,
-    rep: ValueRep.boxed,
-    declaredType: target,
-  );
+  converted = converted.copyWith(type: target, rep: ValueRep.boxed);
   if (targetRep == ValueRep.boxed) return converted;
   return converted.toRep(
     ctx,

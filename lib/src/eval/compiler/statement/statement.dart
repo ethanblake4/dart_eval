@@ -96,9 +96,7 @@ StatementInfo compileStatement(
           decl.returnType,
           decl.functionExpression.typeParameters,
         );
-        final placeholder = BuiltinValue()
-            .push(ctx)
-            .copyWith(type: signature, declaredType: signature);
+        final placeholder = BuiltinValue().push(ctx).copyWith(type: signature);
         ctx.setLocal(decl.name.lexeme, placeholder).captureBinding(ctx, decl);
       }
       final variable = compileFunctionExpression(decl.functionExpression, ctx);

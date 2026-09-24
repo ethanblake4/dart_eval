@@ -28,23 +28,17 @@ class Variable {
   Variable(
     this.ssa,
     this.type, {
-    TypeRef? declaredType,
     required this.rep,
     this.callable,
-    bool isFinal = false,
     ValueFacts? facts,
-  }) : _declaredType = declaredType,
-       _isFinal = isFinal,
-       facts = facts ?? ValueFacts.none;
+  }) : facts = facts ?? ValueFacts.none;
 
   factory Variable.ssa(
     CompilerContext ctx,
     Operation op,
     TypeRef type, {
-    TypeRef? declaredType,
     ValueRep? rep,
     CallableValue? callable,
-    bool isFinal = false,
     ValueFacts? facts,
   }) {
     ctx.pushOp(op);
@@ -60,10 +54,8 @@ class Variable {
     return Variable(
       op.writesTo!,
       type,
-      declaredType: declaredType,
       rep: rep ?? repForType(type, bank ?? MachineRepresentation.object),
       callable: callable,
-      isFinal: isFinal,
       facts: facts,
     );
   }
@@ -72,21 +64,11 @@ class Variable {
     CompilerContext ctx,
     SSA ssa,
     TypeRef type, {
-    TypeRef? declaredType,
     required ValueRep rep,
     CallableValue? callable,
-    bool isFinal = false,
     ValueFacts? facts,
   }) {
-    return Variable(
-      ssa,
-      type,
-      declaredType: declaredType,
-      rep: rep,
-      callable: callable,
-      isFinal: isFinal,
-      facts: facts,
-    );
+    return Variable(ssa, type, rep: rep, callable: callable, facts: facts);
   }
 
   /// A defined but unreachable result slot for a terminating expression.
@@ -98,17 +80,6 @@ class Variable {
   );
 
   final TypeRef type;
-
-  /// Carriers for the binding's [LocalBinding.declaredType]/[LocalBinding.isFinal]
-  /// before the value is bound: `setLocal` copies them onto the binding.
-  /// Once bound, the binding is authoritative and these are ignored.
-  final TypeRef? _declaredType;
-  final bool _isFinal;
-
-  /// The stable source-level type of the binding — for temporaries, the
-  /// declared type recorded at construction ([type] when none was given).
-  /// Bound values defer to the [LocalBinding]'s copy.
-  TypeRef get declaredType => binding?.declaredType ?? _declaredType ?? type;
 
   /// Physical representation of this SSA value — always [rep]'s bank, so
   /// the two cannot disagree.
@@ -145,10 +116,6 @@ class Variable {
   /// Signature information for a runtime callable, when known.
   final CallableValue? callable;
 
-  /// Whether reassignment of this value's binding is forbidden — bound
-  /// values read the [LocalBinding]'s flag; temporaries keep their own.
-  bool get isFinal => binding?.isFinal ?? _isFinal;
-
   CallSignature? get methodSignature => callable?.signature;
 
   bool get boxed => rep.isBoxed;
@@ -157,14 +124,8 @@ class Variable {
   /// value change dropped: [exactType], [concreteTypes], and method tear-off
   /// info are cleared. All SSA identity and binding metadata is preserved.
   Variable widened() {
-    return Variable(
-      ssa,
-      type,
-      declaredType: _declaredType,
-      rep: rep,
-      isFinal: _isFinal,
-      facts: facts.cleared(),
-    )..binding = binding;
+    return Variable(ssa, type, rep: rep, facts: facts.cleared())
+      ..binding = binding;
   }
 
   /// Widens this variable's allocation proofs for a control-flow join.
@@ -186,15 +147,8 @@ class Variable {
       }
     }
     if (!changed) return this;
-    return Variable(
-      ssa,
-      type,
-      declaredType: _declaredType,
-      rep: rep,
-      callable: c,
-      isFinal: _isFinal,
-      facts: merged,
-    )..binding = binding;
+    return Variable(ssa, type, rep: rep, callable: c, facts: merged)
+      ..binding = binding;
   }
 
   final SSA ssa;
@@ -250,7 +204,6 @@ class Variable {
       dest,
       type,
       rep: target,
-      declaredType: declaredType,
       callable: callable,
       facts: facts.copyWith(isConst: false),
     );
@@ -412,16 +365,11 @@ class Variable {
   /// Returns a copy of this variable carrying [facts] instead of its own.
   Variable withFacts(ValueFacts facts) => copyWith(facts: facts);
 
-  /// The binding's latest value after promotion or representation changes.
-  Variable updated(ScopeContext ctx) => binding?.current ?? this;
-
   /// Makes a copy of the variable with some fields updated.
   Variable copyWith({
     TypeRef? type,
-    TypeRef? declaredType,
     ValueRep? rep,
     CallableValue? callable,
-    bool? isFinal,
     bool? isConst,
     String? name,
     List<TypeRef>? possibleClasses,
@@ -439,10 +387,8 @@ class Variable {
     return Variable(
       name == null ? ssa : SSA(name),
       type ?? this.type,
-      declaredType: declaredType ?? _declaredType,
       rep: rep ?? this.rep,
       callable: callable ?? this.callable,
-      isFinal: isFinal ?? _isFinal,
       facts: newFacts,
     )..binding = binding;
   }

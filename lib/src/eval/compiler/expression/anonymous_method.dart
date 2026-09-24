@@ -84,10 +84,8 @@ Variable _runBody(
           : TypeRef.fromAnnotation(ctx, ctx.library, annotation);
       ctx.setLocal(
         name,
-        boundReceiver.copyWith(
-          type: declared ?? boundReceiver.type,
-          declaredType: declared ?? boundReceiver.type,
-        ),
+        boundReceiver.copyWith(type: declared ?? boundReceiver.type),
+        declaredType: declared ?? boundReceiver.type,
       );
     }
   }
@@ -105,10 +103,8 @@ Variable _runBody(
     final resultType = CoreTypes.object.ref(ctx).withNullable(true);
     ctx.setLocal(
       resultName,
-      BuiltinValue()
-          .push(ctx)
-          .boxIfNeeded(ctx)
-          .copyWith(type: resultType, declaredType: resultType),
+      BuiltinValue().push(ctx).boxIfNeeded(ctx).copyWith(type: resultType),
+      declaredType: resultType,
       frame: ctx.locals.length - 2,
     );
     final exit = BasicBlock<Operation>([], label: ctx.label('anon_exit'));

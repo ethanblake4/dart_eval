@@ -44,11 +44,11 @@ final class LocalBinding {
   LocalBinding(
     this.name,
     Variable current, {
+    required this.declaredType,
+    this.isFinal = false,
     this.frameIndex = -1,
     this.initialized = true,
   }) : storage = SsaStorage(),
-       declaredType = current.declaredType,
-       isFinal = current.isFinal,
        _current = current {
     current.binding = this;
   }
@@ -145,7 +145,6 @@ final class LocalBinding {
       stored.copyWith(
         name: local.name,
         type: localType,
-        declaredType: declaredType,
         rep: local.rep,
         facts: stored.facts.forBinding(),
       ),
@@ -160,9 +159,7 @@ final class LocalBinding {
       ctx,
       LoadExceptionSlot(ctx.svar('protected'), s.slot),
       _current.type,
-      declaredType: declaredType,
       rep: repForType(_current.type, _current.representation),
-      isFinal: isFinal,
       callable: _current.callable,
     ),
     ExceptionSlotStorage s => _readCell(ctx, s.cell!),
@@ -174,9 +171,7 @@ final class LocalBinding {
     ctx,
     ReadCaptureCell(ctx.svar('captured'), cell, _current.representation),
     _current.type,
-    declaredType: declaredType,
     rep: repForType(_current.type, _current.representation),
-    isFinal: isFinal,
     callable: _current.callable,
   );
 
@@ -205,8 +200,10 @@ final class LocalBinding {
   void storeInExceptionSlot(ExceptionSlot slot) {
     storage = switch (storage) {
       CaptureCellStorage s => ExceptionSlotStorage(slot, cell: s.cell),
-      ExceptionSlotStorage s when s.cell != null =>
-        ExceptionSlotStorage(slot, cell: s.cell),
+      ExceptionSlotStorage s when s.cell != null => ExceptionSlotStorage(
+        slot,
+        cell: s.cell,
+      ),
       _ => ExceptionSlotStorage(slot),
     };
   }

@@ -40,7 +40,7 @@ Variable compileFunctionExpression(
   final outerFunctionId = ctx.currentFunctionId;
   final outerFunctionLabel = ctx.funcLabel;
   final outerExceptionDepth = ctx.exceptionDepth;
-  final captures = <String, Variable>{};
+  final captures = <String, LocalBinding>{};
   final analysis = capturesFor(e);
   final freeNames = {...?analysis.free[e]};
   if (ctx.currentClass != null && ctx.lookupLocal('#this') != null) {
@@ -76,7 +76,7 @@ Variable compileFunctionExpression(
     }
   }
   for (final name in freeNames) {
-    final binding = ctx.lookupLocal(name);
+    final binding = ctx.lookupBinding(name);
     if (binding != null) captures[name] = binding;
   }
   ctx.finishMethod();
@@ -123,13 +123,15 @@ Variable compileFunctionExpression(
           Variable.of(
             ctx,
             loaded,
-            capture.value.type,
-            rep: capture.value.rep,
-            isFinal: capture.value.isFinal,
-            callable: capture.value.callable,
+            capture.value.current.type,
+            rep: capture.value.current.rep,
+            callable: capture.value.current.callable,
           ),
+          declaredType: capture.value.declaredType,
+          isFinal: capture.value.isFinal,
+          initialized: capture.value.initialized,
         );
-        if (capture.value.binding?.captureCell != null) {
+        if (capture.value.captureCell != null) {
           lb.storage = CaptureCellStorage(loaded);
         }
       }
@@ -400,7 +402,9 @@ Variable compileFunctionExpression(
     CreateClosure(
       ctx.svar('closure'),
       target,
-      captures.values.map((v) => v.binding?.captureCell ?? v.ssa).toList(),
+      captures.values
+          .map((binding) => binding.captureCell ?? binding.current.ssa)
+          .toList(),
       requiredPositional: requiredPositionalArgCount,
       positionalCount: positional.length,
       namedNames: sortedNamedArgNames,

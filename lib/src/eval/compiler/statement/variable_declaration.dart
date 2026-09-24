@@ -66,12 +66,17 @@ void compileVariableDeclarationList(
       final local = res.copyWith(
         name: ctx.svar(li.name.lexeme).name,
         type: type ?? ctx.typeFactory.widenedInferredType(res.type),
-        declaredType: type ?? ctx.typeFactory.widenedInferredType(res.type),
-        isFinal: l.isFinal || l.isConst,
         isConst: l.isConst,
       );
       ctx.pushOp(Assign(local.ssa, res.ssa));
-      ctx.setLocal(li.name.lexeme, local).captureBinding(ctx, li);
+      ctx
+          .setLocal(
+            li.name.lexeme,
+            local,
+            declaredType: type ?? ctx.typeFactory.widenedInferredType(res.type),
+            isFinal: l.isFinal || l.isConst,
+          )
+          .captureBinding(ctx, li);
     } else {
       if (isWildcard) continue;
       ctx
@@ -82,10 +87,10 @@ void compileVariableDeclarationList(
                 .boxIfNeeded(ctx)
                 .copyWith(
                   type: type ?? CoreTypes.dynamic.ref(ctx),
-                  declaredType: type ?? CoreTypes.dynamic.ref(ctx),
                   rep: ValueRep.boxed,
-                  isFinal: l.isFinal || l.isConst,
                 ),
+            declaredType: type ?? CoreTypes.dynamic.ref(ctx),
+            isFinal: l.isFinal || l.isConst,
             // An uninitialized `final`/`const` binding accepts its first
             // write through the initialized flag, not allocation facts.
             initialized: !(l.isFinal || l.isConst),

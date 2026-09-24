@@ -177,7 +177,7 @@ final class LocalDenotation extends Denotation {
 
   @override
   TypeRef writeType(CompilerContext ctx, {AstNode? source}) =>
-      binding.current.declaredType;
+      binding.declaredType;
 
   @override
   Variable _read(

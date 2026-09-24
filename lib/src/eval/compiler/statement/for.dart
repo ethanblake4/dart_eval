@@ -166,11 +166,8 @@ StatementInfo compileForEachLoop(
               name,
               BuiltinValue()
                   .push(ctx)
-                  .copyWith(
-                    type: elementType,
-                    declaredType: bindingType,
-                    rep: ValueRep.boxed,
-                  ),
+                  .copyWith(type: elementType, rep: ValueRep.boxed),
+              declaredType: bindingType,
             )
             .captureBinding(ctx, parts.loopVariable);
         loopVariable = IdentifierReference(null, name);
@@ -285,11 +282,8 @@ StatementInfo compileAwaitForLoop(
               name,
               BuiltinValue()
                   .push(ctx)
-                  .copyWith(
-                    type: elementType,
-                    declaredType: bindingType,
-                    rep: ValueRep.boxed,
-                  ),
+                  .copyWith(type: elementType, rep: ValueRep.boxed),
+              declaredType: bindingType,
             )
             .captureBinding(ctx, parts.loopVariable);
         loopVariable = IdentifierReference(null, name);
