@@ -41,6 +41,7 @@ dependencies:
 
 dev_dependencies:
   test: ^1.25.0
+  crypto: ^3.0.7
   build_runner: ^2.4.0
   json_serializable: ^6.3.0
   lints: '>=4.0.0'
