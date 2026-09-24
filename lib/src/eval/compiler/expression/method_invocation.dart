@@ -12,7 +12,6 @@ import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'dot_shorthand.dart';
 import 'expression.dart';
 import '../reference.dart';
-import 'identifier.dart';
 import 'null_aware.dart';
 import '../member/member_name.dart';
 import '../invocation/call.dart';
@@ -242,129 +241,29 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
         .toList() ??
     const [];
 
-/// Resolves the receiver for a `super.m(args)` call: finds the nearest
-/// concrete member above `this` — mixin-clause members first (below the
-/// member's own layer), then the superclass chain — and returns the
-/// appropriately-levelled super-link variable.
-///
-/// When no concrete member exists (only abstract declarations or none),
-/// the call is dispatched to `noSuchMethod` on the real receiver and the
-/// result is returned in the second position.
+/// Resolves the receiver for a `super.m(args)` call. A missing concrete
+/// member dispatches to noSuchMethod on the real receiver.
 (Variable, Variable?) _resolveSuperReceiver(
   CompilerContext ctx,
   MethodInvocation e,
-  Variable L,
+  Variable receiver,
 ) {
-  final memberName = e.methodName.name;
-  final lib = ctx.enclosingLibrary ?? ctx.library;
-  final (_, withClause, _, _) = classLikeClauses(ctx.currentClass!);
-  // `with` mixins below the member's own layer, nearest first (all of them
-  // for the class's own members); their members fold onto the applying
-  // class, so a hit dispatches against it. Then the superclass's own chain.
-  var stop = withClause.length;
-  final declaring = ctx.memberDeclaringClass;
-  if (declaring != null) {
-    final declaringName = switch (declaring) {
-      ClassDeclaration() ||
-      MixinDeclaration() ||
-      ClassTypeAlias() ||
-      EnumDeclaration() => declarationName(declaring),
-      _ => null,
-    };
-    for (var j = 0; j < withClause.length; j++) {
-      if (withClause[j].name.lexeme == declaringName) {
-        stop = j;
-        break;
-      }
-    }
-  }
-  var found = false;
-  for (var j = stop - 1; !found && j >= 0; j--) {
-    final mixinRef = clauseNamedType(ctx, lib, withClause[j]);
-    if (mixinRef == null) continue;
-    final memberDecl =
-        ctx.instanceDeclarationsMap[mixinRef.file]?[mixinRef
-            .name]?[memberName] ??
-        ctx.instanceDeclarationsMap[mixinRef.file]?[mixinRef
-            .name]?[MemberName.getter(memberName).key];
-    if (memberDecl == null) continue;
-    // Abstract mixin members defer to the next mixin or superclass.
-    if (memberDecl is MethodDeclaration && !memberDecl.isComplete) {
-      continue;
-    }
-    final appType = TypeRef.lookupDeclaration(ctx, lib, ctx.currentClass!);
-    L = Variable.of(
-      ctx,
-      L.ssa,
-      appType,
-      rep: L.rep,
-      facts: ValueFacts(possibleClasses: [appType]),
-    );
-    found = true;
-  }
-  var owner = L.type;
-  // Search the superclass chain for a concrete member without emitting
-  // `loadsuper` ops yet — a failed walk must not leave dead loads that
-  // execute on a null receiver.
-  final superTypes = <TypeRef>[];
-  // Kind of the nearest *abstract* declaration, if any is seen before a
-  // concrete implementation: decides the Invocation shape for a noSuchMethod
-  // dispatch (getter read vs. method call).
-  bool? abstractGetter;
-  while (!found) {
-    // `Object.noSuchMethod` exists on every class but is implicit — it is
-    // not present in bridge/declaration metadata.
-    if (memberName == 'noSuchMethod') {
-      found = true;
-      break;
-    }
-    // Abstract re-declarations have no body — skip them like runtime
-    // dispatch does; the implementation lives deeper in the chain.
-    if (ctx.memberLookup.concreteMemberOn(
-              owner,
-              MemberName(memberName, MemberKind.method),
-            ) !=
-            null ||
-        ctx.memberLookup.concreteMemberOn(
-              owner,
-              MemberName(memberName, MemberKind.getter),
-            ) !=
-            null) {
-      found = true;
-      break;
-    }
-    if (abstractGetter == null) {
-      final decls = ctx.instanceDeclarationsMap[owner.file]?[owner.name];
-      if (decls != null) {
-        if (decls.containsKey(MemberName.getter(memberName).key)) {
-          abstractGetter = true;
-        } else if (decls.containsKey(memberName)) {
-          abstractGetter = false;
-        }
-      }
-    }
-    final bridgeOwner =
-        ctx.topLevelDeclarationsMap[owner.file]?[owner.name]?.bridge;
-    if (bridgeOwner is BridgeClassDef &&
-        bridgeOwner.methods.containsKey(memberName)) {
-      found = true;
-      break;
-    }
-    final parent = ctx.typeSystem.superclassOf(owner);
-    if (parent == null) break;
-    owner = parent;
-    superTypes.add(owner);
-  }
-  if (!found) {
-    // A getter-shaped `super.m(...)` is a function-expression invocation:
-    // the `noSuchMethod` read evaluates before the arguments.
-    if (abstractGetter ?? false) {
+  final name = e.methodName.name;
+  final target = ctx.memberLookup.superMemberTarget(
+    receiver.type,
+    name,
+    kind: MemberKind.getter,
+    methodCall: true,
+  );
+  if (!target.found) {
+    // A getter-shaped call reads before evaluating the arguments.
+    if (target.abstractGetter ?? false) {
       final getterValue = NoSuchMethodCall(
-        name: memberName,
+        name: name,
         getterShaped: true,
       ).emitGetterValue(ctx);
       return (
-        L,
+        receiver,
         CallResolver(ctx).invokeValue(
           CallSite(
             shape: CallShape.fromArgumentList(
@@ -377,9 +276,9 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
         ),
       );
     }
-    final target = NoSuchMethodCall(name: memberName);
+    final fallback = NoSuchMethodCall(name: name);
     final bound = ArgumentBinder(ctx).bindSuppliedOnly(
-      target,
+      fallback,
       CallSite(
         shape: CallShape.fromArgumentList(
           e.argumentList,
@@ -389,15 +288,25 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
       ),
       callee: null,
     );
-    return (L, target.emit(ctx, bound));
+    return (receiver, fallback.emit(ctx, bound));
   }
-  for (final superType in superTypes) {
-    L = Variable.ssa(
+
+  if (target.hops.isEmpty && target.owner != receiver.type) {
+    receiver = Variable.of(
       ctx,
-      LoadSuper(ctx.svar('super'), L.ssa),
-      superType,
-      facts: ValueFacts(possibleClasses: [superType]),
+      receiver.ssa,
+      target.owner,
+      rep: receiver.rep,
+      facts: ValueFacts(possibleClasses: [target.owner]),
     );
   }
-  return (L, null);
+  for (final parent in target.hops) {
+    receiver = Variable.ssa(
+      ctx,
+      LoadSuper(ctx.svar('super'), receiver.ssa),
+      parent,
+      facts: ValueFacts(possibleClasses: [parent]),
+    );
+  }
+  return (receiver, null);
 }

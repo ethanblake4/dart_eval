@@ -150,7 +150,10 @@ final class LocalDenotation extends Denotation {
     final current = binding.current;
     if (current.methodOffset != null &&
         current.callingConvention != CallingConvention.dynamic) {
-      return StaticCall(current.methodOffset!, signature: current.methodSignature!);
+      return StaticCall(
+        current.methodOffset!,
+        signature: current.methodSignature!,
+      );
     }
     return null;
   }
@@ -434,37 +437,28 @@ final class InstanceMemberDenotation extends Denotation {
   Variable _superOwner(CompilerContext ctx, bool forSet) {
     final self = (receiver as SuperReceiver).self;
     var owner = self;
-    final mixinOwner = superMixinMemberOwner(ctx, name);
-    if (mixinOwner != null) {
+    final target = ctx.memberLookup.superMemberTarget(
+      self.type,
+      name,
+      kind: forSet ? MemberKind.setter : MemberKind.getter,
+    );
+    if (target.hops.isEmpty && target.owner != self.type) {
       return Variable.of(
         ctx,
         owner.ssa,
-        mixinOwner,
+        target.owner,
         rep: owner.rep,
-        facts: ValueFacts(possibleClasses: [mixinOwner]),
+        facts: ValueFacts(possibleClasses: [target.owner]),
       );
     }
-    var type = owner.type;
-    final kind = forSet ? MemberKind.setter : MemberKind.getter;
-    while (true) {
-      // Abstract re-declarations have no body — skip them like runtime
-      // dispatch does; the concrete implementation lives deeper.
-      final hit =
-          ctx.memberLookup.concreteMemberOn(
-                type,
-                MemberName(name, MemberKind.method),
-              ) !=
-              null ||
-          ctx.memberLookup.concreteMemberOn(type, MemberName(name, kind)) !=
-              null;
-      if (hit) {
-        return owner;
-      }
-      final parent = ctx.typeSystem.superclassOf(type);
-      if (parent == null) return owner;
-      type = parent;
-      owner = Variable.ssa(ctx, LoadSuper(ctx.svar('super'), owner.ssa), type);
+    for (final parent in target.hops) {
+      owner = Variable.ssa(
+        ctx,
+        LoadSuper(ctx.svar('super'), owner.ssa),
+        parent,
+      );
     }
+    return owner;
   }
 
   /// `receiver.name` where the member is declared on the enclosing class
@@ -1071,11 +1065,8 @@ Denotation _denotationOf(
   if (decl is ExtensionDeclaration) {
     final ext = ctx.extensions.firstWhere(
       (e) => e.declaration == decl,
-      orElse: () => EvalExtension(
-        decOrBridge.sourceLib,
-        decl,
-        declarationName(decl),
-      ),
+      orElse: () =>
+          EvalExtension(decOrBridge.sourceLib, decl, declarationName(decl)),
     );
     return ExtensionNamespaceDenotation(ext, name);
   }

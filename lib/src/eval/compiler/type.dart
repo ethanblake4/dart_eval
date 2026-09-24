@@ -133,7 +133,8 @@ sealed class TypeRef {
 
   /// Whether this type names the declaration [spec] refers to. Nullability
   /// and type arguments are ignored, matching today's nominal `==`.
-  bool isSpec(BridgeTypeSpec spec) => nominalDeclOf(this)?.isSpec(spec) ?? false;
+  bool isSpec(BridgeTypeSpec spec) =>
+      nominalDeclOf(this)?.isSpec(spec) ?? false;
 
   /// Whether this type's declaration lives in `dart:core`.
   bool get isDartCore => nominalDeclOf(this)?.isDartCore ?? false;
@@ -327,41 +328,6 @@ classLikeClauses(Declaration? dec) => switch (dec) {
     ),
   _ => (null, const <NamedType>[], const <NamedType>[], null),
 };
-
-/// For `super` in a class declared with `with` mixins, the mixin-application
-/// layer's members are folded into the applying class's declaration maps.
-/// Returns the applying class's [TypeRef] — under which the folded member is
-/// compiled — when [name] resolves to a member of one of those mixins
-/// (checked last-to-first, matching application order). Returns null when the
-/// member being compiled is itself folded in from a mixin — `super` there
-/// refers to the mixin's `on` constraint — or when no mixin declares [name].
-TypeRef? superMixinMemberOwner(CompilerContext ctx, String name) {
-  if (ctx.memberDeclaringClass != null) return null;
-  final hostDecl = ctx.currentClass;
-  if (hostDecl == null) return null;
-  for (final mixinType in classLikeClauses(hostDecl).$2.reversed) {
-    final prefix = mixinType.importPrefix;
-    final mixinName = prefix == null
-        ? mixinType.name.lexeme
-        : '${prefix.name.lexeme}.${mixinType.name.lexeme}';
-    var ref = ctx.visibleTypes[ctx.library]![mixinName];
-    final alias = ctx.typeAliases[ctx.library]?[mixinName];
-    if (ref == null && alias != null) {
-      ref = ctx.typeFactory.resolveTypeAlias(
-        ctx.library,
-        alias,
-        typeArgs: mixinType.typeArguments?.arguments,
-      );
-    }
-    if (ref == null) continue;
-    final mixinDecl = ctx.types.find(ref.file, ref.name);
-    if (mixinDecl == null) continue;
-    if (ctx.memberLookup.declaredAccessor(mixinDecl, name) != null) {
-      return TypeRef.lookupDeclaration(ctx, ctx.library, hostDecl);
-    }
-  }
-  return null;
-}
 
 /// Normalizes a parsed constructor name: `.new` names the unnamed
 /// constructor, whose internal name is the empty string.
@@ -758,7 +724,6 @@ extension TypeRefNominal on TypeRef {
     TypeParameterTypeRef ref => ref.name,
     RecordTypeRef ref => ref.name,
   };
-
 }
 
 /// The declaration [type] names when it's a nominal type — null for

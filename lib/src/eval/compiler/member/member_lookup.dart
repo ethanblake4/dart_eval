@@ -3,6 +3,8 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
+    show clauseNamedType;
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
@@ -24,6 +26,132 @@ final class MemberLookup {
   const MemberLookup(this.ctx);
 
   final CompilerContext ctx;
+
+  /// The target of a lexical `super.name` access. [hops] are the superclass
+  /// links between the initial super receiver and [owner]. A mixin member
+  /// folded into the applying class has no hops and uses that class as owner.
+  /// [abstractGetter] preserves the invocation shape when a call reaches
+  /// noSuchMethod instead of a concrete member.
+  ({TypeRef owner, List<TypeRef> hops, bool found, bool? abstractGetter})
+  superMemberTarget(
+    TypeRef start,
+    String name, {
+    required MemberKind kind,
+    bool methodCall = false,
+  }) {
+    final mixinOwner = _superMixinOwner(name, methodCall: methodCall);
+    if (mixinOwner != null) {
+      return (
+        owner: mixinOwner,
+        hops: const [],
+        found: true,
+        abstractGetter: null,
+      );
+    }
+
+    var owner = start;
+    final hops = <TypeRef>[];
+    bool? abstractGetter;
+    while (true) {
+      // Object.noSuchMethod is implicit in the declaration metadata.
+      if (methodCall && name == 'noSuchMethod') {
+        return (
+          owner: owner,
+          hops: hops,
+          found: true,
+          abstractGetter: abstractGetter,
+        );
+      }
+      if (concreteMemberOn(owner, MemberName(name, MemberKind.method)) !=
+              null ||
+          concreteMemberOn(owner, MemberName(name, kind)) != null) {
+        return (
+          owner: owner,
+          hops: hops,
+          found: true,
+          abstractGetter: abstractGetter,
+        );
+      }
+      if (methodCall) {
+        if (abstractGetter == null) {
+          final decls = ctx.instanceDeclarationsMap[owner.file]?[owner.name];
+          if (decls?.containsKey(MemberName.getter(name).key) ?? false) {
+            abstractGetter = true;
+          } else if (decls?.containsKey(name) ?? false) {
+            abstractGetter = false;
+          }
+        }
+        final bridge =
+            ctx.topLevelDeclarationsMap[owner.file]?[owner.name]?.bridge;
+        if (bridge is BridgeClassDef && bridge.methods.containsKey(name)) {
+          return (
+            owner: owner,
+            hops: hops,
+            found: true,
+            abstractGetter: abstractGetter,
+          );
+        }
+      }
+      final parent = ctx.typeSystem.superclassOf(owner);
+      if (parent == null) {
+        return (
+          owner: owner,
+          hops: hops,
+          found: false,
+          abstractGetter: abstractGetter,
+        );
+      }
+      owner = parent;
+      hops.add(owner);
+    }
+  }
+
+  TypeRef? _superMixinOwner(String name, {required bool methodCall}) {
+    final host = ctx.currentClass;
+    if (host == null || (!methodCall && ctx.memberDeclaringClass != null)) {
+      return null;
+    }
+    final mixins = classLikeClauses(host).$2;
+    var stop = mixins.length;
+    final declaring = ctx.memberDeclaringClass;
+    if (methodCall && declaring != null) {
+      final declaringName = switch (declaring) {
+        ClassDeclaration() ||
+        MixinDeclaration() ||
+        ClassTypeAlias() ||
+        EnumDeclaration() => declarationName(declaring),
+        _ => null,
+      };
+      for (var i = 0; i < mixins.length; i++) {
+        if (mixins[i].name.lexeme == declaringName) {
+          stop = i;
+          break;
+        }
+      }
+    }
+    final library = methodCall
+        ? ctx.enclosingLibrary ?? ctx.library
+        : ctx.library;
+    for (var i = stop - 1; i >= 0; i--) {
+      final mixin = clauseNamedType(ctx, library, mixins[i]);
+      if (mixin == null) continue;
+      if (methodCall) {
+        final declaration =
+            ctx.instanceDeclarationsMap[mixin.file]?[mixin.name]?[name] ??
+            ctx.instanceDeclarationsMap[mixin.file]?[mixin
+                .name]?[MemberName.getter(name).key];
+        if (declaration == null ||
+            (declaration is MethodDeclaration && !declaration.isComplete)) {
+          continue;
+        }
+      } else {
+        final decl = ctx.types.find(mixin.file, mixin.name);
+        if (decl == null || declaredAccessor(decl, name) == null) continue;
+      }
+      return TypeRef.lookupDeclaration(ctx, library, host);
+    }
+    return null;
+  }
 
   /// The member named [name] in [type]'s public interface. Throws
   /// [UnknownMemberError] when no member exists — callers wanting a

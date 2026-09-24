@@ -240,6 +240,17 @@ void main() {
     ''', 119);
   });
 
+  test('super getter uses a mixin member before the superclass', () {
+    check('''
+      class Base { int get value => 1; }
+      mixin Extra { int get value => 3; }
+      class Combined extends Base with Extra {
+        int read() => super.value;
+      }
+      int main() => Combined().read();
+    ''', 3);
+  });
+
   test('virtual receiver survives loop phis across different classes', () {
     check('''
       class First { int value(int n) => n + 1; }
