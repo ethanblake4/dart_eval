@@ -143,6 +143,7 @@ final class ClosureCall extends CallTarget {
               ctx,
               Assign(ctx.svar('closure_target'), boxed.ssa),
               boxed.type,
+              rep: boxed.rep,
             );
           }();
       ctx.pushOp(

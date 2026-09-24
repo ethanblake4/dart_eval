@@ -298,6 +298,7 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
       ctx,
       L.ssa,
       appType,
+      rep: L.rep,
       facts: ValueFacts(possibleClasses: [appType]),
     );
     found = true;

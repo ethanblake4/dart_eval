@@ -450,6 +450,7 @@ Variable _declarationToVariable(
       );
       return Variable(
         CoreTypes.function.ref(ctx),
+        rep: ValueRep.boxed,
         callable: CallableValue(
           offset: DeferredOrOffset(file: decOrBridge.sourceLib, name: name),
           signature: CallSignature.returnOnly(returnType),
@@ -479,6 +480,7 @@ Variable _declarationToVariable(
     );
     return Variable(
       CoreTypes.type.ref(ctx),
+      rep: ValueRep.boxed,
       facts: ValueFacts(denotedType: extType, possibleClasses: [extType]),
       callable: CallableValue(
         offset: DeferredOrOffset(
@@ -533,6 +535,7 @@ Variable _declarationToVariable(
     decl is FunctionDeclaration
         ? CoreTypes.function.ref(ctx)
         : CoreTypes.type.ref(ctx),
+    rep: ValueRep.boxed,
     facts: decl is FunctionDeclaration
         ? ValueFacts(possibleClasses: [returnType])
         : ValueFacts(denotedType: returnType, possibleClasses: [returnType]),

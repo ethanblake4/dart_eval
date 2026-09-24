@@ -361,6 +361,7 @@ void compileConstructorDeclaration(
         runtimeTypeArgument!,
       ], result: ctx.svar('redirected')),
       clsType,
+      rep: ValueRep.boxed,
     );
     doReturn(ctx, clsType, V);
     ctx.endScope();
@@ -971,6 +972,7 @@ Variable _invokeSuperConstructor(
     ctx,
     Call(methodOffset, [...ssa, superRuntimeType], result: ctx.svar('super')),
     extendsType,
+    rep: ValueRep.boxed,
   );
 }
 

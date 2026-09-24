@@ -1,5 +1,4 @@
-import 'backend/representation.dart'
-    show MachineRepresentation, representationForType;
+import 'backend/representation.dart' show MachineRepresentation, outputBankOf;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -55,14 +54,13 @@ class Variable {
   Variable(
     TypeRef type, {
     TypeRef? declaredType,
-    ValueRep? rep,
+    required this.rep,
     this.callable,
     bool isFinal = false,
     ValueFacts? facts,
   }) : type = type,
        _declaredType = declaredType,
        _isFinal = isFinal,
-       rep = rep ?? repForType(type, representationForType(type)),
        facts = facts ?? ValueFacts.none;
 
   factory Variable.ssa(
@@ -76,10 +74,19 @@ class Variable {
     ValueFacts? facts,
   }) {
     ctx.pushOp(op);
+    // The rep defaults to the bank the op actually writes — a scalar-typed
+    // value in an object slot is boxed, never silently mislabelled unboxed.
+    // Context-decided ops (calls, parameters, globals, assigns) have no
+    // fixed bank: pass `rep:` explicitly.
+    final bank = outputBankOf(op);
+    assert(
+      rep != null || bank != null,
+      'cannot infer rep for $op — pass rep: explicitly',
+    );
     return Variable(
       type,
       declaredType: declaredType,
-      rep: rep,
+      rep: rep ?? repForType(type, bank ?? MachineRepresentation.object),
       callable: callable,
       isFinal: isFinal,
       facts: facts,
@@ -91,7 +98,7 @@ class Variable {
     SSA ssa,
     TypeRef type, {
     TypeRef? declaredType,
-    ValueRep? rep,
+    required ValueRep rep,
     CallableValue? callable,
     bool isFinal = false,
     ValueFacts? facts,

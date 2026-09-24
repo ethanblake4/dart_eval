@@ -610,6 +610,7 @@ final class ExtensionMethodTearOff extends GetTarget {
   Variable emit(CompilerContext ctx) {
     return Variable(
       CoreTypes.function.ref(ctx),
+      rep: ValueRep.boxed,
       callable: CallableValue(
         offset: DeferredOrOffset(
           file: ext.library,

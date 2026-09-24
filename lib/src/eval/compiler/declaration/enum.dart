@@ -16,6 +16,7 @@ import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/string.dart';
+import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 
 void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
@@ -165,6 +166,7 @@ void _compileEnumValue(
     ctx,
     Call(offset, arguments, result: ctx.svar('enum_value')),
     type,
+    rep: ValueRep.boxed,
   );
   final name = '$clsName.$cName';
   final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;

@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 
 Variable compileThrowExpression(CompilerContext ctx, ThrowExpression e) {
   final V = compileExpression(e.expression, ctx);
@@ -19,5 +20,10 @@ Variable compileThrowExpression(CompilerContext ctx, ThrowExpression e) {
   if (!V.type.isSpec(CoreTypes.never)) {
     ctx.pushOp(Throw(V.boxIfNeeded(ctx).ssa));
   }
-  return Variable.of(ctx, dead, CoreTypes.never.ref(ctx));
+  return Variable.of(
+    ctx,
+    dead,
+    CoreTypes.never.ref(ctx),
+    rep: ValueRep.nativeNull,
+  );
 }

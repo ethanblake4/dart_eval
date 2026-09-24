@@ -48,6 +48,7 @@ final class ArgumentBinder {
         ctx,
         Assign(ctx.svar('closure_target'), boxed.ssa),
         boxed.type,
+        rep: boxed.rep,
       );
     }
 
@@ -57,6 +58,7 @@ final class ArgumentBinder {
             ctx,
             Assign(ctx.svar('closure_argument'), argument.ssa),
             argument.type,
+            rep: argument.rep,
           ).boxIfNeeded(ctx);
 
     final positional = List<BoundArgument?>.filled(

@@ -64,6 +64,7 @@ bool containsLeadingShorthand(Expression e) => switch (e) {
 /// so [IdentifierReference] resolves the shorthand's static members.
 Variable _typeNamespace(CompilerContext ctx, TypeRef type) => Variable(
   CoreTypes.type.ref(ctx),
+  rep: ValueRep.boxed,
   facts: ValueFacts(denotedType: type, possibleClasses: [type]),
 );
 

@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../invocation/resolver.dart';
+import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 
 Variable compileStringInterpolation(
   CompilerContext ctx,
@@ -45,7 +46,7 @@ Variable compileStringInterpolation(
 
   if (build == null) {
     // Only reachable when every element threw.
-    return Variable(CoreTypes.never.ref(ctx));
+    return Variable(CoreTypes.never.ref(ctx), rep: ValueRep.boxed);
   }
   // An interpolation in a const context — or one whose interpolated
   // values are all consts — is itself constant and canonicalized.

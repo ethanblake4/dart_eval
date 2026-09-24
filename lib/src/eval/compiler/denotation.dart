@@ -326,6 +326,7 @@ final class StaticMemberDenotation extends Denotation {
   Variable read(CompilerContext ctx, {AstNode? source}) {
     final fn = Variable(
       CoreTypes.function.ref(ctx),
+      rep: ValueRep.boxed,
       callable: CallableValue(offset: _offset(ctx)),
     );
     if (member.isGetter) {
@@ -466,6 +467,7 @@ final class InstanceMemberDenotation extends Denotation {
         ctx,
         owner.ssa,
         mixinOwner,
+        rep: owner.rep,
         facts: ValueFacts(possibleClasses: [mixinOwner]),
       );
     }
@@ -512,6 +514,7 @@ final class InstanceMemberDenotation extends Denotation {
           !declaration.isSetter) {
         return Variable(
           CoreTypes.function.ref(ctx),
+          rep: ValueRep.boxed,
           callable: CallableValue(
             offset: DeferredOrOffset(
               file: ctx.library,
@@ -549,6 +552,7 @@ final class InstanceMemberDenotation extends Denotation {
         !memberDecl.isSetter) {
       return Variable(
         CoreTypes.function.ref(ctx),
+        rep: ValueRep.boxed,
         callable: CallableValue(
           offset: DeferredOrOffset(
             file: owner.type.file,
@@ -783,6 +787,7 @@ final class ExtensionMemberDenotation extends Denotation {
       }
       return Variable(
         CoreTypes.function.ref(ctx),
+        rep: ValueRep.boxed,
         callable: CallableValue(offset: offset),
       );
     }
@@ -805,6 +810,7 @@ final class ExtensionMemberDenotation extends Denotation {
     }
     return Variable(
       CoreTypes.function.ref(ctx),
+      rep: ValueRep.boxed,
       callable: CallableValue(
         offset: offset,
         signature: CallSignature.returnOnly(
@@ -1056,6 +1062,7 @@ final class ExtensionNamespaceDenotation extends Denotation {
     final extType = ExtensionNamespaceTypeRef(ext.library, ext.name);
     return Variable(
       CoreTypes.type.ref(ctx),
+      rep: ValueRep.boxed,
       facts: ValueFacts(denotedType: extType, possibleClasses: [extType]),
       callable: CallableValue(
         offset: DeferredOrOffset(file: ext.library, name: '${ext.name}.'),
@@ -1533,6 +1540,7 @@ final class _TypeMemberDenotation extends Denotation {
       );
       final fn = Variable(
         CoreTypes.function.ref(ctx),
+        rep: ValueRep.boxed,
         callable: CallableValue(offset: memberOffset),
       );
       if (memberDecl is MethodDeclaration && memberDecl.isGetter) {

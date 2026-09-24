@@ -34,6 +34,91 @@ MachineRepresentation representationForType(TypeRef type) {
   };
 }
 
+/// The register bank an operation's result lands in — the output side of the
+/// rules [analyzeRepresentations] applies. A [Variable] created at emission
+/// uses this to name its slot's bank instead of guessing from its type.
+/// Returns null for ops whose bank is context-decided (parameters, calls and
+/// globals via signatures, `Assign`/`Negate`/phi inheriting the source's
+/// bank) and for ops that write no value.
+MachineRepresentation? outputBankOf(cfg.Operation operation) =>
+    switch (operation) {
+      exceptions.LoadExceptionSlot(:final slot) => slot.representation,
+      StringOperation(:final operator) =>
+        operator == StringOperator.length ||
+                operator == StringOperator.codeUnitAt
+            ? MachineRepresentation.integer
+            : MachineRepresentation.string,
+      NumericBinary(:final resultRepresentation) => resultRepresentation,
+      IntToDouble() => MachineRepresentation.doublePrecision,
+      memory.LoadInt() ||
+      collection.IterableLength() ||
+      collection.ListLength() ||
+      types.ResolveTypeId() => MachineRepresentation.integer,
+      memory.LoadDouble() => MachineRepresentation.doublePrecision,
+      alu.IntAdd() ||
+      alu.IntSub() ||
+      alu.Increment() => MachineRepresentation.integer,
+      memory.LoadBool() ||
+      alu.IntEqual() ||
+      alu.IntNotEqual() ||
+      alu.IntLessThan() ||
+      alu.IntLessThanOrEqual() ||
+      alu.IntGreaterThan() ||
+      alu.IntGreaterThanOrEqual() ||
+      alu.LessThan() ||
+      logic.LogicalNot() ||
+      logic.LogicalAnd() ||
+      logic.LogicalOr() ||
+      memory.IsNull() ||
+      objects.DynamicEquals() ||
+      types.IsType() => MachineRepresentation.boolean,
+      memory.LoadString() => MachineRepresentation.string,
+      primitives.Unbox(:final representation) => representation,
+      closures.ReadCaptureCell(:final representation) => representation,
+      primitives.BoxInt() ||
+      primitives.BoxDouble() ||
+      primitives.BoxBool() ||
+      primitives.BoxString() ||
+      primitives.BoxNum() ||
+      primitives.MaybeBoxNull() ||
+      primitives.BoxList() ||
+      primitives.BoxMap() ||
+      primitives.BoxSet() ||
+      primitives.BoxNull() ||
+      memory.LoadNull() ||
+      objects.LoadUninitializedField() ||
+      objects.InvokeDynamic() ||
+      objects.LoadPropertyStatic() ||
+      objects.LoadPropertyDynamic() ||
+      objects.LoadSuper() ||
+      objects.LoadThis() ||
+      objects.InternConst() ||
+      objects.CreateClass() ||
+      bridge.InvokeExternal() ||
+      bridge.PrepareBridgeArgument() ||
+      bridge.BridgeInstantiate() ||
+      bridge.NewBridgeSuperShim() ||
+      closures.InvokeClosure() ||
+      closures.CreateClosure() ||
+      closures.NewCaptureCell() ||
+      closures.LoadCapture() ||
+      exceptions.CaughtException() ||
+      exceptions.CaughtStackTrace() ||
+      async.BeginAsync() ||
+      async.Await() ||
+      functions_ir.LoadFunctionPointer() ||
+      collection.NewList() ||
+      collection.NewMap() ||
+      collection.NewSet() ||
+      collection.IndexList() ||
+      collection.IndexMap() ||
+      collection.NewRecord() ||
+      types.LoadConstantType() ||
+      types.LoadTypeParameter() ||
+      types.LoadRuntimeType() => MachineRepresentation.object,
+      _ => null,
+    };
+
 /// Computes the physical representation of each SSA version without changing
 /// the graph. Assignments and phi inputs must agree; conversions stay explicit.
 Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(

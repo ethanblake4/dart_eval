@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../invocation/resolver.dart';
+import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 
 Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
   if (str.strings.every((element) => element is SimpleStringLiteral)) {
@@ -36,7 +37,7 @@ Variable compileAdjacentStrings(CompilerContext ctx, AdjacentStrings str) {
   }
 
   if (build == null) {
-    return Variable(CoreTypes.never.ref(ctx));
+    return Variable(CoreTypes.never.ref(ctx), rep: ValueRep.boxed);
   }
   return build;
 }
