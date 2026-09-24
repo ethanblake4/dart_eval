@@ -60,6 +60,21 @@ final class ParameterSpec {
     erased: erased,
     node: node,
   );
+
+  // `node` is binding metadata, not part of the signature's identity;
+  // `defaultValue` compares by kind (its AST has no meaningful equality).
+  @override
+  bool operator ==(Object other) =>
+      other is ParameterSpec &&
+      other.name == name &&
+      other.type == type &&
+      other.isRequired == isRequired &&
+      other.erased == erased &&
+      other.defaultValue.runtimeType == defaultValue.runtimeType;
+
+  @override
+  int get hashCode =>
+      Object.hash(name, type, isRequired, erased, defaultValue.runtimeType);
 }
 
 /// The full calling shape of a member: its own type parameters, positional
