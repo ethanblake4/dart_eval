@@ -15,6 +15,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import '../values/value_rep.dart';
 import '../invocation/call.dart';
 import '../invocation/resolver.dart';
+import '../variable/value_facts.dart';
 
 /// Resolves the context type a `.member` shorthand selects: the bound type
 /// with nullability stripped and `FutureOr` unwrapped. Throws when the
@@ -61,8 +62,10 @@ bool containsLeadingShorthand(Expression e) => switch (e) {
 
 /// A type-namespace variable for [type], standing in for the `C` of `C.member`
 /// so [IdentifierReference] resolves the shorthand's static members.
-Variable _typeNamespace(CompilerContext ctx, TypeRef type) =>
-    Variable(CoreTypes.type.ref(ctx), concreteTypes: [type]);
+Variable _typeNamespace(CompilerContext ctx, TypeRef type) => Variable(
+  CoreTypes.type.ref(ctx),
+  facts: ValueFacts(denotedType: type, possibleClasses: [type]),
+);
 
 /// `.member` — a static member (enum value, static field, getter, method
 /// tear-off) of the context type.

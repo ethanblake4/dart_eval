@@ -76,9 +76,8 @@ Receiver receiverOf(CompilerContext ctx, Variable v, {BoundExtension? pin}) {
   if (pin case final bound?) {
     return ExtensionApplicationReceiver(bound.ext, bound.onBindings, v);
   }
-  if (v.type.isSpec(CoreTypes.type) && v.concreteTypes.length == 1) {
-    return TypeLiteralReceiver(v.concreteTypes.first, v);
-  }
+  final denoted = v.denotedType;
+  if (denoted != null) return TypeLiteralReceiver(denoted, v);
   return ValueReceiver(v);
 }
 
@@ -166,7 +165,7 @@ final class LocalDenotation extends Denotation {
             .copyWithUpdate(
               ctx,
               type: localType,
-              concreteTypes: stored.concreteTypes,
+              possibleClasses: stored.concreteTypes,
             )
             .exactType =
         stored.exactType;
@@ -467,7 +466,7 @@ final class InstanceMemberDenotation extends Denotation {
         ctx,
         owner.ssa,
         mixinOwner,
-        concreteTypes: [mixinOwner],
+        facts: ValueFacts(possibleClasses: [mixinOwner]),
       );
     }
     var type = owner.type;
@@ -940,7 +939,10 @@ final class TypeParameterDenotation extends Denotation {
     ctx,
     LoadTypeParameter(ctx.svar('type'), ctx.runtimeTypes.idOf(typeParameter)),
     CoreTypes.type.ref(ctx),
-    concreteTypes: [typeParameter],
+    facts: ValueFacts(
+      denotedType: typeParameter,
+      possibleClasses: [typeParameter],
+    ),
   );
 
   @override
@@ -1054,7 +1056,7 @@ final class ExtensionNamespaceDenotation extends Denotation {
     final extType = ExtensionNamespaceTypeRef(ext.library, ext.name);
     return Variable(
       CoreTypes.type.ref(ctx),
-      concreteTypes: [extType],
+      facts: ValueFacts(denotedType: extType, possibleClasses: [extType]),
       callable: CallableValue(
         offset: DeferredOrOffset(file: ext.library, name: '${ext.name}.'),
       ),

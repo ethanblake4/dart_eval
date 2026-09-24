@@ -19,6 +19,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import '../values/value_rep.dart';
+import '../variable/value_facts.dart';
 
 const _boxListElements = true;
 
@@ -62,7 +63,7 @@ Variable compileListLiteral(
     NewList(ctx.svar('list')),
     listType,
     rep: ValueRep.nativeList,
-    exactType: listType,
+    facts: ValueFacts(exact: listType),
   );
 
   ctx.beginScope();

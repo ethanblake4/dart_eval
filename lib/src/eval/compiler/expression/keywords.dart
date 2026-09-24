@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import '../variable/value_facts.dart';
 
 Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
   // In an anonymous-method body `this` is the anonymous receiver itself.
@@ -72,7 +73,7 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
     ctx,
     LoadSuper(ctx.svar('super'), $this.ssa),
     type,
-    concreteTypes: [type],
+    facts: ValueFacts(possibleClasses: [type]),
   );
   return v;
 }

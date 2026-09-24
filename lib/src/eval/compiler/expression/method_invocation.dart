@@ -20,6 +20,7 @@ import '../invocation/call.dart';
 import '../invocation/binder.dart';
 import '../invocation/resolver.dart';
 import '../invocation/targets.dart';
+import '../variable/value_facts.dart';
 
 Variable compileMethodInvocation(
   CompilerContext ctx,
@@ -293,7 +294,12 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
       continue;
     }
     final appType = TypeRef.lookupDeclaration(ctx, lib, ctx.currentClass!);
-    L = Variable.of(ctx, L.ssa, appType, concreteTypes: [appType]);
+    L = Variable.of(
+      ctx,
+      L.ssa,
+      appType,
+      facts: ValueFacts(possibleClasses: [appType]),
+    );
     found = true;
   }
   var owner = L.type;
@@ -390,7 +396,7 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
       ctx,
       LoadSuper(ctx.svar('super'), L.ssa),
       superType,
-      concreteTypes: [superType],
+      facts: ValueFacts(possibleClasses: [superType]),
     );
   }
   return (L, null);

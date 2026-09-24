@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
+import '../variable/value_facts.dart';
 
 /// Handles `List<num>`, `Map<String, int>` etc. as expressions.
 Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
@@ -29,7 +30,10 @@ Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
         ctx,
         operation,
         CoreTypes.type.ref(ctx),
-        concreteTypes: [parameterized],
+        facts: ValueFacts(
+          denotedType: parameterized,
+          possibleClasses: [parameterized],
+        ),
       );
     }
   }

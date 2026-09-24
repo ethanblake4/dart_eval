@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'variable/value_facts.dart';
 
 class BuiltinValue {
   BuiltinValue({
@@ -43,10 +44,12 @@ class BuiltinValue {
         LoadInt(target, intval!),
         type,
         rep: ValueRep.int,
-        concreteTypes: [type],
-        exactType: type,
-        isConstInt: true,
-        isConst: true,
+        facts: ValueFacts(
+          exact: type,
+          possibleClasses: [type],
+          isConst: true,
+          isConstInt: true,
+        ),
       );
     } else if (type == BuiltinValueType.doubleType) {
       final type = CoreTypes.double.ref(ctx);
@@ -55,9 +58,7 @@ class BuiltinValue {
         LoadDouble(target, doubleval!),
         type,
         rep: ValueRep.double,
-        concreteTypes: [type],
-        exactType: type,
-        isConst: true,
+        facts: ValueFacts(exact: type, possibleClasses: [type], isConst: true),
       );
     } else if (type == BuiltinValueType.stringType) {
       final type = CoreTypes.string.ref(ctx);
@@ -66,9 +67,7 @@ class BuiltinValue {
         LoadString(target, stringval!),
         type,
         rep: ValueRep.string,
-        concreteTypes: [type],
-        exactType: type,
-        isConst: true,
+        facts: ValueFacts(exact: type, possibleClasses: [type], isConst: true),
       );
     } else if (type == BuiltinValueType.boolType) {
       final type = CoreTypes.bool.ref(ctx);
@@ -77,9 +76,7 @@ class BuiltinValue {
         LoadBool(target, boolval!),
         type,
         rep: ValueRep.bool,
-        concreteTypes: [type],
-        exactType: type,
-        isConst: true,
+        facts: ValueFacts(exact: type, possibleClasses: [type], isConst: true),
       );
     } else if (type == BuiltinValueType.nullType) {
       final type = CoreTypes.nullType.ref(ctx);
@@ -88,8 +85,7 @@ class BuiltinValue {
         LoadNull(target),
         type,
         rep: ValueRep.nativeNull,
-        concreteTypes: [type],
-        isConst: true,
+        facts: ValueFacts(possibleClasses: [type], isConst: true),
       );
     } else {
       throw CompileError('Cannot push unknown builtin value type $type');

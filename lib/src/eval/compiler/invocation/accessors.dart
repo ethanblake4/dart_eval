@@ -23,6 +23,7 @@ import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/string.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import '../values/abi.dart';
+import '../variable/value_facts.dart';
 
 /// How a member read `o.name` lowers. [GetTarget.resolve] picks the target
 /// from the receiver's static type, representations, and facts; [emit]
@@ -95,6 +96,7 @@ sealed class GetTarget {
             constantType: (
               ctx.runtimeTypes.idOf(concrete),
               concrete.requiresTypeEnvironment,
+              concrete,
             ),
           );
         }
@@ -403,8 +405,8 @@ final class IntrinsicGet extends GetTarget {
   final bool string;
 
   /// `runtimeType` on a statically known concrete type: (type id, whether
-  /// the descriptor needs the type environment).
-  final (int, bool)? constantType;
+  /// the descriptor needs the type environment, the denoted type).
+  final (int, bool, TypeRef)? constantType;
 
   /// `runtimeType` on an unknown runtime value.
   final bool loadRuntime;
@@ -431,11 +433,16 @@ final class IntrinsicGet extends GetTarget {
             ? LoadTypeParameter(ctx.svar('var_type'), constantType!.$1)
             : LoadConstantType(ctx.svar('var_type'), constantType!.$1),
         CoreTypes.type.ref(ctx),
+        facts: ValueFacts(denotedType: constantType!.$3),
       ),
       _ => Variable.ssa(
         ctx,
         LoadRuntimeType(ctx.svar('runtime_type'), recv.ssa),
         CoreTypes.type.ref(ctx),
+        facts: switch (recv.exactType) {
+          final exact? => ValueFacts(denotedType: exact),
+          null => null,
+        },
       ),
     };
   }
@@ -472,7 +479,7 @@ final class FieldSlotGet extends GetTarget {
         ctx,
         LoadSuper(ctx.svar('super'), linkSsa),
         parent,
-        concreteTypes: [parent],
+        facts: ValueFacts(possibleClasses: [parent]),
       ).ssa;
     }
     return Variable.ssa(
@@ -516,7 +523,7 @@ final class DirectGetterCall extends GetTarget {
         ctx,
         LoadSuper(ctx.svar('super'), linkSsa),
         parent,
-        concreteTypes: [parent],
+        facts: ValueFacts(possibleClasses: [parent]),
       ).ssa;
     }
     return Variable.ssa(
@@ -920,7 +927,7 @@ final class FieldSlotSet extends SetTarget {
         ctx,
         LoadSuper(ctx.svar('super'), linkSsa),
         parent,
-        concreteTypes: [parent],
+        facts: ValueFacts(possibleClasses: [parent]),
       ).ssa;
     }
     ctx.pushOp(
@@ -962,7 +969,7 @@ final class DirectSetterCall extends SetTarget {
         ctx,
         LoadSuper(ctx.svar('super'), linkSsa),
         parent,
-        concreteTypes: [parent],
+        facts: ValueFacts(possibleClasses: [parent]),
       ).ssa;
     }
     ctx.pushOp(

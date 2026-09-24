@@ -21,6 +21,7 @@ import '../values/abi.dart';
 import 'binder.dart';
 import 'resolver.dart';
 import 'bound_call.dart';
+import '../variable/value_facts.dart';
 
 /// What is called — the resolver's output: a value holding only the
 /// information resolution established (offsets, resolved members,
@@ -262,10 +263,12 @@ final class ConstructorCall extends CallTarget {
       result,
       instantiatedType,
       rep: ValueRep.boxed,
-      concreteTypes: [instantiatedType],
-      // A factory may return any subtype — the result is not exactly the
-      // declared class.
-      exactType: _isFactory ? null : instantiatedType,
+      facts: ValueFacts(
+        // A factory may return any subtype — the result is not exactly the
+        // declared class.
+        exact: _isFactory ? null : instantiatedType,
+        possibleClasses: [instantiatedType],
+      ),
     );
   }
 }
@@ -397,7 +400,7 @@ SSA ownerLinkSsa(
       ctx,
       LoadSuper(ctx.svar('super'), ssa),
       parent,
-      concreteTypes: [parent],
+      facts: ValueFacts(possibleClasses: [parent]),
     ).ssa;
   }
   return ssa;

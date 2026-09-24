@@ -33,6 +33,7 @@ import 'accessors.dart';
 import 'devirtualizer.dart';
 import 'intrinsics.dart';
 import 'targets.dart';
+import '../variable/value_facts.dart';
 
 /// Turns a [CallSite] into a [CallTarget] and emits the call. Resolution
 /// consults only the receiver's static type and facts plus the syntactic
@@ -1197,8 +1198,7 @@ final class CallResolver {
               callResult,
               resolved,
               rep: ValueRep.boxed,
-              concreteTypes: [resolved],
-              exactType: resolved,
+              facts: ValueFacts(exact: resolved, possibleClasses: [resolved]),
             );
           }
           break;
@@ -1221,8 +1221,10 @@ final class CallResolver {
             result,
             instantiatedType,
             rep: Abi.unboxedAcrossCalls(type),
-            concreteTypes: [instantiatedType],
-            exactType: instantiatedType,
+            facts: ValueFacts(
+              exact: instantiatedType,
+              possibleClasses: [instantiatedType],
+            ),
           );
         }
       case FunctionDenotation() ||
@@ -1442,10 +1444,12 @@ final class CallResolver {
       result,
       instantiatedReturnType,
       rep: resultRep,
-      concreteTypes: [if (isConstructor) instantiatedReturnType],
-      // A factory may return any subtype — the result is not exactly the
-      // declared class.
-      exactType: generativeCtor ? instantiatedReturnType : null,
+      facts: ValueFacts(
+        // A factory may return any subtype — the result is not exactly the
+        // declared class.
+        exact: generativeCtor ? instantiatedReturnType : null,
+        possibleClasses: [if (isConstructor) instantiatedReturnType],
+      ),
     );
 
     return v;

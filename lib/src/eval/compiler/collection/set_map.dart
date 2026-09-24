@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import '../values/value_rep.dart';
+import '../variable/value_facts.dart';
 
 /// Compiles `{...}` into a Set or Map literal. [bound] is the context type
 /// (e.g. a declared field or parameter type): in Dart it drives literal
@@ -82,7 +83,7 @@ Variable compileSetOrMapLiteral(
     isMap ? NewMap(target) : NewSet(target),
     exactCollectionType,
     rep: isMap ? ValueRep.nativeMap : ValueRep.nativeSet,
-    exactType: exactCollectionType,
+    facts: ValueFacts(exact: exactCollectionType),
   );
   for (final element in literal.elements) {
     final (keys, values) = _compileElement(

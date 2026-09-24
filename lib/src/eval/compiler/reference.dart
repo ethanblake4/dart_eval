@@ -33,6 +33,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'values/abi.dart';
 import 'invocation/accessors.dart';
 import 'invocation/resolver.dart';
+import 'variable/value_facts.dart';
 
 part 'denotation.dart';
 
@@ -478,7 +479,7 @@ Variable _declarationToVariable(
     );
     return Variable(
       CoreTypes.type.ref(ctx),
-      concreteTypes: [extType],
+      facts: ValueFacts(denotedType: extType, possibleClasses: [extType]),
       callable: CallableValue(
         offset: DeferredOrOffset(
           file: decOrBridge.sourceLib,
@@ -532,7 +533,7 @@ Variable _declarationToVariable(
     decl is FunctionDeclaration
         ? CoreTypes.function.ref(ctx)
         : CoreTypes.type.ref(ctx),
-    concreteTypes: [returnType],
+    facts: ValueFacts(denotedType: returnType, possibleClasses: [returnType]),
     callable: CallableValue(
       offset: offset,
       signature: CallSignature.returnOnly(returnType),
@@ -646,7 +647,7 @@ Variable _typeLiteral(
     ctx,
     operation,
     CoreTypes.type.ref(ctx),
-    concreteTypes: [type],
+    facts: ValueFacts(denotedType: type, possibleClasses: [type]),
     callable: CallableValue(
       offset: DeferredOrOffset(file: type.file, name: constructorKey),
       signature: CallSignature.returnOnly(type),

@@ -84,7 +84,7 @@ Variable emitNullGuard(
       ).boxIfNeeded(ctx);
       out = out.copyWith(
         type: V.type.withNullable(true),
-        concreteTypes: {
+        possibleClasses: {
           ...V.concreteTypes,
           CoreTypes.nullType.ref(ctx),
         }.toList(),

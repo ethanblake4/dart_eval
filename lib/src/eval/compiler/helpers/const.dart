@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
+import '../variable/value_facts.dart';
 
 /// Emits an [InternConst] for the SSA [value] — canonicalizing a
 /// `const`-context instance at runtime — and returns the canonical SSA.
@@ -24,7 +25,9 @@ Variable internConst(CompilerContext ctx, Variable value, TypeRef type) =>
       value.type,
       rep: value.rep,
       declaredType: value.declaredType,
-      concreteTypes: value.concreteTypes,
-      exactType: value.exactType,
-      isConst: true,
+      facts: ValueFacts(
+        possibleClasses: value.concreteTypes,
+        exact: value.exactType,
+        isConst: true,
+      ),
     );

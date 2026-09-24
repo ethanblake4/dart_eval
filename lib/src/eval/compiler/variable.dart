@@ -58,32 +58,12 @@ class Variable {
     ValueRep? rep,
     this.callable,
     bool isFinal = false,
-    List<TypeRef> concreteTypes = const [],
-    TypeRef? exactType,
-    bool isConstInt = false,
-    bool isConst = false,
     ValueFacts? facts,
   }) : type = type,
        _declaredType = declaredType,
        _isFinal = isFinal,
        rep = rep ?? repForType(type, representationForType(type)),
-       facts =
-           facts ??
-           ValueFacts(
-             exact: exactType,
-             possibleClasses: concreteTypes,
-             isConst: isConst,
-             isConstInt: isConstInt,
-           ) {
-    assert(
-      facts == null ||
-          (concreteTypes.isEmpty &&
-              exactType == null &&
-              !isConst &&
-              !isConstInt),
-      'pass facts or the legacy fact fields, not both',
-    );
-  }
+       facts = facts ?? ValueFacts.none;
 
   factory Variable.ssa(
     CompilerContext ctx,
@@ -93,10 +73,6 @@ class Variable {
     ValueRep? rep,
     CallableValue? callable,
     bool isFinal = false,
-    List<TypeRef> concreteTypes = const [],
-    TypeRef? exactType,
-    bool isConstInt = false,
-    bool isConst = false,
     ValueFacts? facts,
   }) {
     ctx.pushOp(op);
@@ -106,10 +82,6 @@ class Variable {
       rep: rep,
       callable: callable,
       isFinal: isFinal,
-      concreteTypes: concreteTypes,
-      exactType: exactType,
-      isConstInt: isConstInt,
-      isConst: isConst,
       facts: facts,
     )..name = op.writesTo!.name;
   }
@@ -122,10 +94,6 @@ class Variable {
     ValueRep? rep,
     CallableValue? callable,
     bool isFinal = false,
-    List<TypeRef> concreteTypes = const [],
-    TypeRef? exactType,
-    bool isConstInt = false,
-    bool isConst = false,
     ValueFacts? facts,
   }) {
     return Variable(
@@ -134,10 +102,6 @@ class Variable {
       rep: rep,
       callable: callable,
       isFinal: isFinal,
-      concreteTypes: concreteTypes,
-      exactType: exactType,
-      isConstInt: isConstInt,
-      isConst: isConst,
       facts: facts,
     )..name = ssa.name;
   }
@@ -499,16 +463,15 @@ class Variable {
     bool? isFinal,
     bool? isConst,
     String? name,
-    int? frameIndex,
-    List<TypeRef>? concreteTypes,
-    TypeRef? exactType,
+    List<TypeRef>? possibleClasses,
+    TypeRef? exact,
     ValueFacts? facts,
   }) {
     final newFacts =
         facts ??
         this.facts.copyWith(
-          possibleClasses: concreteTypes,
-          exact: exactType,
+          possibleClasses: possibleClasses,
+          exact: exact,
           isConst: isConst,
           // The literal-int marker only applies to the literal expression
           // itself; any copy drops it.
@@ -535,8 +498,7 @@ class Variable {
     ValueRep? rep,
     CallableValue? callable,
     String? name,
-    int? frameIndex,
-    List<TypeRef>? concreteTypes,
+    List<TypeRef>? possibleClasses,
     ValueFacts? facts,
   }) {
     var uV = copyWith(
@@ -545,8 +507,7 @@ class Variable {
       rep: rep,
       callable: callable,
       name: name,
-      frameIndex: frameIndex,
-      concreteTypes: concreteTypes,
+      possibleClasses: possibleClasses,
       facts: facts,
     );
 
