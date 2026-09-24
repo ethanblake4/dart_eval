@@ -533,7 +533,9 @@ Variable _declarationToVariable(
     decl is FunctionDeclaration
         ? CoreTypes.function.ref(ctx)
         : CoreTypes.type.ref(ctx),
-    facts: ValueFacts(denotedType: returnType, possibleClasses: [returnType]),
+    facts: decl is FunctionDeclaration
+        ? ValueFacts(possibleClasses: [returnType])
+        : ValueFacts(denotedType: returnType, possibleClasses: [returnType]),
     callable: CallableValue(
       offset: offset,
       signature: CallSignature.returnOnly(returnType),
