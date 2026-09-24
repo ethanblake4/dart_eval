@@ -1,7 +1,22 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('field formal requires a declared field', () {
+    for (final declaration in [
+      'class A { A(this.x); }',
+      'class A { int get x => 1; A(this.x); }',
+    ]) {
+      expect(
+        () => Compiler().compile({
+          'binding': {'main.dart': '$declaration void main() {}'},
+        }),
+        throwsA(isA<CompileError>()),
+      );
+    }
+  });
+
   test('explicit constructor binds an applied generic parameter', () {
     expect(
       eval('''

@@ -610,8 +610,8 @@ final class MemberLookup {
   /// The declared type of field-accessor [name] on [type] — what
   /// `lookupFieldType` produced: the field/getter/setter annotation (or
   /// inferred type) instantiated through the receiver's arguments, or the
-  /// setter's parameter type when [forSet]. Field formals restrict the
-  /// probe to real fields ([forFieldFormal]); absent members give null.
+  /// setter's parameter type when [forSet]. Field formals require a field
+  /// declared on this class ([forFieldFormal]).
   TypeRef? fieldType(
     TypeRef type,
     String name, {
@@ -643,15 +643,27 @@ final class MemberLookup {
         }
       }
     }
+    if (forFieldFormal) {
+      final member = nominalDeclOf(
+        type,
+      )?.declaredMember(MemberName.getter(name));
+      if (member == null || !member.isField) {
+        throw CompileError(
+          'Field formals did not find field $name in class $type',
+          source,
+        );
+      }
+      final result = ResolvedMember(member, type).fieldType;
+      return substitutions.isEmpty
+          ? result
+          : result?.substituteTypeParameters(substitutions);
+    }
     final resolved = tryInterfaceMember(
       type,
       MemberName(name, forSet ? MemberKind.setter : MemberKind.getter),
       source: source,
     );
-    // A field formal (`this.x`) resolves against field storage only.
-    if (resolved == null || (forFieldFormal && !resolved.member.isField)) {
-      return null;
-    }
+    if (resolved == null) return null;
     final signature = resolved.signature;
     if (forSet) {
       final spec = signature.positional.firstOrNull;
