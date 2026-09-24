@@ -45,9 +45,9 @@ Future<Map<String, String>> _snapshot() async {
   }
 
   // --- Benchmark programs ---
-  for (final file in Directory('benchmark').listSync().whereType<File>().where(
-    (f) => f.path.endsWith('.dart'),
-  )) {
+  for (final file in Directory(
+    'benchmark',
+  ).listSync().whereType<File>().where((f) => f.path.endsWith('.dart'))) {
     final name = file.uri.pathSegments.last.replaceAll('.dart', '');
     final text = file.readAsStringSync();
     var i = 0;
@@ -67,12 +67,11 @@ Future<Map<String, String>> _snapshot() async {
   return out;
 }
 
-String _mark(Object? value) =>
-    value == null
-        ? '(new)'
-        : value is String && value.startsWith('#')
-        ? value
-        : 'hash';
+String _mark(Object? value) => value == null
+    ? '(new)'
+    : value is String && value.startsWith('#')
+    ? value
+    : 'hash';
 
 String _compile(Compiler compiler, List<DartSource> sources) {
   try {
@@ -98,15 +97,20 @@ Future<void> main(List<String> args) async {
     }
   }
 
-  final snapshot = await _snapshot();
-  final encoder = const JsonEncoder.withIndent('  ');
-  File(outPath).writeAsStringSync('${encoder.convert(snapshot)}\n');
-  stderr.writeln('wrote ${snapshot.length} entries to $outPath');
-
-  if (comparePath != null) {
-    final baseline =
-        jsonDecode(File(comparePath).readAsStringSync())
+  // --compare tool/ir_snapshot.json uses the same path as the default output.
+  // Keep the baseline intact; a separate --out path can retain the new data.
+  final baseline = comparePath == null
+      ? null
+      : jsonDecode(File(comparePath).readAsStringSync())
             as Map<String, dynamic>;
+  final snapshot = await _snapshot();
+  if (comparePath != outPath) {
+    final encoder = const JsonEncoder.withIndent('  ');
+    File(outPath).writeAsStringSync('${encoder.convert(snapshot)}\n');
+    stderr.writeln('wrote ${snapshot.length} entries to $outPath');
+  }
+
+  if (baseline != null) {
     final changed = <String>[
       for (final e in snapshot.entries)
         if (baseline[e.key] != e.value) e.key,
@@ -120,9 +124,7 @@ Future<void> main(List<String> args) async {
       for (final k in changed) {
         final before = baseline[k];
         final after = snapshot[k];
-        print(
-          '  $k: ${_mark(before)} -> ${_mark(after)}',
-        );
+        print('  $k: ${_mark(before)} -> ${_mark(after)}');
       }
       exitCode = 1;
     }
