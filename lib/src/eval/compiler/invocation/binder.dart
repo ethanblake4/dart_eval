@@ -1323,8 +1323,8 @@ bool _closureArgumentsProven(
 /// The result type of calling [method] on a receiver typed [type] — the
 /// resolved member's signature with the receiver's type arguments applied —
 /// or null when the member is a field or bridge without a function shape.
-/// Callers fall back to `dynamic` on null, matching the permissive legacy
-/// semantics for unresolvable returns.
+/// Callers fall back to `dynamic` on null — an unresolvable return
+/// annotation stays permissive rather than failing to compile.
 TypeRef? memberCallResultType(
   CompilerContext ctx,
   TypeRef type,

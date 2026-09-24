@@ -162,14 +162,9 @@ final class CallResolver {
         boundExt.onBindings,
       );
     }
-    TypeRef? mReturnType;
-    final bridgeTypeParameters = <String, TypeRef>{};
-
     ResolvedMember? resolved;
     final bool isStatic;
     TypeRef? staticType;
-
-    BoundCall argsPair;
 
     // `C.new(...)` invokes the unnamed constructor.
     final staticMemberName = ctorNameOf(e.methodName.name);
@@ -410,6 +405,44 @@ final class CallResolver {
       }
     }
 
+    final boundArgs = _bindInvokeMethodArgs(
+      L,
+      e,
+      resolved: resolved,
+      isStatic: isStatic,
+      staticType: staticType,
+      bound: bound,
+    );
+    return _emitResolvedInvoke(
+      L,
+      e,
+      resolved: resolved,
+      isStatic: isStatic,
+      staticType: staticType,
+      staticMemberName: staticMemberName,
+      namespaceExt: namespaceExt,
+      argsPair: boundArgs.args,
+      mReturnType: boundArgs.returnType,
+    );
+  }
+
+  /// The binding phase of [invokeMethod]: compile the argument list
+  /// against the resolved target — the padded bridge ABI vector for
+  /// [BridgeMember]s, the dynamic vector for dynamic receivers, and the
+  /// member's own declaration signature for source members (the interface
+  /// signature while the call stays virtual, the concrete
+  /// implementation's once it's static or devirtualized).
+  ({BoundCall args, TypeRef? returnType}) _bindInvokeMethodArgs(
+    Variable L,
+    MethodInvocation e, {
+    required ResolvedMember? resolved,
+    required bool isStatic,
+    required TypeRef? staticType,
+    required TypeRef? bound,
+  }) {
+    TypeRef? mReturnType;
+    BoundCall argsPair;
+    final bridgeTypeParameters = <String, TypeRef>{};
     final resolvedMember = resolved?.member;
     if (resolvedMember is BridgeMember) {
       final br = resolvedMember.def;
@@ -459,26 +492,6 @@ final class CallResolver {
         argTypes: argsPair.positionalValues.map((a) => a.type).toList(),
         namedArgTypes: argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
       );
-      // Instance calls that carry no named or explicit type arguments route
-      // through the modern invocation path, which preserves intrinsic
-      // optimizations for core types. The argument vector stays padded with
-      // null placeholders so generated wrappers keep the legacy flattened
-      // ABI. The declared return type (including inferred generics and
-      // parameter-type dependencies) still applies to the result.
-      if (!isStatic &&
-          e.typeArguments == null &&
-          argsPair.namedValues.isEmpty) {
-        final invokeResult = invokeOperator(
-          L,
-          e.methodName.name,
-          argsPair.positionalValues,
-        ).result;
-        final preciseType = mReturnType;
-        if (preciseType != null) {
-          return invokeResult.copyWith(type: preciseType);
-        }
-        return invokeResult;
-      }
     } else if (L.type.isSpec(CoreTypes.dynamic)) {
       argsPair = ArgumentBinder(
         ctx,
@@ -560,6 +573,26 @@ final class CallResolver {
       }
     }
 
+    return (args: argsPair, returnType: mReturnType);
+  }
+
+  /// The emission phase of [invokeMethod]: resolve the call's return type
+  /// and emit through the matching [CallTarget] — [ConstructorCall] or
+  /// [StaticCall] for resolved static members, [BridgeCall] for bridge
+  /// members, [DynamicCall] for dynamic receivers, and the devirtualized
+  /// [VirtualCall] otherwise.
+  Variable _emitResolvedInvoke(
+    Variable L,
+    MethodInvocation e, {
+    required ResolvedMember? resolved,
+    required bool isStatic,
+    required TypeRef? staticType,
+    required String staticMemberName,
+    required EvalExtension? namespaceExt,
+    required BoundCall argsPair,
+    required TypeRef? mReturnType,
+  }) {
+    final resolvedMember = resolved?.member;
     final argTypes = argsPair.positionalValues.map((e) => e.type).toList();
     final namedArgTypes = argsPair.namedValues.map(
       (key, value) => MapEntry(key, value.type),
@@ -647,6 +680,26 @@ final class CallResolver {
           : null,
     );
     if (resolvedMember is BridgeMember) {
+      // Instance calls that carry no named or explicit type arguments take
+      // the intrinsic path, which preserves operator optimizations for
+      // core types. The argument vector stays padded with null
+      // placeholders so generated wrappers keep the flattened ABI; the
+      // declared return type (inferred generics and parameter-type
+      // dependencies included) still applies to the result.
+      if (!isStatic &&
+          e.typeArguments == null &&
+          argsPair.namedValues.isEmpty) {
+        final invokeResult = invokeOperator(
+          L,
+          e.methodName.name,
+          argsPair.positionalValues,
+        ).result;
+        final preciseType = mReturnType;
+        if (preciseType != null) {
+          return invokeResult.copyWith(type: preciseType);
+        }
+        return invokeResult;
+      }
       return BridgeCall(
         receiver: L,
         name: e.methodName.name,
