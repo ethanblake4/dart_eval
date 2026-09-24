@@ -148,20 +148,7 @@ int compileMethodDeclaration(
       final parameterTypes = d.parameters == null
           ? const <TypeRef>[]
           : ctx.functionParameterTypes[pos]!;
-      final unboxedOperatorReturn =
-          b is ExpressionFunctionBody &&
-          !b.isAsynchronous &&
-          (methodName == '==' || methodName == '!=') &&
-          !Abi.unboxedAcrossCalls(expectedReturnType).isBoxed;
-      final abi = CallableAbi.fromParameterTypes(
-        parameterTypes,
-        expectedReturnType,
-        CallableKind.method,
-        leadingBoxed: hasReceiver ? 1 : 0,
-        isAsync: b.isAsynchronous,
-        returnsVoid: expectedReturnType.isSpec(CoreTypes.voidType),
-        unboxedBoolResult: unboxedOperatorReturn,
-      );
+      final abi = CallableAbi.ofMethod(d, parameterTypes, expectedReturnType);
 
       if (b.isAsynchronous) {
         setupAsyncFunction(
@@ -214,9 +201,7 @@ int compileMethodDeclaration(
           expectedReturnType,
           V,
           isAsync: b.isAsynchronous,
-          // == and != operators are statically guaranteed to return bools,
-          // so we can optimize boxing away here.
-          skipClassBoxing: d.name.lexeme == '==' || d.name.lexeme == '!=',
+          skipClassBoxing: abi.result?.isBoxed == false,
         );
         ctx.endScope();
       } else if (b is EmptyFunctionBody) {

@@ -162,14 +162,11 @@ final class CallableAbi {
     final node = member is SourceMember ? member.node : null;
     final isConstructor = member.name.kind == MemberKind.constructor;
     if (member is BridgeMember) {
-      return CallableAbi(
-        [
-          if (!member.isStatic && !isConstructor) ValueRep.boxed,
-          for (final _ in signature.positional) ValueRep.boxed,
-          for (final _ in signature.named) ValueRep.boxed,
-        ],
-        ValueRep.boxed,
-      );
+      return CallableAbi([
+        if (!member.isStatic && !isConstructor) ValueRep.boxed,
+        for (final _ in signature.positional) ValueRep.boxed,
+        for (final _ in signature.named) ValueRep.boxed,
+      ], ValueRep.boxed);
     }
     if (member.isField && !member.isStatic) {
       return CallableAbi([
@@ -177,40 +174,46 @@ final class CallableAbi {
         if (member.name.kind == MemberKind.setter) ValueRep.boxed,
       ], ValueRep.boxed);
     }
-    final method = node is MethodDeclaration ? node : null;
-    final isAsync = method?.body.isAsynchronous ?? false;
-    final unboxedBoolResult =
-        method != null &&
-        method.body is ExpressionFunctionBody &&
-        !isAsync &&
-        (method.name.lexeme == '==' || method.name.lexeme == '!=') &&
-        !Abi.unboxedAcrossCalls(signature.returnType).isBoxed;
-    final kind = isConstructor
-        ? CallableKind.constructor
-        : method != null
-        ? CallableKind.method
-        : CallableKind.function;
+    final parameterTypes = [
+      for (final parameter in signature.positional) parameter.type,
+      for (final parameter in signature.named) parameter.type,
+    ];
+    if (node is MethodDeclaration) {
+      return CallableAbi.ofMethod(node, parameterTypes, signature.returnType);
+    }
     return CallableAbi.fromParameterTypes(
-      [
-        for (final parameter in signature.positional) parameter.type,
-        for (final parameter in signature.named) parameter.type,
-      ],
+      parameterTypes,
       signature.returnType,
-      kind,
+      isConstructor ? CallableKind.constructor : CallableKind.function,
       leadingBoxed: isConstructor && node?.parent?.parent is EnumDeclaration
           ? 2
-          : method != null && !method.isStatic
-          ? 1
           : 0,
       hiddenTypeId:
           isConstructor &&
           (node is ClassDeclaration ||
               node is ConstructorDeclaration && node.factoryKeyword == null),
-      isAsync: isAsync,
       returnsVoid: signature.returnType.isSpec(CoreTypes.voidType),
-      unboxedBoolResult: unboxedBoolResult,
     );
   }
+
+  /// A source method's ABI, shared by its declaration and resolved callers.
+  factory CallableAbi.ofMethod(
+    MethodDeclaration declaration,
+    Iterable<TypeRef> parameterTypes,
+    TypeRef returnType,
+  ) => CallableAbi.fromParameterTypes(
+    parameterTypes,
+    returnType,
+    CallableKind.method,
+    leadingBoxed: declaration.isStatic ? 0 : 1,
+    isAsync: declaration.body.isAsynchronous,
+    returnsVoid: returnType.isSpec(CoreTypes.voidType),
+    unboxedBoolResult:
+        declaration.body is ExpressionFunctionBody &&
+        !declaration.body.isAsynchronous &&
+        (declaration.name.lexeme == '==' || declaration.name.lexeme == '!=') &&
+        !Abi.unboxedAcrossCalls(returnType).isBoxed,
+  );
 
   /// A top-level function's ABI, available before it has a function id.
   factory CallableAbi.ofFunction(

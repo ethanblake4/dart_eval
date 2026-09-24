@@ -186,10 +186,9 @@ Variable compileFunctionExpression(
         i++;
       }
 
-      ctx.functionSignatures[fnOffset] = MachineFunctionSignature(
-        List.filled(resolvedParams.length + 1, MachineRepresentation.object),
-        MachineRepresentation.object,
-      );
+      ctx.functionSignatures[fnOffset] = CallableAbi.closure(
+        resolvedParams.length,
+      ).machine;
       final b = e.body;
 
       // The closure body's context type is the bound function type's return
