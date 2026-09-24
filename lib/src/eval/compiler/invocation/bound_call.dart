@@ -3,9 +3,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/values/abi.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-/// Whether a member *value* call evaluates the read or the arguments first.
-enum EvalOrder { argumentsFirst, readFirst }
-
 /// A matched, compiled, and coerced argument.
 final class BoundArgument {
   const BoundArgument(this.value);

@@ -795,13 +795,16 @@ final class ArgumentBinder {
     List<Variable> before = const [],
     SuperParams superParams = const (positional: [], named: {}),
     Map<String, TypeRef> typeParameters = const {},
+    CallSignature? targetSignature,
   }) {
-    final signature = CallSignature.bridge(
-      ctx,
-      function,
-      returnFallback: CoreTypes.dynamic.ref(ctx),
-      typeParameters: typeParameters,
-    );
+    final signature =
+        targetSignature ??
+        CallSignature.bridge(
+          ctx,
+          function,
+          returnFallback: CoreTypes.dynamic.ref(ctx),
+          typeParameters: typeParameters,
+        );
     final positional = signature.positional;
     final namedParamByName = {
       for (final spec in signature.named) spec.name: spec,
@@ -876,6 +879,24 @@ final class ArgumentBinder {
       superParams: superParams,
       positionalValues: compiledPositional,
       namedValues: compiledNamed,
+    );
+  }
+
+  BoundCall bindBridgeTarget(CallTarget target, ArgumentList argumentList) {
+    final function = switch (target) {
+      StaticCall(:final bridgeFunction) ||
+      ConstructorCall(:final bridgeFunction) => bridgeFunction,
+      _ => null,
+    };
+    if (target.policy != BindingPolicy.bridgeVector ||
+        function == null ||
+        target.signature == null) {
+      throw StateError('Bridge call target requires a bridge signature');
+    }
+    return bindBridgeVector(
+      argumentList,
+      function,
+      targetSignature: target.signature,
     );
   }
 
@@ -963,9 +984,8 @@ final class ArgumentBinder {
               _usesParameter(signature.returnType, parameters),
       };
 
-  /// Bind an ordinary source method using the member and policy selected by
-  /// resolution. A virtual target leaves defaults to the runtime; a direct
-  /// target uses the concrete implementation's defaults and declared types.
+  /// Bind a source target using its selected declaration, signature, and
+  /// default policy. A virtual target leaves defaults to the runtime.
   BoundCall bindSourceTarget(
     CallTarget target,
     ArgumentList argumentList, {
@@ -974,16 +994,27 @@ final class ArgumentBinder {
     Map<String, TypeRef> seedGenerics = const {},
     TypeRef? returnContext,
   }) {
-    final member = switch (target) {
-      StaticCall(:final member) || VirtualCall(:final member) => member,
-      _ => null,
+    final (library, declaration) = switch (target) {
+      StaticCall(member: SourceMember member) ||
+      VirtualCall(
+        member: SourceMember member,
+      ) => (member.library, member.sourceDeclaration),
+      StaticCall(:final sourceDeclaration?, offset: final offset?) => (
+        offset.file!,
+        sourceDeclaration,
+      ),
+      ConstructorCall(:final constructor?, offset: final offset?) => (
+        offset.file!,
+        constructor,
+      ),
+      _ => (null, null),
     };
-    if (member is! SourceMember || target.signature == null) {
+    if (library == null || declaration == null || target.signature == null) {
       throw StateError('Source call target requires a source signature');
     }
     return bindDeclaration(
-      member.library,
-      member.sourceDeclaration,
+      library,
+      declaration,
       argumentList,
       typeArguments: typeArguments,
       source: source,

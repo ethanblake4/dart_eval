@@ -192,4 +192,27 @@ void main() {
       );
     },
   );
+
+  test('bare source targets bind defaults before emission', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          int top([int value = 2]) => value;
+          class Box {
+            final int value;
+            Box([this.value = 4]);
+            static int stat([int value = 3]) => value;
+          }
+          typedef BoxAlias<T> = Box<T>;
+          int main() => top() + Box.stat() + BoxAlias<int>().value;
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      9,
+    );
+  });
 }

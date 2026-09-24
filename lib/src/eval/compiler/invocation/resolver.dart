@@ -674,8 +674,28 @@ final class CallResolver {
           seedGenerics: seedGenerics,
           returnContext: bound,
         );
+      } else if (declaration is ConstructorDeclaration && isStatic) {
+        target = ConstructorCall(
+          staticType: staticType!,
+          name: e.methodName.name,
+          offset: DeferredOrOffset.lookupStatic(
+            ctx,
+            staticType.file,
+            staticType.name,
+            e.methodName.name,
+          ),
+          constructor: declaration,
+          isConst: e.inConstantContext,
+          signature: sourceMember.signature,
+        );
+        argsPair = ArgumentBinder(ctx).bindSourceTarget(
+          target,
+          e.argumentList,
+          typeArguments: e.typeArguments,
+          source: e,
+          returnContext: bound,
+        );
       } else {
-        // Constructors retain their existing binding path in this step.
         argsPair = ArgumentBinder(ctx).bindDeclaration(
           sourceMember.library,
           declaration,
@@ -724,9 +744,6 @@ final class CallResolver {
     final returnType = mReturnType ?? CoreTypes.dynamic.ref(ctx);
 
     if (isStatic) {
-      final declaration = resolved?.member is SourceMember
-          ? (resolved!.member as SourceMember).node
-          : null;
       final boundCall = BoundCall(
         positional: const [],
         named: const [],
@@ -736,20 +753,8 @@ final class CallResolver {
         returnType: returnType,
         vectorOverride: argsPair.vector(),
       );
-      if (declaration is ConstructorDeclaration) {
-        return ConstructorCall(
-          staticType: staticType!,
-          instantiatedType: returnType,
-          name: staticMemberName,
-          offset: DeferredOrOffset.lookupStatic(
-            ctx,
-            staticType.file,
-            staticType.name,
-            staticMemberName,
-          ),
-          constructor: declaration,
-          isConst: e.inConstantContext,
-        ).emit(ctx, boundCall);
+      if (resolvedTarget is ConstructorCall) {
+        return resolvedTarget.emit(ctx, boundCall);
       }
       if (resolvedTarget is StaticCall) {
         return resolvedTarget.emit(ctx, boundCall);
@@ -1370,43 +1375,83 @@ final class CallResolver {
         return invokeValue(site, ref: ref);
     }
 
+    // Resolve the call kind and its declaration shape before any argument
+    // compiles. Constructor instantiation is completed after inference and
+    // delivered through BoundCall.returnType.
+    final CallTarget callTarget;
+    if (bridgeDecl is BridgeClassDef) {
+      final bridge = bridgeDecl;
+      final function =
+          bridge.constructors['']?.functionDescriptor ??
+          (throw CompileError(
+            'Class "${e.methodName.name}" does not have a default constructor',
+            e,
+          ));
+      final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
+      callTarget = ConstructorCall(
+        staticType: type,
+        externalIndex:
+            ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
+        classBridge: bridge,
+        isConst: e.inConstantContext,
+        bridgeFunction: function,
+        signature: CallSignature.bridge(
+          ctx,
+          function,
+          returnFallback: CoreTypes.dynamic.ref(ctx),
+        ),
+      );
+    } else if (bridgeDecl is BridgeFunctionDeclaration) {
+      final function = bridgeDecl.function;
+      callTarget = StaticCall(
+        null,
+        externalIndex:
+            ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!,
+        bridgeFunction: function,
+        signature: CallSignature.bridge(
+          ctx,
+          function,
+          returnFallback: CoreTypes.dynamic.ref(ctx),
+        ),
+      );
+    } else if (sourceDecl is ConstructorDeclaration) {
+      callTarget = ConstructorCall(
+        staticType: aliasType ?? sigReturn!,
+        offset: offset,
+        constructor: sourceDecl,
+        isConst: e.inConstantContext,
+        signature: CallSignature.forDeclaration(ctx, offset.file!, sourceDecl),
+      );
+    } else if (sourceDecl != null) {
+      callTarget = StaticCall(
+        offset,
+        sourceDeclaration: sourceDecl,
+        signature: CallSignature.forDeclaration(ctx, offset.file!, sourceDecl),
+      );
+    } else {
+      throw CompileError('Cannot call $name', e);
+    }
+
     final List<Variable> args;
     final Map<String, Variable> namedArgs;
     final List<SSA> callArgs;
     List<int> inferredTypeArgs = const [];
 
-    var isConstructor = false;
+    final isConstructor = callTarget is ConstructorCall;
     List<TypeRef>? inferredCtorArgs;
 
     if (bridgeDecl != null) {
-      final bridge = bridgeDecl;
-
-      /// If we're invoking a class identifier directly (like ClassName()),
-      /// call its default constructor
-      final fnDescriptor = bridge is BridgeClassDef
-          ? (bridge.constructors['']?.functionDescriptor ??
-                (throw CompileError(
-                  'Class "${e.methodName.name}" does not have a default '
-                  'constructor',
-                  e,
-                )))
-          : (bridge as BridgeFunctionDeclaration).function;
-
       final argsPair = ArgumentBinder(
         ctx,
-      ).bindBridgeVector(e.argumentList, fnDescriptor);
+      ).bindBridgeTarget(callTarget, e.argumentList);
 
       args = argsPair.positionalValues;
       namedArgs = argsPair.namedValues;
       callArgs = argsPair.vector();
-      isConstructor = bridge is BridgeClassDef;
     } else {
       final dec = sourceDecl!;
-      isConstructor = dec is ConstructorDeclaration;
-
-      final result = ArgumentBinder(ctx).bindDeclaration(
-        offset.file!,
-        dec,
+      final result = ArgumentBinder(ctx).bindSourceTarget(
+        callTarget,
         e.argumentList,
         typeArguments: e.typeArguments,
         source: e,
@@ -1507,40 +1552,7 @@ final class CallResolver {
       returnType: instantiatedReturnType,
       vectorOverride: callArgs,
     );
-    if (isConstructor) {
-      if (bridgeDecl is BridgeClassDef) {
-        final bridge = bridgeDecl;
-        final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-        return ConstructorCall(
-          staticType: type,
-          instantiatedType: instantiatedReturnType,
-          externalIndex:
-              ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
-          classBridge: bridge,
-          isConst: e.inConstantContext,
-        ).emit(ctx, boundCall);
-      }
-      return ConstructorCall(
-        staticType: instantiatedReturnType,
-        instantiatedType: instantiatedReturnType,
-        offset: offset,
-        constructor: sourceDecl! as ConstructorDeclaration,
-        isConst: e.inConstantContext,
-      ).emit(ctx, boundCall);
-    }
-    if (bridgeDecl != null) {
-      return StaticCall(
-        null,
-        externalIndex:
-            ctx.bridgeStaticFunctionIndices[offset.file]![offset.name]!,
-      ).emit(ctx, boundCall);
-    }
-    return StaticCall(
-      offset,
-      functionDeclaration: sourceDecl is FunctionDeclaration
-          ? sourceDecl
-          : null,
-    ).emit(ctx, boundCall);
+    return callTarget.emit(ctx, boundCall);
   }
 }
 

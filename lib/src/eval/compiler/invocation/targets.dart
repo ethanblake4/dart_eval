@@ -77,7 +77,8 @@ final class StaticCall extends CallTarget {
     CallSignature? signature,
     this.declaringLink,
     this.externalIndex,
-    this.functionDeclaration,
+    this.sourceDeclaration,
+    this.bridgeFunction,
   }) : _signature = signature;
 
   /// The resolved call offset; null only when [externalIndex] is set —
@@ -88,9 +89,10 @@ final class StaticCall extends CallTarget {
   final int? externalIndex;
   final Member? member;
 
-  /// A resolved top-level function. Offset-only targets still use the
-  /// declaration table as a compatibility fallback.
-  final FunctionDeclaration? functionDeclaration;
+  /// A resolved source declaration. Offset-only targets still use the
+  /// declaration table as a compatibility fallback for their ABI.
+  final Declaration? sourceDeclaration;
+  final BridgeFunctionDef? bridgeFunction;
 
   /// For devirtualized methods: the chain link declaring the
   /// implementation — used to bind the implementation's signature
@@ -119,8 +121,12 @@ final class StaticCall extends CallTarget {
     // Call-site type substitution may narrow the language result, but the
     // representation comes from the callee's declared machine layout.
     if (member != null) return CallableAbi.of(member!);
-    if (functionDeclaration != null) {
-      return CallableAbi.ofFunction(ctx, offset!.file!, functionDeclaration!);
+    if (sourceDeclaration is FunctionDeclaration) {
+      return CallableAbi.ofFunction(
+        ctx,
+        offset!.file!,
+        sourceDeclaration! as FunctionDeclaration,
+      );
     }
     final reference = offset;
     // A method offset can have the same unqualified name as a top-level
@@ -227,7 +233,7 @@ final class ClosureCall extends CallTarget {
 final class ConstructorCall extends CallTarget {
   const ConstructorCall({
     required this.staticType,
-    required this.instantiatedType,
+    this.instantiatedType,
     this.name = '',
     this.offset,
     this.constructor,
@@ -236,13 +242,16 @@ final class ConstructorCall extends CallTarget {
     this.classBridge,
     this.implicitDefault = false,
     this.leadingArguments,
+    this.signature,
+    this.bridgeFunction,
   });
 
   /// The declaring class.
   final TypeRef staticType;
 
   /// The applied type arguments delivered to the callee.
-  final TypeRef instantiatedType;
+  /// Resolved before binding when known, otherwise supplied by BoundCall.
+  final TypeRef? instantiatedType;
 
   /// Constructor name (`''` for the unnamed/default constructor).
   final String name;
@@ -257,6 +266,7 @@ final class ConstructorCall extends CallTarget {
   /// instantiates through `BridgeInstantiate`.
   final int? externalIndex;
   final BridgeClassDef? classBridge;
+  final BridgeFunctionDef? bridgeFunction;
 
   /// A class with no declared constructors gets a synthesized `Name.` body
   /// taking only the runtime-type argument.
@@ -269,10 +279,11 @@ final class ConstructorCall extends CallTarget {
   bool get _isFactory => constructor?.factoryKeyword != null;
 
   @override
-  CallSignature? get signature => null;
+  final CallSignature? signature;
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
+    final instantiatedType = this.instantiatedType ?? call.returnType;
     var result = ctx.svar('instance');
     if (externalIndex != null) {
       if (classBridge is BridgeClassDef && !classBridge!.wrap) {
@@ -541,14 +552,10 @@ final class EqualityCall extends CallTarget {
 /// Calling the *value* held by a field, getter, or record field: read the
 /// member, then invoke the result as a closure.
 final class MemberValueCall extends CallTarget {
-  const MemberValueCall({
-    required this.read,
-    this.order = EvalOrder.argumentsFirst,
-  });
+  const MemberValueCall({required this.read});
 
   /// Reads the member value (a getter invocation or field load).
   final Variable Function(CompilerContext ctx) read;
-  final EvalOrder order;
 
   @override
   CallSignature? get signature => null;
