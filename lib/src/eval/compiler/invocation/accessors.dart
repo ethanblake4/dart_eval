@@ -128,25 +128,30 @@ sealed class GetTarget {
         extBindingsMap(bound.ext, bound.onBindings),
       );
     }
-    final resolvedField = ctx.memberLookup.fieldType(
-      resolvedReceiver,
-      name,
-      source: source,
-    );
-    final member =
-        resolvedField == null && !resolvedReceiver.isSpec(CoreTypes.dynamic)
-        ? ctx.memberLookup.tryInterfaceMember(
+    final resolved = resolvedReceiver.isSpec(CoreTypes.dynamic)
+        ? null
+        : ctx.memberLookup.tryInterfaceMember(
                 resolvedReceiver,
                 MemberName(name, MemberKind.getter),
+                source: source,
               ) ??
               ctx.memberLookup.tryInterfaceMember(
                 resolvedReceiver,
                 MemberName(name, MemberKind.setter),
-              )
-        : null;
+                source: source,
+              );
+    final resolvedField =
+        resolved?.fieldType ??
+        // Structural reads (record `$n`/named slots) live outside the
+        // member hierarchy — `fieldType` answers them.
+        ctx.memberLookup.fieldType(resolvedReceiver, name, source: source);
+    // The member is a tear-off/write target only when the read produced
+    // no field type — a method member found here means a bound tear-off,
+    // while a member that yields a type is read as a field.
+    final member = resolvedField == null ? resolved : null;
     if (resolvedField == null &&
-        !resolvedReceiver.isSpec(CoreTypes.dynamic) &&
-        member == null) {
+        member == null &&
+        !resolvedReceiver.isSpec(CoreTypes.dynamic)) {
       // An extension getter may apply.
       final found = resolveExtensionMember(
         ctx,
@@ -218,42 +223,14 @@ sealed class GetTarget {
     final exact = receiver.exactType;
     if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
       // Storage for an inherited field lives on its declaring class's
-      // link, reached from the receiver by LoadSuper hops. First locate
-      // the owning link, then emit the hops.
-      final links = [exact, ...ctx.typeSystem.superclassChain(exact)];
-      var depth = -1;
-      int? fieldIndex;
-      for (var i = 0; i < links.length; i++) {
-        final link = links[i];
-        final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
-        if (index != null) {
-          fieldIndex = index;
-          depth = i;
-          break;
-        }
-        final key = name.startsWith('_')
-            ? MemberName(
-                name,
-                MemberKind.method,
-                privateLibraryUri: ctx.libraryUri(link.file),
-              ).nameKey
-            : name;
-        if ((ctx.instanceDeclarationPositions[link.file]?[link.name]?[MemberKind
-                            .getter]
-                        as Map?)
-                    ?.containsKey(key) ==
-                true &&
-            ctx.memberLookup.concreteMemberOn(
-                  link,
-                  MemberName(name, MemberKind.getter),
-                ) !=
-                null) {
-          depth = i;
-          break;
-        }
-      }
-      if (depth >= 0) {
-        final link = links[depth];
+      // link, reached from the receiver by LoadSuper hops.
+      final slot = ctx.memberLookup.accessorSlot(
+        exact,
+        name,
+        MemberKind.getter,
+      );
+      if (slot != null) {
+        final (link, fieldIndex, linkHops) = slot;
         // Field members resolve to their [VariableDeclaration]; real
         // accessors resolve to [MethodDeclaration]. Field storage is
         // link-relative so it always needs the declaring link; a real
@@ -273,31 +250,27 @@ sealed class GetTarget {
               link,
               MemberName(name, MemberKind.getter),
             );
+        final hops = needsLink ? linkHops : const <TypeRef>[];
         if (fieldIndex != null) {
           final isLate =
               fieldDecl is FieldDeclaration && fieldDecl.fields.isLate;
           return FieldSlotGet(
             receiver,
             name,
-            hops: needsLink ? links.sublist(1, depth + 1) : const [],
+            hops: hops,
             index: fieldIndex,
             isLate: isLate,
             fieldType: fieldType,
           );
         }
-        final key = name.startsWith('_')
-            ? MemberName(
-                name,
-                MemberKind.method,
-                privateLibraryUri: ctx.libraryUri(link.file),
-              ).nameKey
-            : name;
         return DirectGetterCall(
           receiver,
-          hops: needsLink ? links.sublist(1, depth + 1) : const [],
+          hops: hops,
           file: link.file,
           className: link.name,
-          nameKey: key,
+          nameKey: ctx.memberLookup
+              .linkName(MemberName(name, MemberKind.method), link)
+              .nameKey,
           fieldType: fieldType,
         );
       }
@@ -733,38 +706,13 @@ sealed class SetTarget {
     if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
       // Storage for an inherited field lives on its declaring class's
       // link, reached from the receiver by LoadSuper hops.
-      final links = [exact, ...ctx.typeSystem.superclassChain(exact)];
-      var depth = -1;
-      int? fieldIndex;
-      for (var i = 0; i < links.length; i++) {
-        final link = links[i];
-        final key = name.startsWith('_')
-            ? '${ctx.libraryUri(link.file)}::$name'
-            : name;
-        final hasSetter =
-            (ctx.instanceDeclarationPositions[link.file]?[link.name]?[MemberKind
-                            .setter]
-                        as Map?)
-                    ?.containsKey(key) ==
-                true &&
-            ctx.memberLookup.concreteMemberOn(
-                  link,
-                  MemberName(name, MemberKind.setter),
-                ) !=
-                null;
-        final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
-        if (hasSetter && index != null) {
-          fieldIndex = index;
-          depth = i;
-          break;
-        }
-        if (hasSetter) {
-          depth = i;
-          break;
-        }
-      }
-      if (depth >= 0) {
-        final link = links[depth];
+      final slot = ctx.memberLookup.accessorSlot(
+        exact,
+        name,
+        MemberKind.setter,
+      );
+      if (slot != null) {
+        final (link, fieldIndex, linkHops) = slot;
         final resolvedDecl =
             ctx.memberLookup.tryInterfaceMember(
               link,
@@ -787,6 +735,7 @@ sealed class SetTarget {
               link,
               MemberName(name, MemberKind.setter),
             );
+        final hops = needsLink ? linkHops : const <TypeRef>[];
         if (fieldIndex != null) {
           final isLateFinal =
               fieldDecl is FieldDeclaration &&
@@ -796,22 +745,21 @@ sealed class SetTarget {
               );
           return FieldSlotSet(
             object,
-            hops: needsLink ? links.sublist(1, depth + 1) : const [],
+            hops: hops,
             index: fieldIndex,
             isLateFinal: isLateFinal,
             fieldType: fieldType,
             name: name,
           );
         }
-        final key = name.startsWith('_')
-            ? '${ctx.libraryUri(link.file)}::$name'
-            : name;
         return DirectSetterCall(
           object,
-          hops: needsLink ? links.sublist(1, depth + 1) : const [],
+          hops: hops,
           file: link.file,
           className: link.name,
-          nameKey: key,
+          nameKey: ctx.memberLookup
+              .linkName(MemberName(name, MemberKind.method), link)
+              .nameKey,
           fieldType: fieldType,
           name: name,
         );

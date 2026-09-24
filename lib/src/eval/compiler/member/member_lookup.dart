@@ -220,7 +220,7 @@ final class MemberLookup {
     try {
       interfaceMember(type, name);
       return true;
-    } on CompileError {
+    } on UnknownMemberError {
       return false;
     }
   }
@@ -323,12 +323,12 @@ final class MemberLookup {
   Member? concreteMemberOn(TypeRef link, MemberName name) {
     final decl = ctx.types.find(link.file, link.name);
     if (decl is! SourceTypeDecl) return null;
-    return decl.declaredMember(_linkName(name, link), forImplementation: true);
+    return decl.declaredMember(linkName(name, link), forImplementation: true);
   }
 
   /// [name] qualified with [link]'s library: a private member folded in
   /// from another library is stored under `uri::_name`.
-  MemberName _linkName(MemberName name, TypeRef link) => MemberName(
+  MemberName linkName(MemberName name, TypeRef link) => MemberName(
     name.name,
     name.kind,
     privateLibraryUri: name.name.startsWith('_')
@@ -373,7 +373,8 @@ final class MemberLookup {
   /// The declared type of field-accessor [name] on [type] — what
   /// `lookupFieldType` produced: the field/getter/setter annotation (or
   /// inferred type) instantiated through the receiver's arguments, or the
-  /// setter's parameter type when [forSet].
+  /// setter's parameter type when [forSet]. Field formals restrict the
+  /// probe to real fields ([forFieldFormal]); absent members give null.
   TypeRef? fieldType(
     TypeRef type,
     String name, {
@@ -405,118 +406,27 @@ final class MemberLookup {
         }
       }
     }
-    final decl = type.decl ?? ctx.types.find(type.file, type.name);
-    if (decl == null) {
-      final extendsType = ctx.typeSystem.superclassOf(type);
-      if (extendsType == null) return null;
-      return fieldType(
-        extendsType,
-        name,
-        forFieldFormal: forFieldFormal,
-        forSet: forSet,
-        source: source,
-        substitutions: substitutions,
-      );
+    final resolved = tryInterfaceMember(
+      type,
+      MemberName(name, forSet ? MemberKind.setter : MemberKind.getter),
+      source: source,
+    );
+    // A field formal (`this.x`) resolves against field storage only.
+    if (resolved == null || (forFieldFormal && !resolved.member.isField)) {
+      return null;
     }
-    Member? member;
-    var memberKind = MemberKind.getter;
-    if (decl is SourceTypeDecl) {
-      final map = ctx.instanceDeclarationsMap[decl.library]?[decl.name];
-      if (map != null) {
-        final private = name.startsWith('_') ? decl.libraryUri : null;
-        Object? entry;
-        if (forSet) {
-          entry =
-              map[MemberName(
-                name,
-                MemberKind.setter,
-                privateLibraryUri: private,
-              ).key];
-          if (entry != null && entry is! MethodDeclaration) {
-            throw CompileError(
-              'Cannot query setter type of F${decl.library}:${decl.name}.$name, '
-              'which is not a method',
-              source,
-            );
-          }
-          // A setter parameter with no type annotation has no queryable
-          // field type (matching lookupFieldType's null).
-          if (entry is MethodDeclaration &&
-              entry.parameters?.parameters.firstOrNull?.type == null) {
-            return null;
-          }
-          memberKind = MemberKind.setter;
-        }
-        entry ??= map[name];
-        if (entry != null) {
-          if (entry is MethodDeclaration &&
-              !entry.isGetter &&
-              !entry.isSetter) {
-            return CoreTypes.function.ref(ctx);
-          }
-          // Getters and setters are members, not variables — the member
-          // path below resolves their types; only a non-member entry must
-          // be a declared field.
-          if (entry is! VariableDeclaration && entry is! MethodDeclaration) {
-            throw CompileError(
-              'Cannot query field type of ${decl.name}.$name, '
-              'which is not a field',
-              source,
-            );
-          }
-          memberKind = MemberKind.getter;
-          if (entry is MethodDeclaration && entry.isSetter && forSet) {
-            memberKind = MemberKind.setter;
-          }
-        }
-        if (entry == null && !forFieldFormal) {
-          entry =
-              map[MemberName(
-                name,
-                MemberKind.getter,
-                privateLibraryUri: private,
-              ).key];
-          if (entry != null && entry is! MethodDeclaration) {
-            throw CompileError(
-              'Cannot query getter type of F${decl.library}:${decl.name}.$name, '
-              'which is not a method',
-              source,
-            );
-          }
-          memberKind = MemberKind.getter;
-        }
-        member = entry == null
-            ? null
-            : decl.sourceMemberOf(
-                entry,
-                MemberName(name, memberKind, privateLibraryUri: private),
-              );
-      }
-    } else {
-      member = decl.declaredMember(
-        MemberName(
-          name,
-          forSet ? MemberKind.setter : MemberKind.getter,
-          privateLibraryUri: name.startsWith('_') ? decl.libraryUri : null,
-        ),
-      );
-    }
-    if (member == null) {
-      final extendsType = ctx.typeSystem.superclassOf(type);
-      if (extendsType == null) return null;
-      return fieldType(
-        extendsType,
-        name,
-        forFieldFormal: forFieldFormal,
-        forSet: forSet,
-        source: source,
-        substitutions: substitutions,
-      );
-    }
-    final resolved = ResolvedMember(member, _interfaceView(type, decl));
     final signature = resolved.signature;
-    final result = forSet && signature.positional.isNotEmpty
-        ? signature.positional.first.type
+    if (forSet) {
+      final spec = signature.positional.firstOrNull;
+      final node = spec?.node;
+      // A setter parameter with no type annotation has no queryable
+      // field type (matching lookupFieldType's null).
+      if (spec == null || (node != null && node.type == null)) {
+        return null;
+      }
+    }
+    final result = forSet
+        ? signature.positional.firstOrNull?.type
         : resolved.fieldType;
     if (result == null) return null;
     if (substitutions.isNotEmpty) {
@@ -524,6 +434,42 @@ final class MemberLookup {
     }
     return result;
   }
+
+  /// The link and storage slot a `name`-accessor on an exact [type]
+  /// resolves to — `(owning link, field-storage index, LoadSuper hops)`.
+  /// Reads ([MemberKind.getter]) take a storage slot as soon as it
+  /// exists; writes ([MemberKind.setter]) count storage only where a
+  /// compiled setter slot also lives — a final field has no write.
+  (TypeRef, int?, List<TypeRef>)? accessorSlot(
+    TypeRef type,
+    String name,
+    MemberKind kind,
+  ) {
+    final memberName = MemberName(name, kind);
+    final links = [type, ...ctx.typeSystem.superclassChain(type)];
+    for (var i = 0; i < links.length; i++) {
+      final link = links[i];
+      final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
+      if (index != null &&
+          (kind == MemberKind.getter || _accessorPosition(link, memberName))) {
+        return (link, index, links.sublist(1, i + 1));
+      }
+      if (_accessorPosition(link, memberName)) {
+        return (link, null, links.sublist(1, i + 1));
+      }
+    }
+    return null;
+  }
+
+  /// Whether [link] has a compiled [name] accessor — the
+  /// `instanceDeclarationPositions` hit plus `concreteMemberOn`'s
+  /// single-link probe.
+  bool _accessorPosition(TypeRef link, MemberName name) =>
+      (ctx.instanceDeclarationPositions[link.file]?[link.name]?[name.kind]
+                  as Map?)
+              ?.containsKey(linkName(name, link).nameKey) ==
+          true &&
+      concreteMemberOn(link, name) != null;
 }
 
 class _SuperSeeker extends RecursiveAstVisitor<void> {
