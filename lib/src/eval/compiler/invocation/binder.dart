@@ -29,9 +29,8 @@ final class ArgumentBinder {
 
   final CompilerContext ctx;
 
-  /// `calleeBinds` — supplied arguments only. Every unboxed argument is
-  /// snapshotted into a fresh slot so boxing never rewrites the SSA an
-  /// unboxed local still uses.
+  /// `calleeBinds` — supplied arguments only. Each argument is captured as
+  /// it is evaluated, before a later argument can assign to its local slot.
   BoundCall bindSuppliedOnly(
     CallTarget target,
     CallSite site, {
@@ -51,14 +50,8 @@ final class ArgumentBinder {
       );
     }
 
-    Variable snapshot(Variable argument) => argument.boxed
-        ? argument
-        : Variable.ssa(
-            ctx,
-            Assign(ctx.svar('closure_argument'), argument.ssa),
-            argument.type,
-            rep: argument.rep,
-          ).boxIfNeeded(ctx);
+    Variable snapshot(Variable argument) =>
+        argument.copyIntoFreshSlot(ctx, 'closure_argument').boxIfNeeded(ctx);
 
     final positional = List<BoundArgument?>.filled(
       site.shape.positional.length,
@@ -341,7 +334,9 @@ final class ArgumentBinder {
           resolveGenericsMap[n]!.add(arg0.type);
         }
       }
-      return arg0;
+      // A following argument can assign to the local slot that produced this
+      // value. Keep the evaluated value independent of that slot.
+      return arg0.copyIntoFreshSlot(ctx, 'source_argument');
     }
 
     // **Match.** Map arguments to formals without emitting. Named
@@ -440,6 +435,9 @@ final class ArgumentBinder {
             spec.node!,
             parameterHost,
             typeParameters: paramTypeParameters,
+            defaultSource: spec.defaultValue is SourceDefault
+                ? spec.defaultValue as SourceDefault
+                : null,
           );
           push.add(value);
           args.add(value);
@@ -481,6 +479,9 @@ final class ArgumentBinder {
           spec0.node!,
           parameterHost,
           typeParameters: paramTypeParameters,
+          defaultSource: spec0.defaultValue is SourceDefault
+              ? spec0.defaultValue as SourceDefault
+              : null,
         );
         push.add(value);
         namedArgs[name] = value;
@@ -715,6 +716,7 @@ final class ArgumentBinder {
       // Dynamic calls use canonical object values for every argument. Their
       // signature cannot justify unboxing a scalar or a collection here.
       arg0 = arg0.boxIfNeeded(ctx);
+      arg0 = arg0.copyIntoFreshSlot(ctx, 'dynamic_argument');
 
       if (arg is NamedArgument) {
         namedArgs[arg.name.lexeme] = arg0;
@@ -804,7 +806,10 @@ final class ArgumentBinder {
       // shapes can carry distinct [TypeRef] identities for an equivalent
       // static type, so a failing compile-time [isAssignableTo] here must
       // defer to the boundary conversion instead of rejecting.
-      return _providedBridgeArgument(ctx, arg0);
+      return _providedBridgeArgument(
+        ctx,
+        arg0,
+      ).copyIntoFreshSlot(ctx, 'bridge_argument');
     }
 
     Variable compileNamedParam(BridgeParameter param, Expression expr) {
@@ -831,7 +836,10 @@ final class ArgumentBinder {
         representation: MachineRepresentation.object,
         source: argumentList,
       );
-      return _providedBridgeArgument(ctx, arg0);
+      return _providedBridgeArgument(
+        ctx,
+        arg0,
+      ).copyIntoFreshSlot(ctx, 'bridge_argument');
     }
 
     // **Compile** supplied arguments in source order.

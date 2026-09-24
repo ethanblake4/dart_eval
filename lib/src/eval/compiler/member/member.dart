@@ -279,7 +279,6 @@ final class SourceMember extends Member {
           returnType: _decl.thisType,
         );
       case ConstructorDeclaration c:
-        final cls = _parameterHost;
         return CallSignature.source(
           ctx,
           library,
@@ -294,7 +293,7 @@ final class SourceMember extends Member {
           returnAnnotation: null,
           returnFallback: _decl.thisType,
           typeParameters: ownerParams,
-          parameterHost: cls,
+          parameterHost: c,
         );
       default:
         return CallSignature(

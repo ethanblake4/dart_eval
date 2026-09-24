@@ -177,6 +177,34 @@ void main() {
     }
   });
 
+  test('bridge arguments retain their values across later assignments', () {
+    final numeric = Runtime.ofProgram(
+      _compile('int main() { int x = 1; return capture(x, x = 2); }', [
+        _function('capture', 2),
+      ]),
+    );
+    numeric.registerBridgeFuncRegisters(
+      _bridge,
+      'capture',
+      (runtime, r, s, c) => $int((r as $int).$value * 10 + (s as $int).$value),
+    );
+    expect(numeric.executeLib(_library, 'main'), 12);
+
+    final boxed = Runtime.ofProgram(
+      _compile(
+        "dynamic main() { String x = 'a'; return capture(x, x = 'b'); }",
+        [_function('capture', 2, objects: true)],
+      ),
+    );
+    boxed.registerBridgeFuncRegisters(
+      _bridge,
+      'capture',
+      (runtime, r, s, c) =>
+          $String((r as $String).$value + (s as $String).$value),
+    );
+    expect(boxed.executeLib(_library, 'main'), 'ab');
+  });
+
   for (final arity in [0, 1, 2, 3, 6]) {
     test(
       'external callback preserves $arity arguments after serialization',

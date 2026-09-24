@@ -5,6 +5,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import '../context.dart';
 import '../errors.dart';
 import '../helpers/fpl.dart';
+import '../helpers/default_value.dart' show superFormalDefault;
 import '../type.dart';
 
 /// How a parameter's default is spelled at its declaration.
@@ -155,14 +156,21 @@ final class CallSignature {
         typeParameters: allTypeParams,
       );
       final resolved = type ?? CoreTypes.dynamic.ref(ctx);
-      final defaultExpr = param.defaultClause?.value;
+      final explicitDefault = param.defaultClause?.value;
+      final (defaultExpr, defaultLibrary) = explicitDefault != null
+          ? (explicitDefault, library)
+          : param is SuperFormalParameter &&
+                parameterHost is ConstructorDeclaration
+          ? superFormalDefault(ctx, library, param, parameterHost) ??
+                (null, library)
+          : (null, library);
       final spec = ParameterSpec(
         param.name?.lexeme ?? '',
         resolved,
         isRequired: param.isRequired,
         defaultValue: defaultExpr == null
             ? null
-            : SourceDefault(defaultExpr, library),
+            : SourceDefault(defaultExpr, defaultLibrary),
         erased: resolved.isTypeParameter,
         node: param,
       );
@@ -341,8 +349,8 @@ final class CallSignature {
     } else if (host is Declaration) {
       ownerParams =
           nominalDeclOf(
-                ctx.visibleTypes[library]?[declarationName(host)],
-              )?.ownTypeParams ??
+            ctx.visibleTypes[library]?[declarationName(host)],
+          )?.ownTypeParams ??
           const {};
     }
     return CallSignature.source(

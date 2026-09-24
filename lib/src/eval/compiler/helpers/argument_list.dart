@@ -10,6 +10,7 @@ import '../../../../dart_eval_bridge.dart';
 import '../builtins.dart';
 import '../context.dart';
 import '../errors.dart';
+import '../member/call_signature.dart' show SourceDefault;
 import '../type.dart';
 
 import '../variable.dart';
@@ -77,6 +78,7 @@ Variable compileOmittedArgument(
   FormalParameter parameter,
   Declaration host, {
   Map<String, TypeRef> typeParameters = const {},
+  SourceDefault? defaultSource,
 }) {
   if (parameter.isRequired) {
     throw CompileError(
@@ -121,7 +123,8 @@ Variable compileOmittedArgument(
   // objects) compiles the constant expression normally. Super formals inherit
   // their default from the bound super-constructor parameter, evaluated in
   // the super constructor's library.
-  var defaultExpr = parameter.defaultClause?.value;
+  var defaultExpr = defaultSource?.expression ?? parameter.defaultClause?.value;
+  library = defaultSource?.library ?? library;
   if (defaultExpr == null &&
       parameter is SuperFormalParameter &&
       host is ConstructorDeclaration) {

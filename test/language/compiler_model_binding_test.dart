@@ -31,4 +31,31 @@ void main() {
       throwsA(isA<CompileError>()),
     );
   });
+
+  test('an explicit super-formal default resolves in its own library', () {
+    final program = Compiler().compile({
+      'binding': {
+        'base.dart': '''
+          class Base {
+            final int value;
+            Base({this.value = 1});
+          }
+        ''',
+        'main.dart': '''
+          import 'base.dart';
+          const localDefault = 2;
+          class Child extends Base {
+            Child({super.value = localDefault});
+          }
+          int main() => Child().value;
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      2,
+    );
+  });
 }

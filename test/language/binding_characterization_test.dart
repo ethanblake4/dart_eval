@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 // Characterization tests for the argument-binding bugs documented in
@@ -16,18 +15,21 @@ Runtime _runtime(String source) {
 }
 
 void main() {
-  test('overridden default comes from the dispatch, not the static declaration', () {
-    // Dart: uses x = 2 (B.m) — virtual calls leave defaults to the runtime
-    // and devirtualized calls bind the implementation's formals.
-    expect(
-      _runtime(r'''
+  test(
+    'overridden default comes from the dispatch, not the static declaration',
+    () {
+      // Dart: uses x = 2 (B.m) — virtual calls leave defaults to the runtime
+      // and devirtualized calls bind the implementation's formals.
+      expect(
+        _runtime(r'''
         class A { int m([int x = 1]) => x; }
         class B extends A { @override int m([int x = 2]) => x; }
         int main() { A a = B(); return a.m(); }
       ''').executeLib(_library, 'main'),
-      2,
-    );
-  });
+        2,
+      );
+    },
+  );
 
   test('dynamic receiver binds defaults from the runtime declaration', () {
     // Same call through a dynamic receiver: the runtime binds correctly today.
@@ -71,6 +73,64 @@ void main() {
         }
       ''').executeLib(_library, 'main'),
       'bpapab',
+    );
+  });
+
+  test('source arguments retain their values across later assignments', () {
+    expect(
+      _runtime(r'''
+        int f(int a, int b) => a * 10 + b;
+        int main() { int x = 1; return f(x, x = 2); }
+      ''').executeLib(_library, 'main'),
+      12,
+    );
+    expect(
+      _runtime(r'''
+        String f(String a, String b) => a + b;
+        String main() { String x = 'a'; return f(x, x = 'b'); }
+      ''').executeLib(_library, 'main'),
+      'ab',
+    );
+  });
+
+  test(
+    'named source arguments retain their values across later assignments',
+    () {
+      expect(
+        _runtime(r'''
+        int f({required int a, required int b}) => a * 10 + b;
+        int main() { int x = 1; return f(a: x, b: x = 2); }
+      ''').executeLib(_library, 'main'),
+        12,
+      );
+    },
+  );
+
+  test('closure and dynamic arguments retain their values', () {
+    expect(
+      _runtime(r'''
+        int Function(int, int) f = (a, b) => a * 10 + b;
+        int main() { int x = 1; return f(x, x = 2); }
+      ''').executeLib(_library, 'main'),
+      12,
+    );
+    expect(
+      _runtime(r'''
+        dynamic f = (String a, String b) => a + b;
+        String main() { String x = 'a'; return f(x, x = 'b') as String; }
+      ''').executeLib(_library, 'main'),
+      'ab',
+    );
+    expect(
+      _runtime(r'''
+        class C { int f(int a, int b) => a * 10 + b; }
+        int main() {
+          dynamic receiver = C();
+          int x = 1;
+          return receiver.f(x, x = 2) as int;
+        }
+      ''').executeLib(_library, 'main'),
+      12,
     );
   });
 }
