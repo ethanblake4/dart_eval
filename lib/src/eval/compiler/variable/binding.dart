@@ -205,6 +205,8 @@ final class LocalBinding {
   void storeInExceptionSlot(ExceptionSlot slot) {
     storage = switch (storage) {
       CaptureCellStorage s => ExceptionSlotStorage(slot, cell: s.cell),
+      ExceptionSlotStorage s when s.cell != null =>
+        ExceptionSlotStorage(slot, cell: s.cell),
       _ => ExceptionSlotStorage(slot),
     };
   }

@@ -68,6 +68,34 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), 'error2');
     });
 
+    test('nested handlers preserve a captured mutable local', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            int main() {
+              int value = 1;
+              int increment() { value++; return value; }
+              try {
+                increment();
+                try {
+                  increment();
+                  throw 1;
+                } catch (error) {
+                  increment();
+                } finally {
+                  increment();
+                }
+              } finally {
+                increment();
+              }
+              return value;
+            }
+          ''',
+        },
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 6);
+    });
+
     test('Try/catch across function boundaries', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
