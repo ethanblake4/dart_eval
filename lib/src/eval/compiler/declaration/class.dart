@@ -257,52 +257,6 @@ _mixinMembers(
         ctx,
       );
     }
-    // Seed the mixin's type parameters with the clause's arguments so folded
-    // member signatures resolve (`with M<int>`). A name already bound on the
-    // applying class is left alone — `class B<T> with M<T>` binds M's T to
-    // B's T.
-    final mixinParams = switch (decl) {
-      MixinDeclaration(:final typeParameters) => typeParameters?.typeParameters,
-      ClassDeclaration(:final namePart) =>
-        namePart.typeParameters?.typeParameters,
-      _ => null,
-    };
-    if (mixinParams != null && mixinParams.isNotEmpty) {
-      // Seed into the mixin's own library scope — its bounds and folded
-      // member signatures resolve against its imports, not the caller's.
-      final temps = ctx.typeParameterScope(ref.file);
-      final args = mixinType.typeArguments?.arguments;
-      final owner = ownerDecl ?? ctx.currentClass;
-      final ownerParams = switch (owner) {
-        ClassDeclaration c => c.namePart.typeParameters?.typeParameters,
-        MixinDeclaration m => m.typeParameters?.typeParameters,
-        ClassTypeAlias a => a.typeParameters?.typeParameters,
-        _ => null,
-      };
-      final ownerName = switch (owner) {
-        ClassDeclaration c => c.namePart.typeName.lexeme,
-        MixinDeclaration m => m.name.lexeme,
-        ClassTypeAlias a => a.name.lexeme,
-        _ => '',
-      };
-      for (var i = 0; i < mixinParams.length; i++) {
-        final param = mixinParams[i];
-        if (temps.containsKey(param.name.lexeme)) continue;
-        final bound = param.bound;
-        temps[param.name.lexeme] =
-            (args != null && i < args.length
-                ? ctx.typeFactory.resolveAppliedTypeArgument(
-                    clauseLib,
-                    ownerName,
-                    ownerParams,
-                    args[i],
-                  )
-                : null) ??
-            (bound != null
-                ? TypeRef.fromAnnotation(ctx, ref.file, bound)
-                : CoreTypes.dynamic.ref(ctx));
-      }
-    }
     // A `class` used in `with` is a mixin class — its members fold in like a
     // mixin's (its constructors are ignored in the application).
     final (

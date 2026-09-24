@@ -586,17 +586,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           _instanceDeclarationsMap[ref.file]?[ref.name]?.forEach(
             (mName, member) => classMembers?.putIfAbsent(mName, () => member),
           );
-          // Seed the mixin's type parameters with the application's type
-          // arguments so `T`-annotated signatures in the folded members
-          // resolve to concrete types (or the class's own parameters).
-          _seedMixinTypeParams(
-            _ctx,
-            libraryIndex,
-            clsName,
-            dec,
-            mixinType,
-            ref,
-          );
         }
         if (dec is ClassTypeAlias && superclass != null) {
           final prefix = superclass.importPrefix;
@@ -1771,50 +1760,3 @@ Iterable<NamedType> superinterfacesOf(AstNode? declaration) sync* {
   }
 }
 
-/// Seeds the mixin's type parameters into [ctx.typeParameterScope] so signatures
-/// of its folded members resolve `T`-style annotations to the application's
-/// type arguments — a concrete type for `M<int>`, or the class's own type
-/// parameter for `M<T>`. Entries resolve in the mixin's library, where the
-/// member signatures are interpreted.
-void _seedMixinTypeParams(
-  CompilerContext ctx,
-  int libraryIndex,
-  String clsName,
-  Declaration dec,
-  NamedType mixinType,
-  TypeRef ref,
-) {
-  final mixinDecl =
-      ctx.topLevelDeclarationsMap[ref.file]?[ref.name]?.declaration;
-  final mixinParams = switch (mixinDecl) {
-    MixinDeclaration m => m.typeParameters?.typeParameters,
-    ClassDeclaration c => c.namePart.typeParameters?.typeParameters,
-    _ => null,
-  };
-  if (mixinParams == null || mixinParams.isEmpty) {
-    return;
-  }
-  final classParams = classLikeClauses(dec).$4?.typeParameters;
-  final mixinArgs = mixinType.typeArguments?.arguments;
-  final temps = ctx.typeParameterScope(ref.file);
-  for (var i = 0; i < mixinParams.length; i++) {
-    TypeRef? argRef;
-    if (mixinArgs != null && i < mixinArgs.length) {
-      argRef = ctx.typeFactory.resolveAppliedTypeArgument(
-        libraryIndex,
-        clsName,
-        classParams,
-        mixinArgs[i],
-      );
-    }
-    final bound = mixinParams[i].bound;
-    temps.putIfAbsent(
-      mixinParams[i].name.lexeme,
-      () =>
-          argRef ??
-          (bound == null
-              ? CoreTypes.dynamic.ref(ctx)
-              : TypeRef.fromAnnotation(ctx, ref.file, bound)),
-    );
-  }
-}

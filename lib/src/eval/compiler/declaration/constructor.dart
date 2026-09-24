@@ -722,21 +722,28 @@ Map<String, Variable> _evalUnusedFieldInitializers(
           memberLibrary != null && memberOwner is Declaration
           ? memberOwner
           : null;
-      if (memberLibrary != null && parent != null) {
-        ctx.typeParameterScope(memberLibrary).addAll(
-          foldedMemberTypeParams(
-                ctx,
-                parent,
-                fd,
-                memberLibrary,
-                prevLibrary,
-              ) ??
-              const {},
-        );
-      }
       final Variable V;
       try {
-        V = _compileFieldInitializer(ctx, fd, field);
+        if (memberLibrary == null || parent == null) {
+          V = _compileFieldInitializer(ctx, fd, field);
+        } else {
+          // A folded mixin field's initializer resolves the mixin's type
+          // parameters against this application's arguments — seeded in a
+          // pushed frame of the declaring-library scope, popped on exit.
+          V = ctx.withTypeParameters(memberLibrary, null, const [], () {
+            ctx.typeParameterScope(memberLibrary).addAll(
+              foldedMemberTypeParams(
+                    ctx,
+                    parent,
+                    fd,
+                    memberLibrary,
+                    prevLibrary,
+                  ) ??
+                  const {},
+            );
+            return _compileFieldInitializer(ctx, fd, field);
+          });
+        }
       } finally {
         ctx.library = prevLibrary;
         ctx.memberDeclaringClass = null;
@@ -787,21 +794,27 @@ void _compileUnusedFields(
               memberLibrary != null && memberOwner is Declaration
               ? memberOwner
               : null;
-          if (memberLibrary != null && parent != null) {
-            ctx.typeParameterScope(memberLibrary).addAll(
-              foldedMemberTypeParams(
-                    ctx,
-                    parent,
-                    fd,
-                    memberLibrary,
-                    prevLibrary,
-                  ) ??
-                  const {},
-            );
-          }
           final Variable v0;
           try {
-            v0 = _compileFieldInitializer(ctx, fd, field);
+            if (memberLibrary == null || parent == null) {
+              v0 = _compileFieldInitializer(ctx, fd, field);
+            } else {
+              // Same folded-initializer scoping as
+              // _evalUnusedFieldInitializers.
+              v0 = ctx.withTypeParameters(memberLibrary, null, const [], () {
+                ctx.typeParameterScope(memberLibrary).addAll(
+                  foldedMemberTypeParams(
+                        ctx,
+                        parent,
+                        fd,
+                        memberLibrary,
+                        prevLibrary,
+                      ) ??
+                      const {},
+                );
+                return _compileFieldInitializer(ctx, fd, field);
+              });
+            }
           } finally {
             ctx.library = prevLibrary;
             ctx.memberDeclaringClass = null;

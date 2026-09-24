@@ -100,33 +100,44 @@ void compileClassMembers(
         memberLibrary != null && memberOwner is Declaration
         ? memberOwner
         : null;
-    // For a member folded in from a mixin (possibly through a chain of
-    // mixin applications), rebind the declaring mixin's type parameters to
-    // this application's arguments so `T` in its body resolves against the
-    // applying class's type environment. The seed lives in the member's
-    // declaring-library scope — folded member signatures resolve lazily
-    // under that ambient environment.
-    if (memberLibrary != null) {
-      ctx.typeParameterScope(memberLibrary).addAll(
-        foldedMemberTypeParams(
-              ctx,
-              parent,
-              m,
-              memberLibrary,
-              previousLibrary,
-            ) ??
-            const {},
-      );
-    }
     try {
-      compileDeclaration(
-        m,
-        ctx,
-        parent: parent,
-        fieldIndex: fieldIndex,
-        fields: fields,
-        memberLibraries: memberLibraries,
-      );
+      if (memberLibrary == null) {
+        compileDeclaration(
+          m,
+          ctx,
+          parent: parent,
+          fieldIndex: fieldIndex,
+          fields: fields,
+          memberLibraries: memberLibraries,
+        );
+      } else {
+        // A member folded in from a mixin (possibly through a chain of
+        // mixin applications) rebinds the declaring mixin's type
+        // parameters to this application's arguments, so `T` in its body
+        // resolves against the applying class's type environment. The
+        // seed lives in a pushed frame of the member's declaring-library
+        // scope — it pops when the member finishes compiling.
+        ctx.withTypeParameters(memberLibrary, null, const [], () {
+          ctx.typeParameterScope(memberLibrary).addAll(
+            foldedMemberTypeParams(
+                  ctx,
+                  parent,
+                  m,
+                  memberLibrary,
+                  previousLibrary,
+                ) ??
+                const {},
+          );
+          compileDeclaration(
+            m,
+            ctx,
+            parent: parent,
+            fieldIndex: fieldIndex,
+            fields: fields,
+            memberLibraries: memberLibraries,
+          );
+        });
+      }
     } finally {
       ctx.library = previousLibrary;
       ctx.memberDeclaringClass = null;
