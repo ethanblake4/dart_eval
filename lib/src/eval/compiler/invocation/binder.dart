@@ -270,11 +270,7 @@ final class ArgumentBinder {
         if (entry.value is TypeParameterTypeRef)
           entry.key: (entry.value as TypeParameterTypeRef).parameter,
     };
-    final argumentSubstitution = Substitution.of({
-      for (final entry in parameterDefs.entries)
-        if (resolveGenerics[entry.key] case final TypeRef type)
-          entry.value: type,
-    });
+    final argumentSubstitution = signature.substitutionFor(resolveGenerics);
 
     final resolveGenericsMap = <String, Set<TypeRef>>{};
 
@@ -824,14 +820,13 @@ final class ArgumentBinder {
   }
 
   void _resolveInvocationGenerics(
-    int declarationLibrary,
-    List<TypeParameter>? parameters,
+    CallSignature signature,
     List<TypeAnnotation>? explicitArguments,
     Map<String, TypeRef> resolved,
-    AstNode source, {
-    required Declaration dec,
-  }) {
-    if (parameters == null || parameters.isEmpty) {
+    AstNode source,
+  ) {
+    final parameters = signature.typeParameters;
+    if (parameters.isEmpty) {
       if (explicitArguments?.isNotEmpty ?? false) {
         throw CompileError('Function does not declare type parameters', source);
       }
@@ -845,30 +840,18 @@ final class ArgumentBinder {
         source,
       );
     }
-    // Seed every parameter name before resolving bounds so F-bounds can
-    // self-reference (`f<T extends Foo<T>>(...)`). The owner carries the
-    // callee's identity — call-site placeholders for `foo<T>` and `bar<U>`
-    // in the same library are distinct parameters.
-    final callOwner = _callSiteOwner(declarationLibrary, dec);
-    for (var index = 0; index < parameters.length; index++) {
-      final name = parameters[index].name.lexeme;
-      resolved[name] = TypeParameterTypeRef(
-        TypeParameterDef(callOwner, index, name),
-        file: declarationLibrary,
-      );
+    // The declaration seeded these definitions before resolving their bounds,
+    // including recursive bounds. Use the same identities for inference.
+    for (final parameter in parameters) {
+      resolved[parameter.name] = TypeParameterTypeRef(parameter);
     }
     for (var index = 0; index < parameters.length; index++) {
       final parameter = parameters[index];
-      final name = parameter.name.lexeme;
-      final boundAnnotation = parameter.bound;
-      final bound = boundAnnotation == null
-          ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.fromAnnotation(
-              ctx,
-              declarationLibrary,
-              boundAnnotation,
-              typeParameters: resolved,
-            );
+      final name = parameter.name;
+      final bound = (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
+          .substituteTypeParameters(
+            signature.substitutionFor(resolved, includeOwn: false),
+          );
       if (explicitArguments == null) {
         resolved[name] = bound;
         continue;
@@ -881,9 +864,7 @@ final class ArgumentBinder {
       // The bound may self-reference (`T extends Generator<T>`); substitute
       // the actual argument before checking assignability.
       final substitutedBound = bound.substituteTypeParameters(
-        Substitution.of({
-          (resolved[name]! as TypeParameterTypeRef).parameter: argument,
-        }),
+        signature.substitutionFor({...resolved, name: argument}),
       );
       if (!argument.isSpec(CoreTypes.dynamic) &&
           !substitutedBound.isSpec(CoreTypes.dynamic) &&
@@ -901,66 +882,26 @@ final class ArgumentBinder {
     }
   }
 
-  bool _annotationUsesTypeParameters(
-    TypeAnnotation annotation,
-    Map<String, TypeRef> parameters,
-  ) {
-    if (annotation is NamedType) {
-      if (parameters.containsKey(annotation.name.lexeme)) return true;
-      return annotation.typeArguments?.arguments.any(
-            (argument) => _annotationUsesTypeParameters(argument, parameters),
-          ) ??
-          false;
-    }
-    return annotation.childEntities.whereType<TypeAnnotation>().any(
-      (child) => _annotationUsesTypeParameters(child, parameters),
-    );
-  }
-
-  /// Positional argument count of a method invocation, for disambiguating
-  /// extension members that differ only by arity (`operator -`).
-  /// The callable signature of a function/method/constructor declaration:
-  /// (formal parameters, declared type parameters, declared return type).
-  (List<FormalParameter>, List<TypeParameter>?, TypeAnnotation?)
-  _invocationSignature(Declaration dec) => switch (dec) {
-    FunctionDeclaration() => (
-      dec.functionExpression.parameters?.parameters ?? <FormalParameter>[],
-      dec.functionExpression.typeParameters?.typeParameters,
-      dec.returnType,
-    ),
-    MethodDeclaration() => (
-      dec.parameters?.parameters ?? <FormalParameter>[],
-      dec.typeParameters?.typeParameters,
-      dec.returnType,
-    ),
-    ConstructorDeclaration() => (dec.parameters.parameters, null, null),
-    _ => throw CompileError('Invalid declaration type ${dec.runtimeType}'),
-  };
-
-  TypeParameterOwner _callSiteOwner(int library, Declaration dec) {
-    final host = switch (dec) {
-      MethodDeclaration() => dec.parent?.parent,
-      ConstructorDeclaration() => dec.parent?.parent,
-      _ => null,
-    };
-    final prefix = host is Declaration ? '${declarationName(host)}.' : '';
-    final name = switch (dec) {
-      FunctionDeclaration() => dec.name.lexeme,
-      MethodDeclaration() => dec.name.lexeme,
-      ConstructorDeclaration() => dec.name?.lexeme ?? '',
-      _ => '',
-    };
-    final position = switch (dec) {
-      FunctionDeclaration() => dec.functionExpression.offset,
-      _ => dec.offset,
-    };
-    return TypeParameterOwner(
-      TypeParameterOwnerKind.callSite,
-      library,
-      '$prefix$name',
-      position,
-    );
-  }
+  bool _usesParameter(TypeRef type, Set<TypeParameterDef> parameters) =>
+      switch (type) {
+        TypeParameterTypeRef(:final parameter) => parameters.contains(
+          parameter,
+        ),
+        InterfaceTypeRef(:final arguments) => arguments.any(
+          (argument) => _usesParameter(argument, parameters),
+        ),
+        RecordTypeRef(:final positional, :final named) =>
+          positional.any((field) => _usesParameter(field, parameters)) ||
+              named.values.any((field) => _usesParameter(field, parameters)),
+        FunctionTypeRef(:final signature) =>
+          signature.positional.any(
+                (parameter) => _usesParameter(parameter, parameters),
+              ) ||
+              signature.named.values.any(
+                (parameter) => _usesParameter(parameter.type, parameters),
+              ) ||
+              _usesParameter(signature.returnType, parameters),
+      };
 
   /// Compiles the argument list for a call to a non-bridge declaration [dec],
   /// resolving generic type parameters at the call site. [seedGenerics] provides
@@ -986,57 +927,50 @@ final class ArgumentBinder {
     /// See [bindParameterList.fillOmitted].
     bool fillOmitted = true,
   }) {
-    final (_, typeParams, returnAnnotation) = _invocationSignature(dec);
+    final signature = CallSignature.forDeclaration(ctx, sourceLib, dec);
+    final typeParams = signature.typeParameters;
     final isCallableDecl =
         dec is FunctionDeclaration || dec is MethodDeclaration;
     final resolveGenerics = <String, TypeRef>{...seedGenerics};
-    List<TypeParameter>? classParams;
     if (dec is ConstructorDeclaration) {
       // Constructor signatures reference the declaring class's type parameters;
       // seed them from the call's explicit type arguments (or bounds).
-      final owner = dec.thisOrAncestorMatching(
-        (node) =>
-            node is ClassDeclaration ||
-            node is MixinDeclaration ||
-            node is ClassTypeAlias,
-      );
-      classParams = switch (owner) {
-        ClassDeclaration() || MixinDeclaration() || ClassTypeAlias() =>
-          classLikeClauses(owner as Declaration).$4?.typeParameters,
-        _ => null,
-      };
-      if (classParams != null) {
-        final explicitArgs = typeArguments?.arguments;
-        for (var i = 0; i < classParams.length; i++) {
-          final bound = classParams[i].bound;
-          resolveGenerics[classParams[i].name.lexeme] =
-              explicitArgs != null && i < explicitArgs.length
-              ? TypeRef.fromAnnotation(ctx, sourceLib, explicitArgs[i])
-              : bound == null
-              ? CoreTypes.dynamic.ref(ctx)
-              : TypeRef.fromAnnotation(
-                  ctx,
-                  sourceLib,
-                  bound,
-                  typeParameters: resolveGenerics,
-                );
-        }
+      final classParams = [
+        for (final entry in signature.typeParameterRefs.entries)
+          if (entry.value is TypeParameterTypeRef &&
+              (entry.value as TypeParameterTypeRef).parameter.owner.kind ==
+                  TypeParameterOwnerKind.classLike)
+            (entry.key, (entry.value as TypeParameterTypeRef).parameter),
+      ];
+      final explicitArgs = typeArguments?.arguments;
+      for (var i = 0; i < classParams.length; i++) {
+        final (name, parameter) = classParams[i];
+        resolveGenerics[name] = explicitArgs != null && i < explicitArgs.length
+            ? TypeRef.fromAnnotation(ctx, sourceLib, explicitArgs[i])
+            : (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
+                  .substituteTypeParameters(
+                    signature.substitutionFor(resolveGenerics),
+                  );
       }
     }
     if (isCallableDecl) {
       _resolveInvocationGenerics(
-        sourceLib,
-        typeParams,
+        signature,
         typeArguments?.arguments.toList(),
         resolveGenerics,
         source!,
-        dec: dec,
       );
     }
 
     bool? boxedBySubstitution;
-    if (returnAnnotation != null &&
-        _annotationUsesTypeParameters(returnAnnotation, resolveGenerics)) {
+    final referencedParameters = {
+      for (final entry in signature.typeParameterRefs.entries)
+        if (resolveGenerics.containsKey(entry.key) &&
+            entry.value is TypeParameterTypeRef)
+          (entry.value as TypeParameterTypeRef).parameter,
+    };
+    if (signature.returnAnnotated &&
+        _usesParameter(signature.returnType, referencedParameters)) {
       // Substitution narrows the language type, not the compiled callee's ABI.
       boxedBySubstitution = true;
     }
@@ -1047,7 +981,7 @@ final class ArgumentBinder {
     final argsPair = bindParameterList(
       argumentList,
       sourceLib,
-      CallSignature.forDeclaration(ctx, sourceLib, dec),
+      signature,
       dec,
       before: before,
       source: source,
@@ -1064,40 +998,25 @@ final class ArgumentBinder {
     // from the declared return type matched against the context type.
     if (returnContext != null &&
         typeArguments == null &&
-        typeParams != null &&
-        returnAnnotation != null) {
-      final callOwner = _callSiteOwner(sourceLib, dec);
-      final placeholders = <String, TypeRef>{
-        for (var i = 0; i < typeParams.length; i++)
-          typeParams[i].name.lexeme: TypeParameterTypeRef(
-            TypeParameterDef(callOwner, i, typeParams[i].name.lexeme),
-            file: sourceLib,
-          ),
-      };
-      final pattern = TypeRef.fromAnnotation(
-        ctx,
-        sourceLib,
-        returnAnnotation,
-        typeParameters: placeholders,
+        typeParams.isNotEmpty &&
+        signature.returnAnnotated) {
+      final pattern = signature.returnType.substituteTypeParameters(
+        signature.substitutionFor(seedGenerics, includeOwn: false),
       );
       final bindings = <TypeParameterDef, TypeRef>{};
       ctx.typeSystem.unify(pattern, returnContext, bindings);
-      for (var i = 0; i < typeParams.length; i++) {
-        final name = typeParams[i].name.lexeme;
+      for (final parameter in typeParams) {
+        final name = parameter.name;
         if (!identical(resolveGenerics[name], unboundGenerics[name])) continue;
-        final bound =
-            bindings[(placeholders[name]! as TypeParameterTypeRef).parameter];
+        final bound = bindings[parameter];
         if (bound != null) resolveGenerics[name] = bound;
       }
     }
 
     TypeRef? returnType;
-    if (returnAnnotation != null && resolveGenerics.isNotEmpty) {
-      returnType = TypeRef.fromAnnotation(
-        ctx,
-        sourceLib,
-        returnAnnotation,
-        typeParameters: resolveGenerics,
+    if (signature.returnAnnotated && resolveGenerics.isNotEmpty) {
+      returnType = signature.returnType.substituteTypeParameters(
+        signature.substitutionFor(resolveGenerics),
       );
     }
     // Inferred type arguments materialize into the emitted call's runtime
@@ -1105,11 +1024,11 @@ final class ArgumentBinder {
     // nothing constrained stays a call-site placeholder and degrades to
     // `dynamic`, as before.
     final inferredRuntimeTypeArguments =
-        isCallableDecl && typeArguments == null && typeParams != null
+        isCallableDecl && typeArguments == null && typeParams.isNotEmpty
         ? [
             for (final p in typeParams)
               () {
-                final t = resolveGenerics[p.name.lexeme];
+                final t = resolveGenerics[p.name];
                 return t == null || t.isTypeParameter
                     ? ctx.runtimeTypes.idOf(CoreTypes.dynamic.ref(ctx))
                     : ctx.runtimeTypes.idOf(t);

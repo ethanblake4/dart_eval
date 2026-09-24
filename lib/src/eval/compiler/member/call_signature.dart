@@ -90,6 +90,7 @@ final class CallSignature {
     required this.requiredPositional,
     this.named = const [],
     required this.returnType,
+    this.returnAnnotated = true,
     this.returnOverride,
   });
 
@@ -100,6 +101,21 @@ final class CallSignature {
   /// these same references when applying receiver and call type arguments.
   final Map<String, TypeRef> typeParameterRefs;
 
+  /// Apply call and receiver type arguments to the identities used by this
+  /// signature. [includeOwn] is false while inferring its own type arguments.
+  Substitution substitutionFor(
+    Map<String, TypeRef> arguments, {
+    bool includeOwn = true,
+  }) => Substitution.of({
+    for (final entry in typeParameterRefs.entries)
+      if (entry.value is TypeParameterTypeRef &&
+          (includeOwn ||
+              !typeParameters.contains(
+                (entry.value as TypeParameterTypeRef).parameter,
+              )))
+        (entry.value as TypeParameterTypeRef).parameter: ?arguments[entry.key],
+  });
+
   /// Positional parameters (required first).
   final List<ParameterSpec> positional;
   final int requiredPositional;
@@ -107,6 +123,10 @@ final class CallSignature {
   /// Named parameters in declaration order.
   final List<ParameterSpec> named;
   final TypeRef returnType;
+
+  /// Whether a source declaration spelled a return type rather than relying
+  /// on the dynamic fallback. Binding only publishes an annotated result.
+  final bool returnAnnotated;
 
   /// Only for bridge `returnTypeDependency`: the return type chosen by the
   /// static type of one argument.
@@ -202,6 +222,7 @@ final class CallSignature {
       requiredPositional: requiredCount,
       named: named,
       returnType: returnType,
+      returnAnnotated: returnAnnotation != null,
     );
   }
 
@@ -282,6 +303,7 @@ final class CallSignature {
         for (final parameter in named) parameter.substitute(substitution),
       ],
       returnType: returnType.substituteTypeParameters(substitution),
+      returnAnnotated: returnAnnotated,
       returnOverride: returnOverride,
     );
   }
@@ -415,7 +437,8 @@ final class CallSignature {
       ) &&
       other.requiredPositional == requiredPositional &&
       const ListEquality<ParameterSpec>().equals(other.named, named) &&
-      other.returnType == returnType;
+      other.returnType == returnType &&
+      other.returnAnnotated == returnAnnotated;
 
   @override
   int get hashCode => Object.hash(
@@ -424,5 +447,6 @@ final class CallSignature {
     requiredPositional,
     Object.hashAll(named),
     returnType,
+    returnAnnotated,
   );
 }

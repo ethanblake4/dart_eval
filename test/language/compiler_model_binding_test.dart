@@ -58,4 +58,35 @@ void main() {
       2,
     );
   });
+
+  test('explicit self-referential bounds use the callee parameter', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          class Link<T> {}
+          class Good extends Link<Good> {}
+          T echo<T extends Link<T>>(T value) => value;
+          int main() => echo<Good>(Good()) is Good ? 1 : 0;
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      1,
+    );
+    expect(
+      () => Compiler().compile({
+        'binding': {
+          'main.dart': '''
+            class Link<T> {}
+            T echo<T extends Link<T>>(T value) => value;
+            int main() => echo<int>(1);
+          ''',
+        },
+      }),
+      throwsA(isA<CompileError>()),
+    );
+  });
 }
