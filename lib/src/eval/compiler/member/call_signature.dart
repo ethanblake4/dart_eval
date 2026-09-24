@@ -85,6 +85,7 @@ final class ParameterSpec {
 final class CallSignature {
   const CallSignature({
     this.typeParameters = const [],
+    this.typeParameterRefs = const {},
     required this.positional,
     required this.requiredPositional,
     this.named = const [],
@@ -94,6 +95,10 @@ final class CallSignature {
 
   /// The member's own type parameters (`m<T>`), in declaration order.
   final List<TypeParameterDef> typeParameters;
+
+  /// The parameter scope used to resolve this source signature. Binding uses
+  /// these same references when applying receiver and call type arguments.
+  final Map<String, TypeRef> typeParameterRefs;
 
   /// Positional parameters (required first).
   final List<ParameterSpec> positional;
@@ -192,6 +197,7 @@ final class CallSignature {
           );
     return CallSignature(
       typeParameters: ownDefs,
+      typeParameterRefs: Map.unmodifiable(allTypeParams),
       positional: positional,
       requiredPositional: requiredCount,
       named: named,
@@ -264,6 +270,10 @@ final class CallSignature {
     if (substitution.isEmpty) return this;
     return CallSignature(
       typeParameters: typeParameters,
+      typeParameterRefs: {
+        for (final entry in typeParameterRefs.entries)
+          entry.key: entry.value.substituteTypeParameters(substitution),
+      },
       positional: [
         for (final parameter in positional) parameter.substitute(substitution),
       ],

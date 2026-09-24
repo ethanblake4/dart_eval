@@ -21,6 +21,12 @@ import 'bound_call.dart';
 import 'call.dart';
 import 'targets.dart';
 
+typedef _MatchedArgument = ({
+  int? positional,
+  String? named,
+  Expression expression,
+});
+
 /// Maps a [CallSite]'s argument shape onto a [CallTarget]'s signature:
 /// match, seed the substitution, compile and coerce, solve inference, fill
 /// omitted arguments per the target's policy.
@@ -28,6 +34,47 @@ final class ArgumentBinder {
   const ArgumentBinder(this.ctx);
 
   final CompilerContext ctx;
+
+  /// Validate the shape before compiling any expression, then retain source
+  /// order for evaluation. The source and bridge ABIs use the same matching
+  /// rules; only their conversion and omitted-value rules differ.
+  List<_MatchedArgument> _matchArguments(
+    ArgumentList argumentList,
+    int positionalCount,
+    Set<String> namedParameters, {
+    int offset = 0,
+    int leadingPositional = 0,
+  }) {
+    final matched = <_MatchedArgument>[];
+    var positionalCursor = leadingPositional;
+    for (var i = offset; i < argumentList.arguments.length; i++) {
+      final argument = argumentList.arguments[i];
+      if (argument is NamedArgument) {
+        final name = argument.name.lexeme;
+        if (!namedParameters.contains(name)) {
+          throw CompileError('Unknown named argument $name', argument);
+        }
+        matched.add((
+          positional: null,
+          named: name,
+          expression: argument.argumentExpression,
+        ));
+      } else {
+        if (positionalCursor >= positionalCount) {
+          throw CompileError(
+            'Too many positional arguments: $positionalCount expected, '
+            'but ${positionalCursor + 1} found.',
+          );
+        }
+        matched.add((
+          positional: positionalCursor++,
+          named: null,
+          expression: argument.argumentExpression,
+        ));
+      }
+    }
+    return matched;
+  }
 
   /// `calleeBinds` — supplied arguments only. Each argument is captured as
   /// it is evaluated, before a later argument can assign to its local slot.
@@ -197,54 +244,37 @@ final class ArgumentBinder {
 
     var i = 0;
 
-    // Parameters whose annotations name one of the host class's type
-    // parameters use the erased-object ABI — even when the call site supplies
-    // no seed (e.g. an alias constructor whose own class has no parameters).
-    final ctorClassParams =
-        parameterHost is ConstructorDeclaration &&
-            parameterHost.parent?.parent is Declaration
-        ? classLikeClauses(
-                parameterHost.parent!.parent! as Declaration,
-              ).$4?.typeParameters ??
-              const <TypeParameter>[]
-        : const <TypeParameter>[];
-    final ctorClassParamNames = <String>{
-      for (final p in ctorClassParams) p.name.lexeme,
+    // Constructor class parameters are already resolved in the signature's
+    // declaration scope. Reuse them for field/super formals and omitted values.
+    final ctorClassParamRefs = <String, TypeRef>{
+      if (parameterHost is ConstructorDeclaration)
+        for (final entry in signature.typeParameterRefs.entries)
+          if (entry.value is TypeParameterTypeRef &&
+              (entry.value as TypeParameterTypeRef).parameter.owner.kind ==
+                  TypeParameterOwnerKind.classLike)
+            entry.key: entry.value,
     };
-    // Field/super formals resolve to class type-parameter references; the call
-    // site's bindings instantiate them (e.g. `C<num, double>(0, 0.5)` makes
-    // `this.field2`'s declared `S` check against `double`). The same
-    // parameters appear as name-keyed references so annotations on ordinary
-    // (non-formal) params like `T z` resolve inside the ctor.
-    final ctorClassParamRefs = <String, TypeRef>{};
-    if (ctorClassParams.isNotEmpty) {
-      final hostName = declarationName(
-        parameterHost.parent!.parent! as Declaration,
-      );
-      declareTypeParameters(
-        ctx,
-        TypeParameterOwner(
-          TypeParameterOwnerKind.classLike,
-          decLibrary,
-          hostName,
-        ),
-        ctorClassParams,
-        ctorClassParamRefs,
-        (bound) => TypeRef.fromAnnotation(
-          ctx,
-          decLibrary,
-          bound,
-          typeParameters: {...ctorClassParamRefs, ...resolveGenerics},
-        ),
-      );
-    }
+    final ctorClassParamNames = ctorClassParamRefs.keys.toSet();
     final ctorClassParamSubs = Substitution.of(<TypeParameterDef, TypeRef>{
-      for (final param in ctorClassParams)
-        (ctorClassParamRefs[param.name.lexeme]! as TypeParameterTypeRef)
-                .parameter:
-            ?resolveGenerics[param.name.lexeme],
+      for (final entry in ctorClassParamRefs.entries)
+        (entry.value as TypeParameterTypeRef).parameter:
+            ?resolveGenerics[entry.key],
     });
     final paramTypeParameters = {...ctorClassParamRefs, ...resolveGenerics};
+
+    // The signature resolved formal annotations in the declaring scope. Bind
+    // those exact parameter identities to the call's receiver and type args;
+    // resolving AST annotations again here can pick a different scope.
+    final parameterDefs = <String, TypeParameterDef>{
+      for (final entry in signature.typeParameterRefs.entries)
+        if (entry.value is TypeParameterTypeRef)
+          entry.key: (entry.value as TypeParameterTypeRef).parameter,
+    };
+    final argumentSubstitution = Substitution.of({
+      for (final entry in parameterDefs.entries)
+        if (resolveGenerics[entry.key] case final TypeRef type)
+          entry.value: type,
+    });
 
     final resolveGenericsMap = <String, Set<TypeRef>>{};
 
@@ -252,45 +282,17 @@ final class ArgumentBinder {
     // compilation, coercion to the formal, and generic-inference recording.
     Variable compileMatched(ParameterSpec spec, Expression expr) {
       final param = spec.node!;
-      var (paramType, typeAnnotation) = getFormalParameterType(
-        ctx,
-        param,
-        decLibrary,
-        parameterHost,
-        typeParameters: paramTypeParameters,
+      final paramType = spec.type.substituteTypeParameters(
+        argumentSubstitution,
       );
-
-      paramType ??= CoreTypes.dynamic.ref(ctx);
-      if (ctorClassParamSubs.isNotEmpty) {
-        paramType = paramType.substituteTypeParameters(ctorClassParamSubs);
-      }
-      final genericParameter =
-          typeAnnotation is NamedType &&
-          (resolveGenerics.containsKey(typeAnnotation.name.lexeme) ||
-              ctorClassParamNames.contains(typeAnnotation.name.lexeme));
 
       // The placeholder-rich parameter shape used for deep generic
       // inference: built before argument compilation so context-sensitive
       // arguments (closures, generic tear-offs) see the generic form
       // rather than the erased formal type.
       TypeRef? unifyPattern;
-      final unifyPlaceholders = <String, TypeRef>{};
-      final unifyDefs = <String, TypeParameterDef>{};
-      if (inferGenerics &&
-          typeAnnotation != null &&
-          resolveGenerics.isNotEmpty) {
-        var i = 0;
-        final callSiteOwner = _callSiteOwner(decLibrary, parameterHost);
-        for (final name in resolveGenerics.keys) {
-          final def = TypeParameterDef(callSiteOwner, i++, name);
-          unifyDefs[name] = def;
-          unifyPlaceholders[name] = TypeParameterTypeRef(def, file: decLibrary);
-        }
-        unifyPattern = ctx.typeFactory.formalParameterAnnotationType(
-          decLibrary,
-          param,
-          typeParameters: {...paramTypeParameters, ...unifyPlaceholders},
-        );
+      if (inferGenerics && parameterDefs.isNotEmpty) {
+        unifyPattern = spec.type;
       }
 
       // The placeholder-rich shape only serves as context for function-typed
@@ -306,7 +308,7 @@ final class ArgumentBinder {
         paramType,
         param,
         parameterHost,
-        genericParameter: genericParameter,
+        genericParameter: spec.erased,
         source: source,
       );
 
@@ -317,7 +319,7 @@ final class ArgumentBinder {
         {
           final bindings = <TypeParameterDef, TypeRef>{};
           ctx.typeSystem.unify(unifyPattern, arg0.type, bindings);
-          for (final e in unifyDefs.entries) {
+          for (final e in parameterDefs.entries) {
             final bound = bindings[e.value];
             if (bound != null) {
               resolveGenericsMap[e.key] ??= {};
@@ -325,54 +327,26 @@ final class ArgumentBinder {
             }
           }
         }
-      } else if (typeAnnotation != null) {
-        final n = typeAnnotation is NamedType
-            ? (typeAnnotation.name.stringValue ?? typeAnnotation.name.lexeme)
-            : null;
-        if (inferGenerics && n != null && resolveGenerics.containsKey(n)) {
-          resolveGenericsMap[n] ??= {};
-          resolveGenericsMap[n]!.add(arg0.type);
-        }
       }
       // A following argument can assign to the local slot that produced this
       // value. Keep the evaluated value independent of that slot.
       return arg0.copyIntoFreshSlot(ctx, 'source_argument');
     }
 
-    // **Match.** Map arguments to formals without emitting. Named
-    // arguments are skipped during positional matching, as Dart requires.
-    final rawArguments = argumentList.arguments;
-    final matchPositional = List<Expression?>.filled(positional.length, null);
-    final matchNamed = <String, Expression>{};
-    final argIndexToPositional = <int, int>{};
-    final argIndexToNamed = <int, String>{};
-    // Forwarded super parameters occupy the leading positional-param slots.
-    var positionalCursor = superParams.positional.length;
-    for (var a = argIndexOffset; a < rawArguments.length; a++) {
-      final arg = rawArguments[a];
-      if (arg is NamedArgument) {
-        final name = arg.name.lexeme;
-        if (!named.containsKey(name)) {
-          throw CompileError('Unknown named argument $name', arg);
-        }
-        matchNamed[name] = arg.argumentExpression;
-        argIndexToNamed[a] = name;
-      } else {
-        final p = positionalCursor;
-        positionalCursor++;
-        if (p >= positional.length) {
-          throw CompileError(
-            'Too many positional arguments: ${positional.length} expected, '
-            'but ${p + 1} found.',
-          );
-        }
-        matchPositional[p] = arg.argumentExpression;
-        argIndexToPositional[a] = p;
-      }
-    }
+    final matched = _matchArguments(
+      argumentList,
+      positional.length,
+      named.keys.toSet(),
+      offset: argIndexOffset,
+      leadingPositional: superParams.positional.length,
+    );
+    final suppliedNames = {
+      for (final argument in matched)
+        if (argument.named case final String name) name,
+    };
     for (final spec in signature.named) {
       if (spec.isRequired &&
-          !matchNamed.containsKey(spec.name) &&
+          !suppliedNames.contains(spec.name) &&
           !superParams.named.contains(spec.name)) {
         throw CompileError('Missing required argument ${spec.name}', spec.node);
       }
@@ -382,17 +356,20 @@ final class ArgumentBinder {
     // interleaves with positionals.
     final compiledPositional = List<Variable?>.filled(positional.length, null);
     final compiledNamed = <String, Variable>{};
-    for (var a = argIndexOffset; a < rawArguments.length; a++) {
-      final pi = argIndexToPositional[a];
+    for (final argument in matched) {
+      final pi = argument.positional;
       if (pi != null) {
         compiledPositional[pi] = compileMatched(
           positional[pi],
-          matchPositional[pi]!,
+          argument.expression,
         );
       } else {
-        final name = argIndexToNamed[a];
+        final name = argument.named;
         if (name != null) {
-          compiledNamed[name] = compileMatched(named[name]!, matchNamed[name]!);
+          compiledNamed[name] = compileMatched(
+            named[name]!,
+            argument.expression,
+          );
         }
       }
     }
@@ -641,33 +618,48 @@ final class ArgumentBinder {
     BridgeFunctionDef function, {
     List<Variable> before = const [],
     SuperParams superParams = const (positional: [], named: {}),
+  }) => _finishBridgeVector(
+    function,
+    before: before,
+    superParams: superParams,
+    positionalValues: List<Variable?>.filled(function.params.length, null),
+    namedValues: const {},
+  );
+
+  BoundCall _finishBridgeVector(
+    BridgeFunctionDef function, {
+    required List<Variable> before,
+    required SuperParams superParams,
+    required List<Variable?> positionalValues,
+    required Map<String, Variable> namedValues,
   }) {
-    final ssa = <SSA>[];
     final args = <Variable>[];
     final push = <Variable>[...before];
     final namedArgs = <String, Variable>{};
-
     Variable? $null;
-    var positionalSuperIndex = 0;
 
-    for (final param in function.params) {
-      // First check super params. Super params do not contain an expression;
-      // positional ones bind to the callee's positional parameters in order.
-      if (positionalSuperIndex < superParams.positional.length) {
+    for (var i = 0; i < function.params.length; i++) {
+      final param = function.params[i];
+      if (i < superParams.positional.length) {
         final V = _providedBridgeArgument(
           ctx,
-          ctx.lookupLocal(superParams.positional[positionalSuperIndex++])!,
+          ctx.lookupLocal(superParams.positional[i])!,
         );
         push.add(V);
         args.add(V);
-      } else {
-        if (param.optional) {
-          $null ??= BuiltinValue().push(ctx);
-          push.add($null);
-        } else {
-          throw CompileError('Not enough positional arguments');
-        }
+        continue;
       }
+      final supplied = positionalValues[i];
+      if (supplied != null) {
+        push.add(supplied);
+        args.add(supplied);
+        continue;
+      }
+      if (!param.optional) {
+        throw CompileError('Not enough positional arguments');
+      }
+      $null ??= BuiltinValue().push(ctx);
+      push.add($null);
     }
 
     for (final param in function.namedParams) {
@@ -675,19 +667,24 @@ final class ArgumentBinder {
         final V = _providedBridgeArgument(ctx, ctx.lookupLocal(param.name)!);
         push.add(V);
         namedArgs[param.name] = V;
-      } else {
-        $null ??= BuiltinValue().push(ctx);
-        push.add($null);
+        continue;
       }
+      final supplied = namedValues[param.name];
+      if (supplied != null) {
+        push.add(supplied);
+        namedArgs[param.name] = supplied;
+        continue;
+      }
+      $null ??= BuiltinValue().push(ctx);
+      push.add($null);
     }
 
-    ssa.addAll(push.map((argument) => argument.ssa));
     return BoundCall(
       positional: [for (final a in args) BoundArgument(a)],
       named: [
         for (final e in namedArgs.entries) (e.key, BoundArgument(e.value)),
       ],
-      vectorOverride: ssa,
+      vectorOverride: [for (final argument in push) argument.ssa],
       returnType: CoreTypes.dynamic.ref(ctx),
     );
   }
@@ -744,75 +741,21 @@ final class ArgumentBinder {
     SuperParams superParams = const (positional: [], named: {}),
     Map<String, TypeRef> typeParameters = const {},
   }) {
-    final args = <Variable>[];
-    final push = <Variable>[...before];
-    final namedArgs = <String, Variable>{};
-
-    final rawArguments = argumentList.arguments;
     final positional = function.params;
     final namedParamByName = {for (final p in function.namedParams) p.name: p};
-
-    // **Match.** Positional arguments fill positional parameters in order,
-    // skipping named arguments; named arguments bind by name and may
-    // precede positional ones.
-    final matchPositional = List<Expression?>.filled(positional.length, null);
-    final matchNamed = <String, Expression>{};
-    final argIndexToPositional = <int, int>{};
-    final argIndexToNamed = <int, String>{};
-    var positionalCursor = 0;
-    for (var a = 0; a < rawArguments.length; a++) {
-      final arg = rawArguments[a];
-      if (arg is NamedArgument) {
-        final name = arg.name.lexeme;
-        if (!namedParamByName.containsKey(name) &&
-            !superParams.named.contains(name)) {
-          throw CompileError('Unknown named argument $name', arg);
-        }
-        matchNamed[name] = arg.argumentExpression;
-        argIndexToNamed[a] = name;
-        continue;
-      }
-      if (positionalCursor >= positional.length) {
-        throw CompileError(
-          'Too many positional arguments: ${positional.length} expected, '
-          'but ${positionalCursor + 1} found.',
-        );
-      }
-      matchPositional[positionalCursor] = arg.argumentExpression;
-      argIndexToPositional[a] = positionalCursor;
-      positionalCursor++;
-    }
-
-    Variable? $null;
+    final matched = _matchArguments(argumentList, positional.length, {
+      ...namedParamByName.keys,
+      ...superParams.named,
+    });
 
     // Resolve the receiver's type arguments for every parameter annotation.
-    // Simple refs (for example E in List.add) need them as much as generic
-    // function types do; dropping them leaves the context type dynamic and
-    // defeats argument conversion and reified checks.
-    Variable compilePositional(BridgeParameter param, Expression expr) {
-      final paramType = TypeRef.fromBridgeAnnotation(
-        ctx,
-        param.type,
-        typeParameters: typeParameters,
-      );
-      var arg0 = compileExpression(expr, ctx, paramType);
-      arg0 = arg0.boxIfNeeded(ctx);
-      if (arg0.type.isFunctionLike && arg0.unmaterializedCallable != null) {
-        arg0 = arg0.tearOff(ctx, boundContext: paramType);
-      }
-      // Bridge argument conversion lives on the runtime side of the typed
-      // boundary (previously the compiler only boxed). Type parameters that
-      // resolved through the receiver, nullable matches, and dynamic argument
-      // shapes can carry distinct [TypeRef] identities for an equivalent
-      // static type, so a failing compile-time [isAssignableTo] here must
-      // defer to the boundary conversion instead of rejecting.
-      return _providedBridgeArgument(
-        ctx,
-        arg0,
-      ).copyIntoFreshSlot(ctx, 'bridge_argument');
-    }
-
-    Variable compileNamedParam(BridgeParameter param, Expression expr) {
+    // Bridge positional arguments defer assignment checks to the runtime;
+    // named arguments retain the existing static conversion rule.
+    Variable compileMatchedBridge(
+      BridgeParameter param,
+      Expression expr, {
+      required bool named,
+    }) {
       final paramType = TypeRef.fromBridgeAnnotation(
         ctx,
         param.type,
@@ -822,20 +765,22 @@ final class ArgumentBinder {
       if (arg0.type.isFunctionLike && arg0.unmaterializedCallable != null) {
         arg0 = arg0.tearOff(ctx, boundContext: paramType);
       }
-      if (arg0.type.assignmentConversionTo(ctx, paramType) ==
-          AssignmentConversion.invalid) {
-        throw CompileError(
-          'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
-          argumentList,
+      if (named) {
+        if (arg0.type.assignmentConversionTo(ctx, paramType) ==
+            AssignmentConversion.invalid) {
+          throw CompileError(
+            'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
+            argumentList,
+          );
+        }
+        arg0 = convertForAssignment(
+          ctx,
+          arg0,
+          paramType,
+          representation: MachineRepresentation.object,
+          source: argumentList,
         );
       }
-      arg0 = convertForAssignment(
-        ctx,
-        arg0,
-        paramType,
-        representation: MachineRepresentation.object,
-        source: argumentList,
-      );
       return _providedBridgeArgument(
         ctx,
         arg0,
@@ -845,77 +790,36 @@ final class ArgumentBinder {
     // **Compile** supplied arguments in source order.
     final compiledPositional = List<Variable?>.filled(positional.length, null);
     final compiledNamed = <String, Variable>{};
-    for (var a = 0; a < rawArguments.length; a++) {
-      final pi = argIndexToPositional[a];
+    for (final argument in matched) {
+      final pi = argument.positional;
       if (pi != null) {
-        compiledPositional[pi] = compilePositional(
+        compiledPositional[pi] = compileMatchedBridge(
           positional[pi],
-          matchPositional[pi]!,
+          argument.expression,
+          named: false,
         );
         continue;
       }
-      final name = argIndexToNamed[a];
+      final name = argument.named;
       // Named arguments that reach a forwarded super parameter are dropped:
       // the parameter binds the constructor's local instead.
       if (name != null &&
           namedParamByName.containsKey(name) &&
           !superParams.named.contains(name)) {
-        compiledNamed[name] = compileNamedParam(
+        compiledNamed[name] = compileMatchedBridge(
           namedParamByName[name]!,
-          matchNamed[name]!,
+          argument.expression,
+          named: true,
         );
       }
     }
 
-    // **Emit** the flattened vector in declaration order.
-    for (var pi = 0; pi < positional.length; pi++) {
-      final param = positional[pi];
-      if (pi < superParams.positional.length) {
-        final V = _providedBridgeArgument(
-          ctx,
-          ctx.lookupLocal(superParams.positional[pi])!,
-        );
-        push.add(V);
-        args.add(V);
-        continue;
-      }
-      final compiled = compiledPositional[pi];
-      if (compiled != null) {
-        args.add(compiled);
-        push.add(compiled);
-        continue;
-      }
-      if (!param.optional) {
-        throw CompileError('Not enough positional arguments');
-      }
-      $null ??= BuiltinValue().push(ctx);
-      push.add($null);
-    }
-
-    for (final param in function.namedParams) {
-      if (superParams.named.contains(param.name)) {
-        final V = _providedBridgeArgument(ctx, ctx.lookupLocal(param.name)!);
-        push.add(V);
-        namedArgs[param.name] = V;
-        continue;
-      }
-      final compiled = compiledNamed[param.name];
-      if (compiled != null) {
-        push.add(compiled);
-        namedArgs[param.name] = compiled;
-        continue;
-      }
-      $null ??= BuiltinValue().push(ctx);
-      push.add($null);
-    }
-
-    return BoundCall(
-      positional: [for (final a in args) BoundArgument(a)],
-      named: [
-        for (final e in namedArgs.entries) (e.key, BoundArgument(e.value)),
-      ],
-      vectorOverride: push.map((argument) => argument.ssa).toList(),
-      returnType: CoreTypes.dynamic.ref(ctx),
+    return _finishBridgeVector(
+      function,
+      before: before,
+      superParams: superParams,
+      positionalValues: compiledPositional,
+      namedValues: compiledNamed,
     );
   }
 
