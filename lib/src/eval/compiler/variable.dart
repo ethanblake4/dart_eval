@@ -373,12 +373,13 @@ class Variable {
         facts: converted.facts,
       );
     }
-    return copyWithUpdate(
-      ctx,
+    final result = copyWith(
       type: converted.type,
       rep: converted.rep,
       facts: converted.facts,
     );
+    binding!.rebind(result);
+    return result;
   }
 
   /// Boxes this value into a fresh SSA slot instead of boxing the current
@@ -431,12 +432,13 @@ class Variable {
         facts: converted.facts,
       );
     }
-    return copyWithUpdate(
-      ctx,
+    final result = copyWith(
       type: converted.type,
       rep: converted.rep,
       facts: converted.facts,
     );
+    binding!.rebind(result);
+    return result;
   }
 
   /// Emits [Assign] copying this value into a fresh SSA slot, preserving its
@@ -505,34 +507,6 @@ class Variable {
       )
       ..name = name ?? this.name
       ..binding = binding;
-  }
-
-  /// Makes a copy of the variable with some fields updated, and also
-  /// updates the reference on the context frame.
-  Variable copyWithUpdate(
-    ScopeContext? ctx, {
-    TypeRef? type,
-    TypeRef? declaredType,
-    ValueRep? rep,
-    CallableValue? callable,
-    String? name,
-    List<TypeRef>? possibleClasses,
-    ValueFacts? facts,
-  }) {
-    var uV = copyWith(
-      type: type,
-      declaredType: declaredType,
-      rep: rep,
-      callable: callable,
-      name: name,
-      possibleClasses: possibleClasses,
-      facts: facts,
-    );
-
-    if (ctx != null) {
-      uV.binding?.rebind(uV);
-    }
-    return uV;
   }
 
   void inferType(CompilerContext ctx, TypeRef type) {

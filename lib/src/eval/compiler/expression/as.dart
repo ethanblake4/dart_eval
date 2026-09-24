@@ -23,7 +23,9 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
 
   // Special case: if casting null to a nullable type, allow it
   if (V.type.isSpec(CoreTypes.nullType) && slot.nullable) {
-    return V.copyWithUpdate(ctx, type: slot);
+    final result = V.withType(slot);
+    result.binding?.rebind(result);
+    return result;
   }
 
   V = V.boxIfNeeded(ctx);
@@ -31,8 +33,11 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // type — casting to a wider or unrelated type (dynamic, Object) leaves
   // the variable's type unchanged.
   final promotes = slot.isAssignableTo(ctx, V.type, forceAllowDynamic: false);
-  Variable update(Variable v, TypeRef type) =>
-      promotes ? v.copyWithUpdate(ctx, type: type) : v.copyWith(type: type);
+  Variable update(Variable v, TypeRef type) {
+    final result = v.withType(type);
+    if (promotes) result.binding?.rebind(result);
+    return result;
+  }
   final typeId = ctx.runtimeTypes.idOf(slot);
   if (slot.nullable) {
     macroBranch(

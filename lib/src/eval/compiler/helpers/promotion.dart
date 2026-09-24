@@ -24,7 +24,8 @@ void applyConditionPromotions(
   bool value,
 ) {
   _visitPromotions(ctx, expression, value, (local, type) {
-    local.copyWithUpdate(ctx, type: type);
+    final promoted = local.withType(type);
+    promoted.binding?.rebind(promoted);
   });
 }
 
