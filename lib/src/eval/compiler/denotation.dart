@@ -1804,7 +1804,12 @@ CallTarget? _declarationToCallTarget(
   if (decl is FunctionDeclaration && decl.returnType != null) {
     returnType = ctx.withTypeParameters<TypeRef>(
       library,
-      null,
+      TypeParameterOwner(
+        TypeParameterOwnerKind.function,
+        library,
+        name,
+        decl.functionExpression.offset,
+      ),
       decl.functionExpression.typeParameters?.typeParameters,
       () => TypeRef.fromAnnotation(ctx, library, decl.returnType!),
     );

@@ -500,7 +500,8 @@ class TypedBackend {
     final parameters =
         context.functionParameters[functionId] ?? const <FormalParameter>[];
     final declarations = context.topLevelDeclarationsMap[libraryId]!;
-    var declaration = declarations[name]?.declaration;
+    final decOrBridge = declarations[name];
+    var declaration = decOrBridge?.declaration;
     var parameterLibrary = libraryId;
     var parameterHost = declaration;
     if (declaration is ConstructorDeclaration &&
@@ -526,6 +527,30 @@ class TypedBackend {
       }
     }
     final constructorOwner = _constructorOwner(library, name);
+    // A synthesized forwarding constructor on a class type alias mirrors the
+    // superclass constructor's parameters, whose annotations resolve in the
+    // callee's library and type-parameter scope — the same scope
+    // compileAliasForwardingConstructor resolved them in.
+    var calleeTypeParameters = const <String, TypeRef>{};
+    if (declaration is ConstructorDeclaration &&
+        constructorOwner is ClassTypeAlias) {
+      // A class type alias can't declare constructors — a constructor
+      // declaration under it is a synthesized forwarder whose parameters
+      // mirror the callee's signature, resolved in the callee's library and
+      // type-parameter scope (compileAliasForwardingConstructor).
+      final calleeDecl = declaration.parent?.parent;
+      if (calleeDecl is Declaration &&
+          declarationName(calleeDecl) != declarationName(constructorOwner)) {
+        parameterHost = declaration;
+        parameterLibrary = decOrBridge?.sourceLib ?? parameterLibrary;
+        calleeTypeParameters = classTypeParameterRefs(
+          context,
+          parameterLibrary,
+          declarationName(calleeDecl),
+          classLikeClauses(calleeDecl).$4,
+        );
+      }
+    }
     final typeParameters = switch (constructorOwner) {
       null => switch (declaration) {
         FunctionDeclaration(:final functionExpression) =>
@@ -587,6 +612,7 @@ class TypedBackend {
                 parameter,
                 parameterHost,
                 indices,
+                typeParameters: calleeTypeParameters,
               ),
           ],
         );
@@ -598,13 +624,15 @@ class TypedBackend {
     int library,
     FormalParameter parameter,
     Declaration? host,
-    Map<int, int> indices,
-  ) {
+    Map<int, int> indices, {
+    Map<String, TypeRef> typeParameters = const {},
+  }) {
     final (declared, _) = getFormalParameterType(
       context,
       parameter,
       library,
       host,
+      typeParameters: typeParameters,
     );
     final type = declared ?? CoreTypes.dynamic.ref(context);
     var (defaultValue, defaultThunk) = compileParameterDefault(

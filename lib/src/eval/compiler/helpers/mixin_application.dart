@@ -40,23 +40,54 @@ Map<String, TypeRef>? findMixinApplication(
           const <TypeParameter>[];
       final appliedArgs = mixinType.typeArguments?.arguments;
       final classParams = classLikeClauses(decl).$4?.typeParameters;
-      // Each parameter's effective type under the substitutions accumulated so
-      // far (bounds apply when the application omits an argument).
-      final applied = <String, TypeRef>{
+      // The mixin's own parameters scope over parameter bounds —
+      // `mixin M<S, T extends S>` resolves `S` inside `T`'s bound to the
+      // mixin's S so it substitutes to the applied argument below. Bounds are
+      // written in the mixin declaration's own library (ref.file).
+      final mixinDeclRef = nominalDeclOf(ref);
+      final mixinDefs = [
         for (var i = 0; i < mixinParams.length; i++)
-          mixinParams[i].name.lexeme:
-              _resolveAppliedMixinArg(
-                ctx,
-                declFile,
-                declName,
-                classParams,
-                appliedArgs != null && i < appliedArgs.length
-                    ? appliedArgs[i]
-                    : null,
-                substitutions,
-              ) ??
-              _substitutedParamBound(ctx, declFile, mixinParams[i], substitutions),
-      };
+          mixinDeclRef != null && i < mixinDeclRef.typeParameters.length
+              ? mixinDeclRef.typeParameters[i]
+              : ctx.typeParameterDefs.key(
+                  TypeParameterOwner(
+                    TypeParameterOwnerKind.classLike,
+                    ref.file,
+                    ref.name,
+                  ),
+                  i,
+                  '',
+                ),
+      ];
+      // Each parameter's effective type under the substitutions accumulated so
+      // far (bounds apply when the application omits an argument). Params
+      // resolve in order and accumulate into [appliedSubs] so a bound naming
+      // an earlier parameter sees its applied argument.
+      final applied = <String, TypeRef>{};
+      final appliedSubs = <TypeParameterDef, TypeRef>{};
+      for (var i = 0; i < mixinParams.length; i++) {
+        applied[mixinParams[i].name.lexeme] =
+            _resolveAppliedMixinArg(
+              ctx,
+              declFile,
+              declName,
+              classParams,
+              appliedArgs != null && i < appliedArgs.length
+                  ? appliedArgs[i]
+                  : null,
+              substitutions,
+            ) ??
+            _substitutedParamBound(
+              ctx,
+              ref.file,
+              mixinDeclRef?.ownTypeParams ?? const <String, TypeRef>{},
+              mixinParams[i],
+              appliedSubs.isEmpty
+                  ? substitutions
+                  : substitutions.extend(Substitution.of(appliedSubs)),
+            );
+        appliedSubs[mixinDefs[i]] = applied[mixinParams[i].name.lexeme]!;
+      }
       if (identical(mixinDecl, mixinOwner)) {
         return applied;
       }
@@ -68,21 +99,7 @@ Map<String, TypeRef>? findMixinApplication(
           ref.name,
           mixinOwner,
           ownerLibrary,
-          Substitution.of({
-            ...substitutions.bindings,
-            for (var i = 0; i < mixinParams.length; i++)
-              (nominalDeclOf(ref)?.typeParameters[i] ??
-                      ctx.typeParameterDefs.key(
-                        TypeParameterOwner(
-                          TypeParameterOwnerKind.classLike,
-                          ref.file,
-                          ref.name,
-                        ),
-                        i,
-                        '',
-                      )):
-                  applied[mixinParams[i].name.lexeme]!,
-          }),
+          Substitution.of({...substitutions.bindings, ...appliedSubs}),
         );
         if (inner != null) return inner;
       }
@@ -110,16 +127,21 @@ TypeRef? _resolveAppliedMixinArg(
   }
 
 /// The bound of a mixin type parameter, substituted through [substitutions].
+/// [boundScope] carries the mixin's own parameters so bounds like
+/// `T extends S` resolve to the applied argument for `S`.
 TypeRef _substitutedParamBound(
   CompilerContext ctx,
     int file,
+    Map<String, TypeRef> boundScope,
     TypeParameter param,
     Substitution substitutions,
   ) {
     final bound = param.bound;
     return bound == null
         ? CoreTypes.dynamic.ref(ctx)
-        : ctx.typeFactory.fromAnnotation(file, bound).substituteTypeParameters(substitutions);
+        : ctx.typeFactory
+            .fromAnnotation(file, bound, typeParameters: boundScope)
+            .substituteTypeParameters(substitutions);
   }
 
 /// For [member] folded into [applier] from a mixin or mixin-class (possibly

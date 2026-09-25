@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -34,11 +35,11 @@ Variable compileSwitchExpression(
     if (index >= cases.length) {
       // Switch expressions must be exhaustive; reaching here means the
       // scrutinee slipped past static exhaustiveness checking.
-      doAssert(
+      final error = compileAssertionError(
         ctx,
-        BuiltinValue(boolval: false).push(ctx),
         BuiltinValue(stringval: 'non-exhaustive switch expression').push(ctx),
       );
+      ctx.pushOp(Throw(error.ssa));
       return StatementInfo(willAlwaysThrow: true);
     }
     final currentCase = cases[index];

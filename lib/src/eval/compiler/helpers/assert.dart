@@ -8,11 +8,13 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-void doAssert(CompilerContext ctx, Variable condition, Variable message) {
-  // Box/unbox into fresh slots: the arguments may share their SSA slot with
-  // a local or parameter that must keep its current representation.
+/// Builds the `AssertionError` object [doAssert] raises — also usable as a
+/// directly-thrown value in branches that must terminate unconditionally.
+Variable compileAssertionError(CompilerContext ctx, Variable message) {
+  // Box into a fresh slot: the message may share its SSA slot with a local
+  // or parameter that must keep its current representation.
   final argument = message.boxIntoFreshSlot(ctx);
-  final assertionErr = Variable.ssa(
+  return Variable.ssa(
     ctx,
     InvokeExternal(
       ctx.svar('assertion_error'),
@@ -22,6 +24,10 @@ void doAssert(CompilerContext ctx, Variable condition, Variable message) {
     ),
     TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.assertionError)),
   );
+}
+
+void doAssert(CompilerContext ctx, Variable condition, Variable message) {
+  final assertionErr = compileAssertionError(ctx, message);
   enforceConditionType(ctx, condition, null);
   final conditionValue = convertForAssignment(
     ctx,
