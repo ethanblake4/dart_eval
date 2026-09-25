@@ -662,32 +662,6 @@ final class ArgumentBinder {
     );
   }
 
-  BoundCall bindSuperParams(
-    List<FormalParameter> fpl,
-    Declaration parameterHost, {
-    required int decLibrary,
-    List<Variable> before = const [],
-    SuperParams superParams = const (positional: [], named: {}),
-    AstNode? source,
-  }) {
-    // An implicit super call has no expressions to evaluate. Forwarded locals
-    // and omitted defaults follow the same declaration signature as an
-    // explicit super invocation.
-    assert(
-      parameterHost is ConstructorDeclaration &&
-          fpl.length == parameterHost.parameters.parameters.length,
-    );
-    return bindParameterList(
-      null,
-      decLibrary,
-      CallSignature.forDeclaration(ctx, decLibrary, parameterHost),
-      parameterHost,
-      before: before,
-      superParams: superParams,
-      source: source,
-    );
-  }
-
   BoundCall bindSuperParamsBridge(
     BridgeFunctionDef function, {
     List<Variable> before = const [],
@@ -769,48 +743,6 @@ final class ArgumentBinder {
         for (final e in namedArgs.entries) (e.key, BoundArgument(e.value)),
       ],
       vectorOverride: [for (final argument in push) argument.ssa],
-      returnType: CoreTypes.dynamic.ref(ctx),
-    );
-  }
-
-  /// Compile dynamic arguments in source evaluation order. Binding and default
-  /// insertion happen after runtime member lookup.
-  BoundCall bindDynamicVector(
-    ArgumentList argumentList, {
-    List<Variable> before = const [],
-    Map<String, TypeRef> resolveGenerics = const {},
-    AstNode? source,
-  }) {
-    final ssa = <SSA>[];
-    final args = <Variable>[];
-    final push = <Variable>[...before];
-    final namedArgs = <String, Variable>{};
-
-    for (var i = 0; i < argumentList.arguments.length; i++) {
-      final arg = argumentList.arguments[i];
-
-      final expression = arg.argumentExpression;
-      var arg0 = compileExpression(expression, ctx);
-      // Dynamic calls use canonical object values for every argument. Their
-      // signature cannot justify unboxing a scalar or a collection here.
-      arg0 = arg0.boxIfNeeded(ctx);
-      arg0 = arg0.copyIntoFreshSlot(ctx, 'dynamic_argument');
-
-      if (arg is NamedArgument) {
-        namedArgs[arg.name.lexeme] = arg0;
-      } else {
-        args.add(arg0);
-      }
-      push.add(arg0);
-    }
-
-    ssa.addAll(push.map((argument) => argument.ssa));
-    return BoundCall(
-      positional: [for (final a in args) BoundArgument(a)],
-      named: [
-        for (final e in namedArgs.entries) (e.key, BoundArgument(e.value)),
-      ],
-      vectorOverride: ssa,
       returnType: CoreTypes.dynamic.ref(ctx),
     );
   }

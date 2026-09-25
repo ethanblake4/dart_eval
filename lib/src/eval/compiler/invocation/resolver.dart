@@ -550,7 +550,7 @@ final class CallResolver {
 
   /// The binding phase of [invokeMethod]: compile the argument list
   /// against the resolved target — the padded bridge ABI vector for
-  /// [BridgeMember]s, the dynamic vector for dynamic receivers, and the
+  /// [BridgeMember]s, the supplied-only layout for dynamic receivers, and the
   /// member's own declaration signature for source members (the interface
   /// signature while the call stays virtual, the concrete
   /// implementation's once it's static or devirtualized).
@@ -617,9 +617,22 @@ final class CallResolver {
         namedArgTypes: argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
       );
     } else if (L.type.isSpec(CoreTypes.dynamic)) {
-      argsPair = ArgumentBinder(
-        ctx,
-      ).bindDynamicVector(e.argumentList, before: [L]);
+      target = DynamicCall(
+        receiver: L.copyIntoFreshSlot(ctx, 'dynamic_receiver'),
+        name: e.methodName.name,
+      );
+      argsPair = ArgumentBinder(ctx).bindSuppliedOnly(
+        target,
+        CallSite(
+          shape: CallShape.fromArgumentList(
+            e.argumentList,
+            e.typeArguments?.arguments,
+          ),
+          context: bound,
+          source: e,
+        ),
+        callee: null,
+      );
     } else {
       final sourceMember = resolved!.member as SourceMember;
       final declaration = sourceMember.sourceDeclaration;
@@ -791,15 +804,10 @@ final class CallResolver {
           ? runtimeTypeArguments(ctx, e)
           : argsPair.runtimeTypeArguments,
       returnType: returnType,
-      // The dynamic and bridge vectors aren't decomposable into
-      // positional-then-named (source order / padded ABI) — carry the raw
-      // vector.
-      vectorOverride:
-          resolved?.member is BridgeMember || L.type.isSpec(CoreTypes.dynamic)
-          ? (resolvedMember is BridgeMember
-                ? argsPair.vector()
-                : argsPair.vector().skip(1).toList())
-          : null,
+      // Only the padded bridge ABI needs a raw vector. Dynamic calls emit
+      // positional values followed by named values after source-order
+      // evaluation in the binder.
+      vectorOverride: resolvedMember is BridgeMember ? argsPair.vector() : null,
     );
     if (resolvedMember is BridgeMember) {
       // Instance calls that carry no named or explicit type arguments take
@@ -830,10 +838,7 @@ final class CallResolver {
       ).emit(ctx, boundCall);
     }
     if (L.type.isSpec(CoreTypes.dynamic)) {
-      return DynamicCall(
-        receiver: L,
-        name: e.methodName.name,
-      ).emit(ctx, boundCall);
+      return resolvedTarget!.emit(ctx, boundCall);
     }
     return resolvedTarget!.emit(ctx, boundCall);
   }

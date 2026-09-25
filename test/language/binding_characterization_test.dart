@@ -76,6 +76,61 @@ void main() {
     );
   });
 
+  test(
+    'dynamic named-before-positional calls keep source order and layout',
+    () {
+      expect(
+        _runtime(r'''
+        int log = 0;
+        int trace(int value) { log = log * 10 + value; return value; }
+        class C {
+          int f(int value, {int a = 0, int b = 0}) => value * 100 + a * 10 + b;
+        }
+        int main() {
+          dynamic receiver = C();
+          final result = receiver.f(
+            b: trace(2), trace(1), a: trace(3),
+          ) as int;
+          return log * 1000 + result;
+        }
+      ''').executeLib(_library, 'main'),
+        213132,
+      );
+    },
+  );
+
+  test('dynamic dispatch keeps the receiver evaluated before arguments', () {
+    expect(
+      _runtime(r'''
+        class First { int f(int value) => 1; }
+        class Second { int f(int value) => 2; }
+        dynamic receiver = First();
+        int swap() { receiver = Second(); return 0; }
+        int main() => receiver.f(swap()) as int;
+      ''').executeLib(_library, 'main'),
+      1,
+    );
+  });
+
+  test('member-value calls keep the same argument layout', () {
+    expect(
+      _runtime(r'''
+        int log = 0;
+        int trace(int value) { log = log * 10 + value; return value; }
+        class C {
+          int Function(int, {int a, int b}) f =
+              (int value, {int a = 0, int b = 0}) =>
+                  value * 100 + a * 10 + b;
+        }
+        int main() {
+          final result = C().f(b: trace(2), trace(1), a: trace(3));
+          return log * 1000 + result;
+        }
+      ''').executeLib(_library, 'main'),
+      213132,
+    );
+  });
+
   test('source arguments retain their values across later assignments', () {
     expect(
       _runtime(r'''
