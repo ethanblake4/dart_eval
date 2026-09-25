@@ -280,7 +280,11 @@ final class SourceTypeDecl extends TypeDecl {
 
     return DeclaredSupertypes(superclass, [
       for (final implementsName in implementsClause)
-        resolveClauseType(implementsName),
+        // `implements Function` has no effect on the subtype relation —
+        // a callable class is not a subtype of `Function`.
+        if (resolveClauseType(implementsName) case final type
+            when !type.isBareFunction)
+          type,
     ], mixins);
   }
 }

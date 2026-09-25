@@ -221,57 +221,59 @@ abstract final class TypedOp {
   static const rStringIndexA = 188;
   static const cNewList = 189;
   static const cNewMap = 190;
-  static const cNewSet = 191;
-  static const rMapIndexCS = 192;
-  static const mapSetCSR = 193;
-  static const setAddCR = 194;
-  static const rBoxMap = 195;
-  static const rBoxSet = 196;
-  static const eInternConstR = 197;
-  static const eInternConstS = 198;
-  static const eInternConstC = 199;
-  static const aListLengthR = 200;
-  static const rListIndexCA = 201;
-  static const listSetCAR = 202;
-  static const listAppendCR = 203;
-  static const rBoxList = 204;
-  static const rBoxListTyped = 205;
-  static const rCreateClassRA = 206;
-  static const rLoadPropertyR = 207;
-  static const setPropertyRS = 208;
-  static const rLoadSuperR = 209;
-  static const rLoadLatePropertyR = 210;
-  static const setLateFinalPropertyRS = 211;
-  static const rLoadThisR = 212;
-  static const returnNull = 213;
-  static const callVirtual = 214;
-  static const jumpNotEqAB = 215;
-  static const jumpNotEqFG = 216;
-  static const jumpNotNeAB = 217;
-  static const jumpNotNeFG = 218;
-  static const jumpNotLtAB = 219;
-  static const jumpNotLtFG = 220;
-  static const jumpNotLteAB = 221;
-  static const jumpNotLteFG = 222;
-  static const jumpNotGtAB = 223;
-  static const jumpNotGtFG = 224;
-  static const jumpNotGteAB = 225;
-  static const jumpNotGteFG = 226;
-  static const jumpETrueShort = 227;
-  static const jumpEFalseShort = 228;
-  static const jumpShort = 229;
-  static const jumpNotEqABShort = 230;
-  static const jumpNotEqFGShort = 231;
-  static const jumpNotNeABShort = 232;
-  static const jumpNotNeFGShort = 233;
-  static const jumpNotLtABShort = 234;
-  static const jumpNotLtFGShort = 235;
-  static const jumpNotLteABShort = 236;
-  static const jumpNotLteFGShort = 237;
-  static const jumpNotGtABShort = 238;
-  static const jumpNotGtFGShort = 239;
-  static const jumpNotGteABShort = 240;
-  static const jumpNotGteFGShort = 241;
+  static const cNewConstMap = 191;
+  static const cNewSet = 192;
+  static const cNewConstSet = 193;
+  static const rMapIndexCS = 194;
+  static const mapSetCSR = 195;
+  static const setAddCR = 196;
+  static const rBoxMap = 197;
+  static const rBoxSet = 198;
+  static const eInternConstR = 199;
+  static const eInternConstS = 200;
+  static const eInternConstC = 201;
+  static const aListLengthR = 202;
+  static const rListIndexCA = 203;
+  static const listSetCAR = 204;
+  static const listAppendCR = 205;
+  static const rBoxList = 206;
+  static const rBoxListTyped = 207;
+  static const rCreateClassRA = 208;
+  static const rLoadPropertyR = 209;
+  static const setPropertyRS = 210;
+  static const rLoadSuperR = 211;
+  static const rLoadLatePropertyR = 212;
+  static const setLateFinalPropertyRS = 213;
+  static const rLoadThisR = 214;
+  static const returnNull = 215;
+  static const callVirtual = 216;
+  static const jumpNotEqAB = 217;
+  static const jumpNotEqFG = 218;
+  static const jumpNotNeAB = 219;
+  static const jumpNotNeFG = 220;
+  static const jumpNotLtAB = 221;
+  static const jumpNotLtFG = 222;
+  static const jumpNotLteAB = 223;
+  static const jumpNotLteFG = 224;
+  static const jumpNotGtAB = 225;
+  static const jumpNotGtFG = 226;
+  static const jumpNotGteAB = 227;
+  static const jumpNotGteFG = 228;
+  static const jumpETrueShort = 229;
+  static const jumpEFalseShort = 230;
+  static const jumpShort = 231;
+  static const jumpNotEqABShort = 232;
+  static const jumpNotEqFGShort = 233;
+  static const jumpNotNeABShort = 234;
+  static const jumpNotNeFGShort = 235;
+  static const jumpNotLtABShort = 236;
+  static const jumpNotLtFGShort = 237;
+  static const jumpNotLteABShort = 238;
+  static const jumpNotLteFGShort = 239;
+  static const jumpNotGtABShort = 240;
+  static const jumpNotGtFGShort = 241;
+  static const jumpNotGteABShort = 242;
+  static const jumpNotGteFGShort = 243;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false),
@@ -464,7 +466,9 @@ abstract final class TypedOp {
     TypedInstruction('rStringIndexA', [6, 0], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('cNewList', [], [8], TypedImmediate.none, true, false, false),
     TypedInstruction('cNewMap', [], [8], TypedImmediate.none, true, false, false),
+    TypedInstruction('cNewConstMap', [], [8], TypedImmediate.none, true, false, false),
     TypedInstruction('cNewSet', [], [8], TypedImmediate.none, true, false, false),
+    TypedInstruction('cNewConstSet', [], [8], TypedImmediate.none, true, false, false),
     TypedInstruction('rMapIndexCS', [8, 7], [6], TypedImmediate.none, true, false, false),
     TypedInstruction('mapSetCSR', [8, 7, 6], [], TypedImmediate.none, true, false, false),
     TypedInstruction('setAddCR', [8, 6], [], TypedImmediate.none, true, false, false),

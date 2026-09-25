@@ -47,17 +47,49 @@ final class TypedClosure extends EvalFunction {
           !other.descriptor.hasEnvironment &&
           descriptor.boundReceiver == other.descriptor.boundReceiver &&
           (!descriptor.boundReceiver ||
-              identical(captures.single, other.captures.single));
+              identical(captures.single, other.captures.single)) ||
+      other is TypedClosure &&
+          _adapterEquals(other) ||
+      other is TypedMember &&
+          descriptor.boundReceiver &&
+          descriptor.functionId == other.functionId &&
+          identical(captures.single, other.receiver);
+
+  /// Instantiation adapters (`f<X>` torn off under an enclosing generic and
+  /// `f<int>` torn off directly) get distinct function ids but are the same
+  /// value when they forward the same callable at the same signature.
+  bool _adapterEquals(TypedClosure other) =>
+      descriptor.isInstantiationAdapter &&
+      other.descriptor.isInstantiationAdapter &&
+      captures.single == other.captures.single &&
+      _equalityTypeId == other._equalityTypeId;
+
+  int get _equalityTypeId {
+    final runtime = this.runtime;
+    if (runtime == null) return descriptor.runtimeTypeId;
+    return _resolvedRuntimeTypeId ??= _resolveRuntimeType(runtime);
+  }
 
   @override
-  int get hashCode => descriptor.hasEnvironment
-      ? identityHashCode(this)
-      : Object.hash(
-          identityHashCode(program),
-          identityHashCode(runtime),
-          descriptor.functionId,
-          descriptor.boundReceiver ? identityHashCode(captures.single) : null,
-        );
+  int get hashCode {
+    if (descriptor.hasEnvironment && !descriptor.isInstantiationAdapter) {
+      return identityHashCode(this);
+    }
+    if (descriptor.isInstantiationAdapter) {
+      return Object.hash(captures.single, _equalityTypeId);
+    }
+    // Match [TypedMember]: a bound tear-off produced by `x.m` and a bound
+    // closure created directly must hash alike for canonicalization.
+    if (descriptor.boundReceiver) {
+      return Object.hash(identityHashCode(captures.single), descriptor.functionId);
+    }
+    return Object.hash(
+      identityHashCode(program),
+      identityHashCode(runtime),
+      descriptor.functionId,
+      null,
+    );
+  }
   static TypedClosure bind(
     TypedProgram program,
     TypedClosureDescriptor descriptor,
@@ -297,6 +329,17 @@ final class TypedClosure extends EvalFunction {
         typeArguments: typeArguments,
         runtime: runtime,
         trusted: site.trusted,
+      );
+    }
+    if (receiver is TypedInstance) {
+      return receiver.invoke(
+        'call',
+        site.positionalCount,
+        first,
+        rest,
+        namedNames: site.namedNames,
+        typeArguments: typeArguments,
+        runtime: runtime,
       );
     }
     if (receiver is TypedMember) {

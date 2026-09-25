@@ -598,7 +598,10 @@ final class CallResolver {
           : (br as BridgeConstructorDef).functionDescriptor;
       final ownerType = isStatic ? staticType! : resolved!.viewedAs;
       final receiverTypeParameters = isStatic
-          ? const <String, TypeRef>{}
+          // The class's own generics stay as parameters while arguments
+          // bind — `Iterable<T>` keeps literal arguments at their natural
+          // type and `T` is inferred from them afterwards.
+          ? bridgeClassGenericParameters(ctx, staticType!)
           : _bridgeClassTypeArguments(
               ctx,
               L.type,
@@ -609,7 +612,7 @@ final class CallResolver {
         fd,
         returnFallback: CoreTypes.dynamic.ref(ctx),
         owner: ownerType,
-        typeParameters: receiverTypeParameters,
+        typeParameters: receiverTypeParameters.cast<String, TypeRef>(),
       );
       final bridgeTargetName = isStatic
           ? '${staticType!.name}.${e.methodName.name}'
@@ -642,19 +645,11 @@ final class CallResolver {
       // Static calls on generic bridge classes (e.g. `Stream.fromIterable`)
       // infer the class's own type parameters — `T` in `Iterable<T>` — from
       // the argument types, which then resolve `returns:` annotations.
-      final classGenericNames = isStatic
-          ? switch (ctx
-                .topLevelDeclarationsMap[staticType!.file]?[staticType.name]
-                ?.bridge) {
-              BridgeClassDef b => b.type.generics.keys.toSet(),
-              _ => const <String>{},
-            }
-          : const <String>{};
       _inferBridgeTypeParameters(
         fd,
         argsPair.positional,
         bridgeTypeParameters,
-        inferableNames: classGenericNames,
+        inferableNames: receiverTypeParameters.keys.toSet(),
       );
       final resultSignature = bridgeTypeParameters.isEmpty
           ? target.signature!
@@ -714,6 +709,7 @@ final class CallResolver {
                   receiver: L,
                   name: e.methodName.name,
                   member: sourceMember,
+                  signature: resolved.signatureOverride,
                 ),
               )
             : Devirtualizer(ctx).refine(
@@ -721,6 +717,7 @@ final class CallResolver {
                   receiver: L,
                   name: e.methodName.name,
                   member: sourceMember,
+                  signature: resolved.signatureOverride,
                 ),
               );
         if (e.target is SuperExpression && target is VirtualCall) {
@@ -1439,8 +1436,10 @@ final class CallResolver {
             e.typeArguments == null &&
             boundChain.name == ctorClassName) {
           final contextArgs = interfaceArgumentsOf(boundChain);
+          // Declared parameters pin too — `C(id)` under `List<C<T>>` is
+          // `C<T>`; only unresolved inference vars don't constrain.
           if (contextArgs.isNotEmpty &&
-              contextArgs.every((t) => !t.isTypeParameter)) {
+              !contextArgs.any((t) => t.hasInferenceVariables)) {
             inferredCtorArgs = contextArgs;
           }
         }

@@ -66,7 +66,12 @@ final class IndexList extends Operation {
 final class NewMap extends Operation {
   final SSA target;
 
-  NewMap(this.target);
+  /// Backs the store with const-collection key semantics: evaluated keys
+  /// hash and compare by identity so guest `hashCode`/`==` overrides are
+  /// never invoked for `const {k: v}` literals.
+  final bool constBacking;
+
+  NewMap(this.target, {this.constBacking = false});
 
   @override
   SSA? get writesTo => target;
@@ -75,14 +80,17 @@ final class NewMap extends Operation {
   String toString() => '$target = {}';
 
   @override
-  bool operator ==(Object other) => other is NewMap && target == other.target;
+  bool operator ==(Object other) =>
+      other is NewMap &&
+      target == other.target &&
+      constBacking == other.constBacking;
 
   @override
-  int get hashCode => target.hashCode;
+  int get hashCode => target.hashCode ^ constBacking.hashCode;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return NewMap(writesTo ?? target);
+    return NewMap(writesTo ?? target, constBacking: constBacking);
   }
 }
 
@@ -256,14 +264,17 @@ final class NewRecord extends Operation {
 final class NewSet extends Operation {
   final SSA target;
 
-  NewSet(this.target);
+  /// See [NewMap.constBacking].
+  final bool constBacking;
+
+  NewSet(this.target, {this.constBacking = false});
 
   @override
   SSA get writesTo => target;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
-      NewSet(writesTo ?? target);
+      NewSet(writesTo ?? target, constBacking: constBacking);
 
   @override
   String toString() => '$target = set {}';

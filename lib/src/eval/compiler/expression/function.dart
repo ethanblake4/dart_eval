@@ -122,9 +122,9 @@ Variable compileFunctionExpression(
               loaded,
               capture.value.current.type,
               rep: capture.value.current.rep,
-              facts: ValueFacts(
-                callableSignature: capture.value.current.methodSignature,
-              ),
+              // A captured slot carries the same value as the outer one —
+              // facts like `isConst` and class narrowing still apply.
+              facts: capture.value.current.facts,
             ),
             declaredType: capture.value.declaredType,
             isFinal: capture.value.isFinal,

@@ -36,13 +36,14 @@ Variable compileListLiteral(
       throw CompileError('Lists can only have one type argument');
     }
     boundType = interfaceArgumentsOf(bound).first;
-    // An unbound type parameter is an inference variable, not a
-    // constraint: `<num>[...]` under `List<T>` binds `T` to `num` — let
-    // the elements decide.
-    if (boundType.isTypeParameter) {
-      boundType = null;
-    } else if (boundType.requiresTypeEnvironment) {
-      boundType = boundType.lowerTypeParameters(ctx);
+    // An inference variable is not a constraint: `<num>[...]` under
+    // `List<T>` binds `T` to `num` — let the elements decide. A bare type
+    // parameter is the same target: `[0]` under `Iterable<E>` produces
+    // `List<int>` and binds `E`.
+    if (boundType.hasInferenceVariables || boundType.isTypeParameter) {
+      boundType = boundType.isTypeParameter
+          ? null
+          : boundType.lowerTypeParameters(ctx);
     }
   }
   TypeRef? listSpecifiedType;

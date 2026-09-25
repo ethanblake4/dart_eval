@@ -869,8 +869,14 @@ abstract final class TypedMachine {
         case TypedOp.cNewMap:
           c = TypedCollections.newMap(runtime);
           continue dispatch;
+        case TypedOp.cNewConstMap:
+          c = TypedCollections.newConstMap(runtime);
+          continue dispatch;
         case TypedOp.cNewSet:
           c = TypedCollections.newSet(runtime);
+          continue dispatch;
+        case TypedOp.cNewConstSet:
+          c = TypedCollections.newConstSet(runtime);
           continue dispatch;
         case TypedOp.rMapIndexCS:
           r = (c as Map<Object?, Object?>)[s];

@@ -355,13 +355,51 @@ void compileConstructorDeclaration(
     return;
   }
 
-  // Field initializers run before the superconstructor invocation — evaluate
-  // them now and apply the values once the instance exists.
+  // Initializer-list entries execute in source order before the
+  // superconstructor invocation: field-initializer expressions evaluate now
+  // and apply to the instance once it exists.
   final usedNames = {
     ...fieldFormalNames,
     for (final init in otherInitializers)
       if (init is ConstructorFieldInitializer) init.fieldName.name,
   };
+  final pendingFieldInits = <({int index, SSA ssa})>[];
+  for (final init in otherInitializers) {
+    if (init is ConstructorFieldInitializer) {
+      final fType = ctx.memberLookup.fieldType(
+        TypeRef.lookupDeclaration(ctx, ctx.library, parent),
+        init.fieldName.name,
+        source: init,
+      );
+      final fieldIndex =
+          fieldIndices[init.fieldName.name] ??
+          (throw CompileError(
+            'Undefined field ${init.fieldName.name} in initializer',
+            init,
+          ));
+      var V = compileExpression(init.expression, ctx, fType);
+      if (fType != null) {
+        V = convertInitializer(ctx, V, fType, source: init.expression);
+      }
+      V = V.boxIfNeeded(ctx);
+      pendingFieldInits.add((index: fieldIndex, ssa: V.ssa));
+    } else if (init is AssertInitializer) {
+      final cond = compileExpression(init.condition, ctx);
+      final message = init.message;
+      doAssert(
+        ctx,
+        cond,
+        message: message == null
+            ? (ctx) => BuiltinValue().push(ctx)
+            : (ctx) => compileExpression(message, ctx),
+      );
+    } else {
+      throw CompileError('${init.runtimeType} initializer is not supported');
+    }
+  }
+
+  // Field initializers run before the superconstructor invocation — evaluate
+  // them now and apply the values once the instance exists.
   final evaluatedFieldInits = _evalUnusedFieldInitializers(
     ctx,
     fields,
@@ -436,36 +474,8 @@ void compileConstructorDeclaration(
     );
   }
 
-  for (final init in otherInitializers) {
-    if (init is ConstructorFieldInitializer) {
-      final fType = ctx.memberLookup.fieldType(
-        TypeRef.lookupDeclaration(ctx, ctx.library, parent),
-        init.fieldName.name,
-        source: init,
-      );
-      final fieldIndex =
-          fieldIndices[init.fieldName.name] ??
-          (throw CompileError(
-            'Undefined field ${init.fieldName.name} in initializer',
-            init,
-          ));
-      var V = compileExpression(init.expression, ctx, fType);
-      if (fType != null) {
-        V = convertInitializer(ctx, V, fType, source: init.expression);
-      }
-      V = V.boxIfNeeded(ctx);
-      ctx.pushOp(SetPropertyStatic(inst.ssa, fieldIndex, V.ssa));
-    } else if (init is AssertInitializer) {
-      final cond = compileExpression(init.condition, ctx);
-      final msg = init.message != null
-          ? compileExpression(init.message!, ctx)
-          : BuiltinValue().push(ctx);
-      if (!msg.type.isSpec(CoreTypes.never)) {
-        doAssert(ctx, cond, msg);
-      }
-    } else {
-      throw CompileError('${init.runtimeType} initializer is not supported');
-    }
+  for (final init in pendingFieldInits) {
+    ctx.pushOp(SetPropertyStatic(inst.ssa, init.index, init.ssa));
   }
 
   _compileUnusedFields(
@@ -482,6 +492,13 @@ void compileConstructorDeclaration(
   final body = d.body;
   if (d.factoryKeyword == null && body is! EmptyFunctionBody) {
     ctx.beginScope();
+    // Initializing formals are only in scope in the initializer list; in the
+    // body the bare name resolves to `this.<field>` instead.
+    for (final frame in ctx.locals) {
+      for (final name in fieldFormalNames) {
+        frame.remove(name);
+      }
+    }
     ctx.setLocal('#this', inst);
     if (body is BlockFunctionBody) {
       compileBlock(body.block, CoreTypes.voidType.ref(ctx), ctx, name: '$n()');

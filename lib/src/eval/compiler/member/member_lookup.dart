@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
     show clauseNamedType;
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
@@ -329,15 +330,18 @@ final class MemberLookup {
       );
       if (result != null) return result;
     }
-    for (final interface in ctx.typeSystem.interfacesOf(type)) {
-      final result = _tryInterfaceMember(
-        interface,
-        name,
-        source,
-        bottomType0,
-        chain,
-      );
-      if (result != null) return result;
+    // Multiple interfaces may declare [name]: `C implements I1, I2` merges
+    // `I1.f` and `I2.f` into a combined signature (Dart's combined member
+    // signature) — parameters widen to their least upper bound, the return
+    // narrows to the most specific candidate.
+    final interfaces = [
+      for (final interface in ctx.typeSystem.interfacesOf(type))
+        ?_tryInterfaceMember(interface, name, source, bottomType0, chain),
+    ];
+    if (interfaces.isNotEmpty) {
+      return interfaces.length == 1
+          ? interfaces.first
+          : mergeInterfaceMembers(interfaces);
     }
     final superclass = ctx.typeSystem.superclassOf(type);
     if (superclass != null) {
@@ -403,6 +407,79 @@ final class MemberLookup {
     } on UnknownMemberError {
       return null;
     }
+  }
+
+  /// The combined signature across several implemented interfaces:
+  /// parameters widen to the candidates' least upper bound, arity to the
+  /// most permissive candidate, and the return narrows to the most
+  /// specific candidate.
+  ResolvedMember mergeInterfaceMembers(List<ResolvedMember> candidates) {
+    final first = candidates.first;
+    final signatures = [
+      for (final candidate in candidates) candidate.signature,
+    ];
+    ParameterSpec? at(int i, CallSignature s) =>
+        i < s.positional.length ? s.positional[i] : null;
+    final positionalCount = signatures.fold(
+      0,
+      (n, s) => s.positional.length > n ? s.positional.length : n,
+    );
+    final positional = [
+      for (var i = 0; i < positionalCount; i++)
+        _mergeParameter([for (final s in signatures) ?at(i, s)]),
+    ];
+    final names = <String>{
+      for (final s in signatures)
+        for (final p in s.named) p.name,
+    };
+    final named = [
+      for (final name in names)
+        _mergeParameter([
+          for (final s in signatures)
+            ...s.named.where((p) => p.name == name),
+        ]),
+    ];
+    final returnType = signatures.fold<TypeRef>(
+      CoreTypes.dynamic.ref(ctx),
+      (most, s) => s.returnType.isAssignableTo(ctx, most)
+          ? s.returnType
+          : most,
+    );
+    return ResolvedMember(
+      first.member,
+      first.viewedAs,
+      signature: CallSignature(
+        typeParameters: first.signature.typeParameters,
+        typeParameterRefs: first.signature.typeParameterRefs,
+        positional: positional,
+        requiredPositional: signatures.fold(
+          positionalCount,
+          (n, s) => s.requiredPositional < n ? s.requiredPositional : n,
+        ),
+        named: named,
+        returnType: returnType,
+      ),
+    );
+  }
+
+  /// One merged parameter: the first candidate supplies name, default, and
+  /// node; the type widens to the candidates' least upper bound and
+  /// requiredness relaxes to the most permissive.
+  ParameterSpec _mergeParameter(List<ParameterSpec> candidates) {
+    final first = candidates.first;
+    final type = TypeRef.commonBaseType(
+      ctx,
+      {for (final c in candidates) c.type},
+    );
+    final isRequired = candidates.every((c) => c.isRequired);
+    return ParameterSpec(
+      first.name,
+      type,
+      isRequired: isRequired,
+      defaultValue: first.defaultValue,
+      erased: first.erased,
+      node: first.node,
+    );
   }
 
   /// The member [decl] itself declares for [name]'s accessor slot —

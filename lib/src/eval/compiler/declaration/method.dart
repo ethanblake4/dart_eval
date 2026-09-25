@@ -143,6 +143,8 @@ int compileMethodDeclaration(
                 d.parameters,
                 hasReceiver,
                 allowUnboxed: false,
+                parameterHost: parent is ExtensionDeclaration ? null : parent,
+                decLibrary: ctx.library,
               );
 
         final expectedReturnType = d.returnType == null

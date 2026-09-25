@@ -133,6 +133,141 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         ),
         isStatic: false,
       ),
+      'addEntries': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'newEntries',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.mapEntry, [
+                      BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                      BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                    ]),
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+        ),
+        isStatic: false,
+      ),
+      'update': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+          namedParams: [
+            BridgeParameter(
+              'ifAbsent',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                    params: [],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'key',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+              false,
+            ),
+            BridgeParameter(
+              'update',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                    params: [
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'updateAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'update',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                    params: [
+                      BridgeParameter(
+                        'key',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                        false,
+                      ),
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'removeWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'key',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                        false,
+                      ),
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
       'toString': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
@@ -316,6 +451,14 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         return $Closure(__indexSet.func, this);
       case 'addAll':
         return $Closure(__addAll.func, this);
+      case 'addEntries':
+        return $Closure(__addEntries.func, this);
+      case 'update':
+        return $Closure(__update.func, this);
+      case 'updateAll':
+        return $Closure(__updateAll.func, this);
+      case 'removeWhere':
+        return $Closure(__removeWhere.func, this);
       case 'cast':
         return $Closure(__cast.func, this);
       case 'length':
@@ -401,6 +544,90 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     for (final entry in entries) {
       wrapper.$value[entry.key] = entry.value;
     }
+    return null;
+  }
+
+  static const $Function __addEntries = $Function(_addEntries);
+
+  static $Value? _addEntries(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final wrapper = target as $Map;
+    final newEntries = (r as $Value?)!.$value as Iterable;
+    final entries = [
+      for (final e in newEntries) (e is $Value ? e.$value : e) as MapEntry,
+    ];
+    for (final entry in entries) {
+      wrapper._checkEntry(runtime, entry.key, entry.value);
+    }
+    for (final entry in entries) {
+      wrapper.$value[entry.key] = entry.value;
+    }
+    return null;
+  }
+
+  static const $Function __update = $Function(_update);
+
+  static $Value? _update(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final wrapper = target as $Map;
+    final key = r as $Value?;
+    final update = (s as $Value?) as EvalFunction;
+    // `c` is the arg count below three args, else the trailing-arg list —
+    // named `ifAbsent` arrives as its first element when supplied.
+    final ifAbsent = c is List && c.isNotEmpty ? c[0] as EvalFunction? : null;
+    final result = wrapper.$value.update(
+      key,
+      (value) => update.call(runtime, null, value as $Value?, null, 1),
+      ifAbsent: ifAbsent == null
+          ? null
+          : () => ifAbsent.call(runtime, null, null, null, 0),
+    );
+    wrapper._checkEntry(runtime, key, result);
+    return result as $Value?;
+  }
+
+  static const $Function __updateAll = $Function(_updateAll);
+
+  static $Value? _updateAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final update = (r as $Value?) as EvalFunction;
+    (target!.$value as Map).updateAll(
+      (key, value) =>
+          update.call(runtime, null, key as $Value?, value as $Value?, 2),
+    );
+    return null;
+  }
+
+  static const $Function __removeWhere = $Function(_removeWhere);
+
+  static $Value? _removeWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final test = (r as $Value?) as EvalFunction;
+    (target!.$value as Map).removeWhere(
+      (key, value) =>
+          test.call(runtime, null, key as $Value?, value as $Value?, 2)!
+              .$value as bool,
+    );
     return null;
   }
 

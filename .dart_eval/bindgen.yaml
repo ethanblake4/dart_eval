@@ -39,6 +39,9 @@ libraries:
         file: string_buffer.dart
       Symbol:
         file: symbol.dart
+        equality:
+          equals: true
+          hashCode: true
       MapEntry:
         file: map_entry.dart
       Stopwatch:

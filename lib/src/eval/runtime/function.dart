@@ -1,4 +1,5 @@
 import 'package:dart_eval/src/eval/runtime/exception.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_call_site.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_closure.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
@@ -98,6 +99,14 @@ abstract class EvalFunction implements $Instance, EvalCallable {
 /// as an argument, use [$Closure] instead.
 class $Function extends EvalFunction {
   const $Function(this.func);
+
+  /// A function reference equals another carrying the same host callable —
+  /// top-level and static tear-offs canonicalize to one func value.
+  @override
+  bool operator ==(Object other) => other is $Function && identical(func, other.func);
+
+  @override
+  int get hashCode => identityHashCode(func);
 
   static const $declaration = BridgeClassDef(
     BridgeClassType(BridgeTypeRef(CoreTypes.function)),
@@ -208,6 +217,21 @@ class $Function extends EvalFunction {
       );
     }
     if (fn is TypedInstance) {
+      // `Function.apply` tears off `call` and arity-checks it directly — a
+      // real `call` member that rejects the signature fails with
+      // NoSuchMethodError rather than consulting `noSuchMethod`.
+      final call = fn.resolve(TypedMemberKind.method, 'call');
+      if (call != null && !call.accepts(positional.length, namedNames)) {
+        final count = positional.length + namedNames.length;
+        final args = TypedInterop.argList(count, first, rest);
+        throw NoSuchMethodError.withInvocation(
+          fn,
+          Invocation.method(Symbol('call'), args.sublist(0, positional.length), {
+            for (var i = 0; i < namedNames.length; i++)
+              Symbol(namedNames[i]): args[positional.length + i],
+          }),
+        );
+      }
       return fn.invoke(
         'call',
         positional.length,
@@ -294,6 +318,19 @@ class $Closure extends EvalFunction {
 
   final EvalCallableFunc func;
   final $Instance? $this;
+
+  /// Bound tear-offs are equal for the same callable and identical
+  /// receiver — `o.m == o.m`, and `c.m == c.m` for canonical `const` c.
+  /// The receiver compares through `$value` because a host object may be
+  /// re-wrapped (`wrapList`) between reads.
+  @override
+  bool operator ==(Object other) =>
+      other is $Closure &&
+      identical(func, other.func) &&
+      identical($this?.$value, other.$this?.$value);
+
+  @override
+  int get hashCode => Object.hash(func, identityHashCode($this?.$value));
 
   @override
   get $value => func;

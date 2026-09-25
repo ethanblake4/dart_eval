@@ -17,6 +17,7 @@ final class TypedClosureDescriptor {
     this.runtimeTypeId = -1,
     this.hasEnvironment = true,
     this.boundReceiver = false,
+    this.isInstantiationAdapter = false,
   }) : namedNames = List.unmodifiable(namedNames),
        requiredNamed = List.unmodifiable(requiredNamed),
        positionalDefaults = List.unmodifiable(positionalDefaults),
@@ -45,6 +46,12 @@ final class TypedClosureDescriptor {
   final List<bool> parameterNullable;
   final List<int> typeParameterBounds;
   final bool hasEnvironment, boundReceiver;
+
+  /// Whether this descriptor is a `<generic function adapter>`: a closure that
+  /// forwards a captured callable with resolved type arguments. Instantiated
+  /// tear-offs created at different sites get distinct function ids, so
+  /// equality compares the captured callable and resolved signature instead.
+  final bool isInstantiationAdapter;
   final int runtimeTypeId;
 
   /// Whether this is a bound-method tear-off with runtime-checked

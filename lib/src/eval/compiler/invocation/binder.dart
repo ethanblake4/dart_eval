@@ -499,12 +499,11 @@ final class ArgumentBinder {
       final coercionType = paramType.requiresTypeEnvironment
           ? paramType.lowerTypeParameters(ctx)
           : paramType;
-      // The placeholder-rich shape only serves as context for function-typed
-      // parameters — collection literals need the erased formal so their
-      // element types stay unconstrained until unification.
-      final argBound = unifyPattern is FunctionTypeRef
-          ? unifyPattern
-          : coercionType;
+      // The placeholder-rich shape is the better context type everywhere:
+      // its remaining type parameters act as inference variables (`[1]`
+      // under `Iterable<T>` still produces `List<int>` and binds T to int),
+      // while the erased formal would clamp the argument to `dynamic`.
+      final argBound = unifyPattern ?? coercionType;
       var arg0 = _compileArg(ctx, argument, argBound);
       if (unifyPattern != null) {
         // Inference reads the argument's own type — coercion below may

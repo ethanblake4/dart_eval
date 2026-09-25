@@ -1,6 +1,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/bridge/declaration/class.dart';
 import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
@@ -8,15 +10,21 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 /// substitution from the owner's parameter space into the receiver's
 /// arguments.
 final class ResolvedMember {
-  ResolvedMember(this.member, this.viewedAs)
-    : substitution = Substitution.forInterface(viewedAs);
+  ResolvedMember(this.member, this.viewedAs, {CallSignature? signature})
+    : substitution = Substitution.forInterface(viewedAs),
+      signatureOverride = signature;
 
   final Member member;
   final TypeRef viewedAs;
   final Substitution substitution;
 
+  /// A signature merged over multiple interface candidates — already
+  /// substituted, so it replaces `member.signature.substitute(...)`.
+  final CallSignature? signatureOverride;
+
   /// The member's signature instantiated at [viewedAs]'s arguments.
-  CallSignature get signature => member.signature.substitute(substitution);
+  CallSignature get signature =>
+      signatureOverride ?? member.signature.substitute(substitution);
 
   /// For a field accessor, the field's type in the receiver's view; for
   /// callables, the instantiated [FunctionTypeRef].
@@ -42,13 +50,19 @@ final class ResolvedMember {
       raw = member.fieldType;
     } else if (member is SourceMember && member.node is MethodDeclaration) {
       final m = member.node as MethodDeclaration;
-      // `lookupFieldType` on a non-accessor method returns `Function` —
-      // its value is a tear-off, not the method's return type.
+      // A method read is a bound tear-off — the signature's function
+      // type, preserving genericity for tear-off instantiation. An
+      // unannotated accessor's signature carries the inherited type.
       raw = !m.isGetter && !m.isSetter
-          ? CoreTypes.function.ref(member.ownerDecl!.ctx)
+          ? member.signature.toFunctionType(member.ownerDecl!.ctx)
           : m.returnType == null
           ? null
           : member.signature.returnType;
+    } else if (member is BridgeMember &&
+        member.def is BridgeMethodDef &&
+        member.name.kind == MemberKind.method) {
+      // A bridged method read is a bound tear-off like the source case.
+      raw = member.signature.toFunctionType(member.ownerDecl!.ctx);
     } else {
       raw = member.signature.returnType;
     }

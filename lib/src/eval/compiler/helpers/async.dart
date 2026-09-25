@@ -27,7 +27,16 @@ StatementInfo doAsyncReturn(
     var compatible = boxed.type.isAssignableTo(ctx, expected);
     if (!compatible &&
         boxed.type.isAssignableTo(ctx, CoreTypes.future.ref(ctx))) {
-      final arguments = interfaceArgumentsOf(boxed.type);
+      // A Future payload comes from the `Future` superinterface's argument —
+      // not the class's own type parameters (a `FixedPoint<T>` implements
+      // `Future<FixedPoint<T>>`).
+      final instantiation = ctx.typeSystem.asInstanceOf(
+        boxed.type,
+        ctx.types.bySpec(CoreTypes.future),
+      );
+      final arguments = instantiation == null
+          ? const <TypeRef>[]
+          : interfaceArgumentsOf(instantiation);
       final payload = arguments.isEmpty
           ? CoreTypes.dynamic.ref(ctx)
           : arguments.first;

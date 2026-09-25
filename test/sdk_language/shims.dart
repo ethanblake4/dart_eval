@@ -55,10 +55,9 @@ class Expect {
 
   static void notEquals(dynamic unexpected, dynamic actual,
       [String reason = ""]) {
-    if (_deepEquals(unexpected, actual)) {
-      _fail('Expect.notEquals\$unexpected != \$actual fails'
-          '\${_getMessage(reason)}');
-    }
+    if (unexpected != actual) return;
+    _fail('Expect.notEquals\$unexpected != \$actual fails'
+        '\${_getMessage(reason)}');
   }
 
   static void identical(dynamic expected, dynamic actual,

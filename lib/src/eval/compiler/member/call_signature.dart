@@ -488,3 +488,34 @@ final class CallSignature {
     returnAnnotated,
   );
 }
+
+/// Placeholder bindings for a static call site on a generic bridge class —
+/// each of the class's own generics maps to a [TypeParameterTypeRef], so a
+/// parameter typed `Iterable<T>` stays `Iterable<T>` while arguments bind:
+/// literal arguments keep their natural type (`[1]` → `List<int>`) and the
+/// class's `T` is inferred afterwards instead of erasing to `dynamic` and
+/// clamping the argument to `List<dynamic>`.
+Map<String, TypeParameterTypeRef> bridgeClassGenericParameters(
+  CompilerContext ctx,
+  TypeRef staticType,
+) {
+  final bridge =
+      ctx.topLevelDeclarationsMap[staticType.file]?[staticType.name]?.bridge;
+  if (bridge is! BridgeClassDef) return const {};
+  final names = bridge.type.generics.keys.toList();
+  return {
+    for (var i = 0; i < names.length; i++)
+      names[i]: TypeParameterTypeRef(
+        ctx.typeParameterDefs.key(
+          TypeParameterOwner(
+            TypeParameterOwnerKind.classLike,
+            staticType.file,
+            staticType.name,
+          ),
+          i,
+          names[i],
+        ),
+        file: staticType.file,
+      ),
+  };
+}

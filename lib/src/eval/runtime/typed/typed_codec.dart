@@ -311,7 +311,8 @@ abstract final class TypedCodec {
       u32(descriptor.requiredPositional);
       u32(
         (descriptor.hasEnvironment ? 1 : 0) |
-            (descriptor.boundReceiver ? 2 : 0),
+            (descriptor.boundReceiver ? 2 : 0) |
+            (descriptor.isInstantiationAdapter ? 4 : 0),
       );
       strings(descriptor.namedNames);
       strings(descriptor.requiredNamed);
@@ -570,7 +571,7 @@ abstract final class TypedCodec {
           positionalCount = u32(),
           requiredPositional = u32(),
           flags = u32();
-      if (flags > 2 || positionalCount > 65537 || captureCount > 65536) {
+      if (flags > 6 || positionalCount > 65537 || captureCount > 65536) {
         throw const FormatException('Invalid typed closure descriptor');
       }
       final namedNames = strings(), requiredNamed = strings();
@@ -620,6 +621,7 @@ abstract final class TypedCodec {
           requiredPositional: requiredPositional,
           hasEnvironment: flags & 1 != 0,
           boundReceiver: flags & 2 != 0,
+          isInstantiationAdapter: flags & 4 != 0,
           namedNames: namedNames,
           requiredNamed: requiredNamed,
           positionalDefaults: positionalDefaults,

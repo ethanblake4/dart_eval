@@ -62,6 +62,7 @@ TypeRef resolveGlobalType(CompilerContext ctx, int library, String name) {
       if (variable.initializer != null) ctx.globalsWithInitializer.add(index);
       if (list.lateKeyword != null) ctx.globalsLate.add(index);
       if (list.isFinal || list.isConst) ctx.globalsFinal.add(index);
+      if (list.isConst) ctx.globalsConst.add(index);
     }
     final annotation = (variable?.parent as VariableDeclarationList?)?.type;
     final type = annotation == null

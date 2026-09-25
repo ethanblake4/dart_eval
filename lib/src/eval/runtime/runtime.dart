@@ -17,6 +17,7 @@ import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 import 'record.dart';
+import 'typed/typed_collections.dart';
 import 'typed/typed_export_adapter.dart';
 import 'typed/typed_frame.dart';
 import 'typed/typed_interop.dart';
@@ -125,6 +126,9 @@ class Runtime {
     // Pooled string literals are the canonical instances: interned const
     // strings resolve to them so `identical()` behaves like the host VM.
     for (final constant in _constantPool) {
+      if (constant is String) _constInternedStrings[constant] ??= constant;
+    }
+    for (final constant in _typedProgram.objects) {
       if (constant is String) _constInternedStrings[constant] ??= constant;
     }
   }

@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
+import 'package:dart_eval/src/eval/compiler/member/resolved_member.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 /// What declared a member: a nominal type or an extension.
@@ -232,7 +233,7 @@ final class SourceMember extends Member {
     final ownerParams = _ownTypeParams;
     switch (node) {
       case MethodDeclaration() || ConstructorDeclaration():
-        return CallSignature.source(
+        final signature = CallSignature.source(
           ctx,
           library,
           node as Declaration,
@@ -245,6 +246,9 @@ final class SourceMember extends Member {
               ? node as ConstructorDeclaration
               : _parameterHost,
         );
+        return node is MethodDeclaration
+            ? _inheritInterfaceTypes(signature)
+            : signature;
       case FieldDeclaration f:
         final fieldName = variable?.name.lexeme ?? name.name;
         final resolved = _fieldType(ctx, f) ?? CoreTypes.dynamic.ref(ctx);
@@ -275,6 +279,97 @@ final class SourceMember extends Member {
           returnType: CoreTypes.dynamic.ref(ctx),
         );
     }
+  }
+
+  /// Dart's override inference: a parameter or return type left unwritten
+  /// inherits the overridden member's type — the combined signature across
+  /// this type's superclass, mixins, and implemented interfaces.
+  CallSignature _inheritInterfaceTypes(CallSignature signature) {
+    final method = node as MethodDeclaration;
+    bool untyped(ParameterSpec spec) => spec.node?.type == null;
+    final needsReturn = method.returnType == null;
+    if (!needsReturn &&
+        !signature.positional.any(untyped) &&
+        !signature.named.any(untyped)) {
+      return signature;
+    }
+    final owner = this.owner;
+    if (owner is! TypeDeclMemberOwner) return signature;
+    final inherited = inheritedMemberSignature(_ctx, owner.decl, name);
+    // The paired accessor participates too: `set foo(int)` supplies an
+    // untyped getter's return, and `int get foo` an untyped setter's
+    // parameter type.
+    final CallSignature? paired;
+    if (method.isGetter && needsReturn) {
+      paired = inheritedMemberSignature(
+        _ctx,
+        owner.decl,
+        MemberName(
+          name.name,
+          MemberKind.setter,
+          privateLibraryUri: name.privateLibraryUri,
+        ),
+      );
+    } else if (method.isSetter) {
+      paired = inheritedMemberSignature(
+        _ctx,
+        owner.decl,
+        MemberName(
+          name.name,
+          MemberKind.getter,
+          privateLibraryUri: name.privateLibraryUri,
+        ),
+      );
+    } else {
+      paired = null;
+    }
+    if (inherited == null && paired == null) return signature;
+    ParameterSpec inherit(ParameterSpec spec, TypeRef? type) {
+      if (!untyped(spec)) return spec;
+      final resolved = type ?? spec.type;
+      return ParameterSpec(
+        spec.name,
+        resolved,
+        isRequired: spec.isRequired,
+        defaultValue: spec.defaultValue,
+        erased: resolved.isTypeParameter,
+        node: spec.node,
+      );
+    }
+
+    return CallSignature(
+      typeParameters: signature.typeParameters,
+      typeParameterRefs: signature.typeParameterRefs,
+      positional: [
+        for (var i = 0; i < signature.positional.length; i++)
+          inherit(
+            signature.positional[i],
+            (i < (inherited?.positional.length ?? 0)
+                    ? inherited!.positional[i].type
+                    : null) ??
+                paired?.returnType,
+          ),
+      ],
+      requiredPositional: signature.requiredPositional,
+      named: [
+        for (final spec in signature.named)
+          inherit(
+            spec,
+            [
+                  for (final p in inherited?.named ?? const <ParameterSpec>[])
+                    if (p.name == spec.name) p,
+                ].firstOrNull
+                ?.type,
+          ),
+      ],
+      returnType: needsReturn
+          ? inherited?.returnType ??
+              paired?.positional.firstOrNull?.type ??
+              signature.returnType
+          : signature.returnType,
+      returnAnnotated: signature.returnAnnotated,
+      returnOverride: signature.returnOverride,
+    );
   }
 
   /// The field's declared or inferred type, or null when it has neither —
@@ -381,6 +476,30 @@ final class BridgeMember extends Member {
   }
 }
 
+/// The combined signature a member inherits across [decl]'s direct
+/// supertypes — superclass, mixins, then implemented interfaces — for
+/// Dart's override inference and combined member signatures. Null when no
+/// supertype declares [name].
+CallSignature? inheritedMemberSignature(
+  CompilerContext ctx,
+  TypeDecl decl,
+  MemberName name,
+) {
+  final supertypes = decl.supertypes;
+  final candidates = <ResolvedMember>[
+    for (final sup in [
+      ?supertypes.superclass,
+      ...supertypes.mixins,
+      ...supertypes.interfaces,
+    ])
+      ?ctx.memberLookup.tryInterfaceMember(sup, name),
+  ];
+  if (candidates.isEmpty) return null;
+  return candidates.length == 1
+      ? candidates.first.signature
+      : ctx.memberLookup.mergeInterfaceMembers(candidates).signature;
+}
+
 /// Member lookup on a declaration — instance members, static members, and
 /// constructors declared ON this declaration (no inheritance).
 extension TypeDeclMembers on TypeDecl {
@@ -439,8 +558,6 @@ extension TypeDeclMembers on TypeDecl {
             found = probe(name.nameKey);
           }
         case MemberKind.setter:
-          // `x*s` only — a field's setter slot is resolved through the
-          // GetSet machinery, not the member map.
           found = probe(
             MemberName(
               name.name,
@@ -448,6 +565,9 @@ extension TypeDeclMembers on TypeDecl {
               privateLibraryUri: name.privateLibraryUri,
             ).key,
           );
+          if (found == null && !forImplementation) {
+            found = probe(name.nameKey);
+          }
         case MemberKind.constructor:
           found = null;
       }
@@ -493,6 +613,13 @@ extension TypeDeclMembers on TypeDecl {
           // method is a bound tear-off, matching the source map where a
           // method entry sits at the bare `name` key.
           def = classDef?.methods[name.name] ?? enumDef?.methods[name.name];
+          if (def == null) return null;
+          if (def is BridgeMethodDef && def.isStatic) return null;
+          return BridgeMember(
+            owner: memberOwner,
+            name: MemberName(name.name, MemberKind.method),
+            def: def,
+          );
         }
         if (def == null) return null;
         if ((def is BridgeMethodDef && def.isStatic) ||

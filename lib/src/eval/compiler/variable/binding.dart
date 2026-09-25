@@ -7,7 +7,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'value_facts.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
@@ -168,7 +167,7 @@ final class LocalBinding {
       LoadExceptionSlot(ctx.svar('protected'), s.slot),
       _current.type,
       rep: repForType(_current.type, _current.representation),
-      facts: ValueFacts(callableSignature: _current.methodSignature),
+      facts: _current.facts,
     ),
     ExceptionSlotStorage s => _readCell(ctx, s.cell!),
     CaptureCellStorage s => _readCell(ctx, s.cell),
@@ -180,18 +179,21 @@ final class LocalBinding {
     ReadCaptureCell(ctx.svar('captured'), cell, _current.representation),
     _current.type,
     rep: repForType(_current.type, _current.representation),
-    facts: ValueFacts(callableSignature: _current.methodSignature),
+    // A read yields the value the cell holds — its facts apply. Writes
+    // through the cell clear them via [clearValueFacts].
+    facts: _current.facts,
   );
 
   /// Moves the binding's storage behind a capture cell when [declaration]
   /// is captured by a nested closure — allocation proofs are dropped since
-  /// any closure invocation can rewrite the cell.
+  /// any closure invocation can rewrite the cell. A `final`/`const` cell is
+  /// written exactly once, before it escapes, so its facts stay valid.
   void captureBinding(CompilerContext ctx, AstNode declaration) {
     if (!capturesFor(declaration).captured.contains(declaration)) return;
     final cell = ctx.svar('cell');
     ctx.pushOp(NewCaptureCell(cell, _current.ssa, _current.representation));
     storage = CaptureCellStorage(cell);
-    clearValueFacts();
+    if (!(isFinal && initialized)) clearValueFacts();
   }
 
   /// Re-initializes the capture cell from its current value — used at loop

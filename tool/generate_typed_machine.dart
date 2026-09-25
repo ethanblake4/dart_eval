@@ -728,8 +728,20 @@ List<Instruction> specification() {
     mayThrow: true,
   );
   add(
+    'cNewConstMap',
+    'c = TypedCollections.newConstMap(runtime);',
+    output: 8,
+    mayThrow: true,
+  );
+  add(
     'cNewSet',
     'c = TypedCollections.newSet(runtime);',
+    output: 8,
+    mayThrow: true,
+  );
+  add(
+    'cNewConstSet',
+    'c = TypedCollections.newConstSet(runtime);',
     output: 8,
     mayThrow: true,
   );

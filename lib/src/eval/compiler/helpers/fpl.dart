@@ -6,6 +6,8 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/argument_list.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/default_value.dart';
+import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
@@ -136,16 +138,22 @@ List<FormalParameter> resolveFPLDefaults(
 }) {
   if (param is RegularFormalParameter) {
     final type = param.type;
-    return type == null
-        ? (null, null)
-        : (
-            ctx.typeFactory.formalParameterAnnotationType(
-              decLibrary,
-              param,
-              typeParameters: typeParameters,
-            ),
-            type,
-          );
+    if (type != null) {
+      return (
+        ctx.typeFactory.formalParameterAnnotationType(
+          decLibrary,
+          param,
+          typeParameters: typeParameters,
+        ),
+        type,
+      );
+    }
+    // An unwritten parameter type on an instance method is inherited from
+    // the overridden member's signature (Dart's override inference).
+    return (
+      _inheritedParameterType(ctx, param, decLibrary, parameterHost),
+      null,
+    );
   } else if (param is FieldFormalParameter) {
     return (
       resolveFieldFormalType(ctx, decLibrary, param, parameterHost!),
@@ -159,4 +167,52 @@ List<FormalParameter> resolveFPLDefaults(
   } else {
     throw CompileError('Unknown formal type ${param.runtimeType}');
   }
+}
+
+/// The overridden member's type for [param] — Dart's override inference
+/// binds an unannotated instance-method parameter to the type the combined
+/// superinterface signature declares at the same position.
+TypeRef? _inheritedParameterType(
+  CompilerContext ctx,
+  FormalParameter param,
+  int decLibrary,
+  Declaration? parameterHost,
+) {
+  final list = param.parent;
+  final method = list?.parent;
+  if (list is! FormalParameterList ||
+      method is! MethodDeclaration ||
+      method.isStatic ||
+      parameterHost == null) {
+    return null;
+  }
+  final kind = method.isGetter
+      ? MemberKind.getter
+      : method.isSetter
+      ? MemberKind.setter
+      : MemberKind.method;
+  final decl = ctx.types.find(decLibrary, declarationName(parameterHost));
+  if (decl == null) return null;
+  final signature = inheritedMemberSignature(
+    ctx,
+    decl,
+    MemberName(method.name.lexeme, kind),
+  );
+  if (signature == null) return null;
+  if (param.isNamed) {
+    for (final spec in signature.named) {
+      if (spec.name == param.name?.lexeme) return spec.type;
+    }
+    return null;
+  }
+  var index = 0;
+  for (final other in list.parameters) {
+    if (identical(other, param)) {
+      return index < signature.positional.length
+          ? signature.positional[index].type
+          : null;
+    }
+    if (other.isPositional) index++;
+  }
+  return null;
 }

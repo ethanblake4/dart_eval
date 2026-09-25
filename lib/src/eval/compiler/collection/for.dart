@@ -15,14 +15,20 @@ List<TypeRef> compileForElementForList(
   Variable list,
   CompilerContext ctx,
   bool box,
-) => compileForElement(
-  e,
-  ctx,
-  (element) => compileListElement(element, list, ctx, box),
-  iterableBound: CoreTypes.iterable
-      .ref(ctx)
-      .copyWith(arguments: [interfaceArgumentsOf(list.type).first]),
-);
+) {
+  // The list's element type is the iterable's context — but only when it
+  // constrains: an unspecified `List<dynamic>` says nothing, and the
+  // declared loop variable must supply the context instead.
+  final elementType = interfaceArgumentsOf(list.type).first;
+  return compileForElement(
+    e,
+    ctx,
+    (element) => compileListElement(element, list, ctx, box),
+    iterableBound: elementType.isSpec(CoreTypes.dynamic)
+        ? null
+        : CoreTypes.iterable.ref(ctx).copyWith(arguments: [elementType]),
+  );
+}
 
 /// Compiles a collection `for` element, dispatching its body through
 /// [compileBody] and returning every type it may produce.

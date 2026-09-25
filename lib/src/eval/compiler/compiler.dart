@@ -877,9 +877,24 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     // discover its type arguments or supertypes and append more descriptors.
     _ctx.runtimeTypes.typeSets.clear();
     _ctx.runtimeTypes.descriptors.clear();
+    // Instantiated supertypes are emitted only up to the deepest written
+    // type's argument nesting — a divergent interface
+    // (`F<T> implements Future<F<F<T>>>`) would otherwise expand the table
+    // forever. Every `is`-checkable type was already written in the
+    // program, so deeper instantiations only need their nominal index.
+    var maxEmittedArgDepth = 0;
+    for (final type in _ctx.runtimeTypes.list) {
+      final depth = typeArgumentDepth(type);
+      if (depth > maxEmittedArgDepth) maxEmittedArgDepth = depth;
+    }
     for (var i = 0; i < _ctx.runtimeTypes.list.length; i++) {
       final type = _ctx.runtimeTypes.list[i];
-      _ctx.runtimeTypes.typeSets.add(_ctx.runtimeTypes.supertypeIds(type));
+      _ctx.runtimeTypes.typeSets.add(
+        _ctx.typeSystem.supertypeIds(
+          type,
+          maxEmittedArgDepth: maxEmittedArgDepth,
+        ),
+      );
       _ctx.runtimeTypes.descriptors.add(_ctx.runtimeTypes.descriptorOf(type));
     }
     int relocate(int id) =>

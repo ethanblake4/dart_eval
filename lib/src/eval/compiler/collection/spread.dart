@@ -27,12 +27,15 @@ List<TypeRef> compileCollectionSpread(
   bool box = true,
   Variable? source,
 }) {
-  final collection = source ?? compileExpression(element.expression, ctx);
+  final requiredType = (isMap ? CoreTypes.map : CoreTypes.iterable).ref(ctx);
+  // The target's collection type is the spread source's context type — a
+  // nested bare `{}` infers from it rather than defaulting to a Map.
+  final collection =
+      source ?? compileExpression(element.expression, ctx, target.type);
   if (element.isNullAware && collection.type.isSpec(CoreTypes.nullType)) {
     return interfaceArgumentsOf(target.type);
   }
   final sourceType = collection.type.withNullable(false);
-  final requiredType = (isMap ? CoreTypes.map : CoreTypes.iterable).ref(ctx);
   if (!sourceType.isAssignableTo(ctx, requiredType)) {
     throw CompileError(
       'Cannot spread ${collection.type} into ${target.type}',

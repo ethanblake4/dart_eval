@@ -16,7 +16,9 @@ import '../member/member_name.dart';
 import '../invocation/deferred.dart';
 import '../../ir/function.dart' as ir;
 import '../../ir/flow.dart';
+import '../../ir/bridge.dart';
 import '../../ir/representation.dart';
+import 'package:dart_eval/src/eval/bridge/declaration.dart';
 
 /// Materializes a declaration's function reference. When [boundContext] supplies a
 /// [FunctionTypeRef] (the assignment's destination type), a generic
@@ -44,7 +46,7 @@ Variable materializeTearOff(
       );
     }
     if (declared.isBridge) {
-      throw CompileError('Cannot tear off bridged function');
+      return _bridgeTearOff(ctx, offset, declared, boundContext: boundContext, typeArguments: typeArguments);
     }
     declaration = declared.declaration!;
   }
@@ -283,6 +285,92 @@ Variable materializeTearOff(
   );
 }
 
+/// Materializes a bridged (host-registered) function reference as a
+/// captureless adapter closure whose body forwards its arguments to
+/// `InvokeExternal`. Being captureless, the tear-off canonicalizes like any
+/// other constant function reference.
+Variable _bridgeTearOff(
+  CompilerContext ctx,
+  DeferredOrOffset offset,
+  DeclarationOrBridge declared, {
+  TypeRef? boundContext,
+  List<TypeRef>? typeArguments,
+}) {
+  final bridge = declared.bridge! as BridgeFunctionDeclaration;
+  final functionDef = bridge.function;
+  final file = offset.file ?? ctx.library;
+  final externalIndex = ctx.bridgeStaticFunctionIndices[file]?[offset.name];
+  if (externalIndex == null) {
+    throw CompileError('Cannot tear off unregistered bridged function ${offset.name}');
+  }
+  final functionType = CallSignature.bridge(
+    ctx,
+    functionDef,
+    returnFallback: CoreTypes.dynamic.ref(ctx),
+  ).toFunctionType(ctx);
+  final positional = functionDef.params;
+  final named = functionDef.namedParams;
+  final outer = NestedFunctionState(ctx);
+  late final int functionId;
+  try {
+    ctx.finishMethod();
+    outer.resumeAfterFlush();
+    ctx.labels.clear();
+    ctx.caughtExceptionTargets.clear();
+    functionId = ctx.beginFunction('<bridge function adapter>');
+    ctx.locals = [];
+    ctx.exceptionDepth = 0;
+    ctx.beginScope();
+    ctx.functionSignatures[functionId] = MachineFunctionSignature(
+      List.filled(
+        positional.length + named.length,
+        MachineRepresentation.object,
+      ),
+      MachineRepresentation.object,
+    );
+    final args = <SSA>[];
+    for (var i = 0; i < positional.length + named.length; i++) {
+      final arg = SSA('arg_$i');
+      ctx.pushOp(ir.Parameter(arg, i));
+      args.add(arg);
+    }
+    final result = ctx.svar('bridge_result');
+    ctx.pushOp(InvokeExternal(result, externalIndex, args));
+    ctx.pushOp(Return(result));
+    ctx.endScope();
+    ctx.finishMethod();
+  } finally {
+    outer.restore();
+  }
+  final created = Variable.ssa(
+    ctx,
+    CreateClosure(
+      ctx.svar('tearoff'),
+      DeferredOrOffset(offset: functionId),
+      const [],
+      hasEnvironment: false,
+      requiredPositional: positional.where((p) => !p.optional).length,
+      positionalCount: positional.length,
+      namedNames: [for (final p in named) p.name],
+      requiredNamed: [for (final p in named) if (!p.optional) p.name],
+      runtimeTypeId: ctx.runtimeTypes.idOf(functionType),
+    ),
+    functionType,
+    facts: ValueFacts(
+      callableSignature: CallSignature.returnOnly(
+        functionType.signature.returnType,
+      ),
+    ),
+  );
+  final callable = internConst(ctx, created, functionType);
+  return instantiateRuntimeCallable(
+    ctx,
+    callable,
+    boundContext: boundContext,
+    typeArguments: typeArguments,
+  );
+}
+
 /// Specializes a runtime generic callable while retaining runtime dispatch.
 /// The adapter captures the evaluated callable and forwards its arguments with
 /// the selected type arguments, so a method override remains authoritative.
@@ -362,24 +450,30 @@ Variable instantiateRuntimeCallable(
     for (final name in named) instantiated.signature.named[name]!.type,
   ];
 
-  final outer = NestedFunctionState(ctx);
-  late final int functionId;
-  try {
-    // Flush the outer block before compiling the adapter, preserving its builder.
-    ctx.finishMethod();
-    outer.resumeAfterFlush();
-    ctx.labels.clear();
-    ctx.caughtExceptionTargets.clear();
-    functionId = ctx.beginFunction('<generic function adapter>');
-    ctx.locals = [];
-    ctx.exceptionDepth = 0;
-    ctx.beginScope();
-    ctx.functionSignatures[functionId] = MachineFunctionSignature(
-      List.filled(parameters.length + 1, MachineRepresentation.object),
-      MachineRepresentation.object,
-    );
-    ctx.functionParameterTypes[functionId] = parameters;
-    ctx.functionRuntimeTypes[functionId] = instantiated;
+  // Identical instantiations share the adapter — the interned closure keys
+  // on (functionId, captures), so `f<int>` at two sites canonicalizes.
+  final adapterKey =
+      '${ctx.runtimeTypes.idOf(instantiated)}:${argumentIds.join(',')}';
+  var functionId = ctx.instantiatedAdapterIds[adapterKey];
+  if (functionId == null) {
+    final outer = NestedFunctionState(ctx);
+    try {
+      // Flush the outer block before compiling the adapter, preserving its builder.
+      ctx.finishMethod();
+      outer.resumeAfterFlush();
+      ctx.labels.clear();
+      ctx.caughtExceptionTargets.clear();
+      functionId = ctx.beginFunction('<generic function adapter>');
+      ctx.instantiatedAdapterIds[adapterKey] = functionId;
+      ctx.locals = [];
+      ctx.exceptionDepth = 0;
+      ctx.beginScope();
+      ctx.functionSignatures[functionId] = MachineFunctionSignature(
+        List.filled(parameters.length + 1, MachineRepresentation.object),
+        MachineRepresentation.object,
+      );
+      ctx.functionParameterTypes[functionId] = parameters;
+      ctx.functionRuntimeTypes[functionId] = instantiated;
     ctx.pushOp(ir.Parameter(SSA('arg_0'), 0));
     final captured = ctx.svar('generic_function');
     ctx.pushOp(LoadCapture(captured, 0));
@@ -405,15 +499,17 @@ Variable instantiateRuntimeCallable(
     ctx.pushOp(Return(result));
     ctx.endScope();
     ctx.finishMethod();
-  } finally {
-    outer.restore();
+    } finally {
+      outer.restore();
+    }
   }
-  return Variable.ssa(
+  return internConst(ctx, Variable.ssa(
     ctx,
     CreateClosure(
       ctx.svar('instantiated_function'),
       DeferredOrOffset(offset: functionId),
       [value.ssa],
+      isInstantiationAdapter: true,
       requiredPositional: signature.requiredPositional,
       positionalCount: signature.positional.length,
       namedNames: named,
@@ -435,5 +531,5 @@ Variable instantiateRuntimeCallable(
         instantiated.signature.returnType,
       ),
     ),
-  );
+  ), instantiated);
 }

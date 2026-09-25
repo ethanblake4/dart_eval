@@ -1,13 +1,16 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/condition.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/representation.dart';
 
 StatementInfo macroLoop(
   CompilerContext ctx,
@@ -51,7 +54,12 @@ StatementInfo macroLoop(
         exit,
       ).block(0);
     } else if (condition != null) {
-      final value = condition(ctx).unboxIfNeeded(ctx);
+      final value = convertForAssignment(
+        ctx,
+        condition(ctx),
+        CoreTypes.bool.ref(ctx),
+        representation: MachineRepresentation.boolean,
+      );
       ctx.pushOp(JumpIfFalse(value.ssa, exit.label!));
       ctx.flushBlock();
       ctx.builder = ctx.builder.split(bodyBlock, exit).block(0);
@@ -109,7 +117,12 @@ StatementInfo macroLoop(
     if (conditionExpression != null) {
       compileCondition(conditionExpression, ctx, bodyBlock, exit);
     } else if (condition != null) {
-      final value = condition(ctx).unboxIfNeeded(ctx);
+      final value = convertForAssignment(
+        ctx,
+        condition(ctx),
+        CoreTypes.bool.ref(ctx),
+        representation: MachineRepresentation.boolean,
+      );
       ctx.pushOp(JumpIfFalse(value.ssa, exit.label!));
       final tail = ctx.flushBlock();
       ctx.builder.link(tail, exit);

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart'
     show TypedRuntimeInterop, WrappedException;
+import 'package:dart_eval/src/eval/runtime/typed/typed_closure.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -305,14 +306,19 @@ class $Future<T> implements Future<T>, $Instance {
     final $then = (r as $Value?) as EvalFunction;
     final onError = s as EvalFunction?;
     final runtimeTypeId = runtime.typedFutureTypeForCallback($then);
-    FutureOr<$Value?> onErrorCb(Object error, StackTrace stackTrace) =>
-        onError!.call(
-          runtime,
-          target,
-          runtime.wrap(error),
-          runtime.wrap(stackTrace),
-          2,
-        );
+    FutureOr<$Value?> onErrorCb(Object error, StackTrace stackTrace) {
+      final handler = onError!;
+      final twoArgs =
+          handler is TypedClosure &&
+          handler.descriptor.accepts(2, const []);
+      return handler.call(
+        runtime,
+        target,
+        runtime.wrap(error),
+        twoArgs ? $StackTrace.wrap(stackTrace) : null,
+        twoArgs ? 2 : 1,
+      );
+    }
     final $result = ($t.$value).then(
       (value) {
         try {
@@ -393,16 +399,20 @@ class $Future<T> implements Future<T>, $Instance {
     final $t = target as $Future;
     final onError = r as EvalFunction;
     final test = s as EvalFunction?;
-    FutureOr<dynamic> onErrorCb(Object error, StackTrace stackTrace) =>
-        onError
-            .call(
-              runtime,
-              target,
-              runtime.wrap(error),
-              runtime.wrap(stackTrace),
-              2,
-            )
-            ?.$value;
+    FutureOr<dynamic> onErrorCb(Object error, StackTrace stackTrace) {
+      final twoArgs =
+          onError is TypedClosure &&
+          onError.descriptor.accepts(2, const []);
+      return onError
+          .call(
+            runtime,
+            target,
+            runtime.wrap(error),
+            twoArgs ? $StackTrace.wrap(stackTrace) : null,
+            twoArgs ? 2 : 1,
+          )
+          ?.$value;
+    }
     bool testCb(Object error) =>
         test!.call(runtime, target, runtime.wrap(error), null, 1)?.$value
             as bool? ??

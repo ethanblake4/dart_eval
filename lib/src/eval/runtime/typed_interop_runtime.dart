@@ -33,13 +33,20 @@ extension TypedRuntimeInterop on Runtime {
           level = level.superclass;
         }
         key = [for (final part in parts) _constKeyPart(part)];
+      case TypedClosure():
+        // An instantiated or bound tear-off canonicalizes on its adapter
+        // and captures — `f<int>` at separate sites is one value.
+        key = [
+          v.descriptor.functionId,
+          for (final part in v.captures) _constKeyPart(part),
+        ];
       case $Record():
         key = [for (final part in v.fields) _constKeyPart(part)];
       case List<Object?>():
         v = List<Object?>.unmodifiable(v);
         key = [for (final part in v) _constKeyPart(part)];
       case Map():
-        v = UnmodifiableMapView(v);
+        v = UnmodifiableMapView(TypedCollections.canonicalizeMap(v, this));
         key = [
           for (final entry in v.entries) ...[
             _constKeyPart(entry.key),
@@ -47,7 +54,7 @@ extension TypedRuntimeInterop on Runtime {
           ],
         ];
       case Set():
-        v = UnmodifiableSetView(v);
+        v = UnmodifiableSetView(TypedCollections.canonicalizeSet(v, this));
         key = [for (final part in v) _constKeyPart(part)];
       case String():
         // Const strings canonicalize by content: a pooled literal and an
@@ -98,6 +105,7 @@ extension TypedRuntimeInterop on Runtime {
     $String p => _constKeyPart(p.$value),
     $null() => null,
     String p => _constInternedStrings[p] ??= p,
+    TypedClosure p => internConst(p, p.descriptor.runtimeTypeId),
     _ => part,
   };
 
@@ -1183,6 +1191,11 @@ extension TypedRuntimeInterop on Runtime {
     }
     final object = receiver as $Instance;
     final callable = object.$getProperty(this, name);
+    // A getter may return a guest instance whose `call` member is the
+    // intended target (e.g. `list.first()` on an element with `call`).
+    if (callable is TypedInstance) {
+      return callable.invoke('call', count, first, rest, runtime: this);
+    }
     if (callable is! EvalCallable) throw StateError('$name is not callable');
     return TypedInterop.callCallable(
       this,

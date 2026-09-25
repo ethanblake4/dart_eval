@@ -1,12 +1,10 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 
 StatementInfo compileAssertStatement(
   AssertStatement s,
@@ -14,17 +12,14 @@ StatementInfo compileAssertStatement(
   TypeRef? expectedReturnType,
 ) {
   final cond = compileExpression(s.condition, ctx);
-  final msg = s.message != null
-      ? compileExpression(s.message!, ctx)
-      : BuiltinValue().push(ctx);
-
-  // A Never-typed message already threw while evaluating (e.g.
-  // `assert(cond, throw e)`), so the assert itself always diverges.
-  if (msg.type.isSpec(CoreTypes.never)) {
-    return markNeverTerminates(ctx);
-  }
-
-  doAssert(ctx, cond, msg);
+  final message = s.message;
+  doAssert(
+    ctx,
+    cond,
+    message: message == null
+        ? (ctx) => BuiltinValue().push(ctx)
+        : (ctx) => compileExpression(message, ctx),
+  );
 
   return StatementInfo();
 }

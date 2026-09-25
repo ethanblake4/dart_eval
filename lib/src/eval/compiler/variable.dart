@@ -204,6 +204,13 @@ class Variable {
   /// type. Pushes a proper operator to box this value on the frame, and
   /// returns this instance with the type marked as boxed.
   Variable boxIfNeeded(ScopeContext ctx, [AstNode? source]) {
+    // A bound local may have been boxed since this snapshot was taken (a
+    // sibling operand boxed it in place); boxing through the binding's
+    // current value instead of the stale slot keeps it single-boxed.
+    final bound = binding;
+    if (bound != null && !identical(bound.current, this)) {
+      return bound.current.boxIfNeeded(ctx, source);
+    }
     if (boxed) return this;
     final converted = toRep(
       ctx as CompilerContext,
@@ -257,6 +264,12 @@ class Variable {
   /// By default updates the variable in the context locals.
   /// Set [update] to false if that's not desired.
   Variable unboxIfNeeded(CompilerContext ctx, [bool update = true]) {
+    // As in boxIfNeeded, a bound local's representation may have changed
+    // since this snapshot was taken — go through the binding's current.
+    final bound = binding;
+    if (bound != null && !identical(bound.current, this)) {
+      return bound.current.unboxIfNeeded(ctx, update);
+    }
     // Collection instructions accept the canonical wrapper's interfaces. Keeping
     // that wrapper avoids treating a representation-preserving move as unboxing
     // and then wrapping it a second time when the value leaves this function.

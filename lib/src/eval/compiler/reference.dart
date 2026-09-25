@@ -437,6 +437,7 @@ Variable loadGlobalVariable(
     LoadGlobal(ctx.svar(valueName ?? globalName), gIndex),
     type,
     rep: Abi.storageSlot(type),
+    facts: ValueFacts(isConst: ctx.globalsConst.contains(gIndex)),
   );
 }
 

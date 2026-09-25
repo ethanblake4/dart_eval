@@ -343,7 +343,12 @@ final class ConstructorCall extends CallTarget {
 /// signature supplied arguments are checked against; the runtime still
 /// picks the override.
 final class VirtualCall extends CallTarget {
-  const VirtualCall({required this.receiver, required this.name, this.member});
+  const VirtualCall({
+    required this.receiver,
+    required this.name,
+    this.member,
+    CallSignature? signature,
+  }) : _signature = signature;
 
   final Variable receiver;
   final String name;
@@ -353,8 +358,13 @@ final class VirtualCall extends CallTarget {
   /// dispatch remains possible).
   final Member? member;
 
+  /// A signature merged over several interface candidates — the combined
+  /// member signature of a type implementing several interfaces declaring
+  /// [name]. Already substituted at the receiver's view.
+  final CallSignature? _signature;
+
   @override
-  CallSignature? get signature => member?.signature;
+  CallSignature? get signature => _signature ?? member?.signature;
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) =>

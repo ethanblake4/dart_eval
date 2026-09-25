@@ -5,6 +5,7 @@ import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart'
     show Runtime, TypedRuntimeInterop, WrappedException;
 import 'typed_frame.dart';
+import 'typed_instance.dart';
 import 'typed_interop.dart';
 import 'typed_program.dart';
 
@@ -32,7 +33,30 @@ final class TypedAsyncState {
       });
 
   $Future<Object?> complete(Object? value) {
-    final completer = _completer;
+    var completer = _completer;
+    final runtime = this.runtime;
+    if (runtime != null && _isGuestFuture(value, runtime)) {
+      // A returned guest Future is adopted like `await`: this state's future
+      // completes when the guest's own `then` reports a value or an error.
+      final c = _completer ??= Completer<Object?>();
+      try {
+        _attachGuestThen(
+          value as TypedInstance,
+          runtime,
+          (payload) => c.complete(_checked(payload)),
+          (error, trace) => c.completeError(
+            error is WrappedException ? error.exception : error,
+            trace ?? StackTrace.current,
+          ),
+        );
+      } catch (error, trace) {
+        c.completeError(
+          error is WrappedException ? error.exception : error,
+          trace,
+        );
+      }
+      return future;
+    }
     if (completer == null) {
       return $Future.wrap(
         _checked(value),
@@ -41,7 +65,7 @@ final class TypedAsyncState {
       );
     }
     completer.complete(_checked(value));
-    return _future!;
+    return future;
   }
 
   $Future<Object?> completeError(Object error, StackTrace trace) {
@@ -55,7 +79,7 @@ final class TypedAsyncState {
       );
     }
     completer.completeError(thrown, trace);
-    return _future!;
+    return future;
   }
 }
 
@@ -69,6 +93,30 @@ typedef TypedAsyncResume =
       StackTrace? trace,
       Runtime? runtime,
     );
+
+/// Whether [value] is a guest class instance implementing `Future` —
+/// `Future.value` cannot adopt it, so its own `then` must be called.
+bool _isGuestFuture(Object? value, Runtime runtime) =>
+    value is TypedInstance &&
+    runtime.isTypedValueType(value, runtime.lookupType(CoreTypes.future));
+
+/// Attach host completion callbacks to a guest Future's own `then`.
+/// [onValue] receives the exported (unboxed) completion payload.
+void _attachGuestThen(
+  TypedInstance subject,
+  Runtime runtime,
+  void Function(Object?) onValue,
+  void Function(Object, StackTrace?) onError,
+) => subject.invoke(
+  'then',
+  1,
+  TypedHostFunction(onValue),
+  TypedHostFunction(
+    (error, [StackTrace? trace]) => onError(error, trace),
+  ),
+  namedNames: const ['onError'],
+  runtime: runtime,
+);
 
 /// Await is a clobber boundary. The compiler has saved all live values in the
 /// frame's typed spills before this helper detaches the suspended invocation.
@@ -91,6 +139,43 @@ abstract final class TypedAsync {
   ) {
     final future = frame.asyncState!.future;
     frame.detachAsync();
+    // A guest class may implement `Future` directly — `Future.value` cannot
+    // adopt it, so call its `then` and forward the completion ourselves.
+    if (runtime != null && _isGuestFuture(subject, runtime)) {
+      try {
+        _attachGuestThen(
+          subject as TypedInstance,
+          runtime,
+          (value) {
+            try {
+              resume(
+                program,
+                frame,
+                pc,
+                TypedInterop.boxExternal(value, runtime: runtime),
+                null,
+                null,
+                runtime,
+              );
+            } catch (error, trace) {
+              resume(program, frame, pc, null, error, trace, runtime);
+            }
+          },
+          (error, trace) => resume(
+            program,
+            frame,
+            pc,
+            null,
+            error,
+            trace ?? StackTrace.current,
+            runtime,
+          ),
+        );
+      } catch (error, trace) {
+        resume(program, frame, pc, null, error, trace, runtime);
+      }
+      return future;
+    }
     // Future.value also schedules a non-Future await and adopts returned
     // Futures. Values enter the boxed guest ABI only at this host boundary.
     Future<Object?>.value(subject).then<void>(

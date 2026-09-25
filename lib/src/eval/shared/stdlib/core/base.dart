@@ -798,6 +798,15 @@ class $String implements $Instance {
           ),
         ),
       ),
+      'runes': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+            ]),
+          ),
+        ),
+      ),
     },
     wrap: true,
   );
@@ -881,6 +890,8 @@ class $String implements $Instance {
         return $Closure(__index.func, this);
       case 'codeUnitAt':
         return $Closure(__codeUnitAt.func, this);
+      case 'runes':
+        return wrapList<int>($value.runes.toList(), (e) => $int(e));
       case 'codeUnits':
         return wrapList<int>($value.codeUnits, (e) => $int(e));
       case 'compareTo':

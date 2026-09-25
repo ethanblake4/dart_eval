@@ -378,6 +378,7 @@ final class TypedInstance implements $Instance {
       callerLibrary: callerLibrary,
     );
     if (setter != null) {
+
       setter.invokeClosure(1, value, null, runtime: runtime);
       return;
     }
@@ -434,9 +435,13 @@ final class TypedInstance implements $Instance {
 final class TypedMember extends EvalFunction {
   @override
   bool operator ==(Object other) =>
-      other is TypedMember &&
-      identical(receiver, other.receiver) &&
-      functionId == other.functionId;
+      (other is TypedMember &&
+          identical(receiver, other.receiver) &&
+          functionId == other.functionId) ||
+      (other is TypedClosure &&
+          other.descriptor.boundReceiver &&
+          functionId == other.descriptor.functionId &&
+          identical(receiver, other.captures.single));
 
   @override
   int get hashCode => Object.hash(identityHashCode(receiver), functionId);
@@ -462,8 +467,9 @@ final class TypedMember extends EvalFunction {
     Object? rest,
     Runtime? runtime, [
     List<int> typeArguments = const [],
-  ]) =>
-      _closure?.checkExactArguments(count, first, rest, runtime, typeArguments);
+  ]) {
+    _closure?.checkExactArguments(count, first, rest, runtime, typeArguments);
+  }
 
   TypedClosure? _bindClosure() {
     for (final descriptor in receiver.program.closures) {

@@ -318,6 +318,11 @@ sealed class GetTarget {
     if (resolvedField == null &&
         member == null &&
         !resolvedReceiver.isSpec(CoreTypes.dynamic)) {
+      // `call` on a function-typed receiver is the function itself — the
+      // implicit invoke member needs no declared member.
+      if (name == 'call' && resolvedReceiver.isFunctionLike) {
+        return ReceiverGet(receiver);
+      }
       // An extension getter may apply.
       final found = resolveExtensionMember(
         ctx,
@@ -775,6 +780,16 @@ final class ContextualMethodTearOff extends GetTarget {
   }
 }
 
+/// `f.call` on a function-typed receiver — the function itself.
+final class ReceiverGet extends GetTarget {
+  const ReceiverGet(this.receiver);
+
+  final Variable receiver;
+
+  @override
+  Variable emit(CompilerContext ctx) => receiver;
+}
+
 /// The dynamic member read — `LoadPropertyDynamic`.
 final class DynamicGet extends GetTarget {
   const DynamicGet(
@@ -870,6 +885,17 @@ sealed class SetTarget {
         return ExtensionSetterCall(object, ext, member, bindings, name);
       }
     }
+    // A dynamic receiver devirtualized below still writes through the
+    // callee's contract: the write type comes from the resolved member's
+    // declaring link, not `object.type` (dynamic queries yield null).
+    TypeRef? writeTypeOf(TypeRef declaringType) =>
+        declaredFieldType ??
+        ctx.memberLookup.fieldType(
+          declaringType,
+          name,
+          forSet: true,
+          source: source,
+        );
     final fieldType = declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
     final exact = object.exactType;
     if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
@@ -917,7 +943,7 @@ sealed class SetTarget {
             hops: hops,
             index: fieldIndex,
             isLateFinal: isLateFinal,
-            fieldType: fieldType,
+            fieldType: writeTypeOf(link) ?? fieldType,
             name: name,
           );
         }
@@ -929,7 +955,7 @@ sealed class SetTarget {
           nameKey: ctx.memberLookup
               .linkName(MemberName(name, MemberKind.method), link)
               .nameKey,
-          fieldType: fieldType,
+          fieldType: writeTypeOf(link) ?? fieldType,
           name: name,
         );
       }
@@ -958,7 +984,7 @@ sealed class SetTarget {
           file: owner.file,
           className: owner.name,
           nameKey: key,
-          fieldType: fieldType,
+          fieldType: writeTypeOf(object.concreteTypes.first) ?? fieldType,
           name: name,
         );
       }

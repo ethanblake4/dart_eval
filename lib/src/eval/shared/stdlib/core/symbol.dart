@@ -155,4 +155,10 @@ class $Symbol implements $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     return _superclass.$setProperty(runtime, identifier, value);
   }
+
+  @override
+  bool operator ==(Object other) => other is $Symbol && other.$value == $value;
+
+  @override
+  int get hashCode => $value.hashCode;
 }

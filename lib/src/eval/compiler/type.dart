@@ -187,6 +187,16 @@ sealed class TypeRef {
       isTypeParameter ||
       interfaceArgumentsOf(this).any((arg) => arg.requiresTypeEnvironment);
 
+  /// Whether this type embeds a call-site type parameter — an inference
+  /// variable to be bound by unification rather than a declared parameter
+  /// visible in the current scope.
+  bool get hasInferenceVariables {
+    final self = this;
+    return (self is TypeParameterTypeRef &&
+            self.parameter.owner.kind == TypeParameterOwnerKind.callSite) ||
+        interfaceArgumentsOf(self).any((arg) => arg.hasInferenceVariables);
+  }
+
   /// Classifies Dart assignment compatibility of a [this] value into a
   /// [slot] without conflating `dynamic` with a subtype proof.
   AssignmentConversion assignmentConversionTo(
@@ -463,6 +473,18 @@ bool sameDeclaration(TypeRef a, TypeRef b) {
   // Decl-less shapes match by canonical name within the same library —
   // records by shape, extension namespaces by (library, name).
   return a.runtimeType == b.runtimeType && a.file == b.file && a.name == b.name;
+}
+
+/// The nesting depth of a type's argument tree — `F<F<int>>` is 2,
+/// unparameterized types are 0. Bounds how deep instantiated supertypes
+/// may grow during type-table emission.
+int typeArgumentDepth(TypeRef type) {
+  var depth = 0;
+  for (final argument in interfaceArgumentsOf(type)) {
+    final argumentDepth = typeArgumentDepth(argument) + 1;
+    if (argumentDepth > depth) depth = argumentDepth;
+  }
+  return depth;
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {

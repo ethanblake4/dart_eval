@@ -1138,6 +1138,7 @@ class _LoweringSession {
         requiredNamed: op.requiredNamed,
         hasEnvironment: op.hasEnvironment,
         boundReceiver: op.boundReceiver,
+        isInstantiationAdapter: op.isInstantiationAdapter,
         positionalDefaults: op.positionalDefaults.isEmpty
             ? List.filled(op.positionalCount, null)
             : op.positionalDefaults,
@@ -1899,8 +1900,12 @@ class _LoweringSession {
             [object],
             immediate: typeId,
           ),
-          collection.NewMap() => make(['cNewMap'], []),
-          collection.NewSet() => make(['cNewSet'], []),
+          collection.NewMap(:final constBacking) => make([
+            constBacking ? 'cNewConstMap' : 'cNewMap',
+          ], []),
+          collection.NewSet(:final constBacking) => make([
+            constBacking ? 'cNewConstSet' : 'cNewSet',
+          ], []),
           collection.IndexMap(:final map, :final key) => make(
             ['rMapIndexCS'],
             [map, key],

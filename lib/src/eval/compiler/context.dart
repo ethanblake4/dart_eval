@@ -186,6 +186,7 @@ class CompilerContext with ScopeContext {
   final Map<int, MachineRepresentation> globalRepresentations = {};
   final Set<int> globalsLate = {};
   final Set<int> globalsFinal = {};
+  final Set<int> globalsConst = {};
   final Set<int> globalsWithInitializer = {};
   final Map<int, String> globalNames = {};
   final Map<int, List<FormalParameter>> functionParameters = {};
@@ -196,6 +197,11 @@ class CompilerContext with ScopeContext {
   /// expression, so the same default is compiled once for closures, call
   /// sites, and host exports.
   final Map<Expression, int> defaultThunkCache = {};
+
+  /// `<generic function adapter>` function id per instantiated signature:
+  /// `f<T>` torn off at separate call sites forwards through the same
+  /// adapter, so identical instantiations canonicalize to one closure.
+  final Map<String, int> instantiatedAdapterIds = {};
   final Map<int, TypeRef> functionRuntimeTypes = {};
   int? currentFunctionId;
   int _nextFunctionId = 0;

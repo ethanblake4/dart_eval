@@ -4,6 +4,7 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
@@ -79,6 +80,7 @@ Variable compileBinaryExpression(
 
   // Evaluating the right operand can assign or change the representation of a
   // local used by the left operand. Preserve its already evaluated value.
+  final leftConst = L.isConst;
   L = L.copyIntoFreshSlot(ctx, 'binary_left');
   // For `==`/`!=` the right operand's context type is the left operand's
   // static type (e.g. `.foo` shorthands resolve against it).
@@ -87,7 +89,12 @@ Variable compileBinaryExpression(
     _ => boundType,
   };
   var R = compileExpression(e.rightOperand, ctx, rightBound);
-  return CallResolver(ctx).invokeOperator(L, method, [R]).result;
+  final result = CallResolver(ctx).invokeOperator(L, method, [R]).result;
+  if (!e.inConstantContext && !(leftConst && R.isConst)) return result;
+  // Operators on const operands produce compile-time constants that must
+  // canonicalize: `identical("ab", "a" + "b")` holds in the host VM.
+  final boxed = result.boxIfNeeded(ctx);
+  return internConst(ctx, boxed, boxed.type);
 }
 
 Variable _compileShortCircuit(

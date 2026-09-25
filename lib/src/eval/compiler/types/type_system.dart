@@ -177,6 +177,14 @@ final class TypeSystem {
     TypeRef concrete,
     Map<TypeParameterDef, TypeRef> substitutions,
   ) {
+    // The covariant argument shape — `Iterable~T~` against `List~int~` —
+    // instantiates [pattern]'s declaration out of [concrete]'s supertypes
+    // (`Iterable~int~`) and unifies positionally, binding T to int.
+    final instantiation = asInstanceOf(concrete, nominalDeclOf(pattern));
+    if (instantiation != null) {
+      unify(pattern, instantiation, substitutions);
+      return;
+    }
     final queue = <TypeRef>[pattern];
     final seen = <TypeRef>{};
     while (queue.isNotEmpty) {
@@ -204,7 +212,14 @@ final class TypeSystem {
   /// Every runtime type index a value of [type] may report `is`/`as` success
   /// for: its own id plus every declared supertype's, walked with
   /// substitutions applied at each hop.
-  Set<int> supertypeIds(TypeRef type) {
+  ///
+  /// [maxEmittedArgDepth] bounds instantiated-supertype emission — a
+  /// self-nesting interface (`F<T> implements Future<F<F<T>>>`) generates
+  /// deeper instantiations at every hop and the closure would never
+  /// terminate. Supertypes deeper than the bound contribute only their
+  /// nominal index: no `is` target can be that deep anyway, since every
+  /// checkable type was written in the program.
+  Set<int> supertypeIds(TypeRef type, {int? maxEmittedArgDepth}) {
     final selfId = _ctx.runtimeTypes.idOf(type);
     final indices = {
       selfId,
@@ -216,6 +231,16 @@ final class TypeSystem {
     while (worklist.isNotEmpty) {
       final supertype = worklist.removeLast();
       if (!seen.add(supertype)) continue;
+      if (maxEmittedArgDepth != null &&
+          typeArgumentDepth(supertype) > maxEmittedArgDepth) {
+        if (supertype is InterfaceTypeRef) {
+          indices.add(
+            _ctx.runtimeTypes.indexMap[supertype.decl] ??
+                _ctx.runtimeTypes.idOf(supertype.decl.rawType),
+          );
+        }
+        continue;
+      }
       final supertypeId = _ctx.runtimeTypes.idOf(supertype);
       indices.add(supertypeId);
       if (supertype is InterfaceTypeRef) {
@@ -380,28 +405,27 @@ final class TypeSystem {
 
   /// The `flatten` function from the async spec: the value type `T` such
   /// that `await`/`async` treat a `FutureOr<T>`/`Future<T>`-shaped value as
-  /// `T`. `FutureOr` peels to its argument; a type implementing `Future<S>`
-  /// peels to `S`, recursively. Self-referential futures
-  /// (`F implements Future<F>`) return themselves.
+  /// `T`. Resolves one step through the implemented `Future` superinterface
+  /// (`futureValueType`), then peels syntactic `Future`/`FutureOr`
+  /// wrappers. The superinterface step cannot recurse — divergent futures
+  /// (`D implements Future<D<D<T>>>`) would otherwise expand forever.
   TypeRef flatten(TypeRef type) {
     var t = type;
     var nullable = type.nullable;
-    final seen = <TypeRef>{};
     final futureDecl = _ctx.types.bySpec(CoreTypes.future);
-    while (seen.add(t)) {
-      if (t.name == 'FutureOr' && interfaceArgumentsOf(t).isNotEmpty) {
-        nullable = nullable || t.nullable;
-        t = interfaceArgumentsOf(t).first;
-        continue;
-      }
-      final instantiation = asInstanceOf(t, futureDecl);
-      if (instantiation == null) {
-        return t.withNullable(t.nullable || nullable);
-      }
+    final instantiation = asInstanceOf(t, futureDecl);
+    if (t.name == 'FutureOr' && interfaceArgumentsOf(t).isNotEmpty) {
+      t = interfaceArgumentsOf(t).first;
+    } else if (instantiation != null) {
       nullable = nullable || t.nullable;
       t = interfaceArgumentsOf(instantiation).isEmpty
           ? CoreTypes.dynamic.ref(_ctx)
           : interfaceArgumentsOf(instantiation).first;
+    }
+    while (t.isSpec(CoreTypes.future) || t.name == 'FutureOr') {
+      if (interfaceArgumentsOf(t).isEmpty) break;
+      nullable = nullable || t.nullable;
+      t = interfaceArgumentsOf(t).first;
     }
     return t.withNullable(t.nullable || nullable);
   }
