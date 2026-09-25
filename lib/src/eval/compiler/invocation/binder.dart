@@ -662,28 +662,6 @@ final class ArgumentBinder {
     );
   }
 
-  BoundCall bindSuperParamsBridge(
-    BridgeFunctionDef function, {
-    List<Variable> before = const [],
-    SuperParams superParams = const (positional: [], named: {}),
-  }) {
-    final signature = CallSignature.bridge(
-      ctx,
-      function,
-      returnFallback: CoreTypes.dynamic.ref(ctx),
-    );
-    return _finishBridgeVector(
-      signature,
-      before: before,
-      superParams: superParams,
-      positionalValues: List<Variable?>.filled(
-        signature.positional.length,
-        null,
-      ),
-      namedValues: const {},
-    );
-  }
-
   BoundCall _finishBridgeVector(
     CallSignature signature, {
     required List<Variable> before,
@@ -733,6 +711,9 @@ final class ArgumentBinder {
         namedArgs[param.name] = supplied;
         continue;
       }
+      if (param.isRequired) {
+        throw CompileError('Missing required named argument ${param.name}');
+      }
       $null ??= BuiltinValue().push(ctx);
       push.add($null);
     }
@@ -748,7 +729,7 @@ final class ArgumentBinder {
   }
 
   BoundCall bindBridgeVector(
-    ArgumentList argumentList,
+    ArgumentList? argumentList,
     BridgeFunctionDef function, {
     List<Variable> before = const [],
     SuperParams superParams = const (positional: [], named: {}),
@@ -767,10 +748,12 @@ final class ArgumentBinder {
     final namedParamByName = {
       for (final spec in signature.named) spec.name: spec,
     };
-    final matched = _matchArguments(argumentList, positional.length, {
-      ...namedParamByName.keys,
-      ...superParams.named,
-    });
+    final matched = argumentList == null
+        ? <_MatchedArgument>[]
+        : _matchArguments(argumentList, positional.length, {
+            ...namedParamByName.keys,
+            ...superParams.named,
+          }, leadingPositional: superParams.positional.length);
 
     // Resolve the receiver's type arguments for every parameter annotation.
     // Bridge positional arguments defer assignment checks to the runtime;
@@ -840,10 +823,19 @@ final class ArgumentBinder {
     );
   }
 
-  BoundCall bindBridgeTarget(CallTarget target, ArgumentList argumentList) {
+  BoundCall bindBridgeTarget(
+    CallTarget target,
+    ArgumentList? argumentList, {
+    SuperParams superParams = const (positional: [], named: {}),
+  }) {
     final function = switch (target) {
       StaticCall(:final bridgeFunction) ||
       ConstructorCall(:final bridgeFunction) => bridgeFunction,
+      BridgeCall(member: BridgeMember(:final def)) => switch (def) {
+        BridgeMethodDef(:final functionDescriptor) ||
+        BridgeConstructorDef(:final functionDescriptor) => functionDescriptor,
+        _ => null,
+      },
       _ => null,
     };
     if (target.policy != BindingPolicy.bridgeVector ||
@@ -854,6 +846,7 @@ final class ArgumentBinder {
     return bindBridgeVector(
       argumentList,
       function,
+      superParams: superParams,
       targetSignature: target.signature,
     );
   }

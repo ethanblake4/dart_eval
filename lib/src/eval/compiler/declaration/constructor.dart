@@ -627,6 +627,9 @@ void compileDefaultConstructor(
     evaluatedFieldInits,
   );
 
+  final bridgeArgs = extendsDecl != null && extendsDecl.isBridge
+      ? _bridgeSuperArgs(ctx, extendsDecl, constructorName)
+      : const <SSA>[];
   _emitConstructorReturn(
     ctx,
     $extends: $extends,
@@ -634,7 +637,7 @@ void compileDefaultConstructor(
     constructorName: constructorName,
     inst: inst,
     $super: $super.ssa,
-    args: const [],
+    args: bridgeArgs,
   );
 
   ctx.endScope();
@@ -1010,21 +1013,29 @@ List<SSA> _bridgeSuperArgs(
 }) {
   final bridge = extendsDecl.bridge! as BridgeClassDef;
   final constructor = bridge.constructors[constructorName]!;
-  return superInitializer != null
-      ? ArgumentBinder(ctx)
-            .bindBridgeVector(
-              superInitializer.argumentList,
-              constructor.functionDescriptor,
-            )
-            .vector()
-      : superParams.positional.isNotEmpty || superParams.named.isNotEmpty
-      ? ArgumentBinder(ctx)
-            .bindSuperParamsBridge(
-              constructor.functionDescriptor,
-              superParams: superParams,
-            )
-            .vector()
-      : <SSA>[];
+  final function = constructor.functionDescriptor;
+  final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
+  final target = ConstructorCall(
+    staticType: type,
+    name: constructorName,
+    externalIndex:
+        ctx.bridgeStaticFunctionIndices[type
+            .file]!['${type.name}.$constructorName']!,
+    classBridge: bridge,
+    bridgeFunction: function,
+    signature: CallSignature.bridge(
+      ctx,
+      function,
+      returnFallback: CoreTypes.dynamic.ref(ctx),
+    ),
+  );
+  return ArgumentBinder(ctx)
+      .bindBridgeTarget(
+        target,
+        superInitializer?.argumentList,
+        superParams: superParams,
+      )
+      .vector();
 }
 
 /// Emits the constructor's return. For a bridged superclass this instantiates

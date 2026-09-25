@@ -1,4 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 import '../support/bridge_lib.dart';
@@ -6,11 +8,50 @@ import '../support/bridge_lib.dart';
 const _library = 'package:typed_bridge/main.dart';
 const _bridgeLibrary = 'package:bridge_lib/bridge_lib.dart';
 
-Program _compile(String source) {
-  final compiler = Compiler()..defineBridgeClasses([$TestClass.$declaration]);
+Program _compile(String source, {BridgeClassDef? bridge}) {
+  final compiler = Compiler()
+    ..defineBridgeClasses([bridge ?? $TestClass.$declaration]);
   return compiler.compile({
     'typed_bridge': {'main.dart': source},
   });
+}
+
+BridgeClassDef _bridgeWithRequiredArguments() {
+  final base = $TestClass.$declaration;
+  return BridgeClassDef(
+    base.type,
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($TestClass.$type),
+          params: [
+            BridgeParameter(
+              'someNumber',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+            BridgeParameter(
+              'extra',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'bonus',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+        ),
+      ),
+    },
+    methods: base.methods,
+    getters: base.getters,
+    setters: base.setters,
+    fields: base.fields,
+    bridge: true,
+  );
 }
 
 Iterable<(String, Runtime)> _runtimes(Program program) sync* {
@@ -30,6 +71,61 @@ Iterable<(String, Runtime)> _runtimes(Program program) sync* {
 }
 
 void main() {
+  test('bridge super combines forwarded and explicit arguments', () {
+    final program = _compile('''
+      import 'package:bridge_lib/bridge_lib.dart';
+
+      int trace = 0;
+      int mark(int value) {
+        trace = trace * 10 + value;
+        return value;
+      }
+
+      class Guest extends TestClass {
+        Guest(super.someNumber) : super(mark(2), bonus: mark(3));
+      }
+
+      int main() => Guest(4).someNumber + trace;
+    ''', bridge: _bridgeWithRequiredArguments());
+    for (final (kind, runtime) in _runtimes(program)) {
+      expect(runtime.executeLib(_library, 'main'), 27, reason: kind);
+    }
+  });
+
+  test('implicit bridge super validates required arguments', () {
+    expect(
+      () => _compile('''
+        import 'package:bridge_lib/bridge_lib.dart';
+        class Guest extends TestClass {}
+      '''),
+      throwsA(isA<CompileError>()),
+    );
+    expect(
+      () => _compile('''
+        import 'package:bridge_lib/bridge_lib.dart';
+        class Guest extends TestClass {
+          Guest();
+        }
+      '''),
+      throwsA(isA<CompileError>()),
+    );
+    expect(
+      () => _compile('''
+        import 'package:bridge_lib/bridge_lib.dart';
+        class Guest extends TestClass {
+          Guest(super.someNumber, super.extra);
+        }
+      ''', bridge: _bridgeWithRequiredArguments()),
+      throwsA(
+        isA<CompileError>().having(
+          (error) => error.message,
+          'message',
+          contains('Missing required named argument bonus'),
+        ),
+      ),
+    );
+  });
+
   test('plain host bridge values retain runtime type metadata', () {
     final program = _compile('''
       import 'package:bridge_lib/bridge_lib.dart';
