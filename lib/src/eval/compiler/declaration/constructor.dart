@@ -687,6 +687,55 @@ Variable _compileFieldInitializer(
   ).boxIfNeeded(ctx);
 }
 
+Variable _compileUnusedFieldInitializer(
+  CompilerContext ctx,
+  FieldDeclaration fd,
+  VariableDeclaration field,
+  Map<ClassMember, int> memberLibraries,
+  Declaration? parent,
+) {
+  final prevLibrary = ctx.library;
+  final memberLibrary = memberLibraries[fd];
+  // Folded mixin initializers resolve in their declaring library and class.
+  ctx.library = memberLibrary ?? prevLibrary;
+  final memberOwner = fd.parent?.parent;
+  ctx.memberDeclaringClass = memberLibrary != null && memberOwner is Declaration
+      ? memberOwner
+      : null;
+
+  final Variable value;
+  try {
+    if (memberLibrary == null || parent == null) {
+      value = _compileFieldInitializer(ctx, fd, field);
+    } else {
+      value = ctx.withTypeParameters(memberLibrary, null, const [], () {
+        ctx
+            .typeParameterScope(memberLibrary)
+            .addAll(
+              foldedMemberTypeParams(
+                    ctx,
+                    parent,
+                    fd,
+                    memberLibrary,
+                    prevLibrary,
+                  ) ??
+                  const {},
+            );
+        return _compileFieldInitializer(ctx, fd, field);
+      });
+    }
+  } finally {
+    ctx.library = prevLibrary;
+    ctx.memberDeclaringClass = null;
+  }
+  ctx.inferredFieldTypes
+      .putIfAbsent(ctx.library, () => {})
+      .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] = ctx
+      .typeFactory
+      .widenedInferredType(value.type);
+  return value;
+}
+
 /// Evaluates the initializer expressions of fields not bound by the
 /// constructor's initializer list, storing each result in a local. Field
 /// initializers run before the superconstructor invocation (initializer list
@@ -705,50 +754,13 @@ Map<String, Variable> _evalUnusedFieldInitializers(
       if (usedNames.contains(field.name.lexeme) || field.initializer == null) {
         continue;
       }
-      // A folded mixin field's initializer resolves in the mixin's library
-      // and lexical class scope.
-      final prevLibrary = ctx.library;
-      final memberLibrary = memberLibraries[fd];
-      ctx.library = memberLibrary ?? prevLibrary;
-      final memberOwner = fd.parent?.parent;
-      ctx.memberDeclaringClass =
-          memberLibrary != null && memberOwner is Declaration
-          ? memberOwner
-          : null;
-      final Variable V;
-      try {
-        if (memberLibrary == null || parent == null) {
-          V = _compileFieldInitializer(ctx, fd, field);
-        } else {
-          // A folded mixin field's initializer resolves the mixin's type
-          // parameters against this application's arguments — seeded in a
-          // pushed frame of the declaring-library scope, popped on exit.
-          V = ctx.withTypeParameters(memberLibrary, null, const [], () {
-            ctx
-                .typeParameterScope(memberLibrary)
-                .addAll(
-                  foldedMemberTypeParams(
-                        ctx,
-                        parent,
-                        fd,
-                        memberLibrary,
-                        prevLibrary,
-                      ) ??
-                      const {},
-                );
-            return _compileFieldInitializer(ctx, fd, field);
-          });
-        }
-      } finally {
-        ctx.library = prevLibrary;
-        ctx.memberDeclaringClass = null;
-      }
-      ctx.inferredFieldTypes
-          .putIfAbsent(ctx.library, () => {})
-          .putIfAbsent(ctx.currentClassName!, () => {})[field.name.lexeme] = ctx
-          .typeFactory
-          .widenedInferredType(V.type);
-      evaluated[field.name.lexeme] = V;
+      evaluated[field.name.lexeme] = _compileUnusedFieldInitializer(
+        ctx,
+        fd,
+        field,
+        memberLibraries,
+        parent,
+      );
     }
   }
   return evaluated;
@@ -779,52 +791,14 @@ void _compileUnusedFields(
         if (V != null) {
           ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, V.ssa));
         } else {
-          // A folded mixin field's initializer resolves in the mixin's
-          // library and lexical class scope.
-          final prevLibrary = ctx.library;
-          final memberLibrary = memberLibraries[fd];
-          ctx.library = memberLibrary ?? prevLibrary;
-          final memberOwner = fd.parent?.parent;
-          ctx.memberDeclaringClass =
-              memberLibrary != null && memberOwner is Declaration
-              ? memberOwner
-              : null;
-          final Variable v0;
-          try {
-            if (memberLibrary == null || parent == null) {
-              v0 = _compileFieldInitializer(ctx, fd, field);
-            } else {
-              // Same folded-initializer scoping as
-              // _evalUnusedFieldInitializers.
-              v0 = ctx.withTypeParameters(memberLibrary, null, const [], () {
-                ctx
-                    .typeParameterScope(memberLibrary)
-                    .addAll(
-                      foldedMemberTypeParams(
-                            ctx,
-                            parent,
-                            fd,
-                            memberLibrary,
-                            prevLibrary,
-                          ) ??
-                          const {},
-                    );
-                return _compileFieldInitializer(ctx, fd, field);
-              });
-            }
-          } finally {
-            ctx.library = prevLibrary;
-            ctx.memberDeclaringClass = null;
-          }
-          ctx.inferredFieldTypes
-              .putIfAbsent(ctx.library, () => {})
-              .putIfAbsent(
-                ctx.currentClassName!,
-                () => {},
-              )[field.name.lexeme] = ctx.typeFactory.widenedInferredType(
-            v0.type,
+          final value = _compileUnusedFieldInitializer(
+            ctx,
+            fd,
+            field,
+            memberLibraries,
+            parent,
           );
-          ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, v0.ssa));
+          ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, value.ssa));
         }
       }
       fieldIdx0++;
@@ -986,7 +960,9 @@ Variable _invokeSuperConstructor(
             superParams: superParams,
             // `extends A<int>` — the superclass's parameters bind to the
             // clause's arguments so `T z` checks against `int`.
-            resolveGenerics: seeds,
+            resolveGenerics: {
+              ...target.signature!.substitutionFor(seeds).bindings,
+            },
             source: superInitializer,
             fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
           );

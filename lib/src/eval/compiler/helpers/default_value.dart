@@ -256,22 +256,13 @@ int _compileDefaultThunk(
   final cached = ctx.defaultThunkCache[expression];
   if (cached != null) return cached;
 
-  final outerGraph = ctx.activeGraph;
-  final outerBuilder = ctx.builder;
-  final outerBlockCode = ctx.blockCode;
-  final outerFunctionId = ctx.currentFunctionId;
-  final outerFunctionLabel = ctx.funcLabel;
-  final outerHasBegun = ctx.hasBegunMethod;
-  final outerLabels = [...ctx.labels];
-  final outerExceptions = [...ctx.caughtExceptionTargets];
-  final outerExceptionDepth = ctx.exceptionDepth;
-  final saveState = ctx.saveState();
-  ctx.blockCode = [];
-  ctx.labels.clear();
-  ctx.caughtExceptionTargets.clear();
-  ctx.finishMethod();
-  return ctx.withTypeParameters(ctx.library, null, null, () {
-    try {
+  final outer = NestedFunctionState(ctx);
+  try {
+    ctx.blockCode = [];
+    ctx.labels.clear();
+    ctx.caughtExceptionTargets.clear();
+    ctx.finishMethod();
+    return ctx.withTypeParameters(ctx.library, null, null, () {
       final thunkId = ctx.beginFunction('<default>');
       ctx.locals = [];
       ctx.exceptionDepth = 0;
@@ -285,21 +276,8 @@ int _compileDefaultThunk(
       ctx.endScope();
       ctx.finishMethod();
       return ctx.defaultThunkCache[expression] = thunkId;
-    } finally {
-      ctx.activeGraph = outerGraph;
-      ctx.builder = outerBuilder;
-      ctx.blockCode = outerBlockCode;
-      ctx.currentFunctionId = outerFunctionId;
-      ctx.funcLabel = outerFunctionLabel;
-      ctx.hasBegunMethod = outerHasBegun;
-      ctx.exceptionDepth = outerExceptionDepth;
-      ctx.labels
-        ..clear()
-        ..addAll(outerLabels);
-      ctx.caughtExceptionTargets
-        ..clear()
-        ..addAll(outerExceptions);
-      ctx.restoreState(saveState);
-    }
-  });
+    });
+  } finally {
+    outer.restore();
+  }
 }

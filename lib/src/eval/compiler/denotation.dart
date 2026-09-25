@@ -488,74 +488,24 @@ final class InstanceMemberDenotation extends Denotation {
     // of the matching kind.
     if (fieldType == null &&
         !hasInstanceMember(ctx, object.type, name, forSet: forSet)) {
-      fieldType = _extensionMemberType(ctx, object, forSet: forSet);
+      final found = resolveExtensionMember(
+        ctx,
+        object.type,
+        name,
+        getter: !forSet,
+        setter: forSet,
+      );
+      if (found != null) {
+        fieldType = extensionAccessorType(
+          ctx,
+          found.$1,
+          found.$2,
+          found.$3,
+          forSet: forSet,
+        );
+      }
     }
     return fieldType;
-  }
-
-  /// The declared type of an extension member applicable to [object]'s
-  /// static type, or null.
-  TypeRef? _extensionMemberType(
-    CompilerContext ctx,
-    Variable object, {
-    required bool forSet,
-  }) {
-    final found = resolveExtensionMember(
-      ctx,
-      object.type,
-      name,
-      getter: !forSet,
-      setter: forSet,
-    );
-    if (found == null) return null;
-    final (ext, member, bindings) = found;
-    final typeParams = extBindingsMap(ext, bindings);
-    if (forSet) {
-      final param = member.parameters?.parameters.firstOrNull;
-      if (param?.type == null) return null;
-      return ctx.typeFactory.formalParameterAnnotationType(
-        ext.library,
-        param!,
-        typeParameters: typeParams,
-      );
-    }
-    return member.returnType == null
-        ? null
-        : TypeRef.fromAnnotation(
-            ctx,
-            ext.library,
-            member.returnType!,
-            typeParameters: typeParams,
-          );
-  }
-
-  /// For `super.name`: the receiver at the layer declaring the concrete
-  /// member, reached by LoadSuper hops from the immediate receiver.
-  Variable _superOwner(CompilerContext ctx, bool forSet) {
-    final self = (receiver as SuperReceiver).self;
-    var owner = self;
-    final target = ctx.memberLookup.superMemberTarget(
-      self.type,
-      name,
-      kind: forSet ? MemberKind.setter : MemberKind.getter,
-    );
-    if (target.hops.isEmpty && target.owner != self.type) {
-      return Variable.of(
-        ctx,
-        owner.ssa,
-        target.owner,
-        rep: owner.rep,
-        facts: ValueFacts(possibleClasses: [target.owner]),
-      );
-    }
-    for (final parent in target.hops) {
-      owner = Variable.ssa(
-        ctx,
-        LoadSuper(ctx.svar('super'), owner.ssa),
-        parent,
-      );
-    }
-    return owner;
   }
 
   /// `receiver.name` where the member is declared on the enclosing class
@@ -609,115 +559,6 @@ final class InstanceMemberDenotation extends Denotation {
     );
   }
 
-  /// `super.name` read — method reads tear off bound to the super receiver.
-  Variable _readSuper(
-    CompilerContext ctx,
-    AstNode? source,
-    TypeRef? boundContext,
-    List<TypeRef>? typeArguments,
-  ) {
-    final foldedMethod = ctx.memberLookup.lexicalSuperBody(
-      name,
-      MemberKind.method,
-    );
-    if (foldedMethod != null) {
-      final owner = foldedMethod.declaration.parent?.parent;
-      if (owner is Declaration) {
-        return materializeTearOff(
-          ctx,
-          DeferredOrOffset(
-            offset: foldedMethod.offset,
-            file: foldedMethod.library,
-            className: declarationName(owner),
-            name: name,
-          ),
-          implicitReceiver: ctx.lookupLocal('#this')!,
-          boundContext: boundContext,
-          typeArguments: typeArguments,
-          memberTypeParameters: ctx.memberLookup.lexicalSuperTypeParameters(
-            foldedMethod,
-          ),
-        );
-      }
-    }
-    final foldedGetter = ctx.memberLookup.lexicalSuperBody(
-      name,
-      MemberKind.getter,
-    );
-    if (foldedGetter != null) {
-      return FoldedMixinGetterCall(
-        foldedGetter,
-        ctx.lookupLocal('#this')!,
-      ).emit(ctx);
-    }
-    final owner = _superOwner(ctx, false);
-    // A method member read is a tear-off bound to the super receiver.
-    final member = ctx.types
-        .find(owner.type.file, owner.type.name)
-        ?.declaredMember(MemberName.method(name));
-    if (member case SourceMember(
-      node: MethodDeclaration(isGetter: false, isSetter: false),
-    )) {
-      return materializeTearOff(
-        ctx,
-        DeferredOrOffset(
-          file: owner.type.file,
-          className: owner.type.name,
-          name: name,
-        ),
-        implicitReceiver: owner,
-        boundContext: boundContext,
-        typeArguments: typeArguments,
-      );
-    }
-    if (ctx
-            .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
-            ?.isBridge ??
-        false) {
-      return DynamicGet(
-        owner,
-        name,
-        fieldType: readType(ctx, source: source),
-      ).emit(ctx);
-    }
-    return SuperGetterCall(
-      owner,
-      name,
-      readType(ctx, source: source),
-    ).emit(ctx);
-  }
-
-  /// `super.name = v` — write through the owning layer's setter; a bridged
-  /// owner falls back to the ambient setter machinery.
-  Variable _writeSuper(CompilerContext ctx, Variable value, AstNode? source) {
-    final foldedSetter = ctx.memberLookup.lexicalSuperBody(
-      name,
-      MemberKind.setter,
-    );
-    if (foldedSetter != null) {
-      return FoldedMixinSetterCall(
-        foldedSetter,
-        ctx.lookupLocal('#this')!,
-      ).emit(ctx, value);
-    }
-    final owner = _superOwner(ctx, true);
-    if (ctx
-            .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
-            ?.isBridge ??
-        false) {
-      return DynamicSet(
-        owner,
-        name,
-        writeType(ctx, source: source),
-      ).emit(ctx, value);
-    }
-    return SuperSetterCall(
-      owner,
-      name,
-      writeType(ctx, source: source),
-    ).emit(ctx, value);
-  }
-
   @override
   Variable _read(
     CompilerContext ctx, {
@@ -725,8 +566,15 @@ final class InstanceMemberDenotation extends Denotation {
     TypeRef? boundContext,
     List<TypeRef>? typeArguments,
   }) {
-    if (receiver is SuperReceiver) {
-      return _readSuper(ctx, source, boundContext, typeArguments);
+    if (receiver case SuperReceiver(:final self)) {
+      return GetTarget.readSuper(
+        ctx,
+        self,
+        name,
+        fieldType: () => readType(ctx, source: source),
+        boundContext: boundContext,
+        typeArguments: typeArguments,
+      );
     }
     if (declared != null) {
       return _readDeclared(ctx, source, boundContext, typeArguments);
@@ -752,8 +600,14 @@ final class InstanceMemberDenotation extends Denotation {
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) {
-    if (receiver is SuperReceiver) {
-      return _writeSuper(ctx, value, source);
+    if (receiver case SuperReceiver(:final self)) {
+      return SetTarget.writeSuper(
+        ctx,
+        self,
+        name,
+        value,
+        fieldType: () => writeType(ctx, source: source),
+      );
     }
     final r = receiver;
     var object = r is ValueReceiver
@@ -766,20 +620,15 @@ final class InstanceMemberDenotation extends Denotation {
     }
     if (declared != null) {
       // A member declared on the enclosing class itself.
-      final fieldType = _resolveInstanceFieldType(
-        ctx,
-        name,
-        forSet: true,
-        source: source,
-      )!;
-      return SetTarget.writeDeclared(
-        ctx,
-        object,
-        name,
-        value,
-        fieldType,
-        source: source,
-      );
+      final fieldType =
+          ctx.memberLookup.fieldType(
+            declared!.viewedAs,
+            name,
+            forSet: true,
+            source: source,
+          ) ??
+          CoreTypes.dynamic.ref(ctx);
+      return DynamicSet(object, name, fieldType).emit(ctx, value);
     }
     return SetTarget.write(ctx, object, name, value, source: source);
   }
@@ -1938,7 +1787,11 @@ CallTarget? _declarationToCallTarget(
     decl,
     name,
   );
-  return StaticCall(offset, signature: CallSignature.returnOnly(returnType));
+  return StaticCall(
+    offset,
+    sourceDeclaration: decl is FunctionDeclaration ? decl : null,
+    signature: CallSignature.returnOnly(returnType),
+  );
 }
 
 (DeferredOrOffset, TypeRef) _sourceCallableMetadata(
@@ -1979,28 +1832,6 @@ CallTarget? _declarationToCallTarget(
   );
 
   return (offset, returnType);
-}
-
-/// The declared type of instance member [name] on the enclosing class, or null
-/// when the current class has no such member.
-TypeRef? _resolveInstanceFieldType(
-  CompilerContext ctx,
-  String name, {
-  bool forSet = false,
-  AstNode? source,
-}) {
-  final selfDecl = ctx.types.find(ctx.library, ctx.currentClassName!);
-  if (selfDecl == null ||
-      ctx.memberLookup.declaredAccessor(selfDecl, name) == null) {
-    return null;
-  }
-  return ctx.memberLookup.fieldType(
-        selfDecl.thisType,
-        name,
-        forSet: forSet,
-        source: source,
-      ) ??
-      CoreTypes.dynamic.ref(ctx);
 }
 
 /// Resolves [name] to a top-level declaration visible in the current library.

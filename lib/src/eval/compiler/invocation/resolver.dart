@@ -515,7 +515,7 @@ final class CallResolver {
       }
     }
 
-    final boundArgs = _bindInvokeMethodArgs(
+    final (target, arguments) = _bindMethod(
       L,
       e,
       resolved: resolved,
@@ -523,17 +523,26 @@ final class CallResolver {
       staticType: staticType,
       bound: bound,
     );
-    return _emitResolvedInvoke(
-      L,
-      e,
-      resolved: resolved,
-      isStatic: isStatic,
-      staticType: staticType,
-      staticMemberName: staticMemberName,
-      argsPair: boundArgs.args,
-      mReturnType: boundArgs.returnType,
-      resolvedTarget: boundArgs.target,
-    );
+    if (resolved?.member is BridgeMember &&
+        !isStatic &&
+        e.typeArguments == null &&
+        arguments.named.isEmpty) {
+      final intrinsic = Intrinsics(
+        ctx,
+      ).tryEmit(L, e.methodName.name, arguments.positional);
+      if (intrinsic != null) {
+        return intrinsic.result.copyWith(type: arguments.returnType);
+      }
+      return _invokeResolvedOperator(
+        L,
+        e.methodName.name,
+        arguments.positional,
+        null,
+        resolved: resolved,
+        returnType: arguments.returnType,
+      ).result;
+    }
+    return target.emit(ctx, arguments);
   }
 
   /// The binding phase of [invokeMethod]: compile the argument list
@@ -542,8 +551,7 @@ final class CallResolver {
   /// member's own declaration signature for source members (the interface
   /// signature while the call stays virtual, the concrete
   /// implementation's once it's static or devirtualized).
-  ({BoundCall args, TypeRef? returnType, CallTarget? target})
-  _bindInvokeMethodArgs(
+  (CallTarget, BoundCall) _bindMethod(
     Variable L,
     MethodInvocation e, {
     required ResolvedMember? resolved,
@@ -553,7 +561,7 @@ final class CallResolver {
   }) {
     TypeRef? mReturnType;
     BoundCall argsPair;
-    CallTarget? target;
+    final CallTarget target;
     final bridgeTypeParameters = <String, TypeRef>{};
     final resolvedMember = resolved?.member;
     if (resolvedMember is BridgeMember) {
@@ -727,6 +735,16 @@ final class CallResolver {
           returnContext: bound,
         );
       } else {
+        if (!isStatic) throw StateError('Instance call has no resolved target');
+        target = StaticCall(
+          DeferredOrOffset.lookupStatic(
+            ctx,
+            staticType!.file,
+            staticType.name,
+            ctorNameOf(e.methodName.name),
+          ),
+          member: sourceMember,
+        );
         argsPair = ArgumentBinder(ctx).bindDeclaration(
           sourceMember.library,
           declaration,
@@ -739,7 +757,35 @@ final class CallResolver {
       mReturnType = argsPair.declaredReturn;
     }
 
-    return (args: argsPair, returnType: mReturnType, target: target);
+    final returnType =
+        mReturnType ??
+        memberCallResultType(
+          ctx,
+          isStatic ? staticType! : L.type,
+          ctorNameOf(e.methodName.name),
+          [for (final arg in argsPair.positional) arg.type],
+          {for (final (name, arg) in argsPair.named) name: arg.type},
+          $static: isStatic,
+          source: e,
+          resolved: resolved,
+        ) ??
+        CoreTypes.dynamic.ref(ctx);
+    final explicitTypeArguments = runtimeTypeArguments(ctx, e);
+    return (
+      target,
+      BoundCall(
+        receiver: isStatic ? null : L,
+        positional: argsPair.positional,
+        named: argsPair.named,
+        runtimeTypeArguments: explicitTypeArguments.isNotEmpty
+            ? explicitTypeArguments
+            : argsPair.runtimeTypeArguments,
+        returnType: returnType,
+        vectorOverride: isStatic || resolvedMember is BridgeMember
+            ? argsPair.vector()
+            : null,
+      ),
+    );
   }
 
   /// Bind receiver class parameters in the selected implementation's scope.
@@ -762,86 +808,6 @@ final class CallResolver {
         ? resolved.viewedAs
         : ctx.typeSystem.asInstanceOf(link, owner) ?? link;
     return ownerTypeArgumentsOf(owner, viewedAs);
-  }
-
-  /// The emission phase of [invokeMethod]: resolve the call's return type
-  /// and emit through the matching [CallTarget] — [ConstructorCall] or
-  /// [StaticCall] for resolved static members, [BridgeCall] for bridge
-  /// members, [DynamicCall] for dynamic receivers, and the devirtualized
-  /// [VirtualCall] otherwise.
-  Variable _emitResolvedInvoke(
-    Variable L,
-    MethodInvocation e, {
-    required ResolvedMember? resolved,
-    required bool isStatic,
-    required TypeRef? staticType,
-    required String staticMemberName,
-    required BoundCall argsPair,
-    required TypeRef? mReturnType,
-    required CallTarget? resolvedTarget,
-  }) {
-    final resolvedMember = resolved?.member;
-    final returnType =
-        mReturnType ??
-        memberCallResultType(
-          ctx,
-          isStatic ? staticType ?? CoreTypes.dynamic.ref(ctx) : L.type,
-          staticMemberName,
-          [for (final arg in argsPair.positional) arg.type],
-          {for (final (name, arg) in argsPair.named) name: arg.type},
-          $static: isStatic,
-          source: e,
-        ) ??
-        CoreTypes.dynamic.ref(ctx);
-    final explicitTypeArguments = runtimeTypeArguments(ctx, e);
-    final boundCall = BoundCall(
-      receiver: isStatic ? null : L,
-      positional: argsPair.positional,
-      named: argsPair.named,
-      runtimeTypeArguments: explicitTypeArguments.isNotEmpty
-          ? explicitTypeArguments
-          : argsPair.runtimeTypeArguments,
-      returnType: returnType,
-      // Source direct calls can include hidden arguments. Bridge calls need
-      // their padded vector; other instance calls use only supplied values.
-      vectorOverride: isStatic || resolvedMember is BridgeMember
-          ? argsPair.vector()
-          : null,
-    );
-    if (resolvedMember is BridgeMember) {
-      // Instance calls that carry no named or explicit type arguments take
-      // the intrinsic path, which preserves operator optimizations for
-      // core types. The argument vector stays padded with null
-      // placeholders so generated wrappers keep the flattened ABI; the
-      // declared return type (inferred generics and parameter-type
-      // dependencies included) still applies to the result.
-      if (!isStatic && e.typeArguments == null && argsPair.named.isEmpty) {
-        final invokeResult = invokeOperator(
-          L,
-          e.methodName.name,
-          argsPair.positional,
-        ).result;
-        final preciseType = mReturnType;
-        if (preciseType != null) {
-          return invokeResult.copyWith(type: preciseType);
-        }
-        return invokeResult;
-      }
-    }
-    final target =
-        resolvedTarget ??
-        (isStatic
-            ? StaticCall(
-                DeferredOrOffset.lookupStatic(
-                  ctx,
-                  staticType!.file,
-                  staticType.name,
-                  staticMemberName,
-                ),
-                member: resolvedMember,
-              )
-            : throw StateError('Instance call has no resolved target'));
-    return target.emit(ctx, boundCall);
   }
 
   /// `a + b`, `a[i]`, `!x`, `a == b`, `it.moveNext()` — the operator and
@@ -910,6 +876,19 @@ final class CallResolver {
         }
       }
     }
+    return _invokeResolvedOperator(recv, method, args, namedArgs);
+  }
+
+  /// Bind and emit evaluated operands; callers with a resolved member retain it.
+  OperatorResult _invokeResolvedOperator(
+    Variable receiver,
+    String method,
+    List<Variable> args,
+    Map<String, Variable>? namedArgs, {
+    ResolvedMember? resolved,
+    TypeRef? returnType,
+  }) {
+    var recv = receiver;
     final values = [...args];
     final equality = (method == '==' || method == '!=') && values.length == 1;
     final boxed = Variable.boxUnboxMultiple(ctx, [recv, ...values], true);
@@ -942,28 +921,36 @@ final class CallResolver {
     // The '.call' member on a bare Function-typed receiver can't resolve an
     // instance method; the callee's own signature carries the result type.
     final isBareCall = recv.type.isFunctionLike && method == 'call';
-    final TypeRef returnType;
-    if (isBareCall) {
-      returnType =
-          callResultType(
-            ctx,
-            callee: recv,
-            dispatch: null,
-            argTypes: argTypes,
-            namedArgTypes: namedArgTypes,
-          ) ??
-          CoreTypes.dynamic.ref(ctx);
-    } else {
-      returnType =
-          memberCallResultType(
-            ctx,
-            recv.type,
-            method,
-            argTypes,
-            namedArgTypes,
-          ) ??
-          CoreTypes.dynamic.ref(ctx);
+    if (!isBareCall &&
+        !recv.type.isSpec(CoreTypes.dynamic) &&
+        resolved == null) {
+      try {
+        resolved = ctx.memberLookup.interfaceMember(
+          recv.type,
+          ctx.memberNameOf(method, MemberKind.method),
+        );
+      } on CompileError {
+        // Unresolvable operator targets retain the dynamic fallback.
+      }
     }
+    returnType ??=
+        (isBareCall
+            ? callResultType(
+                ctx,
+                callee: recv,
+                dispatch: null,
+                argTypes: argTypes,
+                namedArgTypes: namedArgTypes,
+              )
+            : memberCallResultType(
+                ctx,
+                recv.type,
+                method,
+                argTypes,
+                namedArgTypes,
+                resolved: resolved,
+              )) ??
+        CoreTypes.dynamic.ref(ctx);
     var boundCall = BoundCall(
       receiver: recv,
       positional: prepared,
@@ -973,23 +960,12 @@ final class CallResolver {
       ],
       returnType: returnType,
     );
-    ResolvedMember? opResolved;
-    if (!isBareCall && !recv.type.isSpec(CoreTypes.dynamic)) {
-      try {
-        opResolved = ctx.memberLookup.interfaceMember(
-          recv.type,
-          ctx.memberNameOf(method, MemberKind.method),
-        );
-      } on CompileError {
-        // No resolvable declaration — the untyped dispatch applies.
-      }
-    }
     final target = Devirtualizer(ctx).refine(
-      VirtualCall(receiver: recv, name: method, member: opResolved?.member),
+      VirtualCall(receiver: recv, name: method, member: resolved?.member),
     );
-    if (opResolved?.member case SourceMember sourceMember
+    if (resolved?.member case SourceMember sourceMember
         when sourceMember.sourceDeclaration is MethodDeclaration) {
-      final seedGenerics = _sourceTargetTypeArguments(target, opResolved!);
+      final seedGenerics = _sourceTargetTypeArguments(target, resolved!);
       final typed = ArgumentBinder(ctx).bindSourceValues(
         target,
         prepared,

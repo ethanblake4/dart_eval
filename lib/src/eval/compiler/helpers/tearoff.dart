@@ -333,23 +333,12 @@ Variable instantiateRuntimeCallable(
     for (final name in named) instantiated.signature.named[name]!.type,
   ];
 
-  final outerGraph = ctx.activeGraph;
-  final outerBuilder = ctx.builder;
-  final outerBlockCode = ctx.blockCode;
-  final outerFunctionId = ctx.currentFunctionId;
-  final outerFunctionLabel = ctx.funcLabel;
-  final outerHasBegun = ctx.hasBegunMethod;
-  final outerLabels = [...ctx.labels];
-  final outerExceptions = [...ctx.caughtExceptionTargets];
-  final outerExceptionDepth = ctx.exceptionDepth;
-  final saveState = ctx.saveState();
-  // Flush the outer block before compiling the adapter, preserving its builder.
-  ctx.finishMethod();
-  final resumedBuilder = ctx.builder;
-  final resumedBlockCode = ctx.blockCode;
+  final outer = NestedFunctionState(ctx);
   late final int functionId;
   try {
-    ctx.blockCode = [];
+    // Flush the outer block before compiling the adapter, preserving its builder.
+    ctx.finishMethod();
+    outer.resumeAfterFlush();
     ctx.labels.clear();
     ctx.caughtExceptionTargets.clear();
     functionId = ctx.beginFunction('<generic function adapter>');
@@ -388,20 +377,7 @@ Variable instantiateRuntimeCallable(
     ctx.endScope();
     ctx.finishMethod();
   } finally {
-    ctx.activeGraph = outerGraph;
-    ctx.builder = outerHasBegun ? resumedBuilder : outerBuilder;
-    ctx.blockCode = outerHasBegun ? resumedBlockCode : outerBlockCode;
-    ctx.currentFunctionId = outerFunctionId;
-    ctx.funcLabel = outerFunctionLabel;
-    ctx.hasBegunMethod = outerHasBegun;
-    ctx.exceptionDepth = outerExceptionDepth;
-    ctx.labels
-      ..clear()
-      ..addAll(outerLabels);
-    ctx.caughtExceptionTargets
-      ..clear()
-      ..addAll(outerExceptions);
-    ctx.restoreState(saveState);
+    outer.restore();
   }
   return Variable.ssa(
     ctx,

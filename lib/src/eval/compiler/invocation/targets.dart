@@ -89,8 +89,7 @@ final class StaticCall extends CallTarget {
   final int? externalIndex;
   final Member? member;
 
-  /// A resolved source declaration. Offset-only targets still use the
-  /// declaration table as a compatibility fallback for their ABI.
+  /// The resolved source declaration, retained for its declared ABI.
   final Declaration? sourceDeclaration;
   final BridgeFunctionDef? bridgeFunction;
 
@@ -128,20 +127,7 @@ final class StaticCall extends CallTarget {
         sourceDeclaration! as FunctionDeclaration,
       );
     }
-    final reference = offset;
-    // A method offset can have the same unqualified name as a top-level
-    // function. Only plain top-level offsets index this declaration table.
-    if (reference?.className != null || reference?.methodType != null) {
-      return null;
-    }
-    final library = reference?.file;
-    final name = reference?.name;
-    if (library == null || name == null) return null;
-    final declaration =
-        ctx.topLevelDeclarationsMap[library]?[name]?.declaration;
-    return declaration is FunctionDeclaration
-        ? CallableAbi.ofFunction(ctx, library, declaration)
-        : null;
+    return null;
   }
 
   @override
@@ -372,22 +358,30 @@ final class VirtualCall extends CallTarget {
   CallSignature? get signature => member?.signature;
 
   @override
-  Variable emit(CompilerContext ctx, BoundCall call) {
-    final s = ctx.svar('method_result');
-    ctx.pushOp(
-      InvokeDynamic(
-        s,
-        receiver.boxIfNeeded(ctx).ssa,
-        name,
-        call.vector(),
-        positionalCount: call.positional.length,
-        namedNames: [for (final entry in call.named) entry.$1],
-        callerLibrary: ctx.library,
-        typeArguments: call.runtimeTypeArguments,
-      ),
-    );
-    return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
-  }
+  Variable emit(CompilerContext ctx, BoundCall call) =>
+      _emitDynamicCall(ctx, call, receiver, name);
+}
+
+Variable _emitDynamicCall(
+  CompilerContext ctx,
+  BoundCall call,
+  Variable receiver,
+  String name,
+) {
+  final s = ctx.svar('method_result');
+  ctx.pushOp(
+    InvokeDynamic(
+      s,
+      receiver.boxIfNeeded(ctx).ssa,
+      name,
+      call.vector(),
+      positionalCount: call.positional.length,
+      namedNames: [for (final entry in call.named) entry.$1],
+      callerLibrary: ctx.library,
+      typeArguments: call.runtimeTypeArguments,
+    ),
+  );
+  return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
 }
 
 /// A bridge function, constructor, or member.
@@ -483,22 +477,8 @@ final class DynamicCall extends CallTarget {
   CallSignature? get signature => null;
 
   @override
-  Variable emit(CompilerContext ctx, BoundCall call) {
-    final s = ctx.svar('method_result');
-    ctx.pushOp(
-      InvokeDynamic(
-        s,
-        receiver.boxIfNeeded(ctx).ssa,
-        name,
-        call.vector(),
-        positionalCount: call.positional.length,
-        namedNames: [for (final entry in call.named) entry.$1],
-        callerLibrary: ctx.library,
-        typeArguments: call.runtimeTypeArguments,
-      ),
-    );
-    return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
-  }
+  Variable emit(CompilerContext ctx, BoundCall call) =>
+      _emitDynamicCall(ctx, call, receiver, name);
 }
 
 /// `==`/`!=` without an applicable extension member.

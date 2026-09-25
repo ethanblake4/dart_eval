@@ -44,11 +44,135 @@ Variable _throughSuperLinks(
   return link;
 }
 
+Variable _superOwner(
+  CompilerContext ctx,
+  Variable self,
+  String name,
+  MemberKind kind,
+) {
+  final target = ctx.memberLookup.superMemberTarget(
+    self.type,
+    name,
+    kind: kind,
+  );
+  if (target.hops.isEmpty && target.owner != self.type) {
+    return Variable.of(
+      ctx,
+      self.ssa,
+      target.owner,
+      rep: self.rep,
+      facts: ValueFacts(possibleClasses: [target.owner]),
+    );
+  }
+  var owner = self;
+  for (final parent in target.hops) {
+    owner = Variable.ssa(ctx, LoadSuper(ctx.svar('super'), owner.ssa), parent);
+  }
+  return owner;
+}
+
+TypeRef? extensionAccessorType(
+  CompilerContext ctx,
+  EvalExtension ext,
+  MethodDeclaration member,
+  List<TypeRef> bindings, {
+  required bool forSet,
+}) {
+  final typeParameters = extBindingsMap(ext, bindings);
+  if (forSet) {
+    final parameter = member.parameters?.parameters.firstOrNull;
+    if (parameter?.type == null) return null;
+    return ctx.typeFactory.formalParameterAnnotationType(
+      ext.library,
+      parameter!,
+      typeParameters: typeParameters,
+    );
+  }
+  return member.returnType == null
+      ? null
+      : TypeRef.fromAnnotation(
+          ctx,
+          ext.library,
+          member.returnType!,
+          typeParameters: typeParameters,
+        );
+}
+
 /// How a member read `o.name` lowers. [GetTarget.resolve] picks the target
 /// from the receiver's static type, representations, and facts; [emit]
 /// produces the ops. No argument binding — an accessor target stands alone.
 sealed class GetTarget {
   const GetTarget();
+
+  static Variable readSuper(
+    CompilerContext ctx,
+    Variable self,
+    String name, {
+    required TypeRef Function() fieldType,
+    TypeRef? boundContext,
+    List<TypeRef>? typeArguments,
+  }) {
+    final foldedMethod = ctx.memberLookup.lexicalSuperBody(
+      name,
+      MemberKind.method,
+    );
+    if (foldedMethod != null) {
+      final owner = foldedMethod.declaration.parent?.parent;
+      if (owner is Declaration) {
+        return materializeTearOff(
+          ctx,
+          DeferredOrOffset(
+            offset: foldedMethod.offset,
+            file: foldedMethod.library,
+            className: declarationName(owner),
+            name: name,
+          ),
+          implicitReceiver: ctx.lookupLocal('#this')!,
+          boundContext: boundContext,
+          typeArguments: typeArguments,
+          memberTypeParameters: ctx.memberLookup.lexicalSuperTypeParameters(
+            foldedMethod,
+          ),
+        );
+      }
+    }
+    final foldedGetter = ctx.memberLookup.lexicalSuperBody(
+      name,
+      MemberKind.getter,
+    );
+    if (foldedGetter != null) {
+      return FoldedMixinGetterCall(
+        foldedGetter,
+        ctx.lookupLocal('#this')!,
+      ).emit(ctx);
+    }
+    final owner = _superOwner(ctx, self, name, MemberKind.getter);
+    final member = ctx.types
+        .find(owner.type.file, owner.type.name)
+        ?.declaredMember(MemberName.method(name));
+    if (member case SourceMember(
+      node: MethodDeclaration(isGetter: false, isSetter: false),
+    )) {
+      return materializeTearOff(
+        ctx,
+        DeferredOrOffset(
+          file: owner.type.file,
+          className: owner.type.name,
+          name: name,
+        ),
+        implicitReceiver: owner,
+        boundContext: boundContext,
+        typeArguments: typeArguments,
+      );
+    }
+    if (ctx
+            .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
+            ?.isBridge ??
+        false) {
+      return DynamicGet(owner, name, fieldType: fieldType()).emit(ctx);
+    }
+    return SuperGetterCall(owner, name, fieldType()).emit(ctx);
+  }
 
   /// Member-read resolution: intrinsics (`length`, `runtimeType`), bound
   /// extensions, extension getters and method tear-offs, link-relative
@@ -673,6 +797,33 @@ final class DynamicGet extends GetTarget {
 sealed class SetTarget {
   const SetTarget();
 
+  static Variable writeSuper(
+    CompilerContext ctx,
+    Variable self,
+    String name,
+    Variable value, {
+    required TypeRef Function() fieldType,
+  }) {
+    final foldedSetter = ctx.memberLookup.lexicalSuperBody(
+      name,
+      MemberKind.setter,
+    );
+    if (foldedSetter != null) {
+      return FoldedMixinSetterCall(
+        foldedSetter,
+        ctx.lookupLocal('#this')!,
+      ).emit(ctx, value);
+    }
+    final owner = _superOwner(ctx, self, name, MemberKind.setter);
+    if (ctx
+            .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
+            ?.isBridge ??
+        false) {
+      return DynamicSet(owner, name, fieldType()).emit(ctx, value);
+    }
+    return SuperSetterCall(owner, name, fieldType()).emit(ctx, value);
+  }
+
   /// Member-write resolution: extension setters, link-relative field
   /// storage, direct setter calls, and the dynamic fallback.
   static SetTarget resolve(
@@ -797,17 +948,6 @@ sealed class SetTarget {
     }
     return DynamicSet(object, name, fieldType);
   }
-
-  /// `this.name = v` where `name` is declared on the enclosing class —
-  /// always dynamic dispatch on `#this`.
-  static Variable writeDeclared(
-    CompilerContext ctx,
-    Variable object,
-    String name,
-    Variable value,
-    TypeRef fieldType, {
-    AstNode? source,
-  }) => DynamicSet(object, name, fieldType).emit(ctx, value);
 
   /// [resolve] + [emit].
   static Variable write(
@@ -1000,13 +1140,13 @@ final class ExtensionSetterCall extends SetTarget {
 
   @override
   Variable emit(CompilerContext ctx, Variable value) {
-    final paramType = member.parameters?.parameters.firstOrNull?.type == null
-        ? null
-        : ctx.typeFactory.formalParameterAnnotationType(
-            ext.library,
-            member.parameters!.parameters.first,
-            typeParameters: extBindingsMap(ext, bindings),
-          );
+    final paramType = extensionAccessorType(
+      ctx,
+      ext,
+      member,
+      bindings,
+      forSet: true,
+    );
     final arg = paramType == null
         ? value.boxIfNeeded(ctx)
         : convertForAssignment(

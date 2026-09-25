@@ -629,6 +629,59 @@ class ContextSaveState {
   late final List<Map<String, SavedLocalBinding>> locals;
 }
 
+/// State to restore after compiling a function inside another function.
+/// Call [resumeAfterFlush] when the outer function's pending block was flushed
+/// before the nested function began.
+final class NestedFunctionState {
+  NestedFunctionState(this.context)
+    : graph = context.activeGraph,
+      builder = context.builder,
+      blockCode = context.blockCode,
+      functionId = context.currentFunctionId,
+      functionLabel = context.funcLabel,
+      hasBegunMethod = context.hasBegunMethod,
+      labels = [...context.labels],
+      exceptionTargets = [...context.caughtExceptionTargets],
+      exceptionDepth = context.exceptionDepth,
+      locals = context.saveState();
+
+  final CompilerContext context;
+  final ControlFlowGraph graph;
+  BasicBlockBuilder builder;
+  List<Operation> blockCode;
+  final int? functionId;
+  final String? functionLabel;
+  final bool hasBegunMethod;
+  final List<CompilerLabel> labels;
+  final List<String> exceptionTargets;
+  final int exceptionDepth;
+  final ContextSaveState locals;
+
+  void resumeAfterFlush() {
+    builder = context.builder;
+    blockCode = context.blockCode;
+    context.blockCode = [];
+  }
+
+  void restore() {
+    context
+      ..activeGraph = graph
+      ..builder = builder
+      ..blockCode = blockCode
+      ..currentFunctionId = functionId
+      ..funcLabel = functionLabel
+      ..hasBegunMethod = hasBegunMethod
+      ..exceptionDepth = exceptionDepth;
+    context.labels
+      ..clear()
+      ..addAll(labels);
+    context.caughtExceptionTargets
+      ..clear()
+      ..addAll(exceptionTargets);
+    context.restoreState(locals);
+  }
+}
+
 /// The bare declared name of a class-like [Declaration] (e.g. `Foo` for
 /// `class Foo<T>`).
 String declarationName(Declaration d) => switch (d) {

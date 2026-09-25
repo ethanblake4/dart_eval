@@ -4,7 +4,6 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:control_flow_graph/control_flow_graph.dart' hide Assign;
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -12,6 +11,7 @@ import '../builtins.dart';
 import '../errors.dart';
 import '../member/call_signature.dart';
 import '../member/member.dart';
+import '../member/resolved_member.dart';
 import '../member/member_name.dart';
 import '../helpers/argument_list.dart';
 import '../../ir/bridge.dart' show PrepareBridgeArgument;
@@ -20,6 +20,10 @@ import 'call.dart';
 import 'targets.dart';
 
 typedef _MatchedArgument = ({int? positional, String? named, ArgSource source});
+typedef _ArgumentValues = ({
+  List<Variable?> positional,
+  List<(String, Variable)> named,
+});
 
 /// Maps a [CallSite]'s argument shape onto a [CallTarget]'s signature:
 /// match, seed the substitution, compile and coerce, solve inference, fill
@@ -76,6 +80,85 @@ final class ArgumentBinder {
       }
     }
     return matched;
+  }
+
+  _ArgumentValues _evaluateArguments(
+    List<_MatchedArgument> matched,
+    int positionalCount,
+    Variable Function(_MatchedArgument) compile,
+  ) {
+    final positional = List<Variable?>.filled(positionalCount, null);
+    final named = <(String, Variable)>[];
+    for (final argument in matched) {
+      final value = compile(argument);
+      if (argument.positional case final index?) {
+        positional[index] = value;
+      } else {
+        named.add((argument.named!, value));
+      }
+    }
+    return (positional: positional, named: named);
+  }
+
+  /// Assemble declaration order only after all supplied expressions ran.
+  /// Bridge padding enters the vector but is not a supplied argument.
+  BoundCall _finishArguments(
+    CallSignature signature,
+    _ArgumentValues values, {
+    required List<Variable> before,
+    required SuperParams superParams,
+    required Variable Function(ParameterSpec, String) forward,
+    required Variable? Function(ParameterSpec) omitted,
+    bool includeOmitted = true,
+  }) {
+    final positional = <Variable>[];
+    final named = <(String, Variable)>[];
+    final vector = [for (final value in before) value.ssa];
+    void add(ParameterSpec spec, Variable? supplied, {bool isNamed = false}) {
+      if (supplied == null && spec.isRequired) {
+        throw CompileError(
+          isNamed
+              ? 'Missing required named argument ${spec.name}'
+              : 'Not enough positional arguments',
+        );
+      }
+      final value = supplied ?? omitted(spec);
+      if (value == null) return;
+      vector.add(value.ssa);
+      if (supplied != null || includeOmitted) {
+        if (isNamed) {
+          named.add((spec.name, value));
+        } else {
+          positional.add(value);
+        }
+      }
+    }
+
+    for (var i = 0; i < signature.positional.length; i++) {
+      final spec = signature.positional[i];
+      add(
+        spec,
+        i < superParams.positional.length
+            ? forward(spec, superParams.positional[i])
+            : values.positional[i],
+      );
+    }
+    final namedValues = {for (final (name, value) in values.named) name: value};
+    for (final spec in signature.named) {
+      add(
+        spec,
+        superParams.named.contains(spec.name)
+            ? forward(spec, spec.name)
+            : namedValues[spec.name],
+        isNamed: true,
+      );
+    }
+    return BoundCall(
+      positional: positional,
+      named: named,
+      vectorOverride: vector,
+      returnType: CoreTypes.dynamic.ref(ctx),
+    );
   }
 
   /// `calleeBinds` — supplied arguments only. Each argument is captured as
@@ -168,15 +251,12 @@ final class ArgumentBinder {
       if (declaredType != null &&
           site.shape.typeArguments == null &&
           ownParameters.isNotEmpty) {
-        final bindings = <TypeParameterDef, TypeRef>{};
-        ctx.typeSystem.unify(declaredType, argument.type, bindings);
-        for (final entry in bindings.entries) {
-          if (ownParameters.contains(entry.key)) {
-            inferredArguments
-                .putIfAbsent(entry.key, () => <TypeRef>{})
-                .add(entry.value);
-          }
-        }
+        _inferArgument(
+          declaredType,
+          argument.type,
+          ownParameters,
+          inferredArguments,
+        );
       }
       if (parameterType != null) {
         argument = convertForAssignment(
@@ -192,43 +272,25 @@ final class ArgumentBinder {
           .boxIfNeeded(ctx);
     }
 
-    final positional = List<Variable?>.filled(
+    final matched = _matchArguments(site.shape, site.shape.positional.length, {
+      for (final (name, _) in site.shape.named) name,
+    }, errorSource: site.source);
+    final values = _evaluateArguments(
+      matched,
       site.shape.positional.length,
-      null,
+      (argument) => bindArgument(
+        argument.source,
+        argument.positional == null
+            ? declaredSignature?.named[argument.named]?.type
+            : declaredSignature?.positional[argument.positional!],
+      ),
     );
-    final named = List<(String, Variable)?>.filled(
-      site.shape.named.length,
-      null,
-    );
-    // Arguments evaluate in source order — the interleave matters.
-    for (final i in site.shape.sourceOrder) {
-      if (i >= 0) {
-        positional[i] = bindArgument(
-          site.shape.positional[i],
-          declaredSignature?.positional[i],
-        );
-      } else {
-        final (name, source) = site.shape.named[-1 - i];
-        named[-1 - i] = (
-          name,
-          bindArgument(source, declaredSignature?.named[name]?.type),
-        );
-      }
-    }
-    final positionalArgs = positional.cast<Variable>();
-    final namedArgs = named.cast<(String, Variable)>();
+    final positionalArgs = values.positional.cast<Variable>();
+    final namedArgs = values.named;
 
     final inferredSubstitutions = <TypeParameterDef, TypeRef>{};
     if (declaredSignature != null && site.shape.typeArguments == null) {
-      for (final parameter in declaredSignature.typeParameters) {
-        final candidates = inferredArguments[parameter];
-        if (candidates != null && candidates.isNotEmpty) {
-          inferredSubstitutions[parameter] = TypeRef.commonBaseType(
-            ctx,
-            candidates,
-          );
-        }
-      }
+      inferredSubstitutions.addAll(_solveArguments(inferredArguments));
       if (site.context != null &&
           inferredSubstitutions.length < ownParameters.length) {
         final bindings = <TypeParameterDef, TypeRef>{};
@@ -346,7 +408,8 @@ final class ArgumentBinder {
     Declaration parameterHost, {
     CallShape? suppliedShape,
     List<Variable> before = const [],
-    Map<String, TypeRef> resolveGenerics = const {},
+    Map<TypeParameterDef, TypeRef> resolveGenerics = const {},
+    Set<TypeParameterDef>? constrainedParameters,
     bool inferGenerics = true,
     Set<String>? inferParameterNames,
     SuperParams superParams = const (positional: [], named: {}),
@@ -383,34 +446,33 @@ final class ArgumentBinder {
                 ?.declaration;
       if (targetDecl is ConstructorDeclaration) {
         decLibrary = targetRef!.file;
-        signature = CallSignature.forDeclaration(ctx, decLibrary, targetDecl);
+        final redirected = CallSignature.forDeclaration(
+          ctx,
+          decLibrary,
+          targetDecl,
+        );
+        signature = redirected.substitute(
+          redirected.substitutionFor(signature.typeParameterRefs),
+        );
         parameterHost = targetDecl;
       }
     }
 
-    final ssa = <SSA>[];
-    final args = <Variable>[];
-    final push = <Variable>[...before];
-    final namedArgs = <String, Variable>{};
-
     final positional = signature.positional;
     final named = {for (final spec in signature.named) spec.name: spec};
-
-    var i = 0;
 
     // The signature resolved formal annotations in the declaring scope. Bind
     // those exact parameter identities to the call's receiver and type args;
     // resolving AST annotations again here can pick a different scope.
-    final parameterDefs = <String, TypeParameterDef>{
+    final parameterDefs = {
       for (final entry in signature.typeParameterRefs.entries)
-        if (entry.value is TypeParameterTypeRef &&
-            (inferParameterNames == null ||
-                inferParameterNames.contains(entry.key)))
-          entry.key: (entry.value as TypeParameterTypeRef).parameter,
+        if (entry.value case TypeParameterTypeRef(:final parameter)
+            when inferParameterNames == null ||
+                inferParameterNames.contains(entry.key))
+          parameter,
     };
-    final argumentSubstitution = signature.substitutionFor(resolveGenerics);
-
-    final resolveGenericsMap = <String, Set<TypeRef>>{};
+    final argumentSubstitution = Substitution.of(resolveGenerics);
+    final candidates = <TypeParameterDef, Set<TypeRef>>{};
 
     // Compiles or reads the supplied argument for [spec]: context typing,
     // coercion to the formal, and generic-inference recording.
@@ -447,20 +509,7 @@ final class ArgumentBinder {
       );
 
       if (unifyPattern != null) {
-        // Deep inference: unify the parameter's declared shape against the
-        // supplied type — `List<X>` against `List<int>` binds X to int —
-        // recording each bound generic name for the common-base solve.
-        {
-          final bindings = <TypeParameterDef, TypeRef>{};
-          ctx.typeSystem.unify(unifyPattern, arg0.type, bindings);
-          for (final e in parameterDefs.entries) {
-            final bound = bindings[e.value];
-            if (bound != null) {
-              resolveGenericsMap[e.key] ??= {};
-              resolveGenericsMap[e.key]!.add(bound);
-            }
-          }
-        }
+        _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
       }
       // A following source expression can assign to the local slot that
       // produced this value. Already-compiled operands were captured by the
@@ -502,112 +551,39 @@ final class ArgumentBinder {
       }
     }
 
-    // **Compile** supplied arguments in source order — a named argument
-    // interleaves with positionals.
-    final compiledPositional = List<Variable?>.filled(positional.length, null);
-    final compiledNamed = <String, Variable>{};
-    for (final argument in matched) {
-      final pi = argument.positional;
-      if (pi != null) {
-        compiledPositional[pi] = compileMatched(
-          positional[pi],
-          argument.source,
-        );
-      } else {
-        final name = argument.named;
-        if (name != null) {
-          compiledNamed[name] = compileMatched(named[name]!, argument.source);
-        }
-      }
-    }
-
-    // **Emit** the vector in declaration order.
-    for (var pi = 0; pi < positional.length; pi++) {
-      final spec = positional[pi];
-      // First check super params. Super params do not contain an expression;
-      // positional ones bind to the callee's positional parameters in order.
-      if (i < superParams.positional.length) {
-        final V = _forwardedSuperParam(
-          spec,
-          parameterHost,
-          superParams.positional[i],
-          substitution: argumentSubstitution,
-          source: source,
-        );
-        push.add(V);
-        args.add(V);
-        i++;
-        continue;
-      }
-      final arg0 = compiledPositional[i];
-      if (arg0 != null) {
-        args.add(arg0);
-        push.add(arg0);
-      } else {
-        if (spec.isRequired) {
-          throw CompileError('Not enough positional arguments');
-        } else if (fillOmitted) {
-          final value = compileOmittedArgument(
-            ctx,
-            spec,
-            parameterHost,
-            spec.type.substituteTypeParameters(argumentSubstitution),
-          );
-          push.add(value);
-          args.add(value);
-        }
-      }
-      i++;
-    }
-
-    for (final n in named.entries) {
-      final name = n.key;
-      final spec0 = n.value;
-      if (superParams.named.contains(name)) {
-        final V = _forwardedSuperParam(
-          spec0,
-          parameterHost,
-          name,
-          substitution: argumentSubstitution,
-          source: source,
-        );
-        push.add(V);
-        namedArgs[name] = V;
-
-        continue;
-      }
-      final arg0 = compiledNamed[name];
-      if (arg0 != null) {
-        push.add(arg0);
-        namedArgs[name] = arg0;
-      } else if (fillOmitted) {
-        final value = compileOmittedArgument(
-          ctx,
-          spec0,
-          parameterHost,
-          spec0.type.substituteTypeParameters(argumentSubstitution),
-        );
-        push.add(value);
-        namedArgs[name] = value;
-      }
-    }
-
-    if (inferGenerics) {
-      for (final generic in resolveGenericsMap.keys) {
-        resolveGenerics[generic] = TypeRef.commonBaseType(
-          ctx,
-          resolveGenericsMap[generic]!,
-        );
-      }
-    }
-
-    ssa.addAll(push.map((argument) => argument.ssa));
-    return BoundCall(
-      positional: args,
-      named: [for (final e in namedArgs.entries) (e.key, e.value)],
-      vectorOverride: ssa,
-      returnType: CoreTypes.dynamic.ref(ctx),
+    final values = _evaluateArguments(matched, positional.length, (argument) {
+      final index = argument.positional;
+      final spec = index == null ? named[argument.named]! : positional[index];
+      return compileMatched(spec, argument.source);
+    });
+    final result = _finishArguments(
+      signature,
+      values,
+      before: before,
+      superParams: superParams,
+      forward: (spec, name) => _forwardedSuperParam(
+        spec,
+        parameterHost,
+        name,
+        substitution: argumentSubstitution,
+        source: source,
+      ),
+      omitted: (spec) => fillOmitted
+          ? compileOmittedArgument(
+              ctx,
+              spec,
+              parameterHost,
+              spec.type.substituteTypeParameters(argumentSubstitution),
+            )
+          : null,
     );
+
+    if (inferGenerics && candidates.isNotEmpty) {
+      resolveGenerics.addAll(_solveArguments(candidates));
+      constrainedParameters?.addAll(candidates.keys);
+    }
+
+    return result;
   }
 
   /// The value a `super` parameter forwards to the callee: the caller's local
@@ -631,70 +607,6 @@ final class ArgumentBinder {
       parameterHost,
       genericParameter: spec.erased,
       source: source,
-    );
-  }
-
-  BoundCall _finishBridgeVector(
-    CallSignature signature, {
-    required List<Variable> before,
-    required SuperParams superParams,
-    required List<Variable?> positionalValues,
-    required Map<String, Variable> namedValues,
-  }) {
-    final args = <Variable>[];
-    final push = <Variable>[...before];
-    final namedArgs = <String, Variable>{};
-    Variable? $null;
-
-    for (var i = 0; i < signature.positional.length; i++) {
-      final param = signature.positional[i];
-      if (i < superParams.positional.length) {
-        final V = _providedBridgeArgument(
-          ctx,
-          ctx.lookupLocal(superParams.positional[i])!,
-        );
-        push.add(V);
-        args.add(V);
-        continue;
-      }
-      final supplied = positionalValues[i];
-      if (supplied != null) {
-        push.add(supplied);
-        args.add(supplied);
-        continue;
-      }
-      if (param.isRequired) {
-        throw CompileError('Not enough positional arguments');
-      }
-      $null ??= BuiltinValue().push(ctx);
-      push.add($null);
-    }
-
-    for (final param in signature.named) {
-      if (superParams.named.contains(param.name)) {
-        final V = _providedBridgeArgument(ctx, ctx.lookupLocal(param.name)!);
-        push.add(V);
-        namedArgs[param.name] = V;
-        continue;
-      }
-      final supplied = namedValues[param.name];
-      if (supplied != null) {
-        push.add(supplied);
-        namedArgs[param.name] = supplied;
-        continue;
-      }
-      if (param.isRequired) {
-        throw CompileError('Missing required named argument ${param.name}');
-      }
-      $null ??= BuiltinValue().push(ctx);
-      push.add($null);
-    }
-
-    return BoundCall(
-      positional: args,
-      named: [for (final e in namedArgs.entries) (e.key, e.value)],
-      vectorOverride: [for (final argument in push) argument.ssa],
-      returnType: CoreTypes.dynamic.ref(ctx),
     );
   }
 
@@ -767,35 +679,24 @@ final class ArgumentBinder {
       ).copyIntoFreshSlot(ctx, 'bridge_argument');
     }
 
-    // **Compile** supplied arguments in source order.
-    final compiledPositional = List<Variable?>.filled(positional.length, null);
-    final compiledNamed = <String, Variable>{};
-    for (final argument in matched) {
-      final pi = argument.positional;
-      if (pi != null) {
-        compiledPositional[pi] = compileMatchedBridge(
-          positional[pi],
-          argument.source,
-          named: false,
-        );
-        continue;
-      }
-      final name = argument.named;
-      if (name != null) {
-        compiledNamed[name] = compileMatchedBridge(
-          namedParamByName[name]!,
-          argument.source,
-          named: true,
-        );
-      }
-    }
-
-    return _finishBridgeVector(
+    final values = _evaluateArguments(matched, positional.length, (argument) {
+      final index = argument.positional;
+      return compileMatchedBridge(
+        index == null ? namedParamByName[argument.named]! : positional[index],
+        argument.source,
+        named: index == null,
+      );
+    });
+    Variable? padding;
+    return _finishArguments(
       signature,
+      values,
       before: before,
       superParams: superParams,
-      positionalValues: compiledPositional,
-      namedValues: compiledNamed,
+      forward: (spec, name) =>
+          _providedBridgeArgument(ctx, ctx.lookupLocal(name)!),
+      omitted: (_) => padding ??= BuiltinValue().push(ctx),
+      includeOmitted: false,
     );
   }
 
@@ -827,10 +728,32 @@ final class ArgumentBinder {
     );
   }
 
+  void _inferArgument(
+    TypeRef formal,
+    TypeRef actual,
+    Set<TypeParameterDef> parameters,
+    Map<TypeParameterDef, Set<TypeRef>> candidates,
+  ) {
+    final bindings = <TypeParameterDef, TypeRef>{};
+    ctx.typeSystem.unify(formal, actual, bindings);
+    for (final entry in bindings.entries) {
+      if (parameters.contains(entry.key)) {
+        candidates.putIfAbsent(entry.key, () => {}).add(entry.value);
+      }
+    }
+  }
+
+  Map<TypeParameterDef, TypeRef> _solveArguments(
+    Map<TypeParameterDef, Set<TypeRef>> candidates,
+  ) => {
+    for (final entry in candidates.entries)
+      entry.key: TypeRef.commonBaseType(ctx, entry.value),
+  };
+
   void _resolveInvocationGenerics(
     CallSignature signature,
     List<TypeAnnotation>? explicitArguments,
-    Map<String, TypeRef> resolved,
+    Map<TypeParameterDef, TypeRef> resolved,
     AstNode source,
   ) {
     final parameters = signature.typeParameters;
@@ -851,17 +774,20 @@ final class ArgumentBinder {
     // The declaration seeded these definitions before resolving their bounds,
     // including recursive bounds. Use the same identities for inference.
     for (final parameter in parameters) {
-      resolved[parameter.name] = TypeParameterTypeRef(parameter);
+      resolved[parameter] = TypeParameterTypeRef(parameter);
     }
     for (var index = 0; index < parameters.length; index++) {
       final parameter = parameters[index];
       final name = parameter.name;
       final bound = (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
           .substituteTypeParameters(
-            signature.substitutionFor(resolved, includeOwn: false),
+            Substitution.of({
+              for (final entry in resolved.entries)
+                if (!parameters.contains(entry.key)) entry.key: entry.value,
+            }),
           );
       if (explicitArguments == null) {
-        resolved[name] = bound;
+        resolved[parameter] = bound;
         continue;
       }
       final argument = TypeRef.fromAnnotation(
@@ -872,7 +798,7 @@ final class ArgumentBinder {
       // The bound may self-reference (`T extends Generator<T>`); substitute
       // the actual argument before checking assignability.
       final substitutedBound = bound.substituteTypeParameters(
-        signature.substitutionFor({...resolved, name: argument}),
+        Substitution.of({...resolved, parameter: argument}),
       );
       if (!argument.isSpec(CoreTypes.dynamic) &&
           !substitutedBound.isSpec(CoreTypes.dynamic) &&
@@ -886,7 +812,7 @@ final class ArgumentBinder {
           source,
         );
       }
-      resolved[name] = argument;
+      resolved[parameter] = argument;
     }
   }
 
@@ -1057,7 +983,9 @@ final class ArgumentBinder {
     final typeParams = signature.typeParameters;
     final isCallableDecl =
         dec is FunctionDeclaration || dec is MethodDeclaration;
-    final resolveGenerics = <String, TypeRef>{...seedGenerics};
+    final resolveGenerics = {
+      ...signature.substitutionFor(seedGenerics).bindings,
+    };
     if (dec is ConstructorDeclaration) {
       // Constructor signatures reference the declaring class's type parameters;
       // seed them from the call's explicit type arguments (or bounds).
@@ -1066,24 +994,22 @@ final class ArgumentBinder {
           if (entry.value is TypeParameterTypeRef &&
               (entry.value as TypeParameterTypeRef).parameter.owner.kind ==
                   TypeParameterOwnerKind.classLike)
-            (entry.key, (entry.value as TypeParameterTypeRef).parameter),
+            (entry.value as TypeParameterTypeRef).parameter,
       ];
       final explicitArgs = typeArguments?.arguments;
       for (var i = 0; i < classParams.length; i++) {
-        final (name, parameter) = classParams[i];
+        final parameter = classParams[i];
         if (explicitArgs != null && i < explicitArgs.length) {
-          resolveGenerics[name] = TypeRef.fromAnnotation(
+          resolveGenerics[parameter] = TypeRef.fromAnnotation(
             ctx,
             sourceLib,
             explicitArgs[i],
           );
         } else {
           resolveGenerics.putIfAbsent(
-            name,
+            parameter,
             () => (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
-                .substituteTypeParameters(
-                  signature.substitutionFor(resolveGenerics),
-                ),
+                .substituteTypeParameters(Substitution.of(resolveGenerics)),
           );
         }
       }
@@ -1097,9 +1023,7 @@ final class ArgumentBinder {
       );
     }
 
-    // Snapshot the pre-inference bindings: entries still identical after the
-    // argument list compiles were never constrained by the arguments.
-    final unboundGenerics = Map<String, TypeRef>.of(resolveGenerics);
+    final constrainedParameters = <TypeParameterDef>{};
     final argsPair = bindParameterList(
       argumentList,
       sourceLib,
@@ -1110,6 +1034,7 @@ final class ArgumentBinder {
       source: source,
       argIndexOffset: argIndexOffset,
       resolveGenerics: resolveGenerics,
+      constrainedParameters: constrainedParameters,
       inferParameterNames: inferParameterNames,
       // Only function/method declarations take explicit type arguments at the
       // call site; constructor calls infer regardless (e.g. List<int>() still
@@ -1130,17 +1055,16 @@ final class ArgumentBinder {
       final bindings = <TypeParameterDef, TypeRef>{};
       ctx.typeSystem.unify(pattern, returnContext, bindings);
       for (final parameter in typeParams) {
-        final name = parameter.name;
-        if (!identical(resolveGenerics[name], unboundGenerics[name])) continue;
+        if (constrainedParameters.contains(parameter)) continue;
         final bound = bindings[parameter];
-        if (bound != null) resolveGenerics[name] = bound;
+        if (bound != null) resolveGenerics[parameter] = bound;
       }
     }
 
     TypeRef? returnType;
     if (signature.returnAnnotated && resolveGenerics.isNotEmpty) {
       returnType = signature.returnType.substituteTypeParameters(
-        signature.substitutionFor(resolveGenerics),
+        Substitution.of(resolveGenerics),
       );
     }
     // Inferred type arguments materialize into the emitted call's runtime
@@ -1152,7 +1076,7 @@ final class ArgumentBinder {
         ? [
             for (final p in typeParams)
               () {
-                final t = resolveGenerics[p.name];
+                final t = resolveGenerics[p];
                 return t == null || t.isTypeParameter
                     ? ctx.runtimeTypes.idOf(CoreTypes.dynamic.ref(ctx))
                     : ctx.runtimeTypes.idOf(t);
@@ -1165,7 +1089,11 @@ final class ArgumentBinder {
       vectorOverride: argsPair.vector(),
       returnType: returnType ?? CoreTypes.dynamic.ref(ctx),
       declaredReturn: returnType,
-      typeArguments: resolveGenerics,
+      typeArguments: {
+        for (final entry in signature.typeParameterRefs.entries)
+          if (entry.value case TypeParameterTypeRef(:final parameter))
+            entry.key: ?resolveGenerics[parameter],
+      },
       runtimeTypeArguments: inferredRuntimeTypeArguments,
     );
   }
@@ -1294,6 +1222,7 @@ TypeRef? memberCallResultType(
   Map<String, TypeRef> namedArgTypes, {
   bool $static = false,
   AstNode? source,
+  ResolvedMember? resolved,
 }) {
   final lookupType = ctx.typeSystem.throughTypeParameters(type);
   if (lookupType.isSpec(CoreTypes.dynamic)) {
@@ -1301,24 +1230,15 @@ TypeRef? memberCallResultType(
   }
   if ($static) {
     final member =
+        resolved?.member ??
         ctx.memberLookup.staticMember(lookupType, method, MemberKind.method) ??
         (throw CompileError('Cannot find static method $lookupType.$method'));
-    if (member is BridgeMember) {
-      if (member.isField) return CoreTypes.dynamic.ref(ctx);
-      // member.signature is in the declaring class's parameter space —
-      // signatureOwner lets resolveCallResultType view the receiver as an
-      // instance of that declaration so inherited parameters still bind.
-      return resolveCallResultType(
-        ctx,
-        signature: member.signature,
-        targetType: lookupType,
-        signatureOwner: member.ownerDecl,
-        argTypes: argTypes,
-        namedArgTypes: namedArgTypes,
-      );
+    if (member is BridgeMember && member.isField) {
+      return CoreTypes.dynamic.ref(ctx);
     }
-    final node = (member as SourceMember).node;
-    if (node is ConstructorDeclaration) return lookupType;
+    if (member case SourceMember(node: ConstructorDeclaration())) {
+      return lookupType;
+    }
     return resolveCallResultType(
       ctx,
       signature: member.signature,
@@ -1332,7 +1252,7 @@ TypeRef? memberCallResultType(
     // `Object.noSuchMethod` is implicit — absent from declaration metadata.
     return CoreTypes.dynamic.ref(ctx);
   }
-  final resolved = ctx.memberLookup.interfaceMember(
+  resolved ??= ctx.memberLookup.interfaceMember(
     lookupType,
     ctx.memberNameOf(method, MemberKind.method),
     source: source,
