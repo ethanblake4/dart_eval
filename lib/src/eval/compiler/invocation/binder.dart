@@ -215,7 +215,7 @@ final class ArgumentBinder {
       return declaredSignature != null &&
               site.shape.typeArguments == null &&
               _usesParameter(instantiated, ownParameters)
-          ? instantiated.lowerTypeParameters(ctx)
+          ? instantiated.lowerTypeParameters(ctx, only: ownParameters)
           : instantiated;
     }
 
@@ -341,7 +341,8 @@ final class ArgumentBinder {
             resolvedSubstitutions,
           )
         : null;
-    final inferredResult = inferredReturn?.lowerTypeParameters(ctx);
+    final inferredResult =
+        inferredReturn?.lowerTypeParameters(ctx, only: ownParameters);
     final resultType =
         (inferredResult != null && !inferredResult.isSpec(CoreTypes.voidType)
             ? inferredResult
@@ -491,26 +492,35 @@ final class ArgumentBinder {
         unifyPattern = spec.type;
       }
 
+      // A formal that still holds an unbound type parameter erases to its
+      // bound (or `dynamic`): the erased boundary accepts whatever the
+      // inferred type argument becomes — e.g. `typedef T<X> = C<X>` invoked
+      // as `T(1)` leaves `C`'s parameters bound to `T.X` until inference.
+      final coercionType = paramType.requiresTypeEnvironment
+          ? paramType.lowerTypeParameters(ctx)
+          : paramType;
       // The placeholder-rich shape only serves as context for function-typed
       // parameters — collection literals need the erased formal so their
       // element types stay unconstrained until unification.
       final argBound = unifyPattern is FunctionTypeRef
           ? unifyPattern
-          : paramType;
+          : coercionType;
       var arg0 = _compileArg(ctx, argument, argBound);
+      if (unifyPattern != null) {
+        // Inference reads the argument's own type — coercion below may
+        // erase still-unbound parameters to `dynamic`, which would record
+        // `T -> dynamic` instead of the actual constraint.
+        _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
+      }
       arg0 = coerceArgumentForParameter(
         ctx,
         arg0,
-        paramType,
+        coercionType,
         param,
         parameterHost,
         genericParameter: spec.erased,
         source: source,
       );
-
-      if (unifyPattern != null) {
-        _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
-      }
       // A following source expression can assign to the local slot that
       // produced this value. Already-compiled operands were captured by the
       // caller before target resolution.
@@ -737,6 +747,14 @@ final class ArgumentBinder {
     final bindings = <TypeParameterDef, TypeRef>{};
     ctx.typeSystem.unify(formal, actual, bindings);
     for (final entry in bindings.entries) {
+      // A self-referential binding (T -> T) carries no information — the
+      // actual type only mentioned the parameter's own placeholder. Skipping
+      // it leaves the parameter unconstrained so downward inference from
+      // the context type can still bind it.
+      if (entry.value case TypeParameterTypeRef(:final parameter)
+          when parameter == entry.key) {
+        continue;
+      }
       if (parameters.contains(entry.key)) {
         candidates.putIfAbsent(entry.key, () => {}).add(entry.value);
       }
@@ -787,7 +805,11 @@ final class ArgumentBinder {
             }),
           );
       if (explicitArguments == null) {
-        resolved[parameter] = bound;
+        // Inference starts from the placeholder seeded above, not the
+        // bound: substituting the bound here would erase the parameter in
+        // parameter types (e.g. `List<T>` -> `List<dynamic>`), so context
+        // and argument constraints would never reach it. A parameter
+        // nothing constrains is finalized to its bound after inference.
         continue;
       }
       final argument = TypeRef.fromAnnotation(
@@ -1061,6 +1083,20 @@ final class ArgumentBinder {
       }
     }
 
+    // Parameters nothing constrained still hold their own placeholder —
+    // finalize them to their declared bound (or `dynamic`). A binding to
+    // another parameter (the caller's own) is real and kept.
+    for (final parameter in typeParams) {
+      final resolved = resolveGenerics[parameter];
+      final ownPlaceholder = resolved is TypeParameterTypeRef &&
+          resolved.parameter == parameter;
+      if (resolved == null || ownPlaceholder) {
+        resolveGenerics[parameter] =
+            (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
+                .substituteTypeParameters(Substitution.of(resolveGenerics));
+      }
+    }
+
     TypeRef? returnType;
     if (signature.returnAnnotated && resolveGenerics.isNotEmpty) {
       returnType = signature.returnType.substituteTypeParameters(
@@ -1172,7 +1208,10 @@ TypeRef? resolveCallResultType(
   if (targetSubs != null && targetSubs.isNotEmpty) {
     resolved = resolved.substituteTypeParameters(targetSubs);
   }
-  resolved = resolved.lowerTypeParameters(ctx);
+  resolved = resolved.lowerTypeParameters(
+    ctx,
+    only: signature.typeParameters.toSet(),
+  );
   return resolved == voidType ? null : resolved;
 }
 

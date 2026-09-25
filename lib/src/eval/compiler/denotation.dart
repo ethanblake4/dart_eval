@@ -503,6 +503,18 @@ final class InstanceMemberDenotation extends Denotation {
           found.$3,
           forSet: forSet,
         );
+      } else {
+        // A method member's read type is its bound tear-off signature.
+        final foundMethod = resolveExtensionMember(ctx, object.type, name);
+        if (foundMethod != null) {
+          fieldType = extensionAccessorType(
+            ctx,
+            foundMethod.$1,
+            foundMethod.$2,
+            foundMethod.$3,
+            forSet: forSet,
+          );
+        }
       }
     }
     return fieldType;
@@ -1147,7 +1159,9 @@ Denotation resolveIdentifier(
 }) {
   // 1 — local bindings, innermost scope first.
   final binding = ctx.lookupBinding(name);
-  if (binding != null) return LocalDenotation(binding);
+  if (binding != null) {
+    return LocalDenotation(binding);
+  }
 
   final $this = ctx.lookupLocal('#this');
   final currentExtension = ctx.currentExtension;

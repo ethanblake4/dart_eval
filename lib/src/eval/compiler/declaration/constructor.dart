@@ -144,7 +144,7 @@ void compileConstructorDeclaration(
           redirectTargetDecl,
         ).$1;
       } else if (p.type != null) {
-        type0 = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
+        type0 = ctx.typeFactory.formalParameterAnnotationType(ctx.library, p);
       }
       if (redirectTargetDecl == null) {
         type0 ??= ctx.memberLookup.fieldType(
@@ -178,10 +178,9 @@ void compileConstructorDeclaration(
     } else {
       TypeRef type = CoreTypes.dynamic.ref(ctx);
       if (p.type != null) {
-        type = TypeRef.fromAnnotation(
-          ctx,
+        type = ctx.typeFactory.formalParameterAnnotationType(
           redirectTarget?.$2.file ?? ctx.library,
-          p.type!,
+          p,
         );
       }
       vrep = Variable.of(ctx, SSA('arg_$i'), type, rep: abi.parameters[i]);

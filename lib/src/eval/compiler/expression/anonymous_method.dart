@@ -72,7 +72,10 @@ Variable _runBody(
       ? receiver.copyWith(type: receiver.type.withNullable(false))
       : receiver;
   ctx.anonymousThisReceiver = boundReceiver;
-  ctx.setLocal('#this', boundReceiver);
+  // `#this` gets its own binding — adopting the receiver variable itself
+  // would steal the `.binding` back-reference of a bound local it aliases
+  // (e.g. the promoted variable a previous anonymous body returned).
+  ctx.setLocal('#this', boundReceiver.copyWith());
   final parameters = e.parameters;
   if (parameters != null) {
     for (final parameter in parameters.parameters) {

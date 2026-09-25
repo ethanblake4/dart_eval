@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
@@ -32,7 +33,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // `x as T` promotes x's flow type to T only when T refines x's current
   // type — casting to a wider or unrelated type (dynamic, Object) leaves
   // the variable's type unchanged.
-  final promotes = slot.isAssignableTo(ctx, V.type, forceAllowDynamic: false);
+  final promotes = isPromotionSubtype(ctx, slot, V.type);
   Variable update(Variable v, TypeRef type) {
     final result = v.withType(type);
     if (promotes) result.binding?.rebind(result);

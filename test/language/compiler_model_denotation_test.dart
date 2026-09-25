@@ -50,11 +50,11 @@ void main() {
       ),
     );
     expect(
-      () => eval('''
+      eval('''
       T? optional<T>([T? value]) => value;
-      main() => optional<int>;
+      main() => optional<int>(7) == 7 && optional<int>() == null;
     '''),
-      throwsA(isA<CompileError>()),
+      true,
     );
   });
 

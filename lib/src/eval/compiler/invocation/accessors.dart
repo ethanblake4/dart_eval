@@ -88,6 +88,23 @@ TypeRef? extensionAccessorType(
       typeParameters: typeParameters,
     );
   }
+  if (!member.isGetter && !member.isSetter) {
+    // A method member read is a bound tear-off — its type is the method's
+    // signature (own type parameters kept), not its return type.
+    return ctx.typeFactory.declaredFunctionType(
+      ext.library,
+      member.parameters,
+      member.returnType,
+      member.typeParameters,
+      memberTypeParameters: typeParameters,
+      ownTypeParameterOwner: TypeParameterOwner(
+        TypeParameterOwnerKind.tearOff,
+        ext.library,
+        '${ext.name}.${member.name.lexeme}',
+        member.offset,
+      ),
+    );
+  }
   return member.returnType == null
       ? null
       : TypeRef.fromAnnotation(

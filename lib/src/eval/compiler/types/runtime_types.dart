@@ -1,3 +1,4 @@
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 
@@ -63,19 +64,30 @@ final class RuntimeTypes {
       final ownerType = owner.isClassLike
           ? idOf(_ctx.visibleTypes[owner.library]![owner.name]!)
           : RuntimeTypeDescriptorTag.callableTypeParameterOwner;
+      // An extension member's callable type parameters are the extension's
+      // own parameters followed by the method's — a method-owned parameter's
+      // environment index sits past the extension's `on` bindings.
+      var index = parameter.index;
+      if (owner.kind == TypeParameterOwnerKind.method) {
+        index += _extensionParameterOffset(owner);
+      }
       return [
         idOf(CoreTypes.dynamic.ref(_ctx)),
         type.nullable ? 1 : 0,
         RuntimeTypeDescriptorTag.typeParameter,
         ownerType,
-        parameter.index,
-        // F-bounds reference the parameter itself (`T extends Foo<T>`); erase
-        // the self-reference to dynamic — descriptors can't be cyclic.
+        index,
+        // F-bounds can be cyclic (`T extends Foo<T>`, or mutually cyclic
+        // `S extends Built<S, B>`) and descriptors can't be — self-erase,
+        // lower any chained parameter references to their bounds, then
+        // erase survivors to dynamic.
         idOf(
           (parameter.bound ?? CoreTypes.dynamic.ref(_ctx))
               .substituteTypeParameters(
                 Substitution.of({parameter: CoreTypes.dynamic.ref(_ctx)}),
-              ),
+              )
+              .lowerTypeParameters(_ctx)
+              .eraseTypeParameters(_ctx),
         ),
       ];
     }
@@ -124,5 +136,26 @@ final class RuntimeTypes {
       type.nullable ? 1 : 0,
       for (final argument in interfaceArgumentsOf(type)) idOf(argument),
     ];
+  }
+
+  /// The number of extension `on` bindings a method-owned [owner]'s callable
+  /// environment places before its own type arguments — 0 when the method
+  /// is not an extension member.
+  int _extensionParameterOffset(TypeParameterOwner owner) {
+    final dot = owner.name.indexOf('.');
+    if (dot < 0) return 0;
+    final extensionName = owner.name.substring(0, dot);
+    final methodName = owner.name.substring(dot + 1);
+    for (final ext in _ctx.extensions) {
+      if (ext.library != owner.library || ext.name != extensionName) {
+        continue;
+      }
+      for (final member in ext.members) {
+        if (member is MethodDeclaration && member.name.lexeme == methodName) {
+          return ext.declaration.typeParameters?.typeParameters.length ?? 0;
+        }
+      }
+    }
+    return 0;
   }
 }

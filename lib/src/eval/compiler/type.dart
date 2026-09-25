@@ -228,9 +228,19 @@ sealed class TypeRef {
   /// Replaces every free type-parameter reference inside this type with its
   /// declared bound (or `dynamic` when unbounded). Callers use this when a
   /// type leaves the scope that gave those parameters meaning — an
-  /// unconstrained `T` is not a usable type for the caller.
-  TypeRef lowerTypeParameters(CompilerContext ctx) =>
-      ctx.typeSystem.lowerTypeParameters(this);
+  /// unconstrained `T` is not a usable type for the caller. [only] scopes
+  /// the lowering to a set of parameters; the rest stay.
+  TypeRef lowerTypeParameters(
+    CompilerContext ctx, {
+    Set<TypeParameterDef>? only,
+  }) =>
+      ctx.typeSystem.lowerTypeParameters(this, only: only);
+
+  /// Replaces every remaining type-parameter reference inside this type with
+  /// `dynamic` — the fallback for bounds that cannot be represented (cyclic
+  /// F-bounds never reach a parameter-free form).
+  TypeRef eraseTypeParameters(CompilerContext ctx) =>
+      ctx.typeSystem.eraseTypeParameters(this);
 
   @override
   String toString() {

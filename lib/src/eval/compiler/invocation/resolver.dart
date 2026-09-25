@@ -77,6 +77,7 @@ final class CallResolver {
           member,
           bindings,
           argIndexOffset: 1,
+          bound: bound,
         );
       }
       final target = StaticCall(
@@ -306,6 +307,7 @@ final class CallResolver {
         boundExt.ext,
         member,
         boundExt.onBindings,
+        bound: bound,
       );
     }
     ResolvedMember? resolved;
@@ -333,7 +335,15 @@ final class CallResolver {
           arity: callSite().shape.positionalArity,
         );
         if (found != null) {
-          return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+          return invokeExtensionMethod(
+            ctx,
+            L,
+            e,
+            found.$1,
+            found.$2,
+            found.$3,
+            bound: bound,
+          );
         }
         // Not a static member of the class — it's an instance method of the
         // `Type` object itself (`Foo.toString()`, `Foo.hashCode`, ...).
@@ -383,7 +393,15 @@ final class CallResolver {
           arity: callSite().shape.positionalArity,
         );
         if (found != null) {
-          return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+          return invokeExtensionMethod(
+            ctx,
+            L,
+            e,
+            found.$1,
+            found.$2,
+            found.$3,
+            bound: bound,
+          );
         }
         final foundGetter = resolveExtensionMember(
           ctx,
@@ -455,7 +473,15 @@ final class CallResolver {
         arity: callSite().shape.positionalArity,
       );
       if (found != null) {
-        return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
+        return invokeExtensionMethod(
+          ctx,
+          L,
+          e,
+          found.$1,
+          found.$2,
+          found.$3,
+          bound: bound,
+        );
       }
     }
 
@@ -510,6 +536,7 @@ final class CallResolver {
             memberDecl,
             bindings,
             argIndexOffset: 1,
+            bound: bound,
           );
         }
       }
@@ -1127,6 +1154,7 @@ final class CallResolver {
         d.ext,
         d.member,
         matchExtensionOn(ctx, d.receiver!.type, d.ext) ?? const [],
+        bound: bound,
       );
     }
     // Values invoke through the value-call path (closure, `.call` member,
@@ -1646,6 +1674,7 @@ Variable invokeExtensionMethod(
   MethodDeclaration member,
   List<TypeRef> bindings, {
   int argIndexOffset = 0,
+  TypeRef? bound,
 }) {
   final extParams =
       ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
@@ -1665,6 +1694,7 @@ Variable invokeExtensionMethod(
     },
     argIndexOffset: argIndexOffset,
     source: call,
+    returnContext: bound,
   );
 
   return target.emit(

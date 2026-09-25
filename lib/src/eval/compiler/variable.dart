@@ -130,7 +130,7 @@ class Variable {
         Assign(into, ssa),
         type,
         rep: target,
-        facts: facts.copyWith(isConst: false),
+        facts: facts,
       );
     }
     // A bound local converts in place: the binding's SSA name is its
@@ -155,7 +155,7 @@ class Variable {
       dest,
       type,
       rep: target,
-      facts: facts.copyWith(isConst: false),
+      facts: facts,
     );
   }
 

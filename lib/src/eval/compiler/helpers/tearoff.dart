@@ -257,11 +257,29 @@ Variable materializeTearOff(
   final callable = captures.isEmpty
       ? internConst(ctx, created, functionType)
       : created;
+  // An extension member's callable environment leads with the extension's
+  // own bindings (`[ext bindings..., method args...]`), which the runtime
+  // adapter must forward alongside the method's instantiated arguments.
+  final envTypeArguments = memberExt == null
+      ? const <TypeRef>[]
+      : [
+          for (final parameter
+              in memberExt.declaration.typeParameters?.typeParameters ??
+                  const <TypeParameter>[])
+            memberParams[parameter.name.lexeme] ??
+                CoreTypes.dynamic.ref(ctx),
+        ];
   return instantiateRuntimeCallable(
     ctx,
     callable,
     boundContext: boundContext,
     typeArguments: typeArguments,
+    envTypeArguments: envTypeArguments,
+    positionalDefaults: positionalDefaults,
+    namedDefaults: {
+      for (var i = 0; i < named.length; i++)
+        if (named[i].name != null) named[i].name!.lexeme: namedDefaults[i],
+    },
   );
 }
 
@@ -273,6 +291,9 @@ Variable instantiateRuntimeCallable(
   Variable value, {
   TypeRef? boundContext,
   List<TypeRef>? typeArguments,
+  List<TypeRef> envTypeArguments = const [],
+  List<(Object?, int)> positionalDefaults = const [],
+  Map<String, (Object?, int)> namedDefaults = const {},
 }) {
   final type = value.type;
   if (type is! FunctionTypeRef ||
@@ -298,8 +319,15 @@ Variable instantiateRuntimeCallable(
     ctx.typeSystem.unify(type, boundContext!, bindings);
     if (signature.typeParameters.any((p) => bindings[p] == null)) return value;
   }
-  if (signature.requiredPositional != signature.positional.length ||
-      signature.named.values.any((parameter) => !parameter.required)) {
+  // The adapter forwards optional parameters through its own defaults, which
+  // only a fresh tear-off can supply — instantiating a stored closure loses
+  // that provenance and can't model them.
+  final hasOptionals =
+      signature.requiredPositional != signature.positional.length ||
+      signature.named.values.any((parameter) => !parameter.required);
+  if (hasOptionals &&
+      (positionalDefaults.length != signature.positional.length ||
+          namedDefaults.length != signature.named.length)) {
     throw CompileError(
       'Instantiating a runtime function with optional parameters is not supported',
     );
@@ -324,6 +352,7 @@ Variable instantiateRuntimeCallable(
     decl: type.decl,
   );
   final argumentIds = [
+    for (final type in envTypeArguments) ctx.runtimeTypes.idOf(type),
     for (final parameter in signature.typeParameters)
       ctx.runtimeTypes.idOf(bindings[parameter]!),
   ];
@@ -388,7 +417,16 @@ Variable instantiateRuntimeCallable(
       requiredPositional: signature.requiredPositional,
       positionalCount: signature.positional.length,
       namedNames: named,
-      requiredNamed: named,
+      positionalDefaults: [for (final d in positionalDefaults) d.$1],
+      namedDefaults: [for (final name in named) namedDefaults[name]?.$1],
+      defaultThunks: [
+        for (final d in positionalDefaults) d.$2,
+        for (final name in named) namedDefaults[name]?.$2 ?? -1,
+      ],
+      requiredNamed: [
+        for (final name in named)
+          if (instantiated.signature.named[name]!.required) name,
+      ],
       runtimeTypeId: ctx.runtimeTypes.idOf(instantiated),
     ),
     instantiated,

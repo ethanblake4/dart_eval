@@ -230,16 +230,22 @@ final class TypeSystem {
   /// each parameter replaced by its declared bound (or `dynamic` when
   /// unbounded). Callers use this when a type leaves the scope that gave
   /// those parameters meaning — an unconstrained `T` is not a usable type
-  /// for the caller.
-  TypeRef lowerTypeParameters(TypeRef type) {
+  /// for the caller. When [only] is given, parameters outside the set are
+  /// kept: they belong to the caller's own scope and stay meaningful.
+  TypeRef lowerTypeParameters(TypeRef type, {Set<TypeParameterDef>? only}) {
     final bindings = <TypeParameterDef, TypeRef>{};
     void collect(TypeRef t) {
       if (t.isTypeParameter) {
         final parameter = (t as TypeParameterTypeRef).parameter;
-        bindings.putIfAbsent(
-          parameter,
-          () => parameter.bound ?? CoreTypes.dynamic.ref(_ctx),
-        );
+        if (bindings.containsKey(parameter) ||
+            (only != null && !only.contains(parameter))) {
+          return;
+        }
+        final bound = parameter.bound ?? CoreTypes.dynamic.ref(_ctx);
+        bindings[parameter] = bound;
+        // A bound can itself hold parameters (`T extends U, U extends C`)
+        // — collect them too so they substitute away below.
+        collect(bound);
         return;
       }
       for (final argument in interfaceArgumentsOf(t)) {
@@ -265,9 +271,96 @@ final class TypeSystem {
     }
 
     collect(type);
-    return bindings.isEmpty
-        ? type
-        : type.substituteTypeParameters(Substitution.of(bindings));
+    if (bindings.isEmpty) return type;
+    final substitution = Substitution.of(bindings);
+    // Bound chains substitute one hop per pass (`T -> U -> C`); re-apply
+    // until none of the lowered parameters remains — bounded by the
+    // collected binding count.
+    var lowered = type;
+    var passes = bindings.length;
+    do {
+      lowered = lowered.substituteTypeParameters(substitution);
+    } while (_mentionsAnyParameter(lowered, bindings.keys.toSet()) &&
+        passes-- > 0);
+    return lowered;
+  }
+
+  /// Whether [type] mentions any parameter in [parameters].
+  bool _mentionsAnyParameter(TypeRef type, Set<TypeParameterDef> parameters) {
+    var found = false;
+    void visit(TypeRef t) {
+      if (found) return;
+      if (t.isTypeParameter) {
+        found = parameters.contains((t as TypeParameterTypeRef).parameter);
+        return;
+      }
+      for (final argument in interfaceArgumentsOf(t)) {
+        visit(argument);
+      }
+      if (t is RecordTypeRef) {
+        for (final field in t.positional) {
+          visit(field);
+        }
+        for (final field in t.named.values) {
+          visit(field);
+        }
+      }
+      if (t is FunctionTypeRef) {
+        visit(t.signature.returnType);
+        for (final parameter in t.signature.positional) {
+          visit(parameter);
+        }
+        for (final parameter in t.signature.named.values) {
+          visit(parameter.type);
+        }
+      }
+    }
+
+    visit(type);
+    return found;
+  }
+
+  /// Replaces every remaining type-parameter reference inside [type] with
+  /// `dynamic`. Erasure is the fallback after [lowerTypeParameters] for
+  /// bounds that cannot be represented — cyclic F-bounds like
+  /// `S extends Built<S, B>` never reach a parameter-free form.
+  TypeRef eraseTypeParameters(TypeRef type) {
+    final parameters = <TypeParameterDef>{};
+    void collect(TypeRef t) {
+      if (t.isTypeParameter) {
+        parameters.add((t as TypeParameterTypeRef).parameter);
+        return;
+      }
+      for (final argument in interfaceArgumentsOf(t)) {
+        collect(argument);
+      }
+      if (t is RecordTypeRef) {
+        for (final field in t.positional) {
+          collect(field);
+        }
+        for (final field in t.named.values) {
+          collect(field);
+        }
+      }
+      if (t is FunctionTypeRef) {
+        collect(t.signature.returnType);
+        for (final parameter in t.signature.positional) {
+          collect(parameter);
+        }
+        for (final parameter in t.signature.named.values) {
+          collect(parameter.type);
+        }
+      }
+    }
+
+    collect(type);
+    if (parameters.isEmpty) return type;
+    return type.substituteTypeParameters(
+      Substitution.of({
+        for (final parameter in parameters)
+          parameter: CoreTypes.dynamic.ref(_ctx),
+      }),
+    );
   }
 
   /// Fully unwraps a type-parameter chain (`T extends U, U extends C`) to
@@ -633,11 +726,10 @@ final class TypeSystem {
   /// Classifies Dart assignment compatibility of a [from] value into a
   /// [to] slot without conflating `dynamic` with a subtype proof.
   AssignmentConversion assignmentConversion(TypeRef from, TypeRef to) {
-    final dynamicType = CoreTypes.dynamic.ref(_ctx);
-    if (to == dynamicType || to.isSpec(CoreTypes.voidType)) {
+    if (to.isSpec(CoreTypes.dynamic) || to.isSpec(CoreTypes.voidType)) {
       return AssignmentConversion.none;
     }
-    if (from == dynamicType) {
+    if (from.isSpec(CoreTypes.dynamic)) {
       if (to.isSpec(CoreTypes.object) && to.nullable) {
         return AssignmentConversion.none;
       }

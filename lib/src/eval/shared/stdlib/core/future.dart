@@ -162,7 +162,16 @@ class $Future<T> implements Future<T>, $Instance {
               false,
             ),
           ],
-          namedParams: [],
+          namedParams: [
+            BridgeParameter(
+              'onError',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
         ),
       ),
       'asStream': BridgeMethodDef(
@@ -294,14 +303,26 @@ class $Future<T> implements Future<T>, $Instance {
   ) {
     final $t = target as $Future;
     final $then = (r as $Value?) as EvalFunction;
+    final onError = s as EvalFunction?;
     final runtimeTypeId = runtime.typedFutureTypeForCallback($then);
-    final $result = ($t.$value).then((value) {
-      try {
-        return $then.call(runtime, target, runtime.wrap(value), null, 1);
-      } on WrappedException catch (error, trace) {
-        Error.throwWithStackTrace(error.exception, trace);
-      }
-    });
+    FutureOr<$Value?> onErrorCb(Object error, StackTrace stackTrace) =>
+        onError!.call(
+          runtime,
+          target,
+          runtime.wrap(error),
+          runtime.wrap(stackTrace),
+          2,
+        );
+    final $result = ($t.$value).then(
+      (value) {
+        try {
+          return $then.call(runtime, target, runtime.wrap(value), null, 1);
+        } on WrappedException catch (error, trace) {
+          Error.throwWithStackTrace(error.exception, trace);
+        }
+      },
+      onError: onError == null ? null : onErrorCb,
+    );
     return $Future.wrap(
       $result,
       runtimeTypeId: runtimeTypeId,

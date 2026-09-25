@@ -166,7 +166,10 @@ Variable compileFunctionExpression(
 
           TypeRef type = CoreTypes.dynamic.ref(ctx);
           if (p.type != null) {
-            type = TypeRef.fromAnnotation(ctx, ctx.library, p.type!);
+            type = ctx.typeFactory.formalParameterAnnotationType(
+              ctx.library,
+              p,
+            );
           } else if (i < inorderBoundParams.length) {
             type = inorderBoundParams[i];
           }
@@ -305,11 +308,9 @@ Variable compileFunctionExpression(
     final annotation = parameter.type;
     if (value is int &&
         annotation != null &&
-        TypeRef.fromAnnotation(
-          ctx,
-          ctx.library,
-          annotation,
-        ).isSpec(CoreTypes.double)) {
+        ctx.typeFactory
+            .formalParameterAnnotationType(ctx.library, parameter)
+            .isSpec(CoreTypes.double)) {
       return (value.toDouble(), thunk);
     }
     return (value, thunk);
@@ -320,10 +321,12 @@ Variable compileFunctionExpression(
   // type is (for example when assigned to `void Function(int)?`). Reifying
   // the context's nullability would poison every later subtype check.
   TypeRef literalParameterType(FormalParameter parameter) {
-    final annotation = parameter.type;
-    return annotation == null
+    return parameter.type == null
         ? CoreTypes.dynamic.ref(ctx)
-        : TypeRef.fromAnnotation(ctx, ctx.library, annotation);
+        : ctx.typeFactory.formalParameterAnnotationType(
+            ctx.library,
+            parameter,
+          );
   }
 
   // A context signature still holding type-parameter refs (`void

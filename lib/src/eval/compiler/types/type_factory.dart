@@ -561,14 +561,23 @@ final class TypeFactory {
         ? CoreTypes.dynamic.ref(_ctx)
         : fromAnnotation(library, type, typeParameters: allTypeParams);
 
+    TypeRef resolveParameter(FormalParameter parameter) =>
+        parameter.type == null
+            ? CoreTypes.dynamic.ref(_ctx)
+            : formalParameterAnnotationType(
+                library,
+                parameter,
+                typeParameters: allTypeParams,
+              );
+
     final parameters = parameterList?.parameters ?? const <FormalParameter>[];
     final positional = <TypeRef>[
       for (final parameter in parameters)
         if (parameter.isPositional && parameter.isRequired)
-          resolve(parameter.type),
+          resolveParameter(parameter),
       for (final parameter in parameters)
         if (parameter.isPositional && !parameter.isRequired)
-          resolve(parameter.type),
+          resolveParameter(parameter),
     ];
     final requiredPositional = parameters
         .where((p) => p.isPositional && p.isRequired)
@@ -577,7 +586,7 @@ final class TypeFactory {
       for (final parameter in parameters)
         if (parameter.isNamed)
           parameter.name!.lexeme: (
-            type: resolve(parameter.type),
+            type: resolveParameter(parameter),
             required: parameter.isRequired,
           ),
     };

@@ -263,12 +263,6 @@ final class MemberLookup {
       final bound =
           (type as TypeParameterTypeRef).parameter.bound ??
           CoreTypes.dynamic.ref(ctx);
-      if (bound.isSpec(CoreTypes.dynamic)) {
-        throw CompileError(
-          'Cannot resolve ${name.name} on unbounded type parameter $type',
-          source,
-        );
-      }
       return _interfaceMember(
         bound,
         name,
@@ -319,12 +313,25 @@ final class MemberLookup {
       );
     }
 
-    // The interface walk: mixins (application order), then the superclass,
-    // then implemented interfaces — members folded from mixins already
-    // answered above through the declaration's own member table.
+    // The interface walk: mixins (application order), then implemented
+    // interfaces, then the superclass. An `implements` member defines the
+    // signature every concrete implementation must satisfy — it binds
+    // argument lists even when the inherited implementation is narrower
+    // (`B extends A implements I` binds `I.foo` for `b.foo`). The call
+    // still dispatches virtually by name.
     for (final mixin in ctx.typeSystem.mixinsOf(type)) {
       final result = _tryInterfaceMember(
         mixin,
+        name,
+        source,
+        bottomType0,
+        chain,
+      );
+      if (result != null) return result;
+    }
+    for (final interface in ctx.typeSystem.interfacesOf(type)) {
+      final result = _tryInterfaceMember(
+        interface,
         name,
         source,
         bottomType0,
@@ -336,16 +343,6 @@ final class MemberLookup {
     if (superclass != null) {
       final result = _tryInterfaceMember(
         superclass,
-        name,
-        source,
-        bottomType0,
-        chain,
-      );
-      if (result != null) return result;
-    }
-    for (final interface in ctx.typeSystem.interfacesOf(type)) {
-      final result = _tryInterfaceMember(
-        interface,
         name,
         source,
         bottomType0,
@@ -648,9 +645,12 @@ final class MemberLookup {
       }
     }
     if (forFieldFormal) {
-      final member = nominalDeclOf(
-        type,
-      )?.declaredMember(MemberName.getter(name));
+      final decl = nominalDeclOf(type);
+      // A field formal binds a real field, which lives at the bare name —
+      // an inherited abstract accessor can occupy the getter slot instead.
+      final member = decl?.declaredMember(
+        MemberName(name, MemberKind.method),
+      );
       if (member == null || !member.isField) {
         throw CompileError(
           'Field formals did not find field $name in class $type',
