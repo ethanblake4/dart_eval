@@ -79,6 +79,33 @@ final class ParameterSpec {
       Object.hash(name, type, isRequired, erased, defaultValue.runtimeType);
 }
 
+int _defaultLibrary(
+  CompilerContext ctx,
+  int fallback,
+  Declaration declaration,
+) {
+  final host = switch (declaration) {
+    ConstructorDeclaration() ||
+    MethodDeclaration() => declaration.parent?.parent,
+    _ => null,
+  };
+  if (host is! Declaration) return fallback;
+  final memberName = switch (declaration) {
+    ConstructorDeclaration() => declaration.name?.lexeme ?? '',
+    MethodDeclaration() => declaration.name.lexeme,
+    _ => '',
+  };
+  final key = '${declarationName(host)}.$memberName';
+  // A forwarded constructor can be indexed under an alias in another
+  // library. Its default expression still belongs to the original library.
+  for (final entry in ctx.topLevelDeclarationsMap.entries) {
+    if (identical(entry.value[key]?.declaration, declaration)) {
+      return entry.key;
+    }
+  }
+  return fallback;
+}
+
 /// The full calling shape of a member: its own type parameters, positional
 /// and named parameter specs, and return type. In the owner's type-parameter
 /// space — instantiate through [substitute] for a receiver's view.
@@ -210,6 +237,9 @@ final class CallSignature {
     final positional = <ParameterSpec>[];
     final named = <ParameterSpec>[];
     var requiredCount = 0;
+    int? declaringLibrary;
+    int libraryForDefault() =>
+        declaringLibrary ??= _defaultLibrary(ctx, library, declaration);
     for (final param
         in parameterList?.parameters ?? const <FormalParameter>[]) {
       final (type, _) = getFormalParameterType(
@@ -222,10 +252,15 @@ final class CallSignature {
       final resolved = type ?? CoreTypes.dynamic.ref(ctx);
       final explicitDefault = param.defaultClause?.value;
       final (defaultExpr, defaultLibrary) = explicitDefault != null
-          ? (explicitDefault, library)
+          ? (explicitDefault, libraryForDefault())
           : param is SuperFormalParameter &&
                 parameterHost is ConstructorDeclaration
-          ? superFormalDefault(ctx, library, param, parameterHost) ??
+          ? superFormalDefault(
+                  ctx,
+                  libraryForDefault(),
+                  param,
+                  parameterHost,
+                ) ??
                 (null, library)
           : (null, library);
       final spec = ParameterSpec(

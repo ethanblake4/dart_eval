@@ -652,11 +652,12 @@ final class InstanceMemberDenotation extends Denotation {
     }
     final owner = _superOwner(ctx, false);
     // A method member read is a tear-off bound to the super receiver.
-    final memberDecl =
-        ctx.instanceDeclarationsMap[owner.type.file]?[owner.type.name]?[name];
-    if (memberDecl is MethodDeclaration &&
-        !memberDecl.isGetter &&
-        !memberDecl.isSetter) {
+    final member = ctx.types
+        .find(owner.type.file, owner.type.name)
+        ?.declaredMember(MemberName.method(name));
+    if (member case SourceMember(
+      node: MethodDeclaration(isGetter: false, isSetter: false),
+    )) {
       return materializeTearOff(
         ctx,
         DeferredOrOffset(

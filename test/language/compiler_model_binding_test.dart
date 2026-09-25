@@ -82,6 +82,63 @@ void main() {
     );
   });
 
+  test('an alias constructor uses a default from its defining library', () {
+    final program = Compiler().compile({
+      'binding': {
+        'base.dart': '''
+          const _default = 19;
+          class Base {
+            final int value;
+            Base([this.value = _default]);
+          }
+        ''',
+        'alias.dart': '''
+          import 'base.dart';
+          typedef Alias = Base;
+        ''',
+        'main.dart': '''
+          import 'alias.dart';
+          int main() => Alias().value;
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      19,
+    );
+  });
+
+  test('a mixin alias forwards a default from its base library', () {
+    final program = Compiler().compile({
+      'binding': {
+        'base.dart': '''
+          const _default = 23;
+          class Base {
+            final int value;
+            Base([this.value = _default]);
+          }
+        ''',
+        'alias.dart': '''
+          import 'base.dart';
+          mixin M {}
+          class Alias = Base with M;
+        ''',
+        'main.dart': '''
+          import 'alias.dart';
+          int main() => Alias().value;
+        ''',
+      },
+    });
+    expect(
+      Runtime.ofProgram(
+        program,
+      ).executeLib('package:binding/main.dart', 'main'),
+      23,
+    );
+  });
+
   test('explicit self-referential bounds use the callee parameter', () {
     final program = Compiler().compile({
       'binding': {

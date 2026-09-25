@@ -1,7 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'default_value.dart';
 
@@ -9,7 +8,7 @@ import '../../../../dart_eval_bridge.dart';
 import '../builtins.dart';
 import '../context.dart';
 import '../errors.dart';
-import '../member/call_signature.dart' show SourceDefault;
+import '../member/call_signature.dart' show ParameterSpec, SourceDefault;
 import '../type.dart';
 
 import '../variable.dart';
@@ -66,73 +65,30 @@ SSA pushRuntimeTypeId(CompilerContext ctx, TypeRef type) {
   return ssa;
 }
 
-/// Compiles the fallback value for [parameter] when the caller supplies no
-/// argument: the parameter's default expression, or null. Signature binding
-/// passes [declaredType] so the formal annotation is resolved only once.
+/// Compiles an omitted source argument from its resolved signature. The
+/// signature owns the formal type and the library of any default expression.
 Variable compileOmittedArgument(
   CompilerContext ctx,
-  int library,
-  FormalParameter parameter,
-  Declaration host, {
-  Map<String, TypeRef> typeParameters = const {},
-  SourceDefault? defaultSource,
-  TypeRef? declaredType,
-}) {
+  ParameterSpec parameter,
+  Declaration host,
+  TypeRef type,
+) {
   if (parameter.isRequired) {
     throw CompileError(
-      'Missing required argument ${parameter.name!.lexeme}',
-      parameter,
+      'Missing required argument ${parameter.name}',
+      parameter.node,
     );
   }
-  // The default expression and parameter annotations resolve in the host
-  // declaration's own library — its private names aren't visible in the
-  // caller's, and the caller's `library` may differ (e.g. class type alias
-  // forwarding ctors expose a foreign host's parameters).
-  final hostParent = switch (host) {
-    ConstructorDeclaration() || MethodDeclaration() => host.parent?.parent,
-    _ => null,
-  };
-  if (hostParent is Declaration) {
-    final memberName = switch (host) {
-      ConstructorDeclaration() => host.name?.lexeme ?? '',
-      MethodDeclaration() => host.name.lexeme,
-      _ => '',
-    };
-    final hostKey = '${declarationName(hostParent)}.$memberName';
-    // A declaration may be registered under alias keys in other libraries
-    // (`P1.` forwards to `B2.`); match the key that is the host's own name.
-    for (final entry in ctx.topLevelDeclarationsMap.entries) {
-      final d = entry.value[hostKey];
-      if (d != null && identical(d.declaration, host)) {
-        library = entry.key;
-        break;
-      }
-    }
-  }
-  final type =
-      declaredType ??
-      getFormalParameterType(
-        ctx,
-        parameter,
-        library,
-        host,
-        typeParameters: typeParameters,
-      ).$1 ??
-      CoreTypes.dynamic.ref(ctx);
   // Scalar defaults push as native constants; anything else (tear-offs, const
-  // objects) compiles the constant expression normally. Super formals inherit
-  // their default from the bound super-constructor parameter, evaluated in
-  // the super constructor's library.
-  var defaultExpr = defaultSource?.expression ?? parameter.defaultClause?.value;
-  library = defaultSource?.library ?? library;
-  if (defaultExpr == null &&
-      parameter is SuperFormalParameter &&
-      host is ConstructorDeclaration) {
-    final inherited = superFormalDefault(ctx, library, parameter, host);
-    if (inherited != null) {
-      (defaultExpr, library) = inherited;
-    }
-  }
+  // objects) compiles the constant expression normally. SourceDefault records
+  // the declaring library, including defaults inherited by super formals.
+  final defaultSource = parameter.defaultValue;
+  final defaultExpr = defaultSource is SourceDefault
+      ? defaultSource.expression
+      : null;
+  final library = defaultSource is SourceDefault
+      ? defaultSource.library
+      : ctx.library;
   Object? value;
   var useExpression = false;
   if (defaultExpr == null) {

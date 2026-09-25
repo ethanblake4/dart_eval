@@ -318,12 +318,12 @@ final class CallResolver {
     if (receiver case TypeLiteralReceiver(:final type)) {
       // Static method
       staticType = type;
-      if (ctx.topLevelDeclarationsMap[staticType
-                  .file]?['${staticType.name}.$staticMemberName'] ==
-              null &&
-          ctx.topLevelDeclarationsMap[staticType
-                  .file]?['${staticType.name}.${MemberName.getter(staticMemberName).key}'] ==
-              null) {
+      final staticMember = ctx.memberLookup.staticMember(
+        staticType,
+        staticMemberName,
+        MemberKind.method,
+      );
+      if (staticMember == null) {
         // A member invoked on a `Type` literal may still be an extension
         // member on `Type` — `C.expectStaticType<Exactly<Type>>()`.
         final found = resolveExtensionMember(
@@ -344,23 +344,10 @@ final class CallResolver {
         ];
         return invokeOperator(L, e.methodName.name, args).result;
       }
-      final staticMember = ctx.memberLookup.staticMember(
-        staticType,
-        staticMemberName,
-        MemberKind.method,
+      resolved = ResolvedMember(
+        staticMember,
+        staticMember.ownerDecl?.thisType ?? staticType,
       );
-      resolved = staticMember == null
-          ? null
-          : ResolvedMember(
-              staticMember,
-              staticMember.ownerDecl?.thisType ?? staticType,
-            );
-      if (resolved == null) {
-        throw CompileError(
-          'Cannot find static method $staticType.$staticMemberName',
-          e,
-        );
-      }
       isStatic = true;
     } else if (L.type.isFunctionLike && e.methodName.name == 'call') {
       // `fn.call(...)`: Function has no declared `call` member; the call is

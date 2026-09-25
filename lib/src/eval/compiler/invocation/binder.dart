@@ -549,15 +549,9 @@ final class ArgumentBinder {
         } else if (fillOmitted) {
           final value = compileOmittedArgument(
             ctx,
-            decLibrary,
-            spec.node!,
+            spec,
             parameterHost,
-            defaultSource: spec.defaultValue is SourceDefault
-                ? spec.defaultValue as SourceDefault
-                : null,
-            declaredType: spec.type.substituteTypeParameters(
-              argumentSubstitution,
-            ),
+            spec.type.substituteTypeParameters(argumentSubstitution),
           );
           push.add(value);
           args.add(value);
@@ -589,15 +583,9 @@ final class ArgumentBinder {
       } else if (fillOmitted) {
         final value = compileOmittedArgument(
           ctx,
-          decLibrary,
-          spec0.node!,
+          spec0,
           parameterHost,
-          defaultSource: spec0.defaultValue is SourceDefault
-              ? spec0.defaultValue as SourceDefault
-              : null,
-          declaredType: spec0.type.substituteTypeParameters(
-            argumentSubstitution,
-          ),
+          spec0.type.substituteTypeParameters(argumentSubstitution),
         );
         push.add(value);
         namedArgs[name] = value;
