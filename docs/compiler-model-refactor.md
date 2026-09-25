@@ -1,8 +1,18 @@
 # Compiler model refactor plan
 
-This plan refactors the compiler's type, declaration, value, and invocation models so that each compiler decision has exactly one owner. It is based on `53751b1` (sdk_language checkpoint 39), inspected on September 22, 2026. It is a plan only; no compiler or runtime code has changed.
+This plan refactors the compiler's type, declaration, value, and invocation models so that each compiler decision has exactly one owner. It was written against `53751b1` (sdk_language checkpoint 39), inspected on September 22, 2026. The sections below retain the original targets and sequencing.
 
 The work is structural. Phases 0–6 preserve observable behavior; the bugs the new model exposes are fixed in phase 7 as separate, deliberate commits. The runtime, IR operations, bytecode format, and Program envelope/payload versions do not change.
+
+## Implementation status
+
+The compiler model migration and the compiler-side phase 7 changes are implemented. `TypeRef` is sealed, declarations own nominal members, values and bindings have separate models, and calls resolve a target before binding and emission. `method_invocation.dart` now constructs receivers and call sites and applies null guards; constructor assembly retains the special bridge-super operation that attaches an already-built child and its parent shim.
+
+The runtime and IR operations retain the `53751b1` behavior and layout. The typed payload version is 124, and the Program envelope is unchanged. The only IR-file changes are imports following the relocation of `DeferredOrOffset`.
+
+The deterministic 741-entry [phase-zero snapshot](../tool/ir_snapshot_phase0.json) remains alongside the [current snapshot](../tool/ir_snapshot.json). The final snapshot changes 545 entries from phase zero: 527 hashes changed while compilation outcome stayed the same, and 18 entries changed outcome. This does not satisfy the original phase-by-phase zero-diff guardrail; the historical snapshot is retained for review. The full test suite passes with SDK core accounting of 384 passes, 72 expected failures, and 32 compile errors. The generated-instruction check passes. `dart analyze` reports the existing path-dependency warning and three style infos; `benchmark/compile.dart` has a 77,002 μs median on nine samples.
+
+The chosen runtime/IR boundary leaves runtime instantiation of generic function values with optional parameters as an explicit compile error. Compiler-generated adapters cover supported generic tear-offs, but Dart tear-off identity/equality is not extended by this refactor. Optional raw-type normalization and generic-function alpha-equivalence from phase 7 were not taken up.
 
 ## Decisions recorded
 
