@@ -19,13 +19,7 @@ import 'bound_call.dart';
 import 'call.dart';
 import 'targets.dart';
 
-typedef _MatchedArgument = ({
-  int? positional,
-  String? named,
-  Expression expression,
-});
-
-typedef _MatchedSource = ({int? positional, String? named, ArgSource source});
+typedef _MatchedArgument = ({int? positional, String? named, ArgSource source});
 
 /// Maps a [CallSite]'s argument shape onto a [CallTarget]'s signature:
 /// match, seed the substitution, compile and coerce, solve inference, fill
@@ -39,36 +33,45 @@ final class ArgumentBinder {
   /// order for evaluation. The source and bridge ABIs use the same matching
   /// rules; only their conversion and omitted-value rules differ.
   List<_MatchedArgument> _matchArguments(
-    ArgumentList argumentList,
+    CallShape shape,
     int positionalCount,
     Set<String> namedParameters, {
-    int offset = 0,
+    int positionalOffset = 0,
+    int sourceOffset = 0,
+    Set<String> forwardedNamed = const {},
+    AstNode? errorSource,
   }) {
     final matched = <_MatchedArgument>[];
-    var positionalCursor = 0;
-    for (var i = offset; i < argumentList.arguments.length; i++) {
-      final argument = argumentList.arguments[i];
-      if (argument is NamedArgument) {
-        final name = argument.name.lexeme;
-        if (!namedParameters.contains(name)) {
-          throw CompileError('Unknown named argument $name', argument);
+    var positionalCursor = positionalOffset;
+    for (final index in shape.sourceOrder.skip(sourceOffset)) {
+      if (index < 0) {
+        final (name, source) = shape.named[-1 - index];
+        final argumentNode =
+            source is ExpressionArg && source.expression.parent is NamedArgument
+            ? source.expression.parent
+            : errorSource;
+        if (forwardedNamed.contains(name)) {
+          throw CompileError(
+            'Named super argument $name is already forwarded',
+            argumentNode,
+          );
         }
-        matched.add((
-          positional: null,
-          named: name,
-          expression: argument.argumentExpression,
-        ));
+        if (!namedParameters.contains(name)) {
+          throw CompileError('Unknown named argument $name', argumentNode);
+        }
+        matched.add((positional: null, named: name, source: source));
       } else {
         if (positionalCursor >= positionalCount) {
           throw CompileError(
             'Too many positional arguments: $positionalCount expected, '
             'but ${positionalCursor + 1} found.',
+            errorSource,
           );
         }
         matched.add((
           positional: positionalCursor++,
           named: null,
-          expression: argument.argumentExpression,
+          source: shape.positional[index],
         ));
       }
     }
@@ -478,36 +481,15 @@ final class ArgumentBinder {
         source ?? argumentList,
       );
     }
-    final matched = <_MatchedSource>[];
-    var positionalCursor = superParams.positional.length;
-    for (final index in shape.sourceOrder.skip(argIndexOffset)) {
-      if (index >= 0) {
-        if (positionalCursor >= positional.length) {
-          throw CompileError(
-            'Too many positional arguments: ${positional.length} expected, '
-            'but ${positionalCursor + 1} found.',
-            source,
-          );
-        }
-        matched.add((
-          positional: positionalCursor++,
-          named: null,
-          source: shape.positional[index],
-        ));
-      } else {
-        final (name, argument) = shape.named[-1 - index];
-        if (superParams.named.contains(name)) {
-          throw CompileError(
-            'Named super argument $name is already forwarded',
-            source,
-          );
-        }
-        if (!named.containsKey(name)) {
-          throw CompileError('Unknown named argument $name', source);
-        }
-        matched.add((positional: null, named: name, source: argument));
-      }
-    }
+    final matched = _matchArguments(
+      shape,
+      positional.length,
+      named.keys.toSet(),
+      positionalOffset: superParams.positional.length,
+      sourceOffset: argIndexOffset,
+      forwardedNamed: superParams.named,
+      errorSource: source,
+    );
     final suppliedNames = {
       for (final argument in matched)
         if (argument.named case final String name) name,
@@ -748,42 +730,33 @@ final class ArgumentBinder {
     final namedParamByName = {
       for (final spec in signature.named) spec.name: spec,
     };
-    if (superParams.positional.isNotEmpty &&
-        argumentList != null &&
-        argumentList.arguments.any((argument) => argument is! NamedArgument)) {
+    final shape = argumentList == null
+        ? CallShape.values(const [])
+        : CallShape.fromArgumentList(argumentList);
+    if (superParams.positional.isNotEmpty && shape.positional.isNotEmpty) {
       throw CompileError(
         'Positional super parameters cannot be combined with positional super arguments',
         argumentList,
       );
     }
-    if (argumentList != null) {
-      for (final argument in argumentList.arguments) {
-        if (argument is NamedArgument &&
-            superParams.named.contains(argument.name.lexeme)) {
-          throw CompileError(
-            'Named super argument ${argument.name.lexeme} is already forwarded',
-            argument,
-          );
-        }
-      }
-    }
-    final matched = argumentList == null
-        ? <_MatchedArgument>[]
-        : _matchArguments(argumentList, positional.length, {
-            ...namedParamByName.keys,
-            ...superParams.named,
-          });
+    final matched = _matchArguments(
+      shape,
+      positional.length,
+      namedParamByName.keys.toSet(),
+      forwardedNamed: superParams.named,
+      errorSource: argumentList,
+    );
 
     // Resolve the receiver's type arguments for every parameter annotation.
     // Bridge positional arguments defer assignment checks to the runtime;
     // named arguments retain the existing static conversion rule.
     Variable compileMatchedBridge(
       ParameterSpec param,
-      Expression expr, {
+      ArgSource argument, {
       required bool named,
     }) {
       final paramType = param.type;
-      var arg0 = compileExpression(expr, ctx, paramType).boxIfNeeded(ctx);
+      var arg0 = _compileArg(ctx, argument, paramType).boxIfNeeded(ctx);
       if (named) {
         if (arg0.type.assignmentConversionTo(ctx, paramType) ==
             AssignmentConversion.invalid) {
@@ -814,20 +787,16 @@ final class ArgumentBinder {
       if (pi != null) {
         compiledPositional[pi] = compileMatchedBridge(
           positional[pi],
-          argument.expression,
+          argument.source,
           named: false,
         );
         continue;
       }
       final name = argument.named;
-      // Named arguments that reach a forwarded super parameter are dropped:
-      // the parameter binds the constructor's local instead.
-      if (name != null &&
-          namedParamByName.containsKey(name) &&
-          !superParams.named.contains(name)) {
+      if (name != null) {
         compiledNamed[name] = compileMatchedBridge(
           namedParamByName[name]!,
-          argument.expression,
+          argument.source,
           named: true,
         );
       }

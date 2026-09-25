@@ -790,60 +790,32 @@ final class CallResolver {
     required CallTarget? resolvedTarget,
   }) {
     final resolvedMember = resolved?.member;
-    final argTypes = argsPair.positional.map((e) => e.type).toList();
-    final namedArgTypes = argsPair.namedValues.map(
-      (key, value) => MapEntry(key, value.type),
-    );
-    mReturnType ??= memberCallResultType(
-      ctx,
-      isStatic ? staticType ?? CoreTypes.dynamic.ref(ctx) : L.type,
-      staticMemberName,
-      argTypes,
-      namedArgTypes,
-      $static: isStatic,
-      source: e,
-    );
-    final returnType = mReturnType ?? CoreTypes.dynamic.ref(ctx);
-
-    if (isStatic) {
-      final boundCall = BoundCall(
-        positional: const [],
-        named: const [],
-        runtimeTypeArguments: runtimeTypeArguments(ctx, e).isNotEmpty
-            ? runtimeTypeArguments(ctx, e)
-            : argsPair.runtimeTypeArguments,
-        returnType: returnType,
-        vectorOverride: argsPair.vector(),
-      );
-      if (resolvedTarget is ConstructorCall) {
-        return resolvedTarget.emit(ctx, boundCall);
-      }
-      if (resolvedTarget is StaticCall) {
-        return resolvedTarget.emit(ctx, boundCall);
-      }
-      return StaticCall(
-        DeferredOrOffset.lookupStatic(
+    final returnType =
+        mReturnType ??
+        memberCallResultType(
           ctx,
-          staticType!.file,
-          staticType.name,
+          isStatic ? staticType ?? CoreTypes.dynamic.ref(ctx) : L.type,
           staticMemberName,
-        ),
-        member: resolved?.member,
-      ).emit(ctx, boundCall);
-    }
-
+          [for (final arg in argsPair.positional) arg.type],
+          {for (final (name, arg) in argsPair.named) name: arg.type},
+          $static: isStatic,
+          source: e,
+        ) ??
+        CoreTypes.dynamic.ref(ctx);
+    final explicitTypeArguments = runtimeTypeArguments(ctx, e);
     final boundCall = BoundCall(
-      receiver: L,
+      receiver: isStatic ? null : L,
       positional: argsPair.positional,
       named: argsPair.named,
-      runtimeTypeArguments: runtimeTypeArguments(ctx, e).isNotEmpty
-          ? runtimeTypeArguments(ctx, e)
+      runtimeTypeArguments: explicitTypeArguments.isNotEmpty
+          ? explicitTypeArguments
           : argsPair.runtimeTypeArguments,
       returnType: returnType,
-      // Only the padded bridge ABI needs a raw vector. Dynamic calls emit
-      // positional values followed by named values after source-order
-      // evaluation in the binder.
-      vectorOverride: resolvedMember is BridgeMember ? argsPair.vector() : null,
+      // Source direct calls can include hidden arguments. Bridge calls need
+      // their padded vector; other instance calls use only supplied values.
+      vectorOverride: isStatic || resolvedMember is BridgeMember
+          ? argsPair.vector()
+          : null,
     );
     if (resolvedMember is BridgeMember) {
       // Instance calls that carry no named or explicit type arguments take
@@ -852,9 +824,7 @@ final class CallResolver {
       // placeholders so generated wrappers keep the flattened ABI; the
       // declared return type (inferred generics and parameter-type
       // dependencies included) still applies to the result.
-      if (!isStatic &&
-          e.typeArguments == null &&
-          argsPair.namedValues.isEmpty) {
+      if (!isStatic && e.typeArguments == null && argsPair.named.isEmpty) {
         final invokeResult = invokeOperator(
           L,
           e.methodName.name,
@@ -866,12 +836,21 @@ final class CallResolver {
         }
         return invokeResult;
       }
-      return resolvedTarget!.emit(ctx, boundCall);
     }
-    if (L.type.isSpec(CoreTypes.dynamic)) {
-      return resolvedTarget!.emit(ctx, boundCall);
-    }
-    return resolvedTarget!.emit(ctx, boundCall);
+    final target =
+        resolvedTarget ??
+        (isStatic
+            ? StaticCall(
+                DeferredOrOffset.lookupStatic(
+                  ctx,
+                  staticType!.file,
+                  staticType.name,
+                  staticMemberName,
+                ),
+                member: resolvedMember,
+              )
+            : throw StateError('Instance call has no resolved target'));
+    return target.emit(ctx, boundCall);
   }
 
   /// `a + b`, `a[i]`, `!x`, `a == b`, `it.moveNext()` — the operator and

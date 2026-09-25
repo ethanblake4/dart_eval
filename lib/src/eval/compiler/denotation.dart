@@ -11,6 +11,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'invocation/deferred.dart';
+import 'invocation/devirtualizer.dart';
 import 'invocation/targets.dart';
 import 'invocation/bound_call.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -796,43 +797,15 @@ final class InstanceMemberDenotation extends Denotation {
         exact ??
         (object.concreteTypes.length == 1 ? object.concreteTypes[0] : null);
     if (actualType == null) return null;
-    // If we know the concrete type of the object, we can easily optimize to a static call
-    final returnType = ctx.memberLookup
-        .interfaceMember(
-          actualType,
-          MemberName(name, MemberKind.method),
-          source: source,
-        )
-        .signature
-        .returnType;
-
-    // The statically-fixed target is the nearest class at-or-above the
-    // receiver type declaring the method. An exact allocation type needs
-    // no override check; a merely-declared type does.
-    for (final link in [
+    final resolved = ctx.memberLookup.interfaceMember(
       actualType,
-      ...ctx.typeSystem.superclassChain(actualType),
-    ]) {
-      final methodsMap =
-          ctx.instanceDeclarationPositions[link.file]?[link.name]?[MemberKind
-              .method];
-      if (methodsMap?.containsKey(name) != true) continue;
-      if (exact == null &&
-          ctx.memberOverriddenInSubclass(
-            actualType.file,
-            actualType.name,
-            name,
-          )) {
-        return null;
-      }
-      return StaticCall(
-        DeferredOrOffset(file: link.file, offset: methodsMap![name]),
-        signature: CallSignature.returnOnly(returnType),
-      );
-    }
-    // An inherited method needs the owner's field view as its receiver.
-    // Dynamic dispatch resolves that view as well as the method offset.
-    return null;
+      MemberName.method(name),
+      source: source,
+    );
+    final target = Devirtualizer(ctx).refine(
+      VirtualCall(receiver: object, name: name, member: resolved.member),
+    );
+    return target is StaticCall ? target : null;
   }
 }
 
