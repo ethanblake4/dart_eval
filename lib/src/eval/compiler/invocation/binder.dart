@@ -935,24 +935,12 @@ final class ArgumentBinder {
     TypeRef? returnContext,
     int argIndexOffset = 0,
   }) {
-    final (library, declaration) = switch (target) {
-      StaticCall(member: SourceMember member) ||
-      VirtualCall(
-        member: SourceMember member,
-      ) => (member.library, member.sourceDeclaration),
-      StaticCall(:final sourceDeclaration?, offset: final offset?) => (
-        offset.file!,
-        sourceDeclaration,
-      ),
-      ConstructorCall(:final constructor?, offset: final offset?) => (
-        offset.file!,
-        constructor,
-      ),
-      _ => (null, null),
-    };
-    if (library == null || declaration == null || target.signature == null) {
+    final selected = _sourceDeclaration(target);
+    if (selected == null || target.signature == null) {
       throw StateError('Source call target requires a source signature');
     }
+    final library = selected.library;
+    final declaration = selected.declaration;
     final seeds = <String, TypeRef>{...seedGenerics};
     if (target is ConstructorCall) {
       final arguments = interfaceArgumentsOf(target.staticType);
@@ -982,6 +970,24 @@ final class ArgumentBinder {
     );
   }
 
+  ({int library, Declaration declaration})? _sourceDeclaration(
+    CallTarget target,
+  ) => switch (target) {
+    StaticCall(member: SourceMember member) ||
+    VirtualCall(
+      member: SourceMember member,
+    ) => (library: member.library, declaration: member.sourceDeclaration),
+    StaticCall(:final sourceDeclaration?, offset: final offset?) => (
+      library: offset.file!,
+      declaration: sourceDeclaration,
+    ),
+    ConstructorCall(:final constructor?, offset: final offset?) => (
+      library: offset.file!,
+      declaration: constructor,
+    ),
+    _ => null,
+  };
+
   /// Bind operands that were evaluated before target resolution (operators,
   /// indexes, and implicit `.call`). The selected signature supplies formal
   /// types in its declaring scope; receiver arguments instantiate them.
@@ -992,44 +998,27 @@ final class ArgumentBinder {
     Map<String, TypeRef> seedGenerics = const {},
     AstNode? source,
   }) {
-    final (library, declaration) = switch (target) {
-      StaticCall(member: SourceMember member) ||
-      VirtualCall(
-        member: SourceMember member,
-      ) => (member.library, member.sourceDeclaration),
-      StaticCall(
-        sourceDeclaration: MethodDeclaration method,
-        offset: final offset?,
-      ) =>
-        (offset.file, method),
-      _ => (null, null),
-    };
-    if (library == null ||
-        declaration is! MethodDeclaration ||
+    final selected = _sourceDeclaration(target);
+    if (selected == null ||
+        selected.declaration is! MethodDeclaration ||
         target.signature == null) {
       throw StateError('Source value call requires a method signature');
     }
     final signature = target.signature!;
-    final resolvedGenerics = <String, TypeRef>{...seedGenerics};
-    _resolveInvocationGenerics(
-      signature,
+    final args = bindDeclaration(
+      selected.library,
+      selected.declaration,
       null,
-      resolvedGenerics,
-      source ?? declaration,
-    );
-    final args = bindParameterList(
-      null,
-      library,
-      signature,
-      declaration,
       suppliedShape: CallShape.values(positionalValues, namedValues),
-      resolveGenerics: resolvedGenerics,
+      seedGenerics: seedGenerics,
       inferParameterNames: {
         for (final parameter in signature.typeParameters) parameter.name,
       },
       fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
       source: source,
+      targetSignature: signature,
     );
+    final resolvedGenerics = args.typeArguments;
     final returnType = signature.returnType
         .substituteTypeParameters(signature.substitutionFor(resolvedGenerics))
         .lowerTypeParameters(ctx);
@@ -1055,7 +1044,8 @@ final class ArgumentBinder {
   BoundCall bindDeclaration(
     int sourceLib,
     Declaration dec,
-    ArgumentList argumentList, {
+    ArgumentList? argumentList, {
+    CallShape? suppliedShape,
     List<Variable> before = const [],
     TypeArgumentList? typeArguments,
     AstNode? source,
@@ -1068,6 +1058,7 @@ final class ArgumentBinder {
     /// by argument inference are bound from the declared return type matched
     /// against it (`x.cast()` under `C<bool>` binds `U` to `bool`).
     TypeRef? returnContext,
+    Set<String>? inferParameterNames,
 
     /// See [bindParameterList.fillOmitted].
     bool fillOmitted = true,
@@ -1114,7 +1105,7 @@ final class ArgumentBinder {
         signature,
         typeArguments?.arguments.toList(),
         resolveGenerics,
-        source!,
+        source ?? dec,
       );
     }
 
@@ -1126,10 +1117,12 @@ final class ArgumentBinder {
       sourceLib,
       signature,
       dec,
+      suppliedShape: suppliedShape,
       before: before,
       source: source,
       argIndexOffset: argIndexOffset,
       resolveGenerics: resolveGenerics,
+      inferParameterNames: inferParameterNames,
       // Only function/method declarations take explicit type arguments at the
       // call site; constructor calls infer regardless (e.g. List<int>() still
       // infers the constructor's own generics).

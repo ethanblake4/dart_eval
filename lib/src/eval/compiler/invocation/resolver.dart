@@ -707,27 +707,9 @@ final class CallResolver {
             e,
           );
         }
-        final boundMember = switch (target) {
-          StaticCall(:final member) ||
-          VirtualCall(:final member) => member as SourceMember,
-          _ => throw StateError('Expected a source method target'),
-        };
         final seedGenerics = isStatic
             ? const <String, TypeRef>{}
-            : target is VirtualCall
-            ? resolved.ownerTypeArguments
-            : ownerTypeArgumentsOf(
-                boundMember.declaringDecl ?? boundMember.ownerDecl,
-                switch (target) {
-                  StaticCall(:final declaringLink?) =>
-                    ctx.typeSystem.asInstanceOf(
-                          declaringLink,
-                          boundMember.declaringDecl ?? boundMember.ownerDecl,
-                        ) ??
-                        declaringLink,
-                  _ => resolved.viewedAs,
-                },
-              );
+            : _sourceTargetTypeArguments(target, resolved);
         argsPair = ArgumentBinder(ctx).bindSourceTarget(
           target,
           e.argumentList,
@@ -771,6 +753,28 @@ final class CallResolver {
     }
 
     return (args: argsPair, returnType: mReturnType, target: target);
+  }
+
+  /// Bind receiver class parameters in the selected implementation's scope.
+  /// A virtual call uses the interface view; a direct call may instead name
+  /// an inherited implementation with a different declaring type.
+  Map<String, TypeRef> _sourceTargetTypeArguments(
+    CallTarget target,
+    ResolvedMember resolved,
+  ) {
+    if (target is VirtualCall) return resolved.ownerTypeArguments;
+    final (member, link) = switch (target) {
+      StaticCall(member: SourceMember member, :final declaringLink) => (
+        member,
+        declaringLink,
+      ),
+      _ => throw StateError('Expected a source method target'),
+    };
+    final owner = member.declaringDecl ?? member.ownerDecl;
+    final viewedAs = link == null
+        ? resolved.viewedAs
+        : ctx.typeSystem.asInstanceOf(link, owner) ?? link;
+    return ownerTypeArgumentsOf(owner, viewedAs);
   }
 
   /// The emission phase of [invokeMethod]: resolve the call's return type
@@ -998,25 +1002,7 @@ final class CallResolver {
     );
     if (opResolved?.member case SourceMember sourceMember
         when sourceMember.sourceDeclaration is MethodDeclaration) {
-      final selectedMember = switch (target) {
-        StaticCall(member: SourceMember member) => member,
-        _ => sourceMember,
-      };
-      final seedGenerics = target is VirtualCall
-          ? opResolved!.ownerTypeArguments
-          : ownerTypeArgumentsOf(
-              selectedMember.declaringDecl ?? selectedMember.ownerDecl,
-              switch (target) {
-                StaticCall(:final declaringLink?) =>
-                  ctx.typeSystem.asInstanceOf(
-                        declaringLink,
-                        selectedMember.declaringDecl ??
-                            selectedMember.ownerDecl,
-                      ) ??
-                      declaringLink,
-                _ => opResolved!.viewedAs,
-              },
-            );
+      final seedGenerics = _sourceTargetTypeArguments(target, opResolved!);
       final typed = ArgumentBinder(ctx).bindSourceValues(
         target,
         prepared,

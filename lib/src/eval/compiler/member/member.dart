@@ -237,23 +237,19 @@ final class SourceMember extends Member {
     final ctx = _ctx;
     final ownerParams = _ownTypeParams;
     switch (node) {
-      case MethodDeclaration m:
-        final methodName = '$_ownerName.${m.name.lexeme}';
+      case MethodDeclaration() || ConstructorDeclaration():
         return CallSignature.source(
           ctx,
           library,
-          m.typeParameters,
-          m.parameters,
-          owner: TypeParameterOwner(
-            TypeParameterOwnerKind.method,
-            library,
-            methodName,
-            m.offset,
-          ),
-          returnAnnotation: m.returnType,
-          returnFallback: CoreTypes.dynamic.ref(ctx),
+          node as Declaration,
+          ownerPrefix: '$_ownerName.',
+          returnFallback: node is ConstructorDeclaration
+              ? _decl.thisType
+              : CoreTypes.dynamic.ref(ctx),
           typeParameters: ownerParams,
-          parameterHost: _parameterHost,
+          parameterHost: node is ConstructorDeclaration
+              ? node as ConstructorDeclaration
+              : _parameterHost,
         );
       case FieldDeclaration f:
         final fieldName = variable?.name.lexeme ?? name.name;
@@ -277,23 +273,6 @@ final class SourceMember extends Member {
           positional: const [],
           requiredPositional: 0,
           returnType: _decl.thisType,
-        );
-      case ConstructorDeclaration c:
-        return CallSignature.source(
-          ctx,
-          library,
-          null,
-          c.parameters,
-          owner: TypeParameterOwner(
-            TypeParameterOwnerKind.method,
-            library,
-            '$_ownerName.${c.name?.lexeme ?? ''}',
-            c.offset,
-          ),
-          returnAnnotation: null,
-          returnFallback: _decl.thisType,
-          typeParameters: ownerParams,
-          parameterHost: c,
         );
       default:
         return CallSignature(

@@ -145,14 +145,50 @@ final class CallSignature {
   factory CallSignature.source(
     CompilerContext ctx,
     int library,
-    TypeParameterList? typeParameterList,
-    FormalParameterList? parameterList, {
-    required TypeParameterOwner owner,
-    required TypeAnnotation? returnAnnotation,
+    Declaration declaration, {
+    String ownerPrefix = '',
     required TypeRef returnFallback,
     Map<String, TypeRef> typeParameters = const {},
     Declaration? parameterHost,
   }) {
+    final (
+      name,
+      typeParameterList,
+      parameterList,
+      returnAnnotation,
+    ) = switch (declaration) {
+      FunctionDeclaration d => (
+        d.name.lexeme,
+        d.functionExpression.typeParameters,
+        d.functionExpression.parameters,
+        d.returnType,
+      ),
+      MethodDeclaration d => (
+        d.name.lexeme,
+        d.typeParameters,
+        d.parameters,
+        d.returnType,
+      ),
+      ConstructorDeclaration d => (
+        d.name?.lexeme ?? '',
+        null,
+        d.parameters,
+        null,
+      ),
+      _ => throw CompileError(
+        'Invalid declaration type ${declaration.runtimeType}',
+      ),
+    };
+    final owner = TypeParameterOwner(
+      declaration is FunctionDeclaration
+          ? TypeParameterOwnerKind.function
+          : TypeParameterOwnerKind.method,
+      library,
+      '$ownerPrefix$name',
+      declaration is FunctionDeclaration
+          ? declaration.functionExpression.offset
+          : declaration.offset,
+    );
     final ownParams =
         typeParameterList?.typeParameters ?? const <TypeParameter>[];
     final allTypeParams = <String, TypeRef>{...typeParameters};
@@ -320,10 +356,7 @@ final class CallSignature {
   );
 
   /// The binding signature of a source function, method, or constructor
-  /// declaration — the shape an argument list binds against. The
-  /// type-parameter owner mirrors `SourceMember._buildSignature`'s scheme
-  /// (`method:` for members, `function:` for top-level functions) so a
-  /// signature built either way identifies the same parameters.
+  /// declaration, resolving its owner's type parameters from the AST host.
   factory CallSignature.forDeclaration(
     CompilerContext ctx,
     int library,
@@ -337,30 +370,6 @@ final class CallSignature {
           node is ExtensionDeclaration,
     );
     final prefix = host is Declaration ? '${declarationName(host)}.' : '';
-    final memberName = switch (dec) {
-      FunctionDeclaration d => d.name.lexeme,
-      MethodDeclaration d => d.name.lexeme,
-      ConstructorDeclaration d => d.name?.lexeme ?? '',
-      _ => '',
-    };
-    final (typeParams, params, returnAnnotation) = switch (dec) {
-      FunctionDeclaration() => (
-        dec.functionExpression.typeParameters,
-        dec.functionExpression.parameters,
-        dec.returnType,
-      ),
-      MethodDeclaration() => (
-        dec.typeParameters,
-        dec.parameters,
-        dec.returnType,
-      ),
-      ConstructorDeclaration() => (
-        null as TypeParameterList?,
-        dec.parameters as FormalParameterList?,
-        null as TypeAnnotation?,
-      ),
-      _ => throw CompileError('Invalid declaration type ${dec.runtimeType}'),
-    };
     // Parameter annotations may name the declaring class's (or extension's)
     // own type parameters — seed them like `SourceMember._buildSignature`.
     var ownerParams = const <String, TypeRef>{};
@@ -391,17 +400,8 @@ final class CallSignature {
     return CallSignature.source(
       ctx,
       library,
-      typeParams,
-      params,
-      owner: TypeParameterOwner(
-        dec is FunctionDeclaration
-            ? TypeParameterOwnerKind.function
-            : TypeParameterOwnerKind.method,
-        library,
-        '$prefix$memberName',
-        dec is FunctionDeclaration ? dec.functionExpression.offset : dec.offset,
-      ),
-      returnAnnotation: returnAnnotation,
+      dec,
+      ownerPrefix: prefix,
       returnFallback: CoreTypes.dynamic.ref(ctx),
       typeParameters: ownerParams,
       parameterHost: dec,

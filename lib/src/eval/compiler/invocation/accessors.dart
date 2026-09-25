@@ -27,6 +27,23 @@ import 'bound_call.dart';
 import 'devirtualizer.dart';
 import 'targets.dart';
 
+Variable _throughSuperLinks(
+  CompilerContext ctx,
+  Variable receiver,
+  List<TypeRef> hops,
+) {
+  var link = receiver;
+  for (final parent in hops) {
+    link = Variable.ssa(
+      ctx,
+      LoadSuper(ctx.svar('super'), link.ssa),
+      parent,
+      facts: ValueFacts(possibleClasses: [parent]),
+    );
+  }
+  return link;
+}
+
 /// How a member read `o.name` lowers. [GetTarget.resolve] picks the target
 /// from the receiver's static type, representations, and facts; [emit]
 /// produces the ops. No argument binding — an accessor target stands alone.
@@ -423,15 +440,11 @@ final class FieldSlotGet extends GetTarget {
 
   @override
   Variable emit(CompilerContext ctx) {
-    var linkSsa = receiver.boxIfNeeded(ctx).ssa;
-    for (final parent in hops) {
-      linkSsa = Variable.ssa(
-        ctx,
-        LoadSuper(ctx.svar('super'), linkSsa),
-        parent,
-        facts: ValueFacts(possibleClasses: [parent]),
-      ).ssa;
-    }
+    final linkSsa = _throughSuperLinks(
+      ctx,
+      receiver.boxIfNeeded(ctx),
+      hops,
+    ).ssa;
     return Variable.ssa(
       ctx,
       LoadPropertyStatic(ctx.svar(name), linkSsa, index, isLate: isLate),
@@ -467,15 +480,7 @@ final class DirectGetterCall extends GetTarget {
   @override
   Variable emit(CompilerContext ctx) {
     final boxed = receiver.boxIfNeeded(ctx);
-    var linkSsa = boxed.ssa;
-    for (final parent in hops) {
-      linkSsa = Variable.ssa(
-        ctx,
-        LoadSuper(ctx.svar('super'), linkSsa),
-        parent,
-        facts: ValueFacts(possibleClasses: [parent]),
-      ).ssa;
-    }
+    final linkSsa = _throughSuperLinks(ctx, boxed, hops).ssa;
     return Variable.ssa(
       ctx,
       Call(
@@ -854,15 +859,7 @@ final class FieldSlotSet extends SetTarget {
   @override
   Variable emit(CompilerContext ctx, Variable value) {
     final val = _convertForMember(ctx, value, fieldType, name);
-    var linkSsa = object.boxIfNeeded(ctx).ssa;
-    for (final parent in hops) {
-      linkSsa = Variable.ssa(
-        ctx,
-        LoadSuper(ctx.svar('super'), linkSsa),
-        parent,
-        facts: ValueFacts(possibleClasses: [parent]),
-      ).ssa;
-    }
+    final linkSsa = _throughSuperLinks(ctx, object.boxIfNeeded(ctx), hops).ssa;
     ctx.pushOp(
       SetPropertyStatic(linkSsa, index, val.ssa, isLateFinal: isLateFinal),
     );
@@ -896,15 +893,7 @@ final class DirectSetterCall extends SetTarget {
   Variable emit(CompilerContext ctx, Variable value) {
     final val = _convertForMember(ctx, value, fieldType, name);
     final boxed = object.boxIfNeeded(ctx);
-    var linkSsa = boxed.ssa;
-    for (final parent in hops) {
-      linkSsa = Variable.ssa(
-        ctx,
-        LoadSuper(ctx.svar('super'), linkSsa),
-        parent,
-        facts: ValueFacts(possibleClasses: [parent]),
-      ).ssa;
-    }
+    final linkSsa = _throughSuperLinks(ctx, boxed, hops).ssa;
     ctx.pushOp(
       Call(
         DeferredOrOffset(
