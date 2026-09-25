@@ -43,10 +43,9 @@ final class ArgumentBinder {
     int positionalCount,
     Set<String> namedParameters, {
     int offset = 0,
-    int leadingPositional = 0,
   }) {
     final matched = <_MatchedArgument>[];
-    var positionalCursor = leadingPositional;
+    var positionalCursor = 0;
     for (var i = offset; i < argumentList.arguments.length; i++) {
       final argument = argumentList.arguments[i];
       if (argument is NamedArgument) {
@@ -480,6 +479,12 @@ final class ArgumentBinder {
         (argumentList == null
             ? CallShape.values(const [])
             : CallShape.fromArgumentList(argumentList));
+    if (superParams.positional.isNotEmpty && shape.positional.isNotEmpty) {
+      throw CompileError(
+        'Positional super parameters cannot be combined with positional super arguments',
+        source ?? argumentList,
+      );
+    }
     final matched = <_MatchedSource>[];
     var positionalCursor = superParams.positional.length;
     for (final index in shape.sourceOrder.skip(argIndexOffset)) {
@@ -498,6 +503,12 @@ final class ArgumentBinder {
         ));
       } else {
         final (name, argument) = shape.named[-1 - index];
+        if (superParams.named.contains(name)) {
+          throw CompileError(
+            'Named super argument $name is already forwarded',
+            source,
+          );
+        }
         if (!named.containsKey(name)) {
           throw CompileError('Unknown named argument $name', source);
         }
@@ -748,12 +759,31 @@ final class ArgumentBinder {
     final namedParamByName = {
       for (final spec in signature.named) spec.name: spec,
     };
+    if (superParams.positional.isNotEmpty &&
+        argumentList != null &&
+        argumentList.arguments.any((argument) => argument is! NamedArgument)) {
+      throw CompileError(
+        'Positional super parameters cannot be combined with positional super arguments',
+        argumentList,
+      );
+    }
+    if (argumentList != null) {
+      for (final argument in argumentList.arguments) {
+        if (argument is NamedArgument &&
+            superParams.named.contains(argument.name.lexeme)) {
+          throw CompileError(
+            'Named super argument ${argument.name.lexeme} is already forwarded',
+            argument,
+          );
+        }
+      }
+    }
     final matched = argumentList == null
         ? <_MatchedArgument>[]
         : _matchArguments(argumentList, positional.length, {
             ...namedParamByName.keys,
             ...superParams.named,
-          }, leadingPositional: superParams.positional.length);
+          });
 
     // Resolve the receiver's type arguments for every parameter annotation.
     // Bridge positional arguments defer assignment checks to the runtime;

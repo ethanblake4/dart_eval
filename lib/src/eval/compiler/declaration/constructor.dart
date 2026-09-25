@@ -1039,8 +1039,9 @@ List<SSA> _bridgeSuperArgs(
 }
 
 /// Emits the constructor's return. For a bridged superclass this instantiates
-/// the runtime bridge object and returns it; otherwise it returns the newly
-/// created instance.
+/// the runtime bridge object around the already-built child and installs its
+/// parent shim. Ordinary [ConstructorCall.emit] creates a standalone object;
+/// only argument binding is shared with that target.
 void _emitConstructorReturn(
   CompilerContext ctx, {
   required NamedType? $extends,

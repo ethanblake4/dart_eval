@@ -141,4 +141,39 @@ void main() {
       7,
     );
   });
+
+  test('positional super formals reject explicit positional arguments', () {
+    expect(
+      () => Compiler().compile({
+        'binding': {
+          'main.dart': '''
+            class Base { Base(int first, int second); }
+            class Child extends Base {
+              Child(super.first) : super(2);
+            }
+            void main() {}
+          ''',
+        },
+      }),
+      throwsA(isA<CompileError>()),
+    );
+  });
+
+  test('named super formals reject duplicate named arguments', () {
+    expect(
+      () => Compiler().compile({
+        'binding': {
+          'main.dart': '''
+            class Base { Base(int first, {required int second}); }
+            class Child extends Base {
+              Child(int first, {required super.second})
+                  : super(first, second: 2);
+            }
+            void main() {}
+          ''',
+        },
+      }),
+      throwsA(isA<CompileError>()),
+    );
+  });
 }

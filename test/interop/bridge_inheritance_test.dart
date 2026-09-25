@@ -54,18 +54,28 @@ BridgeClassDef _bridgeWithRequiredArguments() {
   );
 }
 
-Iterable<(String, Runtime)> _runtimes(Program program) sync* {
+Iterable<(String, Runtime)> _runtimes(
+  Program program, {
+  List<List<Object?>>? constructorArguments,
+}) sync* {
   for (final (kind, candidate) in [
     ('fresh', program),
     ('serialized', Program.read(program.write().buffer)),
   ]) {
     final runtime = Runtime.ofProgram(candidate);
-    runtime.registerBridgeFuncRegisters(
-      _bridgeLibrary,
-      'TestClass.',
-      $TestClass.$construct,
-      isBridge: true,
-    );
+    runtime.registerBridgeFuncRegisters(_bridgeLibrary, 'TestClass.', (
+      runtime,
+      r,
+      s,
+      c,
+    ) {
+      constructorArguments?.add([
+        (r as $Value).$value,
+        (s as $Value).$value,
+        (c as $Value).$value,
+      ]);
+      return $TestClass.$construct(runtime, r, s, c);
+    }, isBridge: true);
     yield (kind, runtime);
   }
 }
@@ -82,14 +92,47 @@ void main() {
       }
 
       class Guest extends TestClass {
-        Guest(super.someNumber) : super(mark(2), bonus: mark(3));
+        Guest(super.someNumber, super.extra) : super(bonus: mark(3));
       }
 
-      int main() => Guest(4).someNumber + trace;
+      int main() => Guest(4, 2).someNumber + trace;
     ''', bridge: _bridgeWithRequiredArguments());
-    for (final (kind, runtime) in _runtimes(program)) {
-      expect(runtime.executeLib(_library, 'main'), 27, reason: kind);
+    final arguments = <List<Object?>>[];
+    for (final (kind, runtime) in _runtimes(
+      program,
+      constructorArguments: arguments,
+    )) {
+      expect(runtime.executeLib(_library, 'main'), 7, reason: kind);
     }
+    expect(arguments, [
+      [4, 2, 3],
+      [4, 2, 3],
+    ]);
+  });
+
+  test('positional super formals reject explicit positional arguments', () {
+    expect(
+      () => _compile('''
+        import 'package:bridge_lib/bridge_lib.dart';
+        class Guest extends TestClass {
+          Guest(super.someNumber) : super(2);
+        }
+      '''),
+      throwsA(isA<CompileError>()),
+    );
+  });
+
+  test('named super formals reject duplicate named arguments', () {
+    expect(
+      () => _compile('''
+        import 'package:bridge_lib/bridge_lib.dart';
+        class Guest extends TestClass {
+          Guest(int first, int second, {required super.bonus})
+              : super(first, second, bonus: 3);
+        }
+      ''', bridge: _bridgeWithRequiredArguments()),
+      throwsA(isA<CompileError>()),
+    );
   });
 
   test('implicit bridge super validates required arguments', () {
