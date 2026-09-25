@@ -6,8 +6,7 @@ import 'deferred.dart';
 import 'targets.dart';
 
 /// Turns a [VirtualCall] into a [StaticCall] when the receiver's chain pins
-/// a unique implementation — the direct-call rules of the former
-/// `invokeMethodWithTarget` tail: a `super` link or an allocation-exact
+/// a unique implementation. A `super` link or an allocation-exact
 /// receiver always devirtualizes (with `LoadSuper` hops when the callee
 /// body uses `super`), and a merely-declared type devirtualizes only when
 /// no descendant overrides the member and the body needs no owner link.

@@ -147,7 +147,7 @@ final class StaticCall extends CallTarget {
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     final s = ctx.svar('method_result');
-    final resultRep = declaredAbi(ctx)?.result ?? call.rep ?? ValueRep.boxed;
+    final resultRep = declaredAbi(ctx)?.result ?? ValueRep.boxed;
     final index = externalIndex;
     if (index != null) {
       ctx.pushOp(InvokeExternal(s, index, call.vector()));

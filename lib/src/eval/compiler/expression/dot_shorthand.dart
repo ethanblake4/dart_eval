@@ -11,7 +11,6 @@ import 'package:dart_eval/src/eval/compiler/expression/instance_creation.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import '../values/value_rep.dart';
 import '../invocation/call.dart';
 import '../invocation/resolver.dart';
 
@@ -166,7 +165,6 @@ Variable _invokeShorthandMember(
                 .toList() ??
             result.runtimeTypeArguments,
         returnType: result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
-        rep: ValueRep.boxed,
       ),
     );
   }
@@ -205,7 +203,6 @@ Variable _invokeShorthandMember(
         named: arguments.named,
         vectorOverride: arguments.vector(),
         returnType: returnType,
-        rep: ValueRep.boxed,
       ),
     );
   }

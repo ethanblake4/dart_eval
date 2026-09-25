@@ -1946,13 +1946,12 @@ Variable _declarationToVariable(
   );
 
   if (decl is FunctionDeclaration && decl.isGetter) {
-    return StaticCall(offset).emit(
+    return StaticCall(offset, sourceDeclaration: decl).emit(
       ctx,
       BoundCall(
         positional: const [],
         named: const [],
         returnType: returnType,
-        rep: Abi.unboxedAcrossCalls(returnType),
       ),
     );
   }

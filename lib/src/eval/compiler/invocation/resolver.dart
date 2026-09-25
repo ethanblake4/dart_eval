@@ -3,7 +3,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/variable/value_facts.dart';
+import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
@@ -329,7 +330,7 @@ final class CallResolver {
           ctx,
           L.type,
           e.methodName.name,
-          arity: positionalArity(e),
+          arity: callSite().shape.positionalArity,
         );
         if (found != null) {
           return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
@@ -392,7 +393,7 @@ final class CallResolver {
           ctx,
           L.type,
           e.methodName.name,
-          arity: positionalArity(e),
+          arity: callSite().shape.positionalArity,
         );
         if (found != null) {
           return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
@@ -406,7 +407,7 @@ final class CallResolver {
         if (foundGetter == null && e.methodName.name == 'noSuchMethod') {
           // `Object.noSuchMethod` is implicit — absent from all declaration
           // metadata. Dispatch dynamically.
-          final (positional, named) = compileCallArgs(ctx, e);
+          final (positional, named) = _evaluateCallShape(ctx, callSite().shape);
           return invokeOperator(
             L,
             'noSuchMethod',
@@ -464,7 +465,7 @@ final class CallResolver {
         ctx,
         L.type,
         e.methodName.name,
-        arity: positionalArity(e),
+        arity: callSite().shape.positionalArity,
       );
       if (found != null) {
         return invokeExtensionMethod(ctx, L, e, found.$1, found.$2, found.$3);
@@ -1151,7 +1152,7 @@ final class CallResolver {
                   e,
                 ))
           : _receiverVariable(d.receiver!);
-      return invokeMethodWithTarget(ctx, recv, e, bound: bound);
+      return invokeMethod(recv, e, bound: bound);
     }
     // A bound extension-method tear-off invoked directly — `x.m(args)`
     // lowers to `E.m(x, args)`; covers `m(args)` inside the extension body
@@ -1583,4 +1584,224 @@ void _inferBridgeTypeParameters(
   ) {
     infer(function.params[index].type.type, arguments[index].type);
   }
+}
+
+TypeRef instantiateConstructorType(
+  CompilerContext ctx,
+  MethodInvocation invocation,
+  TypeRef base, [
+  List<TypeRef>? inferredArgs,
+]) {
+  final arguments = invocation.typeArguments?.arguments;
+  if (arguments == null || arguments.isEmpty) {
+    if (inferredArgs == null) return base;
+    final baseArgs = interfaceArgumentsOf(base);
+    if (baseArgs.isEmpty || baseArgs.every((a) => a.isTypeParameter)) {
+      return (base as InterfaceTypeRef).copyWith(arguments: inferredArgs);
+    }
+    return base.substituteTypeParameters(
+      Substitution.of({
+        for (var i = 0; i < inferredArgs.length; i++)
+          (nominalDeclOf(base)?.typeParameters[i] ??
+                  ctx.typeParameterDefs.key(
+                    TypeParameterOwner(
+                      TypeParameterOwnerKind.classLike,
+                      base.file,
+                      base.name,
+                    ),
+                    i,
+                    '',
+                  )):
+              inferredArgs[i],
+      }),
+    );
+  }
+  return (base as InterfaceTypeRef).copyWith(
+    arguments: [
+      for (final argument in arguments)
+        TypeRef.fromAnnotation(ctx, ctx.library, argument),
+    ],
+  );
+}
+
+/// Evaluate a call shape in source order before dynamic dispatch.
+/// The receiver has already been read by the caller.
+(List<Variable>, Map<String, Variable>) _evaluateCallShape(
+  CompilerContext ctx,
+  CallShape shape,
+) {
+  final positional = List<Variable?>.filled(shape.positional.length, null);
+  final named = <String, Variable>{};
+  for (final index in shape.sourceOrder) {
+    if (index >= 0) {
+      positional[index] = compileExpression(
+        (shape.positional[index] as ExpressionArg).expression,
+        ctx,
+      );
+    } else {
+      final (name, source) = shape.named[-1 - index];
+      named[name] = compileExpression(
+        (source as ExpressionArg).expression,
+        ctx,
+      );
+    }
+  }
+  return (positional.cast<Variable>(), named);
+}
+
+/// Compiles `E(receiver)` — explicit extension application. The resolver
+/// handles the extension pin at the call site; this validates the receiver
+/// and returns its value without retaining a local binding.
+Variable applyExtension(
+  CompilerContext ctx,
+  MethodInvocation e,
+  EvalExtension ext,
+) {
+  final args = e.argumentList.arguments;
+  if (args.length != 1 || args.first is NamedArgument) {
+    throw CompileError(
+      'Extension application ${ext.name}(...) requires exactly one '
+      'positional argument',
+      e,
+    );
+  }
+  final receiver = compileExpression(
+    args.first.argumentExpression,
+    ctx,
+  ).boxIfNeeded(ctx);
+  boundExtensionFor(ctx, e, ext, receiver.type); // validates `on` bindings
+  // The application result shares the receiver's SSA but cannot rebind the
+  // source local when a later conversion changes its representation.
+  return receiver.copyWith()..binding = null;
+}
+
+/// Emits a call to a resolved extension member: `x.m(args)` and the
+/// explicit `E.m(x, args)` both land here — the receiver binds through the
+/// vector's leading slot and is skipped in the arg list for the explicit
+/// form ([argIndexOffset]); the extension's `on` bindings plus the
+/// method's resolved type arguments go in the type environment.
+Variable invokeExtensionMethod(
+  CompilerContext ctx,
+  Variable receiver,
+  MethodInvocation call,
+  EvalExtension ext,
+  MethodDeclaration member,
+  List<TypeRef> bindings, {
+  int argIndexOffset = 0,
+}) {
+  final extParams =
+      ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[];
+  final target = StaticCall(
+    DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+    sourceDeclaration: member,
+    signature: CallSignature.forDeclaration(ctx, ext.library, member),
+  );
+  final result = ArgumentBinder(ctx).bindSourceTarget(
+    target,
+    call.argumentList,
+    before: [receiver.boxIfNeeded(ctx)],
+    typeArguments: call.typeArguments,
+    seedGenerics: {
+      for (var i = 0; i < bindings.length && i < extParams.length; i++)
+        extParams[i].name.lexeme: bindings[i],
+    },
+    argIndexOffset: argIndexOffset,
+    source: call,
+  );
+
+  return target.emit(
+    ctx,
+    BoundCall(
+      positional: const [],
+      named: const [],
+      runtimeTypeArguments:
+          extensionCallTypeArguments(
+            ctx,
+            ext,
+            member,
+            bindings,
+            result.typeArguments,
+          ) ??
+          runtimeTypeArguments(ctx, call),
+      returnType: result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
+      vectorOverride: result.vector(),
+    ),
+  );
+}
+
+List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
+    call.typeArguments?.arguments
+        .map((type) => TypeRef.fromAnnotation(ctx, ctx.library, type))
+        .map((type) => ctx.runtimeTypes.idOf(type))
+        .toList() ??
+    const [];
+
+/// Resolves the receiver for a `super.m(args)` call. A missing concrete
+/// member dispatches to noSuchMethod on the real receiver.
+(Variable, Variable?) resolveSuperReceiver(
+  CompilerContext ctx,
+  MethodInvocation e,
+  Variable receiver,
+) {
+  final name = e.methodName.name;
+  final target = ctx.memberLookup.superMemberTarget(
+    receiver.type,
+    name,
+    kind: MemberKind.getter,
+    methodCall: true,
+  );
+  if (!target.found) {
+    // A getter-shaped call reads before evaluating the arguments.
+    if (target.abstractGetter ?? false) {
+      final getterValue = NoSuchMethodCall(
+        name: name,
+        getterShaped: true,
+      ).emitGetterValue(ctx);
+      return (
+        receiver,
+        CallResolver(ctx).invokeValue(
+          CallSite(
+            shape: CallShape.fromArgumentList(
+              e.argumentList,
+              e.typeArguments?.arguments,
+            ),
+            source: e,
+          ),
+          callee: getterValue,
+        ),
+      );
+    }
+    final fallback = NoSuchMethodCall(name: name);
+    final bound = ArgumentBinder(ctx).bindSuppliedOnly(
+      fallback,
+      CallSite(
+        shape: CallShape.fromArgumentList(
+          e.argumentList,
+          e.typeArguments?.arguments,
+        ),
+        source: e,
+      ),
+      callee: null,
+    );
+    return (receiver, fallback.emit(ctx, bound));
+  }
+
+  if (target.hops.isEmpty && target.owner != receiver.type) {
+    receiver = Variable.of(
+      ctx,
+      receiver.ssa,
+      target.owner,
+      rep: receiver.rep,
+      facts: ValueFacts(possibleClasses: [target.owner]),
+    );
+  }
+  for (final parent in target.hops) {
+    receiver = Variable.ssa(
+      ctx,
+      LoadSuper(ctx.svar('super'), receiver.ssa),
+      parent,
+      facts: ValueFacts(possibleClasses: [parent]),
+    );
+  }
+  return (receiver, null);
 }

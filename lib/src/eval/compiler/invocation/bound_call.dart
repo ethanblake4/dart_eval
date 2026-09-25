@@ -1,6 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/values/abi.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 /// A matched, compiled, and coerced argument.
@@ -22,7 +21,6 @@ final class BoundCall {
     this.runtimeTypeArguments = const [],
     required this.returnType,
     this.trusted = false,
-    this.rep,
     this.vectorOverride,
     this.declaredReturn,
   });
@@ -45,13 +43,7 @@ final class BoundCall {
   /// signature, so the runtime skips per-argument checks.
   final bool trusted;
 
-  /// Compatibility representation for offset-only static calls that have no
-  /// declaration ABI yet. New target-backed paths use CallTarget.declaredAbi.
-  final ValueRep? rep;
-
-  /// A precomputed call vector for legacy arg machinery whose ordering
-  /// doesn't decompose into positional-then-named (dynamic source order,
-  /// bridge padded ABI).
+  /// A precomputed call vector for bridge ABI padding or a leading receiver.
   final List<SSA>? vectorOverride;
 
   /// The callee's declared return type with call-site generics applied
