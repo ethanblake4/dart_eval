@@ -14,7 +14,6 @@ final class TypedClosureDescriptor {
     List<int> parameterTypeParameterIndices = const [],
     List<bool> parameterNullable = const [],
     List<int> typeParameterBounds = const [],
-    List<int> boundCallableTypeArguments = const [],
     this.runtimeTypeId = -1,
     this.hasEnvironment = true,
     this.boundReceiver = false,
@@ -31,9 +30,6 @@ final class TypedClosureDescriptor {
        ),
        parameterNullable = List.unmodifiable(parameterNullable),
        typeParameterBounds = List.unmodifiable(typeParameterBounds),
-       boundCallableTypeArguments = List.unmodifiable(
-         boundCallableTypeArguments,
-       ),
        needsCovariantParameterChecks =
            boundReceiver && parameterTypeIds.any((id) => id >= 0);
 
@@ -48,11 +44,6 @@ final class TypedClosureDescriptor {
   final List<int> parameterTypeParameterIndices;
   final List<bool> parameterNullable;
   final List<int> typeParameterBounds;
-
-  /// Runtime type ids binding this callable's own type parameters when the
-  /// tear-off was context-instantiated (empty = unbound). Used when a call
-  /// site supplies no type arguments.
-  final List<int> boundCallableTypeArguments;
   final bool hasEnvironment, boundReceiver;
   final int runtimeTypeId;
 

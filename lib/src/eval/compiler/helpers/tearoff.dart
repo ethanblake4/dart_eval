@@ -20,9 +20,8 @@ import '../../ir/representation.dart';
 
 /// Materializes a declaration's function reference. When [boundContext] supplies a
 /// [FunctionTypeRef] (the assignment's destination type), a generic
-/// callable's own type parameters instantiate from it — `bar` used as a
-/// `double Function(double)` becomes `bar<double>` — and the binding is
-/// recorded on the closure so invocations see the bound arguments.
+/// callable's own type parameters instantiate through a compiler-generated
+/// adapter.
 Variable materializeTearOff(
   CompilerContext ctx,
   DeferredOrOffset offset, {
@@ -185,65 +184,6 @@ Variable materializeTearOff(
     _ => CoreTypes.function.ref(ctx),
   };
 
-  // Downward instantiation: the context's signature binds this callable's
-  // own type parameters (`bar` as `double Function(double)` → `bar<double>`).
-  var boundCallableTypeArguments = const <int>[];
-  var materializedType = functionType;
-  if (((boundContext is FunctionTypeRef &&
-              boundContext.signature.typeParameters.isEmpty) ||
-          typeArguments != null) &&
-      functionType is FunctionTypeRef &&
-      functionType.signature.typeParameters.isNotEmpty) {
-    final signature = functionType.signature;
-    final bindings = <TypeParameterDef, TypeRef>{};
-    if (typeArguments != null) {
-      if (signature.typeParameters.length != typeArguments.length) {
-        throw CompileError('Wrong number of function type arguments');
-      }
-      for (var i = 0; i < typeArguments.length; i++) {
-        bindings[signature.typeParameters[i]] = typeArguments[i];
-      }
-    } else {
-      ctx.typeSystem.unify(functionType, boundContext!, bindings);
-    }
-    var fullyBound = true;
-    boundCallableTypeArguments = [
-      for (final def in signature.typeParameters)
-        () {
-          final bound = bindings[def];
-          if (bound == null || bound.isTypeParameter) {
-            fullyBound = false;
-            return ctx.runtimeTypes.idOf(bound ?? CoreTypes.dynamic.ref(ctx));
-          }
-          return ctx.runtimeTypes.idOf(bound);
-        }(),
-    ];
-    if (fullyBound) {
-      final substitution = Substitution.of(bindings);
-      materializedType = FunctionTypeRef(
-        FunctionSignature(
-          positional: [
-            for (final t in signature.positional)
-              t.substituteTypeParameters(substitution),
-          ],
-          requiredPositional: signature.requiredPositional,
-          named: {
-            for (final e in signature.named.entries)
-              e.key: (
-                type: e.value.type.substituteTypeParameters(substitution),
-                required: e.value.required,
-              ),
-          },
-          returnType: signature.returnType.substituteTypeParameters(
-            substitution,
-          ),
-        ),
-        decl: functionType.decl,
-        nullable: functionType.nullable,
-      );
-    }
-  }
-
   final captures = <SSA>[];
   if (declaration is MethodDeclaration && !declaration.isStatic) {
     final receiver = implicitReceiver != null
@@ -301,25 +241,28 @@ Variable materializeTearOff(
               .parameters[i + positional.length + parameterOffset]
               .isBoxed,
       ],
-      runtimeTypeId: ctx.runtimeTypes.idOf(materializedType),
-      boundCallableTypeArguments: boundCallableTypeArguments,
+      runtimeTypeId: ctx.runtimeTypes.idOf(functionType),
     ),
-    materializedType,
+    functionType,
     facts: ValueFacts(
       callableSignature: CallSignature.returnOnly(
-        materializedType is FunctionTypeRef
-            ? materializedType.signature.returnType
+        functionType is FunctionTypeRef
+            ? functionType.signature.returnType
             : CoreTypes.dynamic.ref(ctx),
       ),
     ),
   );
   // A captureless tear-off is a constant: the VM canonicalizes them, so
   // `identical(main, main)` is true.
-  // The runtime's closure equality omits bound type arguments. Interning an
-  // instantiation could otherwise merge `f<int>` and `f<String>`.
-  return captures.isEmpty && boundCallableTypeArguments.isEmpty
-      ? internConst(ctx, created, materializedType)
+  final callable = captures.isEmpty
+      ? internConst(ctx, created, functionType)
       : created;
+  return instantiateRuntimeCallable(
+    ctx,
+    callable,
+    boundContext: boundContext,
+    typeArguments: typeArguments,
+  );
 }
 
 /// Specializes a runtime generic callable while retaining runtime dispatch.

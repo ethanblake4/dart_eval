@@ -50,14 +50,11 @@ void main() {
       ),
     );
     expect(
-      eval('''
+      () => eval('''
       T? optional<T>([T? value]) => value;
-      bool main() {
-        final selected = optional<int>;
-        return selected() == null && selected(3) == 3;
-      }
+      main() => optional<int>;
     '''),
-      true,
+      throwsA(isA<CompileError>()),
     );
   });
 

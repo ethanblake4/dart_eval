@@ -251,7 +251,8 @@ void main() {
         final throwing = callbacks[0] as TypedClosure;
         final asynchronous = callbacks[1] as TypedClosure;
         expect(() => throwing.invoke(0, null, null), throwsA(isA<Exception>()));
-        final future = asynchronous.invoke(0, null, null)!.$value as Future<Object?>;
+        final future =
+            asynchronous.invoke(0, null, null)!.$value as Future<Object?>;
         expect(_value(await future as $Value?), 11);
       },
     );
@@ -284,10 +285,13 @@ void main() {
           _value(closure.invoke(0, $int(3), null, namedNames: ['x', 'text'])),
           3,
         );
-        expect(() => closure.invoke(0, null, null), throwsArgumentError);
+        expect(
+          () => closure.invoke(0, null, null),
+          throwsA(isA<NoSuchMethodError>()),
+        );
         expect(
           () => closure.invoke(0, $int(3), $int(1), namedNames: ['x', 'extra']),
-          throwsArgumentError,
+          throwsA(isA<NoSuchMethodError>()),
         );
       },
     );

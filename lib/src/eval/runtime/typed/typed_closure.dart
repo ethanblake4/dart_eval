@@ -24,11 +24,7 @@ final class TypedClosure extends EvalFunction {
     this.runtime,
     this.definingTypeEnvironmentReceiver,
     List<int> definingTypeArguments,
-    List<int> boundCallableTypeArguments,
   ) : definingTypeArguments = List.unmodifiable(definingTypeArguments),
-      boundCallableTypeArguments = List.unmodifiable(
-        boundCallableTypeArguments,
-      ),
       function = program.functions[descriptor.functionId];
 
   final TypedProgram program;
@@ -38,10 +34,6 @@ final class TypedClosure extends EvalFunction {
   final Runtime? runtime;
   final Object? definingTypeEnvironmentReceiver;
   final List<int> definingTypeArguments;
-
-  /// This callable's own type arguments when context-instantiated at
-  /// creation (empty = unbound); fills in for call sites supplying none.
-  final List<int> boundCallableTypeArguments;
   int? _resolvedRuntimeTypeId;
 
   @override
@@ -77,7 +69,6 @@ final class TypedClosure extends EvalFunction {
     [receiver],
     runtime,
     receiver,
-    const [],
     const [],
   );
   static final _defaultArguments = Expando<List<$Value?>>();
@@ -143,17 +134,6 @@ final class TypedClosure extends EvalFunction {
       runtime,
       definingTypeEnvironmentReceiver,
       definingTypeArguments,
-      descriptor.boundCallableTypeArguments.isEmpty || runtime == null
-          ? descriptor.boundCallableTypeArguments
-          : runtime.resolveTypedCallTypeArguments(
-              descriptor.boundCallableTypeArguments,
-              actualOwnerType:
-                  definingTypeEnvironmentReceiver is TypedInstance
-                  ? definingTypeEnvironmentReceiver.dispatchRoot
-                      .$getRuntimeType(runtime)
-                  : null,
-              callableTypeArguments: definingTypeArguments,
-            ),
     );
   }
 
@@ -177,11 +157,7 @@ final class TypedClosure extends EvalFunction {
     final descriptor = receiver.descriptor;
     if (!descriptor.hasEnvironment) return null;
     final site = program.closureCalls[index];
-    final suppliedTypeArguments =
-        resolvedTypeArguments ?? site.typeArguments;
-    final typeArguments = suppliedTypeArguments.isEmpty
-        ? receiver.boundCallableTypeArguments
-        : suppliedTypeArguments;
+    final typeArguments = resolvedTypeArguments ?? site.typeArguments;
     if (site.positionalCount != descriptor.positionalCount ||
         site.namedNames.length != descriptor.namedNames.length ||
         !receiver.acceptsTypeArguments(typeArguments)) {
@@ -306,11 +282,8 @@ final class TypedClosure extends EvalFunction {
     final typeArguments = resolvedTypeArguments ?? site.typeArguments;
     final count = site.positionalCount + site.namedNames.length;
     if (receiver is TypedClosure) {
-      final effectiveTypeArguments = typeArguments.isEmpty
-          ? receiver.boundCallableTypeArguments
-          : typeArguments;
       if (!receiver.descriptor.accepts(site.positionalCount, site.namedNames) ||
-          !receiver.acceptsTypeArguments(effectiveTypeArguments)) {
+          !receiver.acceptsTypeArguments(typeArguments)) {
         throw NoSuchMethodError.withInvocation(
           receiver,
           _callInvocation(count, first, rest, site),
@@ -321,7 +294,7 @@ final class TypedClosure extends EvalFunction {
         first,
         rest,
         namedNames: site.namedNames,
-        typeArguments: effectiveTypeArguments,
+        typeArguments: typeArguments,
         runtime: runtime,
         trusted: site.trusted,
       );
@@ -395,17 +368,24 @@ final class TypedClosure extends EvalFunction {
     bool trusted = false,
   }) {
     final descriptor = this.descriptor;
+    final count = positionalCount + namedNames.length;
     if (!descriptor.accepts(positionalCount, namedNames) ||
         !acceptsTypeArguments(typeArguments)) {
-      // A host-side invoke that cannot satisfy the signature is a
-      // programmer error. In-eval dispatch paths pre-check the same
-      // conditions and reject the call as a noSuchMethod on `call`.
-      throw ArgumentError(
-        'TypedClosure has no call method accepting arguments '
-        '($positionalCount positionals, named: ${namedNames.join(',')})',
+      // Calling a closure with an unsatisfiable signature is a
+      // noSuchMethod on its `call` member.
+      final values = TypedInterop.argList(count, first, rest);
+      throw NoSuchMethodError.withInvocation(
+        this,
+        Invocation.method(
+          Symbol('call'),
+          values.sublist(0, positionalCount),
+          {
+            for (var i = 0; i < namedNames.length; i++)
+              Symbol(namedNames[i]): values[positionalCount + i],
+          },
+        ),
       );
     }
-    final count = positionalCount + namedNames.length;
     final context = this.runtime ?? runtime;
     final effectiveTypeArguments =
         this.runtime != null &&
