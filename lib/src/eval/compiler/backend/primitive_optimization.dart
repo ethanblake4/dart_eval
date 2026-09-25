@@ -52,10 +52,7 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
       ..clear()
       ..addAll(rewritten);
   }
-  final definitions = {
-    for (final op in operations())
-      if (op.writesTo != null) op.writesTo!: op,
-  };
+  final definitions = {for (final op in operations()) ?op.writesTo: op};
   cfg.Operation? definition(cfg.SSA value) {
     final seen = <cfg.SSA>{};
     while (seen.add(value)) {

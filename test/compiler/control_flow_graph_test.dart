@@ -135,8 +135,7 @@ void main() {
       final call = operations(graph).whereType<Call>().single;
       expect(call.arguments, hasLength(2));
       final definitions = {
-        for (final op in operations(graph))
-          if (op.writesTo case final target?) target: op,
+        for (final op in operations(graph)) ?op.writesTo: op,
       };
       int? constantOf(SSA argument) {
         final definition = definitions[argument];
@@ -144,6 +143,7 @@ void main() {
         if (definition case Assign(:final source)) return constantOf(source);
         return null;
       }
+
       expect(call.arguments.map(constantOf), [9, 4]);
       expect(call.writesTo, isNotNull);
       expect(operations(graph).whereType<Return>().single.value, call.writesTo);

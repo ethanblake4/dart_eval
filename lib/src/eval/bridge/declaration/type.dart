@@ -177,7 +177,5 @@ class BridgeGenericParam {
 
   final BridgeTypeRef? $extends;
 
-  Map<String, dynamic> toJson() => {
-    if ($extends != null) 'extends': $extends!.toJson(),
-  };
+  Map<String, dynamic> toJson() => {'extends': ?$extends?.toJson()};
 }
