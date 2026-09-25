@@ -1,87 +1,8 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/compiler/optimizer/validate_ssa.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart' show LoadInt;
 import 'package:test/test.dart';
-
-bool dominates(ControlFlowGraph graph, int definition, int use) {
-  var current = use;
-  while (current != definition) {
-    final parent = graph.dominators[current];
-    if (parent == null || parent == current) return false;
-    current = parent;
-  }
-  return true;
-}
-
-void verifySSA(ControlFlowGraph graph, String name) {
-  expect(graph.inSSAForm, isTrue, reason: name);
-  final definitions = <SSA, (int, int)>{};
-  final reachable = <int>{};
-  final pending = <int>[graph.root.id!];
-  while (pending.isNotEmpty) {
-    final id = pending.removeLast();
-    if (reachable.add(id)) pending.addAll(graph.graph.successorsOf(id));
-  }
-  for (final id in reachable) {
-    final block = graph[id]!;
-    for (var index = 0; index < block.code.length; index++) {
-      final target = block.code[index].writesTo;
-      if (target == null || target == ControlFlowGraph.branch) continue;
-      expect(target.version, greaterThanOrEqualTo(0), reason: '$name: $target');
-      expect(
-        definitions.containsKey(target),
-        isFalse,
-        reason: '$name: $target is defined twice',
-      );
-      definitions[target] = (id, index);
-    }
-  }
-
-  for (final id in reachable) {
-    final block = graph[id]!;
-    for (var index = 0; index < block.code.length; index++) {
-      final operation = block.code[index];
-      for (final source in operation.readsFrom) {
-        final definition = definitions[source];
-        expect(
-          definition,
-          isNotNull,
-          reason: '$name B$id: $operation reads undefined $source',
-        );
-        final (definitionBlock, definitionIndex) = definition!;
-        if (operation is PhiNode) {
-          expect(
-            graph.graph
-                .predecessorsOf(id)
-                .any(
-                  (predecessor) =>
-                      dominates(graph, definitionBlock, predecessor),
-                ),
-            isTrue,
-            reason:
-                '$name B$id: phi input $source must dominate an incoming edge',
-          );
-        } else {
-          expect(
-            dominates(graph, definitionBlock, id),
-            isTrue,
-            reason: '$name B$id: $source does not dominate $operation',
-          );
-          if (definitionBlock == id) {
-            expect(
-              definitionIndex,
-              lessThan(index),
-              reason:
-                  '$name B$id: $operation reads $source before its definition',
-            );
-          }
-        }
-      }
-    }
-  }
-}
 
 void main() {
   ControlFlowGraph compileMain(String source) {
@@ -216,8 +137,12 @@ void main() {
       expect(compiler.ssaFunctionGraphs, isNotEmpty);
       for (final function in compiler.ssaFunctionGraphs.entries) {
         final graph = function.value;
+        expect(
+          graph.inSSAForm,
+          isTrue,
+          reason: compiler.functionNames[function.key],
+        );
         validateSSA(graph);
-        verifySSA(graph, compiler.functionNames[function.key]!);
       }
     });
   }

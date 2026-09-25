@@ -138,40 +138,6 @@ final class LoadNull extends Operation {
   }
 }
 
-final class Assign extends Operation {
-  @override
-  bool get isPure => true;
-
-  final SSA target;
-  final SSA source;
-
-  Assign(this.target, this.source);
-
-  @override
-  Set<SSA> get readsFrom => {source};
-
-  @override
-  SSA? get writesTo => target;
-
-  @override
-  OpType get type => AssignmentOp.assign;
-
-  @override
-  String toString() => '$target = $source';
-
-  @override
-  bool operator ==(Object other) =>
-      other is Assign && target == other.target && source == other.source;
-
-  @override
-  int get hashCode => target.hashCode ^ source.hashCode;
-
-  @override
-  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return Assign(writesTo ?? target, readsFrom?.first ?? source);
-  }
-}
-
 final class IsNull extends Operation {
   @override
   bool get isPure => true;

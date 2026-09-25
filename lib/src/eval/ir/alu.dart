@@ -1,5 +1,4 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'operands.dart';
 
 final class IntAdd extends Operation {
   @override

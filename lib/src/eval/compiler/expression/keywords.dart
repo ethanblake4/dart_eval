@@ -1,4 +1,4 @@
-import 'package:dart_eval/src/eval/ir/memory.dart';
+import 'package:control_flow_graph/control_flow_graph.dart' show Assign;
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';

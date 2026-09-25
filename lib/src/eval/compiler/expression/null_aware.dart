@@ -1,3 +1,4 @@
+import 'package:control_flow_graph/control_flow_graph.dart' show Assign;
 // ignore_for_file: experimental_member_use
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
@@ -6,7 +7,6 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
 import '../variable.dart';

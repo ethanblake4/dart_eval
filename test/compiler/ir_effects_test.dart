@@ -1,4 +1,4 @@
-import 'package:control_flow_graph/control_flow_graph.dart' hide Assign;
+import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/invocation/deferred.dart';
 import 'package:dart_eval/src/eval/ir/alu.dart';
 import 'package:dart_eval/src/eval/ir/async.dart';

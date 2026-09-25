@@ -1,5 +1,4 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'operands.dart';
 
 /// Preserve a supplied null as $null at a bridge boundary. Raw null in a
 /// bridge parameter slot means that the optional argument was omitted.

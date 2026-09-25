@@ -10,7 +10,6 @@ import '../../ir/flow.dart' as flow;
 import '../../ir/function.dart' as fn;
 import '../../ir/logic.dart' as logic;
 import '../../ir/memory.dart' as memory;
-import '../../ir/operands.dart';
 import '../../ir/numeric.dart';
 import '../../ir/objects.dart' as objects_ir;
 import '../../ir/primitives.dart' as primitives;
@@ -91,7 +90,7 @@ final class TypedOperation extends cfg.Operation {
   TypedOperation copyWith({cfg.SSA? writesTo, Set<cfg.SSA>? readsFrom}) =>
       copyWithOperands(
         writesTo: writesTo,
-        operands: renameOperands(inputs, this.readsFrom, readsFrom),
+        operands: cfg.renameOperands(inputs, this.readsFrom, readsFrom),
       );
   @override
   TypedOperation copyWithOperands({
@@ -120,77 +119,6 @@ final class _Bytes extends cfg.Instruction {
             (otherTarget == null
                 ? 0
                 : TypedOp.instructions[TypedOp.jump].length);
-}
-
-/// Keep labels, including exception destinations, while choosing fallthroughs.
-Map<int, List<_Bytes>> _layoutBlocks(Map<int, List<_Bytes>> blocks) {
-  final originalOrder = blocks.keys.toList();
-  // The CFG assembler omits jumps for its own layout. Restore those edges
-  // before changing order, including fallthrough through an empty block.
-  for (var i = 0; i + 1 < originalOrder.length; i++) {
-    final code = blocks[originalOrder[i]]!;
-    if (code.isEmpty || !TypedOp.instructions[code.last.code].terminates) {
-      code.add(_Bytes(TypedOp.jump, originalOrder[i + 1]));
-    }
-  }
-  final redirects = <int, int>{};
-  int destination(int target) {
-    final path = <int>{};
-    while (!redirects.containsKey(target) && path.add(target)) {
-      final code = blocks[target]!;
-      if (code.length != 1 || code.single.code != TypedOp.jump) break;
-      target = code.single.immediate!;
-    }
-    final result = redirects[target] ?? target;
-    for (final id in path) {
-      redirects[id] = result;
-    }
-    return result;
-  }
-
-  // Resolve against the original lists, before rewriting any of them.
-  for (final id in originalOrder) {
-    destination(id);
-  }
-  for (final code in blocks.values) {
-    for (var i = 0; i < code.length; i++) {
-      final instruction = code[i];
-      if (TypedOp.instructions[instruction.code].immediate ==
-          TypedImmediate.branch) {
-        code[i] = _Bytes(instruction.code, redirects[instruction.immediate]!);
-      }
-    }
-  }
-  final aliases = <int, List<int>>{};
-  for (final id in originalOrder) {
-    final target = redirects[id]!;
-    if (id != target) (aliases[target] ??= []).add(id);
-  }
-  final ordered = <int, List<_Bytes>>{};
-  for (final start in originalOrder) {
-    var id = redirects[start]!;
-    while (!ordered.containsKey(id)) {
-      final code = blocks[id]!;
-      // Preserve forwarding labels at their destination without emitting
-      // unreachable trampoline instructions. Cycles retain a real self-jump.
-      for (final alias in aliases[id] ?? const <int>[]) {
-        ordered[alias] = [];
-      }
-      ordered[id] = code;
-      if (code.isEmpty || code.last.code != TypedOp.jump) break;
-      id = code.last.immediate!;
-    }
-  }
-  final order = ordered.keys.toList();
-  for (var i = 0; i + 1 < order.length; i++) {
-    final code = ordered[order[i]]!;
-    if (code.isNotEmpty &&
-        code.last.code == TypedOp.jump &&
-        code.last.immediate == redirects[order[i + 1]]) {
-      code.removeLast();
-    }
-  }
-  return ordered;
 }
 
 /// Lowers an entrypoint to fixed typed registers and byte instructions.
@@ -1005,25 +933,9 @@ class _LoweringSession {
     for (var bank = 0; bank < 4; bank++) {
       spillCounts[bank] = exceptionSlotCounts[bank];
     }
-    var addedNativeList = true;
-    while (addedNativeList) {
-      addedNativeList = false;
-      for (final operation in sourceOperations) {
-        final target = operation.writesTo;
-        if (target == null || nativeLists.contains(target)) continue;
-        final proven = switch (operation) {
-          collection.NewList() => true,
-          primitives.BoxList(:final source) ||
-          primitives.Unbox(:final source) ||
-          memory.Assign(:final source) ||
-          cfg.Assign(:final source) => nativeLists.contains(source),
-          cfg.PhiNode(:final sources) =>
-            sources.isNotEmpty && sources.every(nativeLists.contains),
-          _ => false,
-        };
-        if (proven) addedNativeList |= nativeLists.add(target);
-      }
-    }
+    nativeLists.addAll(
+      inferNativeListValues(sourceOperations, throughUnbox: true),
+    );
     // sourceGraph is not referenced after construction; adopt it as the
     // working graph instead of paying for a second deep copy.
     graph = sourceGraph;
@@ -2061,10 +1973,6 @@ class _LoweringSession {
             value(target),
             value(source),
           ),
-          memory.Assign(:final target, :final source) => cfg.Assign(
-            value(target),
-            value(source),
-          ),
           alu.IntAdd(:final left, :final right) => make(
             ['aAddB'],
             [left, right],
@@ -2354,23 +2262,33 @@ class _LoweringSession {
           );
         },
         onJump: (target, _) => _Bytes(TypedOp.jump, target),
+        emitFallthroughJumps: true,
       ),
     );
 
     // Expand the second edge before relaxation so both branch distances use
-    // the final instruction positions. Every branch starts short and can only
-    // widen, guaranteeing that this layout process terminates.
-    final assembled = _layoutBlocks({
-      for (final block in blocks.entries)
-        block.key: <_Bytes>[
-          for (final instruction in block.value.cast<_Bytes>()) ...[
-            if (instruction.code >= 0)
-              _Bytes(instruction.code, instruction.immediate),
-            if (instruction.otherTarget != null)
-              _Bytes(TypedOp.jump, instruction.otherTarget),
+    // the final instruction positions.
+    final assembled = cfg.layoutBlocks<_Bytes>(
+      {
+        for (final block in blocks.entries)
+          block.key: <_Bytes>[
+            for (final instruction in block.value.cast<_Bytes>()) ...[
+              if (instruction.code >= 0)
+                _Bytes(instruction.code, instruction.immediate),
+              if (instruction.otherTarget != null)
+                _Bytes(TypedOp.jump, instruction.otherTarget),
+            ],
           ],
-        ],
-    });
+      },
+      jumpTarget: (instruction) =>
+          instruction.code == TypedOp.jump ? instruction.immediate : null,
+      branchTarget: (instruction) =>
+          TypedOp.instructions[instruction.code].immediate ==
+              TypedImmediate.branch
+          ? instruction.immediate
+          : null,
+      retargetBranch: (instruction, target) => _Bytes(instruction.code, target),
+    );
     final shortToLong = <int, int>{};
     for (final block in assembled.values) {
       for (final instruction in block) {
@@ -2382,36 +2300,16 @@ class _LoweringSession {
         }
       }
     }
-    final offsets = <int, int>{};
-    bool widened;
-    do {
-      var offset = 0;
-      for (final block in assembled.entries) {
-        offsets[block.key] = offset;
-        for (final instruction in block.value) {
-          offset += instruction.length;
-        }
-      }
-      widened = false;
-      offset = 0;
-      for (final block in assembled.values) {
-        for (final instruction in block) {
-          final length = instruction.length;
-          final long = shortToLong[instruction.code];
-          if (long != null) {
-            final distance =
-                offsets[instruction.immediate]! - (offset + length);
-            if (distance < -32768 || distance > 32767) {
-              instruction.code = long;
-              widened = true;
-            }
-          }
-          // All positions in this pass refer to the same layout. Widening is
-          // reflected when offsets are recomputed on the next pass.
-          offset += length;
-        }
-      }
-    } while (widened);
+    final offsets = cfg.relaxBranches<_Bytes>(
+      assembled,
+      length: (instruction) => instruction.length,
+      branchTarget: (instruction) => shortToLong.containsKey(instruction.code)
+          ? instruction.immediate
+          : null,
+      widen: (instruction, distance) => distance < -32768 || distance > 32767
+          ? _Bytes(shortToLong[instruction.code]!, instruction.immediate)
+          : null,
+    );
     for (var index = firstRegion; index < b._exceptionRegions.length; index++) {
       final region = b._exceptionRegions[index];
       b._exceptionRegions[index] = TypedExceptionRegion(

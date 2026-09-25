@@ -1,5 +1,4 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'operands.dart';
 import 'representation.dart';
 
 enum NumericOperator {

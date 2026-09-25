@@ -132,20 +132,12 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
   if (!graph.inSSAForm) {
     throw StateError('Representation analysis requires SSA form');
   }
-  final result = <cfg.SSA, MachineRepresentation>{};
-  final equalities = <List<cfg.SSA>>[];
+  final constraints = cfg.SSAValueConstraints<MachineRepresentation>();
   final operations = <cfg.Operation>[
     for (final id in graph.graph.vertices) ...graph[id]!.code,
   ];
   void constrain(cfg.SSA value, MachineRepresentation representation) {
-    final previous = result[value];
-    if (previous != null && previous != representation) {
-      throw StateError(
-        'Incompatible representations for $value: '
-        '${previous.name} and ${representation.name}; an explicit conversion is required',
-      );
-    }
-    result[value] = representation;
+    constraints.constrain(value, representation);
   }
 
   void output(cfg.Operation operation, MachineRepresentation representation) {
@@ -215,15 +207,13 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           );
         }
         output(operation, signature?.parameters[index] ?? representation);
-      case memory.Assign(:final target, :final source):
-        equalities.add([target, source]);
       case cfg.Assign(:final target, :final source):
-        equalities.add([target, source]);
+        constraints.equate([target, source]);
       case cfg.PhiNode(:final target, :final sources):
-        equalities.add([target, ...sources]);
+        constraints.equate([target, ...sources]);
       case alu.Negate(:final target, :final source):
         // `-x` keeps the operand's representation — int or double.
-        equalities.add([target, source]);
+        constraints.equate([target, source]);
       case alu.IntAdd() || alu.IntSub() || alu.Increment():
         inputs(operation, integer);
         output(operation, integer);
@@ -236,7 +226,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         inputs(operation, integer);
         output(operation, boolean);
       case alu.LessThan(:final left, :final right):
-        equalities.add([left, right]);
+        constraints.equate([left, right]);
         output(operation, boolean);
       case logic.LogicalNot() || logic.LogicalAnd() || logic.LogicalOr():
         inputs(operation, boolean);
@@ -401,24 +391,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
     }
   }
 
-  var changed = true;
-  while (changed) {
-    changed = false;
-    for (final equality in equalities) {
-      final known = equality.map((value) => result[value]).nonNulls.toSet();
-      if (known.length > 1) {
-        throw StateError(
-          'Assignment or phi has incompatible representations: '
-          '${equality.join(', ')} (${known.map((value) => value.name).join(', ')})',
-        );
-      }
-      if (known.isEmpty) continue;
-      for (final value in equality) {
-        if (!result.containsKey(value)) changed = true;
-        constrain(value, known.single);
-      }
-    }
-  }
+  final result = constraints.solve();
   for (final operation in operations) {
     if (operation is primitives.BoxNum || operation is alu.LessThan) {
       for (final source in operation.readsFrom) {

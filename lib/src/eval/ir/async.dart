@@ -1,5 +1,4 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'operands.dart';
 
 /// Starts an async invocation without going through the bridge call ABI.
 final class BeginAsync extends Operation {

@@ -1,3 +1,4 @@
+import 'package:control_flow_graph/control_flow_graph.dart' show Assign;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';

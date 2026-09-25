@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
+import 'package:control_flow_graph/control_flow_graph.dart' show Assign, SSA;
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'deferred.dart';
@@ -15,7 +15,6 @@ import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
-import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import '../values/abi.dart';
 import 'binder.dart';

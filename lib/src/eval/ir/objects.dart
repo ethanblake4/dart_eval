@@ -1,5 +1,4 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'operands.dart';
 
 /// A private field-slot marker, distinct from an initialized nullable value.
 final class LoadUninitializedField extends Operation {

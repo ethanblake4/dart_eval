@@ -831,7 +831,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     for (final entry in _ctx.functionGraphs.entries) {
       final graph = entry.value;
       graph.removeUnreachableBlocks();
-      validateControlFlowGraph(graph);
+      validateFrontendGraph(graph);
       _ctx.ssaFunctionGraphs[entry.key] = buildSSA(graph);
     }
 
@@ -1759,4 +1759,3 @@ Iterable<NamedType> superinterfacesOf(AstNode? declaration) sync* {
       yield* implementsClause?.interfaces ?? const Iterable.empty();
   }
 }
-

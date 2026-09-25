@@ -6,6 +6,37 @@ import '../../ir/objects.dart' as objects;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/representation.dart';
 
+/// Values proven to contain a native list before any list operation is lowered.
+/// Boxing and copies preserve that property; a phi does so only when all of
+/// its inputs do. Unboxing is included by the later lowering stage.
+Set<cfg.SSA> inferNativeListValues(
+  Iterable<cfg.Operation> operations, {
+  bool throughUnbox = false,
+}) {
+  final code = operations.toList();
+  final nativeLists = <cfg.SSA>{};
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (final op in code) {
+      final target = op.writesTo;
+      if (target == null || nativeLists.contains(target)) continue;
+      final proven = switch (op) {
+        collection.NewList() => true,
+        primitives.BoxList(:final source) ||
+        cfg.Assign(:final source) => nativeLists.contains(source),
+        primitives.Unbox(:final source) when throughUnbox =>
+          nativeLists.contains(source),
+        cfg.PhiNode(:final sources) =>
+          sources.isNotEmpty && sources.every(nativeLists.contains),
+        _ => false,
+      };
+      if (proven) changed |= nativeLists.add(target);
+    }
+  }
+  return nativeLists;
+}
+
 /// Simplifies proven primitive conversions on a private SSA graph.
 void optimizePrimitives(cfg.ControlFlowGraph graph) {
   Iterable<cfg.Operation> operations() sync* {
@@ -14,25 +45,7 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
     }
   }
 
-  final nativeLists = <cfg.SSA>{};
-  var changed = true;
-  while (changed) {
-    changed = false;
-    for (final op in operations()) {
-      final target = op.writesTo;
-      if (target == null || nativeLists.contains(target)) continue;
-      final proven = switch (op) {
-        collection.NewList() => true,
-        primitives.BoxList(:final source) ||
-        memory.Assign(:final source) ||
-        cfg.Assign(:final source) => nativeLists.contains(source),
-        cfg.PhiNode(:final sources) =>
-          sources.isNotEmpty && sources.every(nativeLists.contains),
-        _ => false,
-      };
-      if (proven) changed |= nativeLists.add(target);
-    }
-  }
+  final nativeLists = inferNativeListValues(operations());
   var next = 0;
   for (final id in graph.graph.vertices) {
     final code = graph[id]!.code;
@@ -52,20 +65,8 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
       ..clear()
       ..addAll(rewritten);
   }
-  final definitions = {for (final op in operations()) ?op.writesTo: op};
-  cfg.Operation? definition(cfg.SSA value) {
-    final seen = <cfg.SSA>{};
-    while (seen.add(value)) {
-      final op = definitions[value];
-      final source = switch (op) {
-        memory.Assign(:final source) || cfg.Assign(:final source) => source,
-        _ => null,
-      };
-      if (source == null) return op;
-      value = source;
-    }
-    return null;
-  }
+  final definitions = cfg.SSADefinitions(graph);
+  cfg.Operation? definition(cfg.SSA value) => definitions.throughCopies(value);
 
   for (final id in graph.graph.vertices) {
     final code = graph[id]!.code;
@@ -98,25 +99,13 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
     }
   }
   // Keep escaped wrappers, arbitrary unboxing, and potentially effectful reads.
-  changed = true;
-  while (changed) {
-    changed = false;
-    final used = {for (final op in operations()) ...op.readsFrom};
-    for (final id in graph.graph.vertices) {
-      graph[id]!.code.removeWhere((op) {
-        final removable =
-            op is primitives.BoxInt ||
-            op is primitives.BoxDouble ||
-            op is primitives.BoxBool ||
-            op is primitives.BoxString ||
-            op is memory.Assign ||
-            op is cfg.Assign ||
-            op is memory.LoadInt;
-        final dead =
-            removable && op.writesTo != null && !used.contains(op.writesTo);
-        changed |= dead;
-        return dead;
-      });
-    }
-  }
+  graph.removeUnusedDefines(
+    canRemove: (op) =>
+        op is primitives.BoxInt ||
+        op is primitives.BoxDouble ||
+        op is primitives.BoxBool ||
+        op is primitives.BoxString ||
+        op is cfg.Assign ||
+        op is memory.LoadInt,
+  );
 }

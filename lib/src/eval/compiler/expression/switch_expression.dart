@@ -1,3 +1,4 @@
+import 'package:control_flow_graph/control_flow_graph.dart' show Assign;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
@@ -9,7 +10,6 @@ import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/ir/memory.dart';
 import '../values/value_rep.dart';
 import '../invocation/resolver.dart';
 

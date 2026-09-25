@@ -1,5 +1,4 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
-import 'operands.dart';
 
 /// Operations selected only for statically known, unboxed String operands.
 enum StringOperator { length, concatenate, codeUnitAt, indexAt }
