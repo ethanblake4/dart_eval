@@ -574,6 +574,7 @@ final class CallResolver {
       final fd = br is BridgeMethodDef
           ? br.functionDescriptor
           : (br as BridgeConstructorDef).functionDescriptor;
+      final ownerType = isStatic ? staticType! : resolved!.viewedAs;
       final receiverTypeParameters = isStatic
           ? const <String, TypeRef>{}
           : _bridgeClassTypeArguments(
@@ -581,12 +582,42 @@ final class CallResolver {
               L.type,
               resolvedMember.ownerDecl!.library,
             );
-      argsPair = ArgumentBinder(ctx).bindBridgeVector(
-        e.argumentList,
+      final signature = CallSignature.bridge(
+        ctx,
         fd,
-        before: [],
+        returnFallback: CoreTypes.dynamic.ref(ctx),
+        owner: ownerType,
         typeParameters: receiverTypeParameters,
       );
+      final bridgeTargetName = isStatic
+          ? '${staticType!.name}.${e.methodName.name}'
+          : null;
+      final externalIndex = bridgeTargetName == null
+          ? null
+          : ctx.bridgeStaticFunctionIndices[staticType!
+                .file]?[bridgeTargetName];
+      if (isStatic && externalIndex == null) {
+        throw CompileError(
+          'Bridge target $bridgeTargetName is not registered',
+          e,
+        );
+      }
+      target = isStatic
+          ? StaticCall(
+              null,
+              externalIndex: externalIndex,
+              member: resolvedMember,
+              bridgeFunction: fd,
+              signature: signature,
+            )
+          : BridgeCall(
+              receiver: L,
+              name: e.methodName.name,
+              isSuperReceiver: e.target is SuperExpression,
+              member: resolvedMember,
+              signature: signature,
+            );
+      argsPair = ArgumentBinder(ctx).bindBridgeTarget(target, e.argumentList);
       // Static calls on generic bridge classes (e.g. `Stream.fromIterable`)
       // infer the class's own type parameters — `T` in `Iterable<T>` — from
       // the argument types, which then resolve `returns:` annotations.
@@ -604,15 +635,21 @@ final class CallResolver {
         bridgeTypeParameters,
         inferableNames: classGenericNames,
       );
+      final resultSignature = bridgeTypeParameters.isEmpty
+          ? target.signature!
+          : CallSignature.bridge(
+              ctx,
+              fd,
+              returnFallback: CoreTypes.dynamic.ref(ctx),
+              owner: ownerType,
+              typeParameters: {
+                ...receiverTypeParameters,
+                ...bridgeTypeParameters,
+              },
+            );
       mReturnType = resolveCallResultType(
         ctx,
-        signature: CallSignature.bridge(
-          ctx,
-          fd,
-          returnFallback: CoreTypes.dynamic.ref(ctx),
-          owner: isStatic ? staticType : L.type,
-          typeParameters: bridgeTypeParameters,
-        ),
+        signature: resultSignature,
         targetType: isStatic ? staticType : L.type,
         argTypes: argsPair.positionalValues.map((a) => a.type).toList(),
         namedArgTypes: argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
@@ -772,15 +809,6 @@ final class CallResolver {
       if (resolvedTarget is StaticCall) {
         return resolvedTarget.emit(ctx, boundCall);
       }
-      if (resolved?.member is BridgeMember) {
-        return StaticCall(
-          null,
-          externalIndex:
-              ctx.bridgeStaticFunctionIndices[staticType!
-                  .file]!['${staticType.name}.$staticMemberName']!,
-          member: resolved?.member,
-        ).emit(ctx, boundCall);
-      }
       return StaticCall(
         DeferredOrOffset.lookupStatic(
           ctx,
@@ -831,12 +859,7 @@ final class CallResolver {
         }
         return invokeResult;
       }
-      return BridgeCall(
-        receiver: L,
-        name: e.methodName.name,
-        isSuperReceiver: e.target is SuperExpression,
-        member: resolvedMember,
-      ).emit(ctx, boundCall);
+      return resolvedTarget!.emit(ctx, boundCall);
     }
     if (L.type.isSpec(CoreTypes.dynamic)) {
       return resolvedTarget!.emit(ctx, boundCall);
@@ -1530,19 +1553,19 @@ Map<String, TypeRef> _bridgeClassTypeArguments(
   TypeRef receiver,
   int declarationLibrary,
 ) {
-  final resolved = receiver;
   final declaration =
-      ctx.topLevelDeclarationsMap[declarationLibrary]?[resolved.name];
+      ctx.topLevelDeclarationsMap[declarationLibrary]?[receiver.name];
   final bridge = declaration?.bridge;
   if (bridge is! BridgeClassDef) return const {};
   final names = bridge.type.generics.keys.toList();
+  final arguments = interfaceArgumentsOf(receiver);
   return {
     for (
       var index = 0;
-      index < names.length && index < interfaceArgumentsOf(resolved).length;
+      index < names.length && index < arguments.length;
       index++
     )
-      names[index]: interfaceArgumentsOf(resolved)[index],
+      names[index]: arguments[index],
   };
 }
 

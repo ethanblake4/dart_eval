@@ -408,7 +408,8 @@ final class BridgeCall extends CallTarget {
     this.externalIndex,
     this.isSuperReceiver = false,
     this.member,
-  });
+    CallSignature? signature,
+  }) : _signature = signature;
 
   /// The receiver for an instance bridge member; null for statics.
   final Variable? receiver;
@@ -425,9 +426,10 @@ final class BridgeCall extends CallTarget {
 
   /// The resolved bridge member, when the call resolved statically.
   final Member? member;
+  final CallSignature? _signature;
 
   @override
-  CallSignature? get signature => member?.signature;
+  CallSignature? get signature => _signature ?? member?.signature;
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
