@@ -267,7 +267,7 @@ abstract final class TypedCodec {
     for (final site in program.callSites) {
       string(site.name);
       u32(site.argumentCount);
-      u32(site.kind.index | (site.superDispatch ? 0x80000000 : 0));
+      u32(site.kind.index);
       u32(site.positionalCount);
       string(site.callerLibrary);
       strings(site.namedNames);
@@ -457,9 +457,7 @@ abstract final class TypedCodec {
     final callSites = <TypedCallSite>[];
     for (var i = 0; i < callSiteCount; i++) {
       final name = string(), argumentCount = u32();
-      final rawKind = u32();
-      final superDispatch = rawKind & 0x80000000 != 0;
-      final kind = rawKind & 0x7fffffff;
+      final kind = u32();
       if (kind >= TypedMemberKind.values.length) {
         throw const FormatException('Invalid typed member kind');
       }
@@ -481,7 +479,6 @@ abstract final class TypedCodec {
           callerLibrary: callerLibrary,
           typeArguments: typeArguments,
           kind: TypedMemberKind.values[kind],
-          superDispatch: superDispatch,
         ),
       );
     }

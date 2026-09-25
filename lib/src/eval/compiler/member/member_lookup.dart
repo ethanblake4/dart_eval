@@ -129,6 +129,22 @@ final class MemberLookup {
           abstractGetter: abstractGetter,
         );
       }
+      final bridge =
+          ctx.topLevelDeclarationsMap[owner.file]?[owner.name]?.bridge;
+      if (bridge is BridgeClassDef &&
+          (bridge.fields.containsKey(name) ||
+              switch (kind) {
+                MemberKind.getter => bridge.getters.containsKey(name),
+                MemberKind.setter => bridge.setters.containsKey(name),
+                _ => false,
+              })) {
+        return (
+          owner: owner,
+          hops: hops,
+          found: true,
+          abstractGetter: abstractGetter,
+        );
+      }
       if (methodCall) {
         if (abstractGetter == null) {
           final decls = ctx.instanceDeclarationsMap[owner.file]?[owner.name];
@@ -138,8 +154,6 @@ final class MemberLookup {
             abstractGetter = false;
           }
         }
-        final bridge =
-            ctx.topLevelDeclarationsMap[owner.file]?[owner.name]?.bridge;
         if (bridge is BridgeClassDef && bridge.methods.containsKey(name)) {
           return (
             owner: owner,

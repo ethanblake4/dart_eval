@@ -358,12 +358,7 @@ final class ConstructorCall extends CallTarget {
 /// signature supplied arguments are checked against; the runtime still
 /// picks the override.
 final class VirtualCall extends CallTarget {
-  const VirtualCall({
-    required this.receiver,
-    required this.name,
-    this.member,
-    this.isSuperReceiver = false,
-  });
+  const VirtualCall({required this.receiver, required this.name, this.member});
 
   final Variable receiver;
   final String name;
@@ -372,10 +367,6 @@ final class VirtualCall extends CallTarget {
   /// only when no declaration could be found (an untyped `noSuchMethod`
   /// dispatch remains possible).
   final Member? member;
-
-  /// `super.m(...)`: the receiver's link is positioned above the current
-  /// layer, so devirtualization uses the link rather than `exactType`.
-  final bool isSuperReceiver;
 
   @override
   CallSignature? get signature => member?.signature;
@@ -393,7 +384,6 @@ final class VirtualCall extends CallTarget {
         namedNames: [for (final entry in call.named) entry.$1],
         callerLibrary: ctx.library,
         typeArguments: call.runtimeTypeArguments,
-        superReceiver: isSuperReceiver,
       ),
     );
     return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
@@ -406,7 +396,6 @@ final class BridgeCall extends CallTarget {
     this.receiver,
     this.name = '',
     this.externalIndex,
-    this.isSuperReceiver = false,
     this.member,
     CallSignature? signature,
   }) : _signature = signature;
@@ -418,11 +407,6 @@ final class BridgeCall extends CallTarget {
   /// `bridgeStaticFunctionIndices` index for static calls; null emits an
   /// `InvokeDynamic` for an instance member instead.
   final int? externalIndex;
-
-  /// `super.m()` on a bridge member: the receiver is a mid-chain link, so
-  /// the runtime resolves the member at-or-below it — dispatching by name
-  /// from the root would re-enter the override this call sits beneath.
-  final bool isSuperReceiver;
 
   /// The resolved bridge member, when the call resolved statically.
   final Member? member;
@@ -450,7 +434,6 @@ final class BridgeCall extends CallTarget {
           namedNames: const [],
           callerLibrary: ctx.library,
           typeArguments: call.runtimeTypeArguments,
-          superReceiver: isSuperReceiver,
         ),
       );
     }

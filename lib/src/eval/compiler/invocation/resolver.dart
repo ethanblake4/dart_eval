@@ -613,7 +613,6 @@ final class CallResolver {
           : BridgeCall(
               receiver: L,
               name: e.methodName.name,
-              isSuperReceiver: e.target is SuperExpression,
               member: resolvedMember,
               signature: signature,
             );
@@ -687,14 +686,27 @@ final class CallResolver {
                 ),
                 member: sourceMember,
               )
+            : e.target is SuperExpression
+            ? Devirtualizer(ctx).refineSuper(
+                VirtualCall(
+                  receiver: L,
+                  name: e.methodName.name,
+                  member: sourceMember,
+                ),
+              )
             : Devirtualizer(ctx).refine(
                 VirtualCall(
                   receiver: L,
                   name: e.methodName.name,
                   member: sourceMember,
-                  isSuperReceiver: e.target is SuperExpression,
                 ),
               );
+        if (e.target is SuperExpression && target is VirtualCall) {
+          throw CompileError(
+            'Cannot resolve a direct target for super.${e.methodName.name}',
+            e,
+          );
+        }
         final boundMember = switch (target) {
           StaticCall(:final member) ||
           VirtualCall(:final member) => member as SourceMember,

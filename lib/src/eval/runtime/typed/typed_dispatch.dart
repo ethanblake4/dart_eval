@@ -20,12 +20,8 @@ abstract final class TypedDispatch {
     Object? argumentsFirst,
     Object? argumentsRest,
   ]) {
-    final site = program.callSites[siteIndex];
     if (receiver is! TypedInstance) {
-      // A `super` dispatch into a bridge layer targets the bridge's own
-      // implementation — unwrapping to the eval subclass linked above it
-      // would re-dispatch the override the caller sits beneath.
-      if (receiver is! $Bridge || site.superDispatch) return null;
+      if (receiver is! $Bridge) return null;
       receiver = Runtime.bridgeData[receiver]?.subclass;
     }
     if (receiver is! TypedInstance ||
@@ -33,11 +29,11 @@ abstract final class TypedDispatch {
         (receiver.runtime != null && !identical(receiver.runtime, runtime))) {
       return null;
     }
+    final site = program.callSites[siteIndex];
     final member = receiver.resolve(
       site.kind,
       site.name,
       callerLibrary: site.callerLibrary,
-      superDispatch: site.superDispatch,
     );
     if (member == null || !identical(member.receiver.program, program)) {
       return null;
@@ -85,7 +81,6 @@ abstract final class TypedDispatch {
             site.name,
             callerLibrary: site.callerLibrary,
             runtime: runtime,
-            superDispatch: site.superDispatch,
           );
         }
         return TypedInterop.getProperty(runtime, receiver, site.name);
@@ -96,7 +91,6 @@ abstract final class TypedDispatch {
             first as $Value?,
             callerLibrary: site.callerLibrary,
             runtime: runtime,
-            superDispatch: site.superDispatch,
           );
           return null;
         }
@@ -119,7 +113,6 @@ abstract final class TypedDispatch {
             callerLibrary: site.callerLibrary,
             typeArguments: typeArguments,
             runtime: runtime,
-            superDispatch: site.superDispatch,
           );
         }
         if (site.name == 'call' && receiver is TypedClosure) {

@@ -15,24 +15,32 @@ final class Devirtualizer {
 
   final CompilerContext ctx;
 
-  CallTarget refine(VirtualCall target) {
+  CallTarget refine(VirtualCall target) => _refine(target, lexicalSuper: false);
+
+  CallTarget refineSuper(VirtualCall target) =>
+      _refine(target, lexicalSuper: true);
+
+  CallTarget _refine(VirtualCall target, {required bool lexicalSuper}) {
     final L = target.receiver;
     // A nullable receiver may be null — a direct call would skip the
     // runtime's null dispatch (e.g. interpolated toString on null).
-    final linkType = switch ((target.isSuperReceiver, L.exactType)) {
-      (true, _) => L.concreteTypes.first,
+    final linkType = switch ((lexicalSuper, L.exactType)) {
+      (true, _) => L.type,
       (false, final exactType?) when !L.type.nullable => exactType,
       _ => null,
     };
     final name = target.name;
-    var directOwner = linkType != null
-        ? ctx.memberLookup.implementationOwner(
-            linkType,
-            MemberName(name, MemberKind.method),
-          )
+    final memberName = MemberName.method(name);
+    var directOwner =
+        lexicalSuper &&
+            ctx.memberLookup.concreteMemberOn(L.type, memberName)
+                is SourceMember
+        ? L.type
+        : linkType != null
+        ? ctx.memberLookup.implementationOwner(linkType, memberName)
         : null;
     if (directOwner == null &&
-        !target.isSuperReceiver &&
+        !lexicalSuper &&
         L.exactType == null &&
         // A nullable receiver may be null — a direct call would skip the
         // runtime's null dispatch (e.g. interpolated toString on null).

@@ -63,7 +63,6 @@ class TypedProgram {
              callerLibrary: site.callerLibrary,
              typeArguments: List.unmodifiable(site.typeArguments),
              kind: site.kind,
-             superDispatch: site.superDispatch,
            ),
          ),
        ),

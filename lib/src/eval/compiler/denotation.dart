@@ -672,13 +672,11 @@ final class InstanceMemberDenotation extends Denotation {
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
             ?.isBridge ??
         false) {
-      return GetTarget.read(
-        ctx,
+      return DynamicGet(
         owner,
         name,
-        source: source,
-        isSuperReceiver: true,
-      );
+        fieldType: readType(ctx, source: source),
+      ).emit(ctx);
     }
     return SuperGetterCall(
       owner,
@@ -705,14 +703,11 @@ final class InstanceMemberDenotation extends Denotation {
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
             ?.isBridge ??
         false) {
-      return SetTarget.write(
-        ctx,
+      return DynamicSet(
         owner,
         name,
-        value,
-        source: source,
-        isSuperReceiver: true,
-      );
+        writeType(ctx, source: source),
+      ).emit(ctx, value);
     }
     return SuperSetterCall(
       owner,
@@ -1948,11 +1943,7 @@ Variable _declarationToVariable(
   if (decl is FunctionDeclaration && decl.isGetter) {
     return StaticCall(offset, sourceDeclaration: decl).emit(
       ctx,
-      BoundCall(
-        positional: const [],
-        named: const [],
-        returnType: returnType,
-      ),
+      BoundCall(positional: const [], named: const [], returnType: returnType),
     );
   }
   return materializeTearOff(

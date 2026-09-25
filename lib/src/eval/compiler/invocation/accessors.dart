@@ -44,7 +44,6 @@ sealed class GetTarget {
     TypeRef? boundContext,
     List<TypeRef>? typeArguments,
     BoundExtension? extensionPin,
-    bool isSuperReceiver = false,
   }) {
     if (name == 'length' && !receiver.type.nullable) {
       final isString = receiver.type.isAssignableTo(
@@ -206,12 +205,7 @@ sealed class GetTarget {
       if (boundContext is FunctionTypeRef &&
           methodSignature.typeParameters.isNotEmpty) {
         final target = Devirtualizer(ctx).refine(
-          VirtualCall(
-            receiver: receiver,
-            name: name,
-            member: member.member,
-            isSuperReceiver: isSuperReceiver,
-          ),
+          VirtualCall(receiver: receiver, name: name, member: member.member),
         );
         if (target is StaticCall) {
           return ContextualMethodTearOff(target, boundContext, typeArguments);
@@ -312,7 +306,6 @@ sealed class GetTarget {
       name,
       fieldType: fieldType,
       methodSignature: methodSignature,
-      isSuperReceiver: isSuperReceiver,
     );
   }
 
@@ -325,7 +318,6 @@ sealed class GetTarget {
     TypeRef? boundContext,
     List<TypeRef>? typeArguments,
     BoundExtension? extensionPin,
-    bool isSuperReceiver = false,
   }) => resolve(
     ctx,
     receiver,
@@ -334,7 +326,6 @@ sealed class GetTarget {
     boundContext: boundContext,
     typeArguments: typeArguments,
     extensionPin: extensionPin,
-    isSuperReceiver: isSuperReceiver,
   ).emit(ctx);
 
   Variable emit(CompilerContext ctx);
@@ -645,7 +636,6 @@ final class DynamicGet extends GetTarget {
     this.name, {
     required this.fieldType,
     this.methodSignature,
-    this.isSuperReceiver = false,
   });
 
   /// The receiver; boxed during emission.
@@ -657,10 +647,6 @@ final class DynamicGet extends GetTarget {
   /// typed.
   final CallSignature? methodSignature;
 
-  /// `super.name` read: the receiver is a mid-chain link, so the runtime
-  /// resolves the member at-or-below that link, not at the dispatch root.
-  final bool isSuperReceiver;
-
   @override
   Variable emit(CompilerContext ctx) => Variable.ssa(
     ctx,
@@ -669,7 +655,6 @@ final class DynamicGet extends GetTarget {
       receiver.boxIfNeeded(ctx).ssa,
       name,
       callerLibrary: ctx.library,
-      superReceiver: isSuperReceiver,
     ),
     fieldType,
     rep: ValueRep.boxed,
@@ -690,7 +675,6 @@ sealed class SetTarget {
     Variable object,
     String name, {
     AstNode? source,
-    bool isSuperReceiver = false,
   }) {
     final declaredFieldType = ctx.memberLookup.fieldType(
       object.type,
@@ -806,12 +790,7 @@ sealed class SetTarget {
         );
       }
     }
-    return DynamicSet(
-      object,
-      name,
-      fieldType,
-      isSuperReceiver: isSuperReceiver,
-    );
+    return DynamicSet(object, name, fieldType);
   }
 
   /// `this.name = v` where `name` is declared on the enclosing class —
@@ -832,14 +811,7 @@ sealed class SetTarget {
     String name,
     Variable value, {
     AstNode? source,
-    bool isSuperReceiver = false,
-  }) => resolve(
-    ctx,
-    object,
-    name,
-    source: source,
-    isSuperReceiver: isSuperReceiver,
-  ).emit(ctx, value);
+  }) => resolve(ctx, object, name, source: source).emit(ctx, value);
 
   Variable emit(CompilerContext ctx, Variable value);
 }
@@ -1075,21 +1047,12 @@ final class ExtensionSetterCall extends SetTarget {
 
 /// The dynamic member write — `SetPropertyDynamic`.
 final class DynamicSet extends SetTarget {
-  const DynamicSet(
-    this.object,
-    this.name,
-    this.fieldType, {
-    this.isSuperReceiver = false,
-  });
+  const DynamicSet(this.object, this.name, this.fieldType);
 
   /// The receiver; boxed during emission.
   final Variable object;
   final String name;
   final TypeRef fieldType;
-
-  /// `super.name = v`: the receiver is a mid-chain link, so the runtime
-  /// resolves the member at-or-below that link, not at the dispatch root.
-  final bool isSuperReceiver;
 
   @override
   Variable emit(CompilerContext ctx, Variable value) {
@@ -1100,7 +1063,6 @@ final class DynamicSet extends SetTarget {
         name,
         val.ssa,
         callerLibrary: ctx.library,
-        superReceiver: isSuperReceiver,
       ),
     );
     return val;

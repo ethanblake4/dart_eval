@@ -227,6 +227,32 @@ void main() {
     },
   );
 
+  test('super bridge accessors bypass evaluated overrides', () {
+    final program = _compile('''
+      import 'package:bridge_lib/bridge_lib.dart';
+
+      class Guest extends TestClass {
+        Guest(int value) : super(value);
+
+        @override
+        int get someNumber => 99;
+
+        @override
+        set someNumber(int value) {}
+
+        int update() {
+          super.someNumber = 7;
+          return super.someNumber;
+        }
+      }
+
+      int main() => Guest(2).update();
+    ''');
+    for (final (kind, runtime) in _runtimes(program)) {
+      expect(runtime.executeLib(_library, 'main'), 7, reason: kind);
+    }
+  });
+
   test(
     'further guest subclasses dispatch native and async calls to overrides',
     () async {
