@@ -2,13 +2,6 @@ import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
-/// A matched, compiled, and coerced argument.
-final class BoundArgument {
-  const BoundArgument(this.value);
-
-  final Variable value;
-}
-
 /// The binder's output: callee-order arguments, resolved type arguments,
 /// the post-coercion receiver, and the call's return type.
 final class BoundCall {
@@ -33,8 +26,8 @@ final class BoundCall {
   /// arguments compiled — an argument may redefine the slot the callee
   /// expression read (`f(f = g())` invokes the old `f`).
   final Variable? callee;
-  final List<BoundArgument> positional;
-  final List<(String, BoundArgument)> named;
+  final List<Variable> positional;
+  final List<(String, Variable)> named;
   final Map<String, TypeRef> typeArguments;
   final List<int> runtimeTypeArguments;
   final TypeRef returnType;
@@ -51,22 +44,15 @@ final class BoundCall {
   /// generic-dependent or the target has no declaration).
   final TypeRef? declaredReturn;
 
-  /// The provided positional arguments as plain variables.
-  List<Variable> get positionalValues => [
-    for (final arg in positional) arg.value,
-  ];
-
   /// The named arguments as a name-to-variable map.
-  Map<String, Variable> get namedValues => {
-    for (final e in named) e.$1: e.$2.value,
-  };
+  Map<String, Variable> get namedValues => {for (final e in named) e.$1: e.$2};
 
   /// The flattened call vector: positionals then named values in
   /// declaration order.
   List<SSA> vector() =>
       vectorOverride ??
       [
-        for (final arg in positional) arg.value.ssa,
-        for (final entry in named) entry.$2.value.ssa,
+        for (final arg in positional) arg.ssa,
+        for (final entry in named) entry.$2.ssa,
       ];
 }

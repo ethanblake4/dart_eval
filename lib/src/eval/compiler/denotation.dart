@@ -1907,37 +1907,11 @@ Variable _declarationToVariable(
     return typeLiteral(ctx, type, '${declarationName(decl)}.');
   }
 
-  TypeRef? returnType;
-  if (decl is FunctionDeclaration && decl.returnType != null) {
-    returnType = ctx.withTypeParameters<TypeRef>(
-      decOrBridge.sourceLib,
-      null,
-      decl.functionExpression.typeParameters?.typeParameters,
-      () =>
-          TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!),
-    );
-  } else if (decl is ConstructorDeclaration) {
-    returnType = TypeRef.lookupDeclaration(
-      ctx,
-      decOrBridge.sourceLib,
-      decl.parent!.parent as ClassDeclaration,
-    );
-  } else {
-    // A function without a return type annotation returns dynamic.
-    returnType = CoreTypes.dynamic.ref(ctx);
-  }
-
-  // Accessors compile under `*g`/`*s` keys — use the accessor's own key so
-  // deferred resolution finds the right function entry.
-  final offset = DeferredOrOffset(
-    file: decOrBridge.sourceLib,
-    name: decl is FunctionDeclaration
-        ? (decl.isGetter
-              ? MemberName.getter(decl.name.lexeme).key
-              : decl.isSetter
-              ? MemberName.setter(decl.name.lexeme).key
-              : name)
-        : name,
+  final (offset, returnType) = _sourceCallableMetadata(
+    ctx,
+    decOrBridge.sourceLib,
+    decl,
+    name,
   );
 
   if (decl is FunctionDeclaration && decl.isGetter) {
@@ -1984,19 +1958,33 @@ CallTarget? _declarationToCallTarget(
     return StaticCall(offset, signature: CallSignature.returnOnly(rt));
   }
 
-  TypeRef? returnType;
+  final (offset, returnType) = _sourceCallableMetadata(
+    ctx,
+    decOrBridge.sourceLib,
+    decl,
+    name,
+  );
+  return StaticCall(offset, signature: CallSignature.returnOnly(returnType));
+}
+
+(DeferredOrOffset, TypeRef) _sourceCallableMetadata(
+  CompilerContext ctx,
+  int library,
+  Declaration decl,
+  String name,
+) {
+  final TypeRef returnType;
   if (decl is FunctionDeclaration && decl.returnType != null) {
     returnType = ctx.withTypeParameters<TypeRef>(
-      decOrBridge.sourceLib,
+      library,
       null,
       decl.functionExpression.typeParameters?.typeParameters,
-      () =>
-          TypeRef.fromAnnotation(ctx, decOrBridge.sourceLib, decl.returnType!),
+      () => TypeRef.fromAnnotation(ctx, library, decl.returnType!),
     );
   } else if (decl is ConstructorDeclaration) {
     returnType = TypeRef.lookupDeclaration(
       ctx,
-      decOrBridge.sourceLib,
+      library,
       decl.parent!.parent as ClassDeclaration,
     );
   } else {
@@ -2004,10 +1992,9 @@ CallTarget? _declarationToCallTarget(
     returnType = CoreTypes.dynamic.ref(ctx);
   }
 
-  // Accessors compile under `*g`/`*s` keys — use the accessor's own key so
-  // deferred resolution finds the right function entry.
+  // Accessors compile under `*g`/`*s` keys for deferred resolution.
   final offset = DeferredOrOffset(
-    file: decOrBridge.sourceLib,
+    file: library,
     name: decl is FunctionDeclaration
         ? (decl.isGetter
               ? MemberName.getter(decl.name.lexeme).key
@@ -2017,7 +2004,7 @@ CallTarget? _declarationToCallTarget(
         : name,
   );
 
-  return StaticCall(offset, signature: CallSignature.returnOnly(returnType));
+  return (offset, returnType);
 }
 
 /// The declared type of instance member [name] on the enclosing class, or null

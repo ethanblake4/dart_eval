@@ -190,7 +190,7 @@ Variable _invokeShorthandMember(
           ctx,
           signature: target.signature!,
           targetType: type,
-          argTypes: arguments.positionalValues.map((a) => a.type).toList(),
+          argTypes: arguments.positional.map((a) => a.type).toList(),
           namedArgTypes: arguments.namedValues.map(
             (k, v) => MapEntry(k, v.type),
           ),

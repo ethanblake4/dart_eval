@@ -189,35 +189,31 @@ final class ArgumentBinder {
           .boxIfNeeded(ctx);
     }
 
-    final positional = List<BoundArgument?>.filled(
+    final positional = List<Variable?>.filled(
       site.shape.positional.length,
       null,
     );
-    final named = List<(String, BoundArgument)?>.filled(
+    final named = List<(String, Variable)?>.filled(
       site.shape.named.length,
       null,
     );
     // Arguments evaluate in source order — the interleave matters.
     for (final i in site.shape.sourceOrder) {
       if (i >= 0) {
-        positional[i] = BoundArgument(
-          bindArgument(
-            site.shape.positional[i],
-            declaredSignature?.positional[i],
-          ),
+        positional[i] = bindArgument(
+          site.shape.positional[i],
+          declaredSignature?.positional[i],
         );
       } else {
         final (name, source) = site.shape.named[-1 - i];
         named[-1 - i] = (
           name,
-          BoundArgument(
-            bindArgument(source, declaredSignature?.named[name]?.type),
-          ),
+          bindArgument(source, declaredSignature?.named[name]?.type),
         );
       }
     }
-    final positionalArgs = positional.cast<BoundArgument>();
-    final namedArgs = named.cast<(String, BoundArgument)>();
+    final positionalArgs = positional.cast<Variable>();
+    final namedArgs = named.cast<(String, Variable)>();
 
     final inferredSubstitutions = <TypeParameterDef, TypeRef>{};
     if (declaredSignature != null && site.shape.typeArguments == null) {
@@ -271,8 +267,8 @@ final class ArgumentBinder {
     ];
 
     final dispatch = target is ClosureCall ? target.known : null;
-    final argTypes = [for (final a in positionalArgs) a.value.type];
-    final namedArgTypes = {for (final e in namedArgs) e.$1: e.$2.value.type};
+    final argTypes = [for (final a in positionalArgs) a.type];
+    final namedArgTypes = {for (final e in namedArgs) e.$1: e.$2.type};
     final inferredReturn =
         declaredSignature != null &&
             _usesParameter(declaredSignature.returnType, ownParameters)
@@ -299,12 +295,9 @@ final class ArgumentBinder {
       callee: materializedCallee,
       runtimeTypeArguments: runtimeTypeArguments,
       returnType: resultType,
-      trusted: _closureArgumentsProven(
-        ctx,
-        callee?.type,
-        [for (final a in positionalArgs) a.value],
-        {for (final e in namedArgs) e.$1: e.$2.value},
-      ),
+      trusted: _closureArgumentsProven(ctx, callee?.type, positionalArgs, {
+        for (final e in namedArgs) e.$1: e.$2,
+      }),
     );
   }
 
@@ -640,10 +633,8 @@ final class ArgumentBinder {
 
     ssa.addAll(push.map((argument) => argument.ssa));
     return BoundCall(
-      positional: [for (final a in args) BoundArgument(a)],
-      named: [
-        for (final e in namedArgs.entries) (e.key, BoundArgument(e.value)),
-      ],
+      positional: args,
+      named: [for (final e in namedArgs.entries) (e.key, e.value)],
       vectorOverride: ssa,
       returnType: CoreTypes.dynamic.ref(ctx),
     );
@@ -730,10 +721,8 @@ final class ArgumentBinder {
     }
 
     return BoundCall(
-      positional: [for (final a in args) BoundArgument(a)],
-      named: [
-        for (final e in namedArgs.entries) (e.key, BoundArgument(e.value)),
-      ],
+      positional: args,
+      named: [for (final e in namedArgs.entries) (e.key, e.value)],
       vectorOverride: [for (final argument in push) argument.ssa],
       returnType: CoreTypes.dynamic.ref(ctx),
     );

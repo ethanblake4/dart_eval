@@ -218,8 +218,8 @@ final class ClosureCall extends CallTarget {
       InvokeClosure(
         target,
         closure.ssa,
-        [for (final arg in call.positional) arg.value.ssa],
-        {for (final entry in call.named) entry.$1: entry.$2.value.ssa},
+        [for (final arg in call.positional) arg.ssa],
+        {for (final entry in call.named) entry.$1: entry.$2.ssa},
         typeArguments: call.runtimeTypeArguments,
         trusted: call.trusted,
       ),
@@ -555,10 +555,8 @@ final class MemberValueCall extends CallTarget {
       ctx,
       callee: callee,
       dispatch: null,
-      argTypes: [for (final arg in call.positional) arg.value.type],
-      namedArgTypes: {
-        for (final entry in call.named) entry.$1: entry.$2.value.type,
-      },
+      argTypes: [for (final arg in call.positional) arg.type],
+      namedArgTypes: {for (final entry in call.named) entry.$1: entry.$2.type},
     );
     return refined == null ? result : result.copyWith(type: refined);
   }
@@ -621,9 +619,9 @@ final class NoSuchMethodCall extends CallTarget {
         ctx,
         callee: getterValue,
         dispatch: null,
-        argTypes: [for (final arg in call.positional) arg.value.type],
+        argTypes: [for (final arg in call.positional) arg.type],
         namedArgTypes: {
-          for (final entry in call.named) entry.$1: entry.$2.value.type,
+          for (final entry in call.named) entry.$1: entry.$2.type,
         },
       );
       return refined == null ? result : result.copyWith(type: refined);
@@ -641,7 +639,7 @@ final class NoSuchMethodCall extends CallTarget {
       rep: ValueRep.nativeList,
     );
     for (final arg in call.positional) {
-      ctx.pushOp(ListAppend(list.ssa, arg.value.boxIfNeeded(ctx).ssa));
+      ctx.pushOp(ListAppend(list.ssa, arg.boxIfNeeded(ctx).ssa));
     }
     final invArgs = [_symbolFor(ctx, name).ssa, list.boxIfNeeded(ctx).ssa];
     if (call.named.isNotEmpty) {
@@ -661,7 +659,7 @@ final class NoSuchMethodCall extends CallTarget {
           MapSet(
             map.ssa,
             _symbolFor(ctx, entry.$1).ssa,
-            entry.$2.value.boxIfNeeded(ctx).ssa,
+            entry.$2.boxIfNeeded(ctx).ssa,
           ),
         );
       }

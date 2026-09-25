@@ -983,7 +983,7 @@ final class FoldedMixinSetterCall extends SetTarget {
     ).emit(
       ctx,
       BoundCall(
-        positional: [BoundArgument(converted)],
+        positional: [converted],
         named: const [],
         returnType: CoreTypes.voidType.ref(ctx),
       ),

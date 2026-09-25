@@ -238,8 +238,8 @@ final class CallResolver {
         return invokeOperator(
           callableVar,
           'call',
-          [for (final a in bound.positional) a.value],
-          namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
+          bound.positional,
+          namedArgs: {for (final e in bound.named) e.$1: e.$2},
         ).result;
       }
     }
@@ -630,7 +630,7 @@ final class CallResolver {
           : const <String>{};
       _inferBridgeTypeParameters(
         fd,
-        argsPair.positionalValues,
+        argsPair.positional,
         bridgeTypeParameters,
         inferableNames: classGenericNames,
       );
@@ -650,7 +650,7 @@ final class CallResolver {
         ctx,
         signature: resultSignature,
         targetType: isStatic ? staticType : L.type,
-        argTypes: argsPair.positionalValues.map((a) => a.type).toList(),
+        argTypes: argsPair.positional.map((a) => a.type).toList(),
         namedArgTypes: argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
       );
     } else if (L.type.isSpec(CoreTypes.dynamic)) {
@@ -790,7 +790,7 @@ final class CallResolver {
     required CallTarget? resolvedTarget,
   }) {
     final resolvedMember = resolved?.member;
-    final argTypes = argsPair.positionalValues.map((e) => e.type).toList();
+    final argTypes = argsPair.positional.map((e) => e.type).toList();
     final namedArgTypes = argsPair.namedValues.map(
       (key, value) => MapEntry(key, value.type),
     );
@@ -834,13 +834,8 @@ final class CallResolver {
 
     final boundCall = BoundCall(
       receiver: L,
-      positional: [
-        for (final arg in argsPair.positionalValues) BoundArgument(arg),
-      ],
-      named: [
-        for (final entry in argsPair.namedValues.entries)
-          (entry.key, BoundArgument(entry.value)),
-      ],
+      positional: argsPair.positional,
+      named: argsPair.named,
       runtimeTypeArguments: runtimeTypeArguments(ctx, e).isNotEmpty
           ? runtimeTypeArguments(ctx, e)
           : argsPair.runtimeTypeArguments,
@@ -863,7 +858,7 @@ final class CallResolver {
         final invokeResult = invokeOperator(
           L,
           e.methodName.name,
-          argsPair.positionalValues,
+          argsPair.positional,
         ).result;
         final preciseType = mReturnType;
         if (preciseType != null) {
@@ -1001,10 +996,10 @@ final class CallResolver {
     }
     var boundCall = BoundCall(
       receiver: recv,
-      positional: [for (final arg in prepared) BoundArgument(arg)],
+      positional: prepared,
       named: [
         for (final entry in (namedArgs ?? const <String, Variable>{}).entries)
-          (entry.key, BoundArgument(entry.value.boxIfNeeded(ctx))),
+          (entry.key, entry.value.boxIfNeeded(ctx)),
       ],
       returnType: returnType,
     );
@@ -1063,7 +1058,7 @@ final class CallResolver {
     return (
       target: recv,
       result: result,
-      args: boundCall.positionalValues,
+      args: boundCall.positional,
       namedArgs: boundCall.namedValues,
     );
   }
@@ -1098,8 +1093,8 @@ final class CallResolver {
     return (
       target: null,
       result: result,
-      args: [for (final a in bound.positional) a.value],
-      namedArgs: {for (final e in bound.named) e.$1: e.$2.value},
+      args: bound.positional,
+      namedArgs: {for (final e in bound.named) e.$1: e.$2},
     );
   }
 
@@ -1146,7 +1141,7 @@ final class CallResolver {
           vectorOverride: bound.vector(),
         ),
       ),
-      args: bound.positionalValues,
+      args: bound.positional,
       namedArgs: bound.namedValues,
     );
   }
@@ -1449,7 +1444,7 @@ final class CallResolver {
         ctx,
       ).bindBridgeTarget(callTarget, e.argumentList);
 
-      args = argsPair.positionalValues;
+      args = argsPair.positional;
       namedArgs = argsPair.namedValues;
       callArgs = argsPair.vector();
     } else {
@@ -1463,7 +1458,7 @@ final class CallResolver {
       );
 
       mReturnType = result.declaredReturn;
-      args = result.positionalValues;
+      args = result.positional;
       namedArgs = result.namedValues;
       callArgs = result.vector();
       inferredTypeArgs = result.runtimeTypeArguments;

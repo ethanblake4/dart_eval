@@ -206,7 +206,7 @@ Variable compileInstanceOf(
       final positionalParams = fnDescriptor.params;
       for (
         var i = 0;
-        i < arguments.positionalValues.length && i < positionalParams.length;
+        i < arguments.positional.length && i < positionalParams.length;
         i++
       ) {
         final pattern = TypeRef.fromBridgeAnnotation(
@@ -216,10 +216,10 @@ Variable compileInstanceOf(
         );
         final concrete =
             ctx.typeSystem.asInstanceOf(
-              arguments.positionalValues[i].type,
+              arguments.positional[i].type,
               nominalDeclOf(pattern),
             ) ??
-            arguments.positionalValues[i].type;
+            arguments.positional[i].type;
         ctx.typeSystem.unify(pattern, concrete, bindings);
       }
       instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
@@ -285,7 +285,6 @@ Variable compileInstanceOf(
       source: source,
       seedGenerics: seedGenerics,
     );
-
   }
 
   return target.emit(
