@@ -1,14 +1,10 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
-import '../invocation/deferred.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-
-/// Whether a constructor member is generative or a factory.
-enum ConstructorKind { generative, factory }
 
 /// What declared a member: a nominal type or an extension.
 sealed class MemberOwner {
@@ -85,9 +81,8 @@ final class ExtensionDecl extends MemberOwner {
 }
 
 /// A callable or accessible member of a type — instance and static methods,
-/// getters, setters, fields, and constructors. Bodies are
-/// [DeferredOrOffset]s resolved when the backend links calls; signatures
-/// are in the owner's type-parameter space.
+/// getters, setters, fields, and constructors. Signatures are in the owner's
+/// type-parameter space.
 sealed class Member {
   const Member();
 
@@ -104,7 +99,6 @@ sealed class Member {
   bool get isAbstract;
   bool get isField;
   CallSignature get signature;
-  DeferredOrOffset? get body;
 
   /// The decl that declared this member — for mixin-folded members the
   /// applying class's decl is [ownerDecl] but the member's annotations,
@@ -308,71 +302,13 @@ final class SourceMember extends Member {
       typeParameters: _ownTypeParams,
     );
   }
-
-  @override
-  DeferredOrOffset? get body {
-    final ctx = _ctx;
-    switch (node) {
-      case ClassDeclaration _:
-        return null;
-      case ConstructorDeclaration c:
-        final ctorName = c.name?.lexeme ?? '';
-        return DeferredOrOffset.lookupStatic(
-          ctx,
-          library,
-          _ownerName,
-          ctorName,
-        );
-      case FieldDeclaration _:
-        final key = ctx.memberNameKey(name.name);
-        final table = ctx.instanceDeclarationPositions[library]?[_ownerName];
-        final pos = table == null ? null : table[name.kind]?[key];
-        return pos != null
-            ? DeferredOrOffset(offset: pos, file: library)
-            : DeferredOrOffset(
-                file: library,
-                name: '$_ownerName.$key',
-                className: _ownerName,
-                methodType: name.kind,
-              );
-      case MethodDeclaration m:
-        final memberName = ctx.memberNameOf(m.name.lexeme, memberKind(m));
-        if (m.isStatic) {
-          return DeferredOrOffset.lookupStatic(
-            ctx,
-            library,
-            _ownerName,
-            memberName.key,
-          );
-        }
-        final table = ctx.instanceDeclarationPositions[library]?[_ownerName];
-        final pos = table == null
-            ? null
-            : table[memberName.kind]?[memberName.nameKey];
-        return pos != null
-            ? DeferredOrOffset(offset: pos, file: library)
-            : DeferredOrOffset(
-                file: library,
-                name: '$_ownerName.${memberName.key}',
-                className: _ownerName,
-                methodType: memberName.kind,
-              );
-      default:
-        return null;
-    }
-  }
 }
 
 /// A member declared by a bridge definition — the runtime object supplies
 /// the body; [signature] comes from the bridge function descriptor or the
 /// field's bridge type annotation.
 final class BridgeMember extends Member {
-  BridgeMember({
-    required this.owner,
-    required this.name,
-    required this.def,
-    this.constructorKind,
-  });
+  BridgeMember({required this.owner, required this.name, required this.def});
 
   @override
   final MemberOwner owner;
@@ -381,8 +317,6 @@ final class BridgeMember extends Member {
 
   /// A [BridgeMethodDef], [BridgeConstructorDef], or [BridgeFieldDef].
   final Object def;
-
-  final ConstructorKind? constructorKind;
 
   TypeDecl get _decl => (owner as TypeDeclMemberOwner).decl;
 
@@ -445,9 +379,6 @@ final class BridgeMember extends Member {
         );
     }
   }
-
-  @override
-  DeferredOrOffset? get body => null;
 }
 
 /// Member lookup on a declaration — instance members, static members, and
@@ -682,57 +613,5 @@ extension TypeDeclMembers on TypeDecl {
       case MemberKind.constructor:
         return null;
     }
-  }
-
-  /// A constructor by name (empty for the default) and kind. Source
-  /// classes without a declared default constructor get a synthesized
-  /// generative one.
-  Member? constructor(String name, ConstructorKind kind) {
-    final self = this;
-    if (self is SourceTypeDecl) {
-      final members = switch (self.node) {
-        ClassDeclaration c => c.body.members,
-        MixinDeclaration m => m.body.members,
-        EnumDeclaration e => e.body.members,
-        _ => const <ClassMember>[],
-      };
-      var hasCtor = false;
-      for (final member in members) {
-        if (member is! ConstructorDeclaration) continue;
-        hasCtor = true;
-        final isFactory = member.factoryKeyword != null;
-        if (isFactory != (kind == ConstructorKind.factory)) continue;
-        if ((member.name?.lexeme ?? '') == name) {
-          return SourceMember(
-            owner: memberOwner,
-            name: MemberName('${this.name}.$name', MemberKind.constructor),
-            node: member,
-            library: library,
-          );
-        }
-      }
-      if (name == '' &&
-          kind == ConstructorKind.generative &&
-          self.node is ClassDeclaration &&
-          !hasCtor) {
-        return SourceMember(
-          owner: memberOwner,
-          name: MemberName('${this.name}.', MemberKind.constructor),
-          node: self.node,
-          library: library,
-        );
-      }
-      return null;
-    }
-    final def = (self as BridgeTypeDecl).classDef?.constructors[name];
-    if (def == null) return null;
-    return BridgeMember(
-      owner: memberOwner,
-      name: MemberName('${this.name}.$name', MemberKind.constructor),
-      def: def,
-      constructorKind: def.isFactory
-          ? ConstructorKind.factory
-          : ConstructorKind.generative,
-    );
   }
 }

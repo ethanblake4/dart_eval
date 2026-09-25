@@ -18,8 +18,9 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 /// - [interfaceMember]: the member in the receiver type's public interface
 ///   (what a statically typed call resolves to — walks mixins, the
 ///   superclass, and implemented interfaces in interface order).
-/// - [implementation]: the concrete member a call dispatches to (the first
-///   non-abstract declaration along the superclass chain).
+/// - [implementationOwner]: the type supplying the concrete member a call
+///   dispatches to (the first non-abstract declaration along the superclass
+///   chain).
 ///
 /// Plus the static side ([staticMember]), member-override checks
 /// ([overriddenBelow]), and dispatch facts ([needsOwnerLink]).
@@ -530,14 +531,7 @@ final class MemberLookup {
     return null;
   }
 
-  /// The class at-or-above [type] (in superclass order) that supplies the
-  /// concrete implementation of [name] — null when the member is only
-  /// reachable through a bridged ancestor or isn't on the chain.
-  Member? implementation(TypeRef type, MemberName name) {
-    return _implementationAt(type, name)?.$2;
-  }
-
-  /// The declaring [TypeDecl] whose [implementation] supplies [name] —
+  /// The declaring [TypeDecl] whose concrete implementation supplies [name] —
   /// what the legacy `memberOwner` returned as a [TypeRef].
   TypeRef? implementationOwner(TypeRef type, MemberName name) {
     return _implementationAt(type, name)?.$1;
@@ -587,12 +581,8 @@ final class MemberLookup {
         : null,
   );
 
-  /// Like [implementation], but for a receiver statically typed [type]
-  /// that may hold a subclass instance: a fixed target exists only while
-  /// no descendant of [type] redeclares [name].
-  Member? directImplementation(TypeRef type, MemberName name) =>
-      _directImplementationAt(type, name)?.$2;
-
+  /// The declaring [TypeDecl] whose direct implementation supplies [name],
+  /// provided no descendant of [type] redeclares it.
   TypeRef? directImplementationOwner(TypeRef type, MemberName name) =>
       _directImplementationAt(type, name)?.$1;
 
