@@ -184,8 +184,7 @@ final class TypedInstance implements $Instance {
     if (getter != null) {
       final callable = getter.invoke(0, null, null, runtime: runtime);
       if (callable is TypedClosure) {
-        if (!callable.descriptor.accepts(positionalCount, namedNames) ||
-            !callable.acceptsTypeArguments(typeArguments)) {
+        if (!callable.acceptsTypeArguments(typeArguments)) {
           return _noSuchMethod(
             _typedMethodInvocation(
               name,
