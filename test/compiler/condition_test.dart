@@ -129,6 +129,44 @@ void main() {
     );
   });
 
+  test('a conditional keeps the sole continuing arm and its promotion', () {
+    final program = compile('''
+      Never reject() => throw 8;
+      int first(Object x) {
+        final int chosen = x is String ? 3 : throw 7;
+        return chosen + x.length;
+      }
+      int second(Object x) {
+        final int chosen = x is! String ? reject() : 5;
+        return chosen + x.length;
+      }
+      int main() {
+        var total = first('ab') + second('abc');
+        try { first(42); } catch (e) { total += e as int; }
+        try { second(42); } catch (e) { total += e as int; }
+        return total;
+      }
+    ''');
+    expectResult(program, 28);
+  });
+
+  test('a conditional with two Never arms remains terminating', () {
+    final program = compile('''
+      Never failA() => throw 4;
+      Never failB() => throw 7;
+      int main(bool choose) {
+        var total = 0;
+        try { choose ? throw 3 : failA(); }
+        catch (e) { total += e as int; }
+        try { choose ? failB() : throw 5; }
+        catch (e) { total += e as int; }
+        return total;
+      }
+    ''');
+    expectResult(program, 10, {'choose': true});
+    expectResult(program, 9, {'choose': false});
+  });
+
   test('nested scalar conditional joins do not box their results', () {
     final program = compile('''
       int main(int a, int b) {

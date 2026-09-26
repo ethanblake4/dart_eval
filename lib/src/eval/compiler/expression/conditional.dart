@@ -1,7 +1,9 @@
 import 'package:control_flow_graph/control_flow_graph.dart'
     show Assign, Operation;
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -26,6 +28,9 @@ Variable compileConditionalExpression(
 
   StatementInfo compileArm(Expression expression) {
     final value = compileExpression(expression, ctx, boundType);
+    if (value.type.isSpec(CoreTypes.never) && !value.type.nullable) {
+      return markNeverTerminates(ctx);
+    }
     types.add(value.type);
     final code = ctx.blockCode;
     final start = code.length;
@@ -42,6 +47,8 @@ Variable compileConditionalExpression(
     elseBranch: (ctx, rt) => compileArm(e.elseExpression),
     source: e,
   );
+
+  if (arms.isEmpty) return Variable.never(ctx);
 
   final joined = TypeRef.commonBaseType(ctx, types);
   // The nominal common ancestor can be non-nullable even when an arm is

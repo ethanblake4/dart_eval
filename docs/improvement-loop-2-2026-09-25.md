@@ -140,3 +140,14 @@ next workloads therefore focus on polymorphic template rendering and an event
 bus using closures, captures and bound methods, rather than scalar loops.
 
 Validation: full default suite passes 1,601 tests with 62 skipped; changed-file analysis is clean.
+
+## Conditional review repair
+
+The review found a second termination issue in conditional expressions. A
+Never-typed arm still contributed to the result join and hid promotions from
+the sole continuing arm. Such arms now terminate before result conversion;
+only continuing arms determine the result type and storage representation.
+Two terminating arms produce an unreachable Never result. Focused regressions
+cover both arm orders, direct throws, Never-returning calls and the inferred
+integer result in fresh and serialized execution. All 16 condition tests pass;
+changed-file analysis is clean.
