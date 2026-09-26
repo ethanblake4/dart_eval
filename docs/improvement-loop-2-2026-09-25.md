@@ -51,8 +51,8 @@ choices in the inner loop. The compiler now waits for both arm types, then
 replaces the result conversions at their original positions with scalar copies
 or unboxing. This preserves branch evaluation order and local representations.
 Mixed and nullable results keep the existing object representation. A wider SDK
-survey caught TypeRef's nullability-insensitive equality dropping a nullable
-arm; the join now preserves nullability independently of type-set deduplication.
+survey caught nominal common-ancestor selection dropping a nullable arm;
+the conditional join now preserves nullability from both arms explicitly.
 
 Pinned affinity mask `4`, sequential processes without concurrent test runs,
 100,000 appointments and 15 samples:
@@ -76,3 +76,26 @@ integer conditionals contain no boxing or object-to-scalar moves. Other cases
 cover mixed types, local mutation, throwing arms and nullable scalar arms in
 both orders. Changed-file analysis is clean. No runtime, opcode, standard-library
 or serialization changes.
+
+## Step 3a: promotions after throwing guards
+
+A second SDK survey covered 53 runnable tests in nnbd/never, flow_analysis and
+type_promotion: 37 passed and 16 failed before the nullable-conditional repair
+and guard fixes. Two tests failed to compile because `x is String || throw ...`
+did not promote `x` after the expression.
+
+Short-circuit compilation now marks a Never-typed RHS as terminating before
+emitting result conversions. At the join, the left operand's surviving condition
+supplies its promotions. Conditional expressions no longer restore the then
+branch's state unconditionally. Branch joins retain a promoted type only when
+both continuing paths agree, so a guard on just one arm cannot affect the other.
+
+`nnbd/type_promotion/logical_or_throw_test.dart` and `conditional_both_test.dart`
+pass and their expected-failure entries are removed. The type_promotion survey
+now passes seven of ten runnable tests. Regression coverage runs both conditional
+arms, direct throws, Never-returning calls, AND null guards and rejects a
+promotion present on only one arm. Fresh and serialized runtimes agree. All
+12 condition tests and changed-file analysis pass. No runtime changes or
+additional checks on ordinary boolean expressions were introduced.
+
+Full default suite: 1,599 passed, 62 skipped. Generated typed-machine check passed.

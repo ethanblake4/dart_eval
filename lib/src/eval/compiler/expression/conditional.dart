@@ -40,13 +40,12 @@ Variable compileConditionalExpression(
     conditionExpression: e.condition,
     thenBranch: (ctx, rt) => compileArm(e.thenExpression),
     elseBranch: (ctx, rt) => compileArm(e.elseExpression),
-    resolveStateToThen: true,
     source: e,
   );
 
   final joined = TypeRef.commonBaseType(ctx, types);
-  // TypeRef equality ignores nullability, so the set can discard a nullable
-  // arm when the other arm has the same nominal type.
+  // The nominal common ancestor can be non-nullable even when an arm is
+  // nullable. Its null path must survive the join.
   final type = joined.withNullable(
     joined.nullable || arms.any((arm) => arm.value.type.nullable),
   );

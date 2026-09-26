@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -148,6 +149,10 @@ Variable _compileShortCircuit(
           ? boundType ?? L.type.withNullable(false)
           : CoreTypes.bool.ref(ctx);
       var R = compileExpression(right, ctx, rightBound);
+      rightType = R.type;
+      if (rightType.isSpec(CoreTypes.never) && !rightType.nullable) {
+        return markNeverTerminates(ctx);
+      }
       if (operator != '??') {
         R = convertForAssignment(
           ctx,
@@ -167,6 +172,14 @@ Variable _compileShortCircuit(
       return StatementInfo();
     },
   );
+
+  if (rightType.isSpec(CoreTypes.never) &&
+      !rightType.nullable &&
+      operator != '??') {
+    // The RHS cannot reach the join. Continuing therefore proves the LHS
+    // short-circuited, including any type test or null check it contains.
+    applyConditionPromotions(ctx, left, operator == '||');
+  }
 
   // For `??` the result is the join of the non-null LHS type and the RHS —
   // a `Null`-typed LHS contributes nothing (`Null ?? C` is `C`, not `C?`).

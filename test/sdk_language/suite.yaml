@@ -543,8 +543,6 @@ expect_fail:
   - path: 'nnbd/type_equality/futureOr_normalization_test.dart'
   - path: 'nnbd/type_equality/generic_function_type_equality_test.dart'
   - path: 'nnbd/type_promotion/assignment_test.dart'
-  - path: 'nnbd/type_promotion/conditional_both_test.dart'
-  - path: 'nnbd/type_promotion/logical_or_throw_test.dart'
   - path: 'nnbd/type_promotion/try_catch_is_not_type_exit_body_catch_test.dart'
   - path: 'no_such_method/mock_test.dart'
   - path: 'no_such_method/no_such_method2_test.dart'

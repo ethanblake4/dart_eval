@@ -42,7 +42,6 @@ StatementInfo macroBranch(
   Expression? conditionExpression,
   required MacroStatementClosure thenBranch,
   MacroStatementClosure? elseBranch,
-  bool resolveStateToThen = false,
   AstNode? source,
   bool testNullish = false,
 }) {
@@ -134,16 +133,26 @@ StatementInfo macroBranch(
       !elseResult.willAlwaysThrow &&
       !elseResult.willAlwaysBreak;
   ctx.restoreState(
-    resolveStateToThen
-        ? thenState
-        : !thenContinues && elseContinues
+    !thenContinues && elseContinues
         ? elseState
         : thenContinues && !elseContinues
         ? thenState
         : initialState,
   );
-  if (thenContinues && elseContinues && !resolveStateToThen) {
+  if (thenContinues && elseContinues) {
     ctx.mergeBranchState([thenState, elseState]);
+    for (var i = 0; i < ctx.locals.length; i++) {
+      for (final entry in ctx.locals[i].entries) {
+        final thenType = thenState.locals[i][entry.key]?.current.type;
+        final elseType = elseState.locals[i][entry.key]?.current.type;
+        final current = entry.value.current;
+        if (thenType != null &&
+            thenType == elseType &&
+            isPromotionSubtype(ctx, thenType, current.type)) {
+          entry.value.rebind(current.withType(thenType));
+        }
+      }
+    }
   }
   ctx.endScope();
   return thenResult | elseResult;

@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 Program compile(String source) => Compiler().compile({
@@ -29,6 +30,40 @@ Iterable<TypedInstruction> instructions(TypedProgram program) =>
     program.instructions.map((e) => e.$2);
 
 void main() {
+  test('throwing guards retain only promotions on continuing paths', () {
+    final program = compile('''
+      Never reject() => throw 9;
+      int direct(Object x) {
+        x is String || reject();
+        return x.length;
+      }
+      int both(bool choose, Object x) {
+        choose ? (x is String || (throw 1)) : (x is String || (throw 2));
+        return x.length;
+      }
+      int conjunction(String? text) {
+        text == null && (throw 3);
+        return text.length;
+      }
+      int main(bool choose) {
+        var result = both(choose, 'abc') + conjunction('four') + direct('ab');
+        try { both(choose, 42); } catch (e) { result += e as int; }
+        return result;
+      }
+    ''');
+    expectResult(program, 10, {'choose': true});
+    expectResult(program, 11, {'choose': false});
+    expect(
+      () => compile('''
+        int main(bool choose, Object x) {
+          choose ? (x is String || (throw 1)) : true;
+          return x.length;
+        }
+      '''),
+      throwsA(isA<CompileError>()),
+    );
+  });
+
   test('nested scalar conditional joins do not box their results', () {
     final program = compile('''
       int main(int a, int b) {
