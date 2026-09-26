@@ -25,6 +25,22 @@ void main() {
       });
     }
 
+    check('initializing formal names capture fields in constructor bodies', r'''
+      class Counter {
+        int value;
+        late Function next;
+        final Function initial;
+        Counter(this.value) : initial = (() => value) {
+          next = () => ++value;
+        }
+      }
+      int main() {
+        final counter = Counter(3);
+        counter.value = 5;
+        return counter.next() * 10 + counter.initial();
+      }
+    ''', 63);
+
     check('collection loops renew captures before their updates', r'''
       int main() {
         final list = [for (var i = 0; i < 3; i++) () => i];

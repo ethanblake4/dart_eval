@@ -88,6 +88,15 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       for (final initializer in initializers) {
         initializer.accept(this);
       }
+      // Initializing formals bind names only in the initializer list. In
+      // the body those names refer to fields and closures must capture this.
+      if (node is ConstructorDeclaration) {
+        for (final parameter in node.parameters.parameters) {
+          if (parameter is FieldFormalParameter) {
+            _scopes.last.remove(parameter.name.lexeme);
+          }
+        }
+      }
       body.accept(this);
     });
     _functions.removeLast();
