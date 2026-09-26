@@ -895,7 +895,7 @@ abstract final class TypedMachine {
            continue dispatch;
         case TypedOp.rLoadPropertyR:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-           r = (r as TypedInstance).values[index];
+           r = TypedInstance.boxField((r as TypedInstance).values[index]);
            continue dispatch;
         case TypedOp.setPropertyRS:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -907,7 +907,7 @@ abstract final class TypedMachine {
            continue dispatch;
         case TypedOp.fLoadPropertyR:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-           f = TypedInterop.toDouble((r as TypedInstance).values[index]);
+           f = TypedInstance.doubleField((r as TypedInstance).values[index]);
            continue dispatch;
         case TypedOp.eLoadPropertyR:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -935,7 +935,7 @@ abstract final class TypedMachine {
            continue dispatch;
         case TypedOp.setPropertyRF:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-           (r as TypedInstance).values[index] = $double(f);
+           (r as TypedInstance).values[index] = f;
            continue dispatch;
         case TypedOp.setPropertyRE:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1274,7 +1274,7 @@ abstract final class TypedMachine {
        break;
     case 301:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       f = TypedInterop.toDouble((s as TypedInstance).values[index]);
+       f = TypedInstance.doubleField((s as TypedInstance).values[index]);
        break;
     case 302:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1282,7 +1282,7 @@ abstract final class TypedMachine {
        break;
     case 303:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       s = (s as TypedInstance).values[index];
+       s = TypedInstance.boxField((s as TypedInstance).values[index]);
        break;
     case 304:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1290,7 +1290,7 @@ abstract final class TypedMachine {
        break;
     case 305:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       s = (r as TypedInstance).values[index];
+       s = TypedInstance.boxField((r as TypedInstance).values[index]);
        break;
     case 306:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1314,7 +1314,7 @@ abstract final class TypedMachine {
        break;
     case 311:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (s as TypedInstance).values[index] = $double(f);
+       (s as TypedInstance).values[index] = f;
        break;
     case 312:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1460,7 +1460,7 @@ abstract final class TypedMachine {
        break;
     case 347:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       f = TypedInterop.toDouble((c as TypedInstance).values[index]);
+       f = TypedInstance.doubleField((c as TypedInstance).values[index]);
        break;
     case 348:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1468,7 +1468,7 @@ abstract final class TypedMachine {
        break;
     case 349:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       c = (c as TypedInstance).values[index];
+       c = TypedInstance.boxField((c as TypedInstance).values[index]);
        break;
     case 350:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1476,7 +1476,7 @@ abstract final class TypedMachine {
        break;
     case 351:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       c = (r as TypedInstance).values[index];
+       c = TypedInstance.boxField((r as TypedInstance).values[index]);
        break;
     case 352:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1500,7 +1500,7 @@ abstract final class TypedMachine {
        break;
     case 357:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (c as TypedInstance).values[index] = $double(f);
+       (c as TypedInstance).values[index] = f;
        break;
     case 358:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;

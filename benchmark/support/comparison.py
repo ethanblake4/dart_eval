@@ -11,10 +11,11 @@ def run_comparison(
     unit: str,
     iterations: int,
     warmup_iterations: int,
+    default_samples: int = 7,
 ) -> None:
     """Match comparison.dart's warmups, timing boundaries, and checksum."""
     count = int(sys.argv[1]) if len(sys.argv) > 1 else iterations
-    samples = int(sys.argv[2]) if len(sys.argv) > 2 else 7
+    samples = int(sys.argv[2]) if len(sys.argv) > 2 else default_samples
     if count < 1 or samples < 7:
         raise ValueError('Positive iterations and at least seven samples required')
 

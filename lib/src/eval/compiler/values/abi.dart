@@ -101,7 +101,7 @@ abstract final class Abi {
   static ValueRep storageSlot(TypeRef type) =>
       repForType(type, representationForType(type));
 
-  /// Field storage is always boxed.
+  /// The field accessor ABI is boxed. Typed stores may defer double boxing.
   static const fieldStorage = ValueRep.boxed;
 
   /// Collection elements are always boxed.

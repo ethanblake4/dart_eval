@@ -10,9 +10,10 @@ void runComparison(
   required String unit,
   required int iterations,
   required int warmupIterations,
+  int defaultSamples = 7,
 }) {
   final count = args.isEmpty ? iterations : int.parse(args[0]);
-  final samples = args.length < 2 ? 7 : int.parse(args[1]);
+  final samples = args.length < 2 ? defaultSamples : int.parse(args[1]);
   if (count < 1 || samples < 7) {
     throw ArgumentError(
       'Positive iterations and at least seven samples required',
@@ -24,15 +25,15 @@ void runComparison(
     name: {'main.dart': source},
   });
   final runtime = Runtime(program.write().buffer);
-  int run(int n) =>
-      runtime.executeLib(library, 'main', arguments: {parameter: n}) as int;
+  num run(int n) =>
+      runtime.executeLib(library, 'main', arguments: {parameter: n}) as num;
 
-  var checksum = 0;
+  num checksum = 0;
   for (var warm = 0; warm < 2; warm++) {
     checksum += run(warmupIterations);
   }
   final times = <double>[];
-  int? expected;
+  num? expected;
   for (var sample = 0; sample < samples; sample++) {
     final watch = Stopwatch()..start();
     final result = run(count);

@@ -10,7 +10,7 @@ abstract final class TypedLateField {
     if (identical(value, uninitialized)) {
       throw StateError('Late field has not been initialized');
     }
-    return value;
+    return TypedInstance.boxField(value);
   }
 
   @pragma('vm:never-inline')

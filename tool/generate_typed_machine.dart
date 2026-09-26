@@ -995,7 +995,7 @@ String familyOf(String name) {
   );
   add(
     'rLoadPropertyR',
-    'r = (r as TypedInstance).values[index];',
+    'r = TypedInstance.boxField((r as TypedInstance).values[index]);',
     inputs: [6],
     output: 6,
     immediate: 'field',
@@ -1018,7 +1018,7 @@ String familyOf(String name) {
   );
   add(
     'fLoadPropertyR',
-    'f = TypedInterop.toDouble((r as TypedInstance).values[index]);',
+    'f = TypedInstance.doubleField((r as TypedInstance).values[index]);',
     inputs: [6],
     output: 2,
     immediate: 'field',
@@ -1072,7 +1072,7 @@ String familyOf(String name) {
   );
   add(
     'setPropertyRF',
-    '(r as TypedInstance).values[index] = \$double(f);',
+    '(r as TypedInstance).values[index] = f;',
     inputs: [6, 2],
     immediate: 'field',
     mayThrow: true,
@@ -1236,7 +1236,7 @@ String familyOf(String name) {
     );
     add(
       'fLoadProperty$R',
-      'f = TypedInterop.toDouble(($rn as TypedInstance).values[index]);',
+      'f = TypedInstance.doubleField(($rn as TypedInstance).values[index]);',
       inputs: [recv],
       output: 2,
       immediate: 'field',
@@ -1254,7 +1254,7 @@ String familyOf(String name) {
     );
     add(
       '${rn}LoadProperty$R',
-      '$rn = ($rn as TypedInstance).values[index];',
+      '$rn = TypedInstance.boxField(($rn as TypedInstance).values[index]);',
       inputs: [recv],
       output: recv,
       immediate: 'field',
@@ -1273,7 +1273,7 @@ String familyOf(String name) {
     // A field of `this` (r) loaded straight into another object register.
     add(
       '${rn}LoadPropertyR',
-      '$rn = (r as TypedInstance).values[index];',
+      '$rn = TypedInstance.boxField((r as TypedInstance).values[index]);',
       inputs: [6],
       output: recv,
       immediate: 'field',
@@ -1294,7 +1294,7 @@ String familyOf(String name) {
       (1, 'b', r'$int(b)'),
       (7, 's', 's'),
       (8, 'c', 'c'),
-      (2, 'f', r'$double(f)'),
+      (2, 'f', 'f'),
       (4, 'e', r'$bool(e)'),
     ]) {
       add(

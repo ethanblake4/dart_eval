@@ -766,26 +766,20 @@ final class MemberLookup {
     for (var i = 0; i < links.length; i++) {
       final link = links[i];
       final index = ctx.instanceGetterIndices[link.file]?[link.name]?[name];
-      if (index != null &&
-          (kind == MemberKind.getter || _accessorPosition(link, memberName))) {
+      final hasAccessor =
+          (ctx.instanceDeclarationPositions[link.file]?[link.name]?[kind]
+                  as Map?)
+              ?.containsKey(linkName(memberName, link).nameKey) ==
+          true;
+      if (index != null && (kind == MemberKind.getter || hasAccessor)) {
         return (link, index, links.sublist(1, i + 1));
       }
-      if (_accessorPosition(link, memberName)) {
+      if (hasAccessor && concreteMemberOn(link, memberName) != null) {
         return (link, null, links.sublist(1, i + 1));
       }
     }
     return null;
   }
-
-  /// Whether [link] has a compiled [name] accessor — the
-  /// `instanceDeclarationPositions` hit plus `concreteMemberOn`'s
-  /// single-link probe.
-  bool _accessorPosition(TypeRef link, MemberName name) =>
-      (ctx.instanceDeclarationPositions[link.file]?[link.name]?[name.kind]
-                  as Map?)
-              ?.containsKey(linkName(name, link).nameKey) ==
-          true &&
-      concreteMemberOn(link, name) != null;
 }
 
 class _SuperSeeker extends RecursiveAstVisitor<void> {

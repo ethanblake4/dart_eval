@@ -82,9 +82,8 @@ final class SetPropertyStatic extends Operation {
   final SSA value;
   final bool isLateFinal;
 
-  /// The register bank [value] arrives in; `object` means it is stored
-  /// boxed, a scalar bank means the op wraps it into the declared field's
-  /// `$Value` subclass itself.
+  /// The register bank [value] arrives in. Scalar stores box the value,
+  /// except doubles, which can remain native until an object read.
   final MachineRepresentation rep;
 
   SetPropertyStatic(
@@ -137,8 +136,8 @@ final class LoadPropertyStatic extends Operation {
   final int index;
   final bool isLate;
 
-  /// The bank the read lands in; `object` yields the stored `$Value`, a
-  /// scalar bank unboxes the field directly into it.
+  /// The bank the read lands in; `object` yields a `$Value`, a scalar bank
+  /// reads the field directly into it.
   final MachineRepresentation rep;
 
   LoadPropertyStatic(

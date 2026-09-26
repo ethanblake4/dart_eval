@@ -38,6 +38,13 @@ Invocation _typedMethodInvocation(
 
 /// An evaluated object whose members belong to a typed program.
 final class TypedInstance implements $Instance {
+  /// Field writes may retain native doubles until an object read needs a box.
+  static Object? boxField(Object? value) =>
+      value is double ? $double(value) : value;
+
+  static double doubleField(Object? value) =>
+      value is double ? value : (value as $double).$value;
+
   @pragma('vm:never-inline')
   TypedInstance(
     this.program,
@@ -71,6 +78,8 @@ final class TypedInstance implements $Instance {
   final Runtime? runtime;
   final int classId;
   final $Instance? superclass;
+
+  /// Canonical boxed values, except doubles written from a scalar register.
   final List<Object?> values;
   TypedInstance? _dispatchRoot;
   final int? runtimeTypeId;
@@ -380,7 +389,6 @@ final class TypedInstance implements $Instance {
       callerLibrary: callerLibrary,
     );
     if (setter != null) {
-
       setter.invokeClosure(1, value, null, runtime: runtime);
       return;
     }
@@ -461,7 +469,8 @@ final class TypedMember extends EvalFunction {
       namedNames.isEmpty;
 
   bool acceptsTypeArguments(List<int> typeArguments) =>
-      boundClosure?.acceptsTypeArguments(typeArguments) ?? typeArguments.isEmpty;
+      boundClosure?.acceptsTypeArguments(typeArguments) ??
+      typeArguments.isEmpty;
 
   bool acceptsArgumentTypes(List<int> types) {
     final parameters = boundClosure?.descriptor.parameterTypeIds;
@@ -479,7 +488,13 @@ final class TypedMember extends EvalFunction {
     Runtime? runtime, [
     List<int> typeArguments = const [],
   ]) {
-    boundClosure?.checkExactArguments(count, first, rest, runtime, typeArguments);
+    boundClosure?.checkExactArguments(
+      count,
+      first,
+      rest,
+      runtime,
+      typeArguments,
+    );
   }
 
   TypedClosure? _bindClosure() {

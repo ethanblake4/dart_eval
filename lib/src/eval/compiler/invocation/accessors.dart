@@ -1108,6 +1108,14 @@ sealed class SetTarget {
             );
         final hops = needsLink ? linkHops : const <TypeRef>[];
         if (fieldIndex != null) {
+          // A widened receiver view must still check the actual setter's
+          // contract. Generic fields need its receiver type environment.
+          if (member is SourceMember &&
+                  (member.fieldType?.requiresTypeEnvironment ?? false) ||
+              declaredFieldType != null &&
+                  resolvedDecl?.fieldType != declaredFieldType) {
+            return DynamicSet(object, name, fieldType);
+          }
           final isLateFinal =
               fieldDecl is FieldDeclaration &&
               fieldDecl.fields.isLate &&
