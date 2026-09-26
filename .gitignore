@@ -109,5 +109,8 @@ fabric.properties
 # Executables
 *.exe
 
+# Python
+__pycache__/
+
 # macOS
 .DS_Store

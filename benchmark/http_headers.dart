@@ -1,4 +1,4 @@
-import 'package:dart_eval/dart_eval.dart';
+import 'support/comparison.dart';
 
 // Generate and scan request headers with mixed casing and changing values.
 // dart compile exe benchmark/http_headers.dart -o .dart_tool/http_headers.exe
@@ -80,46 +80,12 @@ int main(int requests) {
 }
 ''';
 
-void main(List<String> args) {
-  final requests = args.isEmpty ? 1000 : int.parse(args[0]);
-  final samples = args.length < 2 ? 7 : int.parse(args[1]);
-  if (requests < 1 || samples < 7) {
-    throw ArgumentError(
-      'Positive requests and at least seven samples required',
-    );
-  }
-  final compiler = Compiler();
-  compiler.entrypoints.add('package:http_headers/main.dart');
-  final program = compiler.compile({
-    'http_headers': {'main.dart': _source},
-  });
-  final runtime = Runtime(program.write().buffer);
-  int run(int n) =>
-      runtime.executeLib(
-            'package:http_headers/main.dart',
-            'main',
-            arguments: {'requests': n},
-          )
-          as int;
-
-  var checksum = 0;
-  for (var warm = 0; warm < 2; warm++) {
-    checksum += run(10);
-  }
-  final times = <double>[];
-  for (var sample = 0; sample < samples; sample++) {
-    final watch = Stopwatch()..start();
-    checksum += run(requests);
-    watch.stop();
-    times.add(watch.elapsedMicroseconds / 1000);
-  }
-  times.sort();
-  final median = times[times.length ~/ 2];
-  print(
-    'http_headers median_ms=${median.toStringAsFixed(3)} '
-    'min_ms=${times.first.toStringAsFixed(3)} '
-    'max_ms=${times.last.toStringAsFixed(3)} '
-    'ns/request=${(median * 1000000 / requests).toStringAsFixed(2)}',
-  );
-  print('checksum=$checksum');
-}
+void main(List<String> args) => runComparison(
+  args,
+  name: 'http_headers',
+  source: _source,
+  parameter: 'requests',
+  unit: 'request',
+  iterations: 1000,
+  warmupIterations: 10,
+);

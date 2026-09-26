@@ -1,12 +1,12 @@
 import 'package:control_flow_graph/control_flow_graph.dart' as cfg;
 import '../../ir/alu.dart' as alu;
 import '../../ir/collection.dart' as collection;
+import '../../ir/exception.dart' as exceptions;
 import '../../ir/memory.dart' as memory;
 import '../../ir/objects.dart' as objects;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/representation.dart';
 import '../../ir/string.dart';
-import '../../ir/exception.dart' as exceptions;
 
 /// Values proven to contain a native list before any list operation is lowered.
 /// Boxing and copies preserve that property; a phi does so only when all of

@@ -1,4 +1,4 @@
-import 'package:dart_eval/dart_eval.dart';
+import 'support/comparison.dart';
 
 // Rolling sixteen-sample telemetry windows for 64 devices.
 // dart compile exe benchmark/telemetry_window.dart -o .dart_tool/telemetry_window.exe
@@ -45,44 +45,12 @@ int main(int events) {
 }
 ''';
 
-void main(List<String> args) {
-  final events = args.isEmpty ? 100000 : int.parse(args[0]);
-  final samples = args.length < 2 ? 7 : int.parse(args[1]);
-  if (events < 1 || samples < 7) {
-    throw ArgumentError('Positive events and at least seven samples required');
-  }
-  final compiler = Compiler();
-  compiler.entrypoints.add('package:telemetry_window/main.dart');
-  final program = compiler.compile({
-    'telemetry_window': {'main.dart': _source},
-  });
-  final runtime = Runtime(program.write().buffer);
-  int run(int n) =>
-      runtime.executeLib(
-            'package:telemetry_window/main.dart',
-            'main',
-            arguments: {'events': n},
-          )
-          as int;
-
-  var checksum = 0;
-  for (var warm = 0; warm < 2; warm++) {
-    checksum += run(1000);
-  }
-  final times = <double>[];
-  for (var sample = 0; sample < samples; sample++) {
-    final watch = Stopwatch()..start();
-    checksum += run(events);
-    watch.stop();
-    times.add(watch.elapsedMicroseconds / 1000);
-  }
-  times.sort();
-  final median = times[times.length ~/ 2];
-  print(
-    'telemetry_window median_ms=${median.toStringAsFixed(3)} '
-    'min_ms=${times.first.toStringAsFixed(3)} '
-    'max_ms=${times.last.toStringAsFixed(3)} '
-    'ns/event=${(median * 1000000 / events).toStringAsFixed(2)}',
-  );
-  print('checksum=$checksum');
-}
+void main(List<String> args) => runComparison(
+  args,
+  name: 'telemetry_window',
+  source: _source,
+  parameter: 'events',
+  unit: 'event',
+  iterations: 100000,
+  warmupIterations: 1000,
+);

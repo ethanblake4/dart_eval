@@ -114,3 +114,59 @@ test failed identically with the new optimization disabled. The optimization
 leaves those unproven writes on the existing checked-dispatch path; it does not
 repair the constructor metadata. Reified list literals do enforce the constraint
 and are covered by the regression suite.
+
+## Step 4: cleanup and final review
+
+Reviewed the loop, member lookup, collection specialization and common-expression
+changes. The loop helper already shares the capture logic; expression keys stay
+in dart_eval and dominance traversal stays in control_flow_graph.
+
+The two new benchmarks now share timing and checksum helpers in each language.
+The helpers validate stable results between samples, print raw timings and handle
+both odd and even sample counts. Compilation and result validation are outside
+the timed section. The embedded Dart workloads are byte-identical to the previous
+checkpoint, and the Python workload function ASTs are unchanged.
+
+To reproduce the comparisons from the repository root:
+
+```powershell
+dart compile exe benchmark/http_headers.dart -o .dart_tool/http_headers.exe
+.dart_tool/http_headers.exe 3000 15
+python benchmark/http_headers.py 3000 15
+dart compile exe benchmark/telemetry_window.dart -o .dart_tool/telemetry_window.exe
+.dart_tool/telemetry_window.exe 500000 15
+python benchmark/telemetry_window.py 500000 15
+```
+
+The reported measurements used a single logical CPU, affinity mask `4`, and
+sequential processes. Unpinned runs may vary. The AOT compilation applies to the
+dart_eval host; each host compiles its guest program before starting the timer.
+
+All 14 AOT benchmark drivers built and exited successfully in a final smoke
+sweep, run sequentially with affinity mask `0x10`. This checks execution across
+the suite, not performance against a saved baseline for every driver.
+
+| Driver | Arguments | Checksum |
+| --- | --- | ---: |
+| dispatch | 250000 7 | 1059577860 |
+| calls | 100000 7 | 70016280000 |
+| closures | 100000 7 | 12690000 |
+| callbacks | 10000 7 | 720590924 |
+| external_calls | 50000 7 | 17508905000 |
+| globals | 100000 7 | 5287536 |
+| exceptions | 10000 7 | 1125075 |
+| async | 250 7 | 1867500 |
+| dynamic | 10000 7 | 1325568257 |
+| virtual_calls | 50000 7 | 26255029500 |
+| json_codec | 200 7 | 19542839 |
+| compile | 7 1 | 1228 compiled bytes |
+| http_headers | 250 7 | 1927344718309 |
+| telemetry_window | 5000 7 | 17703412 |
+
+The final shared helpers also passed eight-sample AOT/Python comparisons. Both
+languages returned checksum `2199073882764` for 250 header requests and
+`19713872` for 5,000 telemetry events. Local raw logs and command metadata are in
+`.dart_tool/improvement-aot/`. Changed-file analysis is clean. Whole-repository
+analysis reports only the existing path-dependency warning and three existing
+style notices. The final compiler suite remains at 1,593 passes and 62 skips;
+control_flow_graph has 99 passing tests.

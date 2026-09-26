@@ -1,5 +1,4 @@
-import sys
-import time
+from support.comparison import run_comparison
 
 
 def main(events):
@@ -43,22 +42,7 @@ def main(events):
 
 
 if __name__ == '__main__':
-    events = int(sys.argv[1]) if len(sys.argv) > 1 else 100000
-    samples = int(sys.argv[2]) if len(sys.argv) > 2 else 7
-    if events < 1 or samples < 7:
-        raise ValueError('Positive events and at least seven samples required')
-
-    checksum = 0
-    for _ in range(2):
-        checksum += main(1000)
-    times = []
-    for _ in range(samples):
-        start = time.perf_counter()
-        checksum += main(events)
-        times.append((time.perf_counter() - start) * 1000)
-    times.sort()
-    median = times[len(times) // 2]
-    print(f'telemetry_window median_ms={median:.3f} '
-          f'min_ms={times[0]:.3f} max_ms={times[-1]:.3f} '
-          f'ns/event={median * 1000000 / events:.2f}')
-    print(f'checksum={checksum}')
+    run_comparison(
+        'telemetry_window', main, unit='event',
+        iterations=100000, warmup_iterations=1000,
+    )

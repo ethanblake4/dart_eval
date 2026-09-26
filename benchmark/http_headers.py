@@ -1,5 +1,4 @@
-import sys
-import time
+from support.comparison import run_comparison
 
 
 def make_request(seed):
@@ -79,22 +78,7 @@ def main(requests):
 
 
 if __name__ == '__main__':
-    requests = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
-    samples = int(sys.argv[2]) if len(sys.argv) > 2 else 7
-    if requests < 1 or samples < 7:
-        raise ValueError('Positive requests and at least seven samples required')
-
-    checksum = 0
-    for _ in range(2):
-        checksum += main(10)
-    times = []
-    for _ in range(samples):
-        start = time.perf_counter()
-        checksum += main(requests)
-        times.append((time.perf_counter() - start) * 1000)
-    times.sort()
-    median = times[len(times) // 2]
-    print(f'http_headers median_ms={median:.3f} '
-          f'min_ms={times[0]:.3f} max_ms={times[-1]:.3f} '
-          f'ns/request={median * 1000000 / requests:.2f}')
-    print(f'checksum={checksum}')
+    run_comparison(
+        'http_headers', main, unit='request',
+        iterations=1000, warmup_iterations=10,
+    )
