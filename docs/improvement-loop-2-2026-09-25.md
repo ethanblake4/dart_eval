@@ -285,3 +285,13 @@ no changes. Generated-machine validation passes. Root analysis has only the
 existing path-dependency warning and three existing informational diagnostics.
 The final codec regression also confirms argument-proof IDs must reference the
 program's type table.
+
+## Step 4: simplification
+
+Constructor parameter locals now reuse the already-resolved signature types
+used by their ABI. This removes duplicated annotation, field and super-parameter
+resolution while retaining the required field/super boxing. The focused
+constructor checks and final default suite passed with this cleanup in place.
+Conditional regressions no longer cast results whose continuing arm already
+proves an integer type. The review also made string-operation output-bank
+selection exhaustive and shared it with representation analysis.

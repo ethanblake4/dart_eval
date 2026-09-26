@@ -219,9 +219,9 @@ void main() {
         var caught = 0;
         try {
           final result = choose ? (throw 'left') : selected;
-          caught += result as int;
+          caught += result;
           final other = choose ? selected : (throw 'right');
-          caught += other as int;
+          caught += other;
         } catch (e) { caught += 10; }
         return selected * 10000 + value * 1000 + doubleValue.toInt() * 100 +
             (boolValue ? 10 : 0) + text.length +

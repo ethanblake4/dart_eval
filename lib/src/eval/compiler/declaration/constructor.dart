@@ -114,9 +114,10 @@ void compileConstructorDeclaration(
         : d,
     decLibrary: redirectTarget?.$2.file,
   );
+  final parameterTypes = ctx.functionParameterTypes[ctx.currentFunctionId!]!;
   final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
   final abi = CallableAbi.fromParameterTypes(
-    ctx.functionParameterTypes[ctx.currentFunctionId!]!,
+    parameterTypes,
     clsType,
     CallableKind.constructor,
     leadingBoxed: isEnum ? 2 : 0,
@@ -127,66 +128,24 @@ void compileConstructorDeclaration(
   var i = parent is EnumDeclaration ? 2 : 0;
 
   for (final p in resolvedParams) {
-    Variable vrep;
     if ($redirectingInitializer != null && p is! RegularFormalParameter) {
       throw CompileError(
         'Redirecting constructor invocation cannot have super or this parameters',
         d,
       );
     }
+    final type = parameterTypes[i - (isEnum ? 2 : 0)];
+    var vrep = Variable.of(ctx, SSA('arg_$i'), type, rep: abi.parameters[i]);
     if (p is FieldFormalParameter) {
-      TypeRef? type0;
-      if (redirectTargetDecl != null) {
-        // Bound against the redirect target's fields, not this class's.
-        type0 = getFormalParameterType(
-          ctx,
-          p,
-          redirectTarget!.$2.file,
-          redirectTargetDecl,
-        ).$1;
-      } else if (p.type != null) {
-        type0 = ctx.typeFactory.formalParameterAnnotationType(ctx.library, p);
-      }
-      if (redirectTargetDecl == null) {
-        type0 ??= ctx.memberLookup.fieldType(
-          TypeRef.lookupDeclaration(ctx, ctx.library, parent),
-          p.name.lexeme,
-          source: p,
-        );
-      }
-      type0 ??= CoreTypes.dynamic.ref(ctx);
-      vrep = Variable.of(
-        ctx,
-        SSA('arg_$i'),
-        type0,
-        rep: abi.parameters[i],
-      ).boxIfNeeded(ctx);
-
+      vrep = vrep.boxIfNeeded(ctx);
       fieldFormalNames.add(p.name.lexeme);
     } else if (p is SuperFormalParameter) {
-      final type =
-          ctx.functionParameterTypes[ctx.currentFunctionId!]![i -
-              (isEnum ? 2 : 0)];
-      vrep = Variable.of(
-        ctx,
-        SSA('arg_$i'),
-        type,
-        rep: abi.parameters[i],
-      ).boxIfNeeded(ctx);
+      vrep = vrep.boxIfNeeded(ctx);
       if (p.isNamed) {
         superParams.named.add(p.name.lexeme);
       } else {
         superParams.positional.add(p.name.lexeme);
       }
-    } else {
-      TypeRef type = CoreTypes.dynamic.ref(ctx);
-      if (p.type != null) {
-        type = ctx.typeFactory.formalParameterAnnotationType(
-          redirectTarget?.$2.file ?? ctx.library,
-          p,
-        );
-      }
-      vrep = Variable.of(ctx, SSA('arg_$i'), type, rep: abi.parameters[i]);
     }
 
     ctx.setLocal(p.name!.lexeme, vrep).captureBinding(ctx, p);
