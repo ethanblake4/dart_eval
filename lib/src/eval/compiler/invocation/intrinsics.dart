@@ -37,8 +37,13 @@ final class Intrinsics {
           forceAllowDynamic: false,
         )) {
       final buffer = receiver.boxIfNeeded(ctx);
-      final argument = args.single.boxIfNeeded(ctx);
-      ctx.pushOp(BufferWrite(buffer.ssa, argument.ssa));
+      final isString =
+          args.single.type.isSpec(CoreTypes.string) &&
+          !args.single.type.nullable;
+      final argument = isString
+          ? args.single.unboxIfNeeded(ctx, false)
+          : args.single.boxIfNeeded(ctx);
+      ctx.pushOp(BufferWrite(buffer.ssa, argument.ssa, isString: isString));
       return (
         target: buffer,
         result: Variable.of(
@@ -221,6 +226,33 @@ final class Intrinsics {
       );
     }
 
+    if ((method == '==' || method == '!=') &&
+        args.length == 1 &&
+        type.isSpec(CoreTypes.string) &&
+        !type.nullable &&
+        args.single.type.isSpec(CoreTypes.string) &&
+        !args.single.type.nullable) {
+      final left = receiver.unboxIfNeeded(ctx);
+      final right = args.single.ssa == receiver.ssa
+          ? left
+          : args.single.unboxIfNeeded(ctx);
+      return (
+        target: left,
+        result: Variable.ssa(
+          ctx,
+          StringOperation(
+            ctx.svar('string_equal'),
+            method == '==' ? StringOperator.equal : StringOperator.notEqual,
+            left.ssa,
+            right.ssa,
+          ),
+          boolType,
+          rep: ValueRep.bool,
+        ),
+        args: [right],
+        namedArgs: const {},
+      );
+    }
     if (method == '!' &&
         type.isAssignableTo(
           ctx,

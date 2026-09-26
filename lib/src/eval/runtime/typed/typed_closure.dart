@@ -36,6 +36,16 @@ final class TypedClosure extends EvalFunction {
   final List<int> definingTypeArguments;
   int? _resolvedRuntimeTypeId;
 
+  // Bound methods with a boxed ABI can use the closure entry path by supplying
+  // their receiver in place of its hidden environment argument.
+  late final bool _canEnterBound =
+      !descriptor.hasEnvironment &&
+      descriptor.boundReceiver &&
+      function.argumentKinds.length == descriptor.argumentCount + 1 &&
+      function.argumentKinds.every((kind) => kind == TypedArgumentKind.object) &&
+      (function.resultKind == null ||
+          function.resultKind == TypedArgumentKind.object);
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -181,13 +191,14 @@ final class TypedClosure extends EvalFunction {
     Object? rest, [
     List<int>? resolvedTypeArguments,
   ]) {
+    if (receiver is TypedMember) receiver = receiver.boundClosure;
     if (receiver is! TypedClosure ||
         !identical(receiver.program, program) ||
         (receiver.runtime != null && !identical(receiver.runtime, runtime))) {
       return null;
     }
     final descriptor = receiver.descriptor;
-    if (!descriptor.hasEnvironment) return null;
+    if (!descriptor.hasEnvironment && !receiver._canEnterBound) return null;
     final site = program.closureCalls[index];
     final typeArguments = resolvedTypeArguments ?? site.typeArguments;
     if (site.positionalCount != descriptor.positionalCount ||

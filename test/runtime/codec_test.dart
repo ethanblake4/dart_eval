@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:dart_eval/src/eval/compiler/program.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed.dart';
 import 'package:test/test.dart';
 
@@ -318,8 +319,13 @@ void main() {
   test('external call descriptors round trip and keep the table immutable', () {
     final calls = [const TypedExternalCall(0xffffffff, 4)];
     final p = TypedProgram(
-      Uint8List.fromList([TypedOp.ext,
-        TypedOp.callExternal - TypedOp.extendedBase, 0, 0, TypedOp.rReturn]),
+      Uint8List.fromList([
+        TypedOp.ext,
+        TypedOp.callExternal - TypedOp.extendedBase,
+        0,
+        0,
+        TypedOp.rReturn,
+      ]),
       functions: const [TypedFunction(0, objectOutgoingCount: 2)],
       externalCalls: calls,
     );
@@ -789,6 +795,42 @@ void main() {
     );
   });
 
+  test('codec preserves virtual argument type proofs', () {
+    final program = TypedProgram(
+      Uint8List.fromList([TypedOp.rReturn]),
+      callSites: const [
+        TypedCallSite('accept', argumentCount: 2, argumentTypes: [7, -1]),
+      ],
+    );
+    final restored = TypedProgram.read(program.write().buffer);
+    expect(restored.callSites.single.argumentTypes, [7, -1]);
+    expect(
+      () => restored.callSites.single.argumentTypes[0] = 8,
+      throwsUnsupportedError,
+    );
+  });
+
+  test('argument type proofs must reference the program type table', () {
+    Program make(int proof) => Program(
+      {},
+      [<int>{}],
+      TypedProgram(
+        Uint8List.fromList([TypedOp.rReturn]),
+        callSites: [
+          TypedCallSite('accept', argumentCount: 1, argumentTypes: [proof]),
+        ],
+      ),
+      {},
+      {},
+      [],
+      {},
+      {},
+    );
+    expect(() => make(1), throwsFormatException);
+    expect(make(0).typedProgram.callSites.single.argumentTypes, [0]);
+    expect(make(-1).typedProgram.callSites.single.argumentTypes, [-1]);
+  });
+
   test('validator rejects malformed class and call site signatures', () {
     TypedProgram program({
       List<TypedClass> classes = const [],
@@ -831,6 +873,18 @@ void main() {
       ),
       throwsFormatException,
     );
+    for (final proof in [
+      const [1],
+      const [-2, 1],
+      const [65536, 1],
+    ]) {
+      expect(
+        () => program(
+          sites: [TypedCallSite('m', argumentCount: 2, argumentTypes: proof)],
+        ),
+        throwsFormatException,
+      );
+    }
   });
 
   test(

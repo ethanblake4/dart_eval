@@ -43,11 +43,14 @@ MachineRepresentation representationForType(TypeRef type) {
 MachineRepresentation? outputBankOf(cfg.Operation operation) =>
     switch (operation) {
       exceptions.LoadExceptionSlot(:final slot) => slot.representation,
-      StringOperation(:final operator) =>
-        operator == StringOperator.length ||
-                operator == StringOperator.codeUnitAt
-            ? MachineRepresentation.integer
-            : MachineRepresentation.string,
+      StringOperation(:final operator) => switch (operator) {
+        StringOperator.length ||
+        StringOperator.codeUnitAt => MachineRepresentation.integer,
+        StringOperator.equal ||
+        StringOperator.notEqual => MachineRepresentation.boolean,
+        StringOperator.concatenate ||
+        StringOperator.indexAt => MachineRepresentation.string,
+      },
       StringSubstring() => MachineRepresentation.string,
       NumericBinary(:final resultRepresentation) => resultRepresentation,
       IntToDouble() => MachineRepresentation.doublePrecision,
@@ -178,18 +181,14 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         if (argument != null) {
           constrain(
             argument,
-            operator == StringOperator.concatenate
+            operator == StringOperator.concatenate ||
+                    operator == StringOperator.equal ||
+                    operator == StringOperator.notEqual
                 ? MachineRepresentation.string
                 : integer,
           );
         }
-        output(
-          operation,
-          operator == StringOperator.length ||
-                  operator == StringOperator.codeUnitAt
-              ? integer
-              : MachineRepresentation.string,
-        );
+        output(operation, outputBankOf(operation)!);
       case StringSubstring(:final string, :final start, :final end):
         constrain(string, MachineRepresentation.string);
         constrain(start, integer);
@@ -391,11 +390,13 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           flow.ReturnAsync() ||
           types.AssertType() ||
           objects.SetPropertyDynamic() ||
-          objects.BufferWrite() ||
           collection.MapSet() ||
           collection.ListAppend() ||
           bridge.ParentBridgeSuperShim():
         inputs(operation, object);
+      case objects.BufferWrite(:final buffer, :final value, :final isString):
+        constrain(buffer, object);
+        constrain(value, isString ? string : object);
       case collection.SetAdd(:final target):
         inputs(operation, object);
         if (target != null) output(operation, boolean);

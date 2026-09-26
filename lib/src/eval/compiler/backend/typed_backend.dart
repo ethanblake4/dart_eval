@@ -1282,6 +1282,9 @@ class _LoweringSession {
       out,
       temporaryPrefix: 'virtualOutgoing',
     );
+    final argumentTypes = op is objects_ir.InvokeDynamic
+        ? op.argumentTypes
+        : const <int>[];
     var siteIndex = b._callSites.indexWhere(
       (site) =>
           site.name == name &&
@@ -1290,7 +1293,8 @@ class _LoweringSession {
           _sameList(site.namedNames, namedNames) &&
           site.callerLibrary == callerLibrary &&
           _sameList(site.typeArguments, typeArguments) &&
-          site.kind == kind,
+          site.kind == kind &&
+          _sameList(site.argumentTypes, argumentTypes),
     );
     if (siteIndex < 0) {
       siteIndex = b._callSites.length;
@@ -1303,6 +1307,7 @@ class _LoweringSession {
           callerLibrary: callerLibrary,
           typeArguments: typeArguments,
           kind: kind,
+          argumentTypes: argumentTypes,
         ),
       );
     }
@@ -1859,6 +1864,8 @@ class _LoweringSession {
                   StringOperator.concatenate => 'rStringConcatS',
                   StringOperator.codeUnitAt => 'aStringCodeUnitR',
                   StringOperator.indexAt => 'rStringIndexA',
+                  StringOperator.equal => 'eStringEqRS',
+                  StringOperator.notEqual => 'eStringNeRS',
                 },
               ],
               [string, ?argument],

@@ -634,11 +634,72 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     _ctx.topLevelGlobalIndices = _topLevelGlobalIndices;
 
-    // Index which types are named in a superinterface position so member
-    // calls on them are not devirtualized by the direct-call fast path.
+    // Index superinterfaces and declared members for direct-call decisions.
+    void addAncestor(String selfKey, TypeRef ancestorType) {
+      final ancestorKey = '${ancestorType.file}:${ancestorType.name}';
+      (_ctx.subclassEdges[selfKey] ??= []).add(ancestorKey);
+      // A mixin contributes members to the applying class even when they are
+      // not written in its body.
+      final ancestor = _ctx
+          .topLevelDeclarationsMap[ancestorType.file]?[ancestorType.name]
+          ?.declaration;
+      final members = _ctx.declaredInstanceMembers[selfKey];
+      if (ancestor is MixinDeclaration && members != null) {
+        for (final m in ancestor.body.members) {
+          if (m is MethodDeclaration && !m.isStatic) {
+            members.add(
+              _ctx.instanceMethodKey(m.name.lexeme, positionalArityOf(m)),
+            );
+          } else if (m is FieldDeclaration && !m.isStatic) {
+            for (final v in m.fields.variables) {
+              members.add(_ctx.memberNameKey(v.name.lexeme));
+            }
+          }
+        }
+      }
+    }
+
+    TypeRef? bridgeAncestor(BridgeTypeRef reference) {
+      final cacheId = reference.cacheId;
+      if (cacheId != null) return _ctx.runtimeTypes.list[cacheId];
+      final spec = reference.spec;
+      if (spec == null) return null;
+      final library = _ctx.libraryMap[spec.library];
+      return library == null ? null : _ctx.visibleTypes[library]?[spec.name];
+    }
+
+    final sourceAnchoredTypes = <String>{};
+    final bridgeEdges = <(String, TypeRef)>[];
     _topLevelDeclarationsMap.forEach((libraryIndex, declarations) {
       _ctx.library = libraryIndex;
       for (final tlDeclaration in declarations.values) {
+        if (tlDeclaration.bridge case BridgeClassDef bridge) {
+          final selfType = TypeRef.fromBridgeTypeRef(_ctx, bridge.type.type);
+          final selfKey = '${selfType.file}:${selfType.name}';
+          _ctx.declaredInstanceMembers[selfKey] = {
+            for (final method in bridge.methods.entries)
+              if (!method.value.isStatic)
+                _ctx.instanceMethodKey(
+                  method.key,
+                  method.value.functionDescriptor.params.length,
+                ),
+            for (final getter in bridge.getters.entries)
+              if (!getter.value.isStatic) _ctx.memberNameKey(getter.key),
+            for (final setter in bridge.setters.entries)
+              if (!setter.value.isStatic) _ctx.memberNameKey(setter.key),
+            for (final field in bridge.fields.entries)
+              if (!field.value.isStatic) _ctx.memberNameKey(field.key),
+          };
+          for (final parent in [
+            if (bridge.type.$extends case final superclass?) superclass,
+            ...bridge.type.$implements,
+            ...bridge.type.$with,
+          ]) {
+            final ancestor = bridgeAncestor(parent);
+            if (ancestor != null) bridgeEdges.add((selfKey, ancestor));
+          }
+          continue;
+        }
         if (tlDeclaration.isBridge) continue;
         final declaration = tlDeclaration.declaration;
         final (name, typeParameters) = switch (declaration) {
@@ -683,6 +744,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           };
         }
         final selfKey = '$libraryIndex:$name';
+        if (name.isNotEmpty) sourceAnchoredTypes.add(selfKey);
         for (final namedType in superinterfacesOf(declaration)) {
           TypeRef? resolved;
           try {
@@ -698,32 +760,29 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             // the missing name would fail compilation anyway elsewhere.
             continue;
           }
-          final ancestorKey = '${resolved.file}:${resolved.name}';
-          (_ctx.subclassEdges[selfKey] ??= []).add(ancestorKey);
-          // `with M` folds M's members into this class, so a descendant
-          // that applies M redeclares those members even though they aren't
-          // written in its body — record them as declared here so
-          // memberOverriddenInSubclass sees the override.
-          final ancestor = _ctx
-              .topLevelDeclarationsMap[resolved.file]?[resolved.name]
-              ?.declaration;
-          final members = _ctx.declaredInstanceMembers[selfKey];
-          if (ancestor is MixinDeclaration && members != null) {
-            for (final m in ancestor.body.members) {
-              if (m is MethodDeclaration && !m.isStatic) {
-                members.add(
-                  _ctx.instanceMethodKey(m.name.lexeme, positionalArityOf(m)),
-                );
-              } else if (m is FieldDeclaration && !m.isStatic) {
-                for (final v in m.fields.variables) {
-                  members.add(_ctx.memberNameKey(v.name.lexeme));
-                }
-              }
-            }
-          }
+          addAncestor(selfKey, resolved);
         }
       }
     });
+    // Only bridge chains descending from source declarations affect source
+    // direct-call proofs. Indexing every SDK bridge under Object would also
+    // turn its built-in runtimeType getter into a virtual host bridge call.
+    var pending = bridgeEdges;
+    while (pending.isNotEmpty) {
+      final remaining = <(String, TypeRef)>[];
+      var changed = false;
+      for (final (selfKey, ancestor) in pending) {
+        final ancestorKey = '${ancestor.file}:${ancestor.name}';
+        if (!sourceAnchoredTypes.contains(ancestorKey)) {
+          remaining.add((selfKey, ancestor));
+          continue;
+        }
+        addAncestor(selfKey, ancestor);
+        changed |= sourceAnchoredTypes.add(selfKey);
+      }
+      if (!changed) break;
+      pending = remaining;
+    }
 
     try {
       /// Compile statics first so we can infer their type

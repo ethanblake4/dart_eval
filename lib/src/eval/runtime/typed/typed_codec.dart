@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 124;
+  static const version = 125;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -275,6 +275,10 @@ abstract final class TypedCodec {
       for (final type in site.typeArguments) {
         u32(type);
       }
+      u32(site.argumentTypes.length);
+      for (final type in site.argumentTypes) {
+        u32(type + 1);
+      }
     }
     for (final declaration in program.exports) {
       string(declaration.library);
@@ -433,7 +437,7 @@ abstract final class TypedCodec {
 
     require(
       classCount * 24 +
-          callSiteCount * 24 +
+          callSiteCount * 28 +
           exportCount * 20 +
           externalCallCount * 8 +
           closureCount * 40 +
@@ -471,6 +475,16 @@ abstract final class TypedCodec {
         (_) => u32(),
         growable: false,
       );
+      final argumentTypeCount = u32();
+      if (argumentTypeCount != 0 && argumentTypeCount != argumentCount) {
+        throw const FormatException('Invalid argument type proof count');
+      }
+      require(argumentTypeCount * 4);
+      final argumentTypes = List.generate(
+        argumentTypeCount,
+        (_) => u32() - 1,
+        growable: false,
+      );
       callSites.add(
         TypedCallSite(
           name,
@@ -480,6 +494,7 @@ abstract final class TypedCodec {
           callerLibrary: callerLibrary,
           typeArguments: typeArguments,
           kind: TypedMemberKind.values[kind],
+          argumentTypes: argumentTypes,
         ),
       );
     }

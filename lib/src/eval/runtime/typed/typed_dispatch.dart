@@ -45,12 +45,15 @@ abstract final class TypedDispatch {
         function.argumentKinds.length != site.argumentCount + 1) {
       return null;
     }
-    member.checkExactArguments(
-      site.argumentCount,
-      argumentsFirst,
-      argumentsRest,
-      runtime,
-    );
+    if (site.argumentCount != 0 &&
+        !member.acceptsArgumentTypes(site.argumentTypes)) {
+      member.checkExactArguments(
+        site.argumentCount,
+        argumentsFirst,
+        argumentsRest,
+        runtime,
+      );
+    }
     // Ordinary methods share the boxed result ABI. Native scalar operators
     // use the explicit signature adapter until their return adapters are linked.
     if (function.resultKind != TypedArgumentKind.object &&

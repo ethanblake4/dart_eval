@@ -644,6 +644,7 @@ abstract final class TypedMachine {
           );
           if (closure != null) {
             final function = closure.function;
+            if (!closure.descriptor.hasEnvironment) r = closure.captures.single;
             frame = frame.enterClosure(
               function,
               pc,
@@ -1213,148 +1214,154 @@ abstract final class TypedMachine {
        r = (r as TypedInstance).dispatchRoot;
        break;
     case 282:
-       if (!(a == b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       e = (r as String) == (s as String);
        break;
     case 283:
-       if (!(f == g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       e = (r as String) != (s as String);
        break;
     case 284:
-       if (!(a != b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(a == b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 285:
-       if (!(f != g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(f == g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 286:
-       if (!(a < b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(a != b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 287:
-       if (!(f < g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(f != g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 288:
-       if (!(a <= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(a < b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 289:
-       if (!(f <= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(f < g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 290:
-       if (!(a > b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(a <= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 291:
-       if (!(f > g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(f <= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 292:
-       if (!(a >= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(a > b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 293:
-       if (!(f >= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       if (!(f > g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 294:
-       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       a = TypedInterop.toInt((s as TypedInstance).values[index]);
+       if (!(a >= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 295:
-       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       f = TypedInterop.toDouble((s as TypedInstance).values[index]);
+       if (!(f >= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
        break;
     case 296:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       e = TypedInterop.toBool((s as TypedInstance).values[index]);
+       a = TypedInterop.toInt((s as TypedInstance).values[index]);
        break;
     case 297:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       s = (s as TypedInstance).values[index];
+       f = TypedInterop.toDouble((s as TypedInstance).values[index]);
        break;
     case 298:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       s = TypedInterop.toStringValue((s as TypedInstance).values[index]);
+       e = TypedInterop.toBool((s as TypedInstance).values[index]);
        break;
     case 299:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       s = (r as TypedInstance).values[index];
+       s = (s as TypedInstance).values[index];
        break;
     case 300:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       s = TypedInterop.toStringValue((r as TypedInstance).values[index]);
+       s = TypedInterop.toStringValue((s as TypedInstance).values[index]);
        break;
     case 301:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (s as TypedInstance).values[index] = $int(a);
+       s = (r as TypedInstance).values[index];
        break;
     case 302:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (s as TypedInstance).values[index] = $int(b);
+       s = TypedInterop.toStringValue((r as TypedInstance).values[index]);
        break;
     case 303:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (s as TypedInstance).values[index] = s;
+       (s as TypedInstance).values[index] = $int(a);
        break;
     case 304:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (s as TypedInstance).values[index] = c;
+       (s as TypedInstance).values[index] = $int(b);
        break;
     case 305:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (s as TypedInstance).values[index] = $double(f);
+       (s as TypedInstance).values[index] = s;
        break;
     case 306:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (s as TypedInstance).values[index] = $bool(e);
+       (s as TypedInstance).values[index] = c;
        break;
     case 307:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = s as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
+       (s as TypedInstance).values[index] = $double(f);
        break;
     case 308:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = s as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
+       (s as TypedInstance).values[index] = $bool(e);
        break;
     case 309:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = s as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
+       final instance = s as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
        break;
     case 310:
-       a = (s as String).length;
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = s as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
        break;
     case 311:
-       a = (s as String).codeUnitAt(a);
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = s as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
        break;
     case 312:
-       s = (s as String)[a];
+       a = (s as String).length;
        break;
     case 313:
-       s = (s as String).substring(a, b);
+       a = (s as String).codeUnitAt(a);
        break;
     case 314:
-       s = $String(s as String);
+       s = (s as String)[a];
        break;
     case 315:
-       s = TypedInterop.toStringValue(s);
+       s = (s as String).substring(a, b);
        break;
     case 316:
-       a = (s as List).length;
+       s = $String(s as String);
        break;
     case 317:
-       a = s as int;
+       s = TypedInterop.toStringValue(s);
        break;
     case 318:
-       f = s as double;
+       a = (s as List).length;
        break;
     case 319:
-       e = s as bool;
+       a = s as int;
        break;
     case 320:
-       a = TypedInterop.toInt(s);
+       f = s as double;
        break;
     case 321:
-       f = TypedInterop.toDouble(s);
+       e = s as bool;
        break;
     case 322:
-       e = TypedInterop.toBool(s);
+       a = TypedInterop.toInt(s);
        break;
     case 323:
-       s = $List.wrap(s as List);
+       f = TypedInterop.toDouble(s);
        break;
     case 324:
+       e = TypedInterop.toBool(s);
+       break;
+    case 325:
+       s = $List.wrap(s as List);
+       break;
+    case 326:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        final runtimeTypeId = runtime == null
               ? index
@@ -1369,7 +1376,7 @@ abstract final class TypedMachine {
             runtime: runtime,
           );
        break;
-    case 325:
+    case 327:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        final runtimeTypeId = runtime == null
               ? index
@@ -1384,27 +1391,27 @@ abstract final class TypedMachine {
             runtime: runtime,
           );
        break;
-    case 326:
+    case 328:
        s = (s as TypedInstance).dispatchRoot;
        break;
-    case 327:
+    case 329:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        e = index == 0 ? s is List : index == 1 ? s is Set : s is Map;
        break;
-    case 328:
+    case 330:
        throw WrappedException(s!);
-    case 329:
+    case 331:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        s = TypedGlobalState.loadObject(runtime, index);
        break;
-    case 330:
+    case 332:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        TypedGlobalState.storeObject(runtime, index, s);
        break;
-    case 331:
+    case 333:
        if (!e) throw WrappedException(s!);
        break;
-    case 332:
+    case 334:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        e = runtime!.isTypedValueTypeInCallableEnvironment(
             s,
@@ -1413,134 +1420,134 @@ abstract final class TypedMachine {
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           );
        break;
-    case 333:
+    case 335:
        s = a;
        break;
-    case 334:
+    case 336:
        s = $int(a);
        break;
-    case 335:
+    case 337:
        s = b;
        break;
-    case 336:
+    case 338:
        s = $int(b);
        break;
-    case 337:
+    case 339:
        s = f;
        break;
-    case 338:
+    case 340:
        s = g;
        break;
-    case 339:
-       s = e;
-       break;
-    case 340:
-       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       a = TypedInterop.toInt((c as TypedInstance).values[index]);
-       break;
     case 341:
-       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       f = TypedInterop.toDouble((c as TypedInstance).values[index]);
+       s = e;
        break;
     case 342:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       e = TypedInterop.toBool((c as TypedInstance).values[index]);
+       a = TypedInterop.toInt((c as TypedInstance).values[index]);
        break;
     case 343:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       c = (c as TypedInstance).values[index];
+       f = TypedInterop.toDouble((c as TypedInstance).values[index]);
        break;
     case 344:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       c = TypedInterop.toStringValue((c as TypedInstance).values[index]);
+       e = TypedInterop.toBool((c as TypedInstance).values[index]);
        break;
     case 345:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       c = (r as TypedInstance).values[index];
+       c = (c as TypedInstance).values[index];
        break;
     case 346:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       c = TypedInterop.toStringValue((r as TypedInstance).values[index]);
+       c = TypedInterop.toStringValue((c as TypedInstance).values[index]);
        break;
     case 347:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (c as TypedInstance).values[index] = $int(a);
+       c = (r as TypedInstance).values[index];
        break;
     case 348:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (c as TypedInstance).values[index] = $int(b);
+       c = TypedInterop.toStringValue((r as TypedInstance).values[index]);
        break;
     case 349:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (c as TypedInstance).values[index] = s;
+       (c as TypedInstance).values[index] = $int(a);
        break;
     case 350:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (c as TypedInstance).values[index] = c;
+       (c as TypedInstance).values[index] = $int(b);
        break;
     case 351:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (c as TypedInstance).values[index] = $double(f);
+       (c as TypedInstance).values[index] = s;
        break;
     case 352:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (c as TypedInstance).values[index] = $bool(e);
+       (c as TypedInstance).values[index] = c;
        break;
     case 353:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = c as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
+       (c as TypedInstance).values[index] = $double(f);
        break;
     case 354:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = c as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
+       (c as TypedInstance).values[index] = $bool(e);
        break;
     case 355:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = c as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
+       final instance = c as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
        break;
     case 356:
-       a = (c as String).length;
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = c as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
        break;
     case 357:
-       a = (c as String).codeUnitAt(a);
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = c as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
        break;
     case 358:
-       c = (c as String)[a];
+       a = (c as String).length;
        break;
     case 359:
-       c = (c as String).substring(a, b);
+       a = (c as String).codeUnitAt(a);
        break;
     case 360:
-       c = $String(c as String);
+       c = (c as String)[a];
        break;
     case 361:
-       c = TypedInterop.toStringValue(c);
+       c = (c as String).substring(a, b);
        break;
     case 362:
-       a = (c as List).length;
+       c = $String(c as String);
        break;
     case 363:
-       a = c as int;
+       c = TypedInterop.toStringValue(c);
        break;
     case 364:
-       f = c as double;
+       a = (c as List).length;
        break;
     case 365:
-       e = c as bool;
+       a = c as int;
        break;
     case 366:
-       a = TypedInterop.toInt(c);
+       f = c as double;
        break;
     case 367:
-       f = TypedInterop.toDouble(c);
+       e = c as bool;
        break;
     case 368:
-       e = TypedInterop.toBool(c);
+       a = TypedInterop.toInt(c);
        break;
     case 369:
-       c = $List.wrap(c as List);
+       f = TypedInterop.toDouble(c);
        break;
     case 370:
+       e = TypedInterop.toBool(c);
+       break;
+    case 371:
+       c = $List.wrap(c as List);
+       break;
+    case 372:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        final runtimeTypeId = runtime == null
               ? index
@@ -1555,7 +1562,7 @@ abstract final class TypedMachine {
             runtime: runtime,
           );
        break;
-    case 371:
+    case 373:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        final runtimeTypeId = runtime == null
               ? index
@@ -1570,27 +1577,27 @@ abstract final class TypedMachine {
             runtime: runtime,
           );
        break;
-    case 372:
+    case 374:
        c = (c as TypedInstance).dispatchRoot;
        break;
-    case 373:
+    case 375:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        e = index == 0 ? c is List : index == 1 ? c is Set : c is Map;
        break;
-    case 374:
+    case 376:
        throw WrappedException(c!);
-    case 375:
+    case 377:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        c = TypedGlobalState.loadObject(runtime, index);
        break;
-    case 376:
+    case 378:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        TypedGlobalState.storeObject(runtime, index, c);
        break;
-    case 377:
+    case 379:
        if (!e) throw WrappedException(c!);
        break;
-    case 378:
+    case 380:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        e = runtime!.isTypedValueTypeInCallableEnvironment(
             c,
@@ -1599,88 +1606,88 @@ abstract final class TypedMachine {
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           );
        break;
-    case 379:
+    case 381:
        (r as $StringBuffer).$value.write(TypedInterop.reify(c));
        break;
-    case 380:
+    case 382:
        c = a;
        break;
-    case 381:
+    case 383:
        c = $int(a);
        break;
-    case 382:
+    case 384:
        c = b;
        break;
-    case 383:
+    case 385:
        c = $int(b);
        break;
-    case 384:
+    case 386:
        c = f;
        break;
-    case 385:
+    case 387:
        c = g;
        break;
-    case 386:
+    case 388:
        c = e;
        break;
-    case 387:
+    case 389:
        r = (r as List<Object?>)[a];
        break;
-    case 388:
+    case 390:
        (r as List<Object?>)[a] = r;
        break;
-    case 389:
+    case 391:
        (r as List<Object?>).add(r);
        break;
-    case 390:
+    case 392:
        r = (r as Map<Object?, Object?>)[s];
        break;
-    case 391:
+    case 393:
        (r as Map<Object?, Object?>)[s] = r;
        break;
-    case 392:
+    case 394:
        (r as Set<Object?>).add(r);
        break;
-    case 393:
+    case 395:
        e = (r as Set<Object?>).add(r);
        break;
-    case 394:
+    case 396:
        r = <Object?>[];
        break;
-    case 395:
+    case 397:
        r = frame.objectOutgoing;
        break;
-    case 396:
+    case 398:
        r = (s as List<Object?>)[a];
        break;
-    case 397:
+    case 399:
        (s as List<Object?>)[a] = r;
        break;
-    case 398:
+    case 400:
        (s as List<Object?>).add(r);
        break;
-    case 399:
+    case 401:
        r = (s as Map<Object?, Object?>)[s];
        break;
-    case 400:
+    case 402:
        (s as Map<Object?, Object?>)[s] = r;
        break;
-    case 401:
+    case 403:
        (s as Set<Object?>).add(r);
        break;
-    case 402:
+    case 404:
        e = (s as Set<Object?>).add(r);
        break;
-    case 403:
+    case 405:
        s = <Object?>[];
        break;
-    case 404:
+    case 406:
        s = frame.objectOutgoing;
        break;
-    case 405:
+    case 407:
        e = TypedInterop.equals(runtime, r, c);
        break;
-    case 406:
+    case 408:
        e = TypedInterop.equals(runtime, s, c);
        break;
     default: throw StateError('Invalid extended typed opcode');

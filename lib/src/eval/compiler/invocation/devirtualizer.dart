@@ -1,9 +1,25 @@
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import '../member/member_lookup.dart' show hasBridgeSuperclass;
 import '../type.dart';
 import 'deferred.dart';
 import 'targets.dart';
+
+/// A non-generic source class with no descendants has an exact runtime layout.
+/// Generic classes are excluded because a covariant instantiation can narrow
+/// member contracts even without introducing a subclass.
+TypeRef? declaredLeafClass(CompilerContext ctx, TypeRef type) {
+  final declaration = nominalDeclOf(type);
+  if (type.nullable ||
+      declaration is! SourceTypeDecl ||
+      declaration.typeParameters.isNotEmpty ||
+      ctx.hasSubclasses(type.file, type.name) ||
+      hasBridgeSuperclass(ctx, type)) {
+    return null;
+  }
+  return type;
+}
 
 /// Turns a [VirtualCall] into a [StaticCall] when the receiver's chain pins
 /// a unique implementation. A `super` link or an allocation-exact
@@ -22,9 +38,10 @@ final class Devirtualizer {
 
   CallTarget _refine(VirtualCall target, {required bool lexicalSuper}) {
     final L = target.receiver;
+    final exact = L.exactType ?? declaredLeafClass(ctx, L.type);
     // A nullable receiver may be null — a direct call would skip the
     // runtime's null dispatch (e.g. interpolated toString on null).
-    final linkType = switch ((lexicalSuper, L.exactType)) {
+    final linkType = switch ((lexicalSuper, exact)) {
       (true, _) => L.type,
       (false, final exactType?) when !L.type.nullable => exactType,
       _ => null,
@@ -41,7 +58,7 @@ final class Devirtualizer {
         : null;
     if (directOwner == null &&
         !lexicalSuper &&
-        L.exactType == null &&
+        exact == null &&
         // A nullable receiver may be null — a direct call would skip the
         // runtime's null dispatch (e.g. interpolated toString on null).
         !L.type.nullable &&

@@ -513,6 +513,7 @@ String familyOf(String name) {
           );
           if (closure != null) {
             final function = closure.function;
+            if (!closure.descriptor.hasEnvironment) r = closure.captures.single;
             frame = frame.enterClosure(
               function,
               pc,
@@ -1162,6 +1163,15 @@ String familyOf(String name) {
     immediate: 'callSite',
     mayThrow: true,
   );
+  for (final (name, operator) in [('Eq', '=='), ('Ne', '!=')]) {
+    add(
+      'eString${name}RS',
+      'e = (r as String) $operator (s as String);',
+      inputs: [6, 7],
+      output: 4,
+      extended: true,
+    );
+  }
   // Branch on the negated comparison, preserving unordered NaN semantics.
   for (final comparison in {
     'Eq': '==',

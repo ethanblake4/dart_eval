@@ -378,20 +378,38 @@ Variable _emitDynamicCall(
   String name,
 ) {
   final s = ctx.svar('method_result');
+  final arguments = call.vector();
+  final values = [...call.positional, for (final entry in call.named) entry.$2];
   ctx.pushOp(
     InvokeDynamic(
       s,
       receiver.boxIfNeeded(ctx).ssa,
       name,
-      call.vector(),
+      arguments,
       positionalCount: call.positional.length,
       namedNames: [for (final entry in call.named) entry.$1],
       callerLibrary: ctx.library,
       typeArguments: call.runtimeTypeArguments,
+      argumentTypes: values.length == arguments.length
+          ? [
+              for (final value in values)
+                _isGroundNominalType(value.type)
+                    ? ctx.runtimeTypes.idOf(value.type)
+                    : -1,
+            ]
+          : const [],
     ),
   );
   return Variable.of(ctx, s, call.returnType, rep: ValueRep.boxed);
 }
+
+// Concrete nominal types can be compared with the selected method's declared
+// parameter ids. Structural and environment-dependent types keep runtime checks.
+bool _isGroundNominalType(TypeRef type) =>
+    type is InterfaceTypeRef &&
+    !type.isSpec(CoreTypes.dynamic) &&
+    !type.isSpec(CoreTypes.voidType) &&
+    interfaceArgumentsOf(type).every(_isGroundNominalType);
 
 /// A bridge function, constructor, or member.
 final class BridgeCall extends CallTarget {

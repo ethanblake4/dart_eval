@@ -437,6 +437,7 @@ class Runtime {
   int? _subtypeMemoOwner;
   int _subtypeMemoVersion = -1;
   bool _subtypeMemoResult = false;
+  final _subtypeCache = <(int, int, int?), bool>{};
 
   /// Memoized environment resolutions keyed on (type, ownerType) for calls
   /// without callable type arguments. Cleared on [_typeTableVersion] changes.

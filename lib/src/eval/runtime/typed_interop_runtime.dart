@@ -142,12 +142,9 @@ extension TypedRuntimeInterop on Runtime {
     return _isSubtypeMemoized(actual, expected, null);
   }
 
-  /// One-entry monomorphic memo over
-  /// [_isTypedDescriptorSubtypeInEnvironment]. Hot checked paths — collection
-  /// writes, closure arguments, conversion asserts — repeat the same
-  /// (actual, expected, owner) triple virtually every iteration. Only used by
-  /// callers without callable type arguments or a propagated nullability
-  /// expectation, where the check is fully determined by the triple.
+  /// Reuse subtype answers across alternating argument types as well as
+  /// repeated scalar checks. Owner types and the type-table version are part
+  /// of the contract; callable type arguments use the uncached path.
   bool _isSubtypeMemoized(int actual, int expected, int? actualOwnerType) {
     if (actual == expected) return true;
     if (_subtypeMemoVersion == _typeTableVersion &&
@@ -156,12 +153,19 @@ extension TypedRuntimeInterop on Runtime {
         actualOwnerType == _subtypeMemoOwner) {
       return _subtypeMemoResult;
     }
-    final result = _isTypedDescriptorSubtypeInEnvironment(
-      actual,
-      expected,
-      actualOwnerType,
-      const [],
-    );
+    if (_subtypeMemoVersion != _typeTableVersion) _subtypeCache.clear();
+    final key = (actual, expected, actualOwnerType);
+    var result = _subtypeCache[key];
+    if (result == null) {
+      result = _isTypedDescriptorSubtypeInEnvironment(
+        actual,
+        expected,
+        actualOwnerType,
+        const [],
+      );
+      if (_subtypeCache.length == 256) _subtypeCache.clear();
+      _subtypeCache[key] = result;
+    }
     _subtypeMemoActual = actual;
     _subtypeMemoExpected = expected;
     _subtypeMemoOwner = actualOwnerType;

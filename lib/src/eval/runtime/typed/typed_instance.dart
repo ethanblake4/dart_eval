@@ -454,14 +454,23 @@ final class TypedMember extends EvalFunction {
   final TypedInstance receiver;
   final int functionId;
   final TypedFunction function;
-  late final TypedClosure? _closure = _bindClosure();
+  late final TypedClosure? boundClosure = _bindClosure();
 
   bool accepts(int positionalCount, Iterable<String> namedNames) =>
-      _closure?.descriptor.accepts(positionalCount, namedNames) ??
+      boundClosure?.descriptor.accepts(positionalCount, namedNames) ??
       namedNames.isEmpty;
 
   bool acceptsTypeArguments(List<int> typeArguments) =>
-      _closure?.acceptsTypeArguments(typeArguments) ?? typeArguments.isEmpty;
+      boundClosure?.acceptsTypeArguments(typeArguments) ?? typeArguments.isEmpty;
+
+  bool acceptsArgumentTypes(List<int> types) {
+    final parameters = boundClosure?.descriptor.parameterTypeIds;
+    if (parameters == null || types.length != parameters.length) return false;
+    for (var i = 0; i < types.length; i++) {
+      if (parameters[i] >= 0 && types[i] != parameters[i]) return false;
+    }
+    return true;
+  }
 
   void checkExactArguments(
     int count,
@@ -470,7 +479,7 @@ final class TypedMember extends EvalFunction {
     Runtime? runtime, [
     List<int> typeArguments = const [],
   ]) {
-    _closure?.checkExactArguments(count, first, rest, runtime, typeArguments);
+    boundClosure?.checkExactArguments(count, first, rest, runtime, typeArguments);
   }
 
   TypedClosure? _bindClosure() {
@@ -496,7 +505,7 @@ final class TypedMember extends EvalFunction {
     Runtime? runtime,
     bool trusted = false,
   }) {
-    final closure = _closure;
+    final closure = boundClosure;
     if (closure != null) {
       return closure.invoke(
         positionalCount,
@@ -515,7 +524,7 @@ final class TypedMember extends EvalFunction {
   }
 
   $Value? invokeBridgeArguments(List<$Value?> arguments, {Runtime? runtime}) {
-    final closure = _closure;
+    final closure = boundClosure;
     final (first, rest) = TypedInterop.splitVector(arguments);
     if (closure == null ||
         arguments.length != closure.descriptor.argumentCount) {
@@ -565,7 +574,7 @@ final class TypedMember extends EvalFunction {
 
   @override
   int $getRuntimeType(Runtime runtime) {
-    return _closure?.$getRuntimeType(runtime) ??
+    return boundClosure?.$getRuntimeType(runtime) ??
         runtime.lookupType(CoreTypes.function);
   }
 }

@@ -364,6 +364,7 @@ final class InvokeDynamic extends Operation {
   final List<String> namedNames;
   final int callerLibrary;
   final List<int> typeArguments;
+  final List<int> argumentTypes;
 
   InvokeDynamic(
     this.target,
@@ -374,6 +375,7 @@ final class InvokeDynamic extends Operation {
     this.namedNames = const [],
     this.callerLibrary = -1,
     this.typeArguments = const [],
+    this.argumentTypes = const [],
   }) : positionalCount = positionalCount ?? args.length;
 
   @override
@@ -395,7 +397,8 @@ final class InvokeDynamic extends Operation {
       positionalCount == other.positionalCount &&
       namedNames == other.namedNames &&
       callerLibrary == other.callerLibrary &&
-      typeArguments == other.typeArguments;
+      typeArguments == other.typeArguments &&
+      argumentTypes == other.argumentTypes;
 
   @override
   int get hashCode =>
@@ -417,6 +420,7 @@ final class InvokeDynamic extends Operation {
       namedNames: namedNames,
       callerLibrary: callerLibrary,
       typeArguments: typeArguments,
+      argumentTypes: argumentTypes,
     );
   }
 }
@@ -463,8 +467,9 @@ final class InternConst extends Operation {
 final class BufferWrite extends Operation {
   final SSA buffer;
   final SSA value;
+  final bool isString;
 
-  BufferWrite(this.buffer, this.value);
+  BufferWrite(this.buffer, this.value, {this.isString = false});
 
   @override
   Set<SSA> get readsFrom => {buffer, value};
@@ -474,14 +479,17 @@ final class BufferWrite extends Operation {
 
   @override
   bool operator ==(Object other) =>
-      other is BufferWrite && buffer == other.buffer && value == other.value;
+      other is BufferWrite &&
+      buffer == other.buffer &&
+      value == other.value &&
+      isString == other.isString;
 
   @override
-  int get hashCode => buffer.hashCode ^ value.hashCode;
+  int get hashCode => Object.hash(buffer, value, isString);
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
     final inputs = renameOperands([buffer, value], this.readsFrom, readsFrom);
-    return BufferWrite(inputs[0], inputs[1]);
+    return BufferWrite(inputs[0], inputs[1], isString: isString);
   }
 }

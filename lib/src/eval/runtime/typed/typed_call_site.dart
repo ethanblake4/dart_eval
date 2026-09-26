@@ -9,6 +9,7 @@ final class TypedCallSite {
     this.namedNames = const [],
     this.callerLibrary = '',
     this.typeArguments = const [],
+    this.argumentTypes = const [],
     this.kind = TypedMemberKind.method,
   }) : positionalCount = positionalCount ?? argumentCount;
 
@@ -18,5 +19,9 @@ final class TypedCallSite {
   final List<String> namedNames;
   final String callerLibrary;
   final List<int> typeArguments;
+
+  /// Compiler-proven concrete argument types, or -1 where no proof exists.
+  /// An empty list supplies no proof for calls with arguments.
+  final List<int> argumentTypes;
   final TypedMemberKind kind;
 }

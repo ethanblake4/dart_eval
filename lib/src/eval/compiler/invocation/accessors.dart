@@ -386,7 +386,7 @@ sealed class GetTarget {
       fieldType = resolvedField ?? CoreTypes.dynamic.ref(ctx);
       methodSignature = null;
     }
-    final exact = receiver.exactType;
+    final exact = receiver.exactType ?? declaredLeafClass(ctx, receiver.type);
     // A provably-class receiver can reach member storage directly. An
     // exact receiver is never a subclass instance; a concreteTypes
     // receiver may be, so the slot is only valid when no descendant
@@ -1032,7 +1032,7 @@ sealed class SetTarget {
           source: source,
         );
     final fieldType = declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
-    final exact = object.exactType;
+    final exact = object.exactType ?? declaredLeafClass(ctx, object.type);
     final directType =
         exact ??
         (object.concreteTypes.length == 1 &&

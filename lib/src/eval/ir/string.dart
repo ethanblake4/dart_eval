@@ -1,7 +1,14 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 
 /// Operations selected only for statically known, unboxed String operands.
-enum StringOperator { length, concatenate, codeUnitAt, indexAt }
+enum StringOperator {
+  length,
+  concatenate,
+  codeUnitAt,
+  indexAt,
+  equal,
+  notEqual,
+}
 
 final class StringOperation extends Operation {
   StringOperation(this.target, this.operator, this.string, [this.argument]);

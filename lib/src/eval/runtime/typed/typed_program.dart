@@ -63,6 +63,7 @@ class TypedProgram {
              callerLibrary: site.callerLibrary,
              typeArguments: List.unmodifiable(site.typeArguments),
              kind: site.kind,
+             argumentTypes: List.unmodifiable(site.argumentTypes),
            ),
          ),
        ),
@@ -152,6 +153,7 @@ class TypedProgram {
     }
     for (final site in callSites) {
       yield* site.typeArguments;
+      yield* site.argumentTypes.where((id) => id >= 0);
     }
     for (var pc = 0; pc < code.length;) {
       var opcode = code[pc];
@@ -291,6 +293,9 @@ class TypedProgram {
           site.namedNames.any((name) => name.isEmpty) ||
           site.namedNames.toSet().length != site.namedNames.length ||
           site.typeArguments.any((type) => type < 0 || type > 65535) ||
+          (site.argumentTypes.isNotEmpty &&
+              site.argumentTypes.length != site.argumentCount) ||
+          site.argumentTypes.any((type) => type < -1 || type > 65535) ||
           (site.kind == TypedMemberKind.getter && site.argumentCount != 0) ||
           (site.kind == TypedMemberKind.setter && site.argumentCount != 1)) {
         throw const FormatException('Invalid typed call site signature');
