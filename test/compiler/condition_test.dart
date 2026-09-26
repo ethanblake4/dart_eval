@@ -29,6 +29,72 @@ Iterable<TypedInstruction> instructions(TypedProgram program) =>
     program.instructions.map((e) => e.$2);
 
 void main() {
+  test('nested scalar conditional joins do not box their results', () {
+    final program = compile('''
+      int main(int a, int b) {
+        final low = a < b ? a : b;
+        final high = a > b ? a : b;
+        return (a == b ? low : (a < b ? high : low)) + low + high;
+      }
+    ''');
+    expect(
+      instructions(program.typedProgram).where(
+        (op) =>
+            op.name.contains('Box') ||
+            op.name.contains('FromR') ||
+            op.name.contains('FromS') ||
+            op.name.contains('FromC'),
+      ),
+      isEmpty,
+    );
+    expectResult(program, 17, {'a': 3, 'b': 7});
+    expectResult(program, 13, {'a': 7, 'b': 3});
+    expectResult(program, 15, {'a': 5, 'b': 5});
+  });
+
+  test('nullable scalar arms stay nullable in either order', () {
+    final program = compile('''
+      class Item { final int value; Item(this.value); }
+      int main(bool choose) {
+        Item? item = null;
+        final left = choose ? item?.value : 3;
+        final right = choose ? 5 : item?.value;
+        return (left ?? 7) * 10 + (right ?? 9);
+      }
+    ''');
+    expectResult(program, 75, {'choose': true});
+    expectResult(program, 39, {'choose': false});
+  });
+
+  test(
+    'conditional joins preserve mixed values, local state and throwing arms',
+    () {
+      final program = compile('''
+      int main(bool choose) {
+        var value = 3;
+        final selected = choose ? value : (value = 7);
+        final doubleValue = choose ? 1.5 : 2.5;
+        final boolValue = choose ? true : value == 7;
+        final text = choose ? 'yes' : 'no';
+        final mixed = choose ? 4 : 'text';
+        final nullable = choose ? null : 2;
+        var caught = 0;
+        try {
+          final result = choose ? (throw 'left') : selected;
+          caught += result as int;
+          final other = choose ? selected : (throw 'right');
+          caught += other as int;
+        } catch (e) { caught += 10; }
+        return selected * 10000 + value * 1000 + doubleValue.toInt() * 100 +
+            (boolValue ? 10 : 0) + text.length +
+            (mixed is int ? 1 : 2) + (nullable ?? 0) + caught;
+      }
+    ''');
+      expectResult(program, 33124, {'choose': true});
+      expectResult(program, 77233, {'choose': false});
+    },
+  );
+
   test('compound numeric conditions branch without boolean temporaries', () {
     final program = compile('''
       int main(int a, int b, int c) {
