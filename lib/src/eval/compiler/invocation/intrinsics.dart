@@ -51,13 +51,20 @@ final class Intrinsics {
         namedArgs: const {},
       );
     }
-    // Collection writes go direct only for unboxed natives with statically
-    // proven element types — a boxed $List/$Set carries its reified element
-    // type, and an unchecked write must stay on the member path.
-    if (args.length == 1 && method == 'add' && !receiver.boxed) {
-      final collectionRep = unboxedRepOf(type);
+    // An allocation-exact boxed List also proves its storage and type
+    // arguments. Use those arguments, not a possibly widened static type, to
+    // preserve covariant write checks. Unknown boxed receivers still dispatch.
+    final collectionType = !receiver.boxed
+        ? type
+        : receiver.exactType?.isSpec(CoreTypes.list) == true
+        ? receiver.exactType
+        : null;
+    final collectionRep = collectionType == null
+        ? null
+        : unboxedRepOf(collectionType);
+    if (args.length == 1 && method == 'add' && collectionType != null) {
       final isList = collectionRep == ValueRep.nativeList;
-      final typeArgs = interfaceArgumentsOf(type);
+      final typeArgs = interfaceArgumentsOf(collectionType);
       final elementType = typeArgs.isEmpty ? null : typeArgs.first;
       if ((isList || collectionRep == ValueRep.nativeSet) &&
           (elementType == null ||
@@ -87,9 +94,8 @@ final class Intrinsics {
         );
       }
     }
-    if (args.length == 2 && method == '[]=' && !receiver.boxed) {
-      final collectionRep = unboxedRepOf(type);
-      final typeArgs = interfaceArgumentsOf(type);
+    if (args.length == 2 && method == '[]=' && collectionType != null) {
+      final typeArgs = interfaceArgumentsOf(collectionType);
       bool storable(Variable arg, int parameter) =>
           typeArgs.length <= parameter ||
           arg.type.isAssignableTo(

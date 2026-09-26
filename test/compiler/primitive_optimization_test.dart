@@ -19,6 +19,51 @@ void checkBoth(Program program, Object? expected) {
 }
 
 void main() {
+  test('known List constructor writes use the allocation element type', () {
+    final program = compile('''
+      int main() {
+        final values = List<int>.filled(2, 0, growable: true);
+        values[0] = 4;
+        values.add(5);
+        return values[0] * 10 + values[2];
+      }
+    ''');
+    checkBoth(program, 45);
+    final names = opNames(program.typedProgram);
+    expect(names, containsAll(['listSet', 'listAppend']));
+    expect(names, isNot(contains('callVirtual')));
+  });
+
+  test('widened boxed List aliases still reject covariant writes', () {
+    checkBoth(
+      compile('''
+      int main() {
+        List<num> values = <int>[7];
+        var failures = 0;
+        try { values[0] = 1.5; } on TypeError { failures++; }
+        try { values.add(2.5); } on TypeError { failures++; }
+        return failures * 100 + values.length * 10 + values[0].toInt();
+      }
+    '''),
+      217,
+    );
+  });
+
+  test('direct List writes preserve fixed-length and bounds errors', () {
+    checkBoth(
+      compile('''
+      int main() {
+        final values = List<int>.filled(1, 7);
+        var failures = 0;
+        try { values.add(2); } on UnsupportedError { failures++; }
+        try { values[1] = 3; } on RangeError { failures++; }
+        return failures * 10 + values[0];
+      }
+    '''),
+      27,
+    );
+  });
+
   test('dominating string reads are shared through copies and branches', () {
     final program = compile('''
       int scan(String text, int index) {

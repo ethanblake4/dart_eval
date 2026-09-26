@@ -114,7 +114,7 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
             argument == null ? null : resolve(argument),
           ),
         primitives.Unbox(:final source, :final representation)
-            when representation == MachineRepresentation.string =>
+            when representation != MachineRepresentation.object =>
           (primitives.Unbox, resolve(source), representation),
         _ => null,
       },
