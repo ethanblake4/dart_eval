@@ -47,7 +47,10 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
         StringOperator.length ||
         StringOperator.codeUnitAt => MachineRepresentation.integer,
         StringOperator.equal ||
-        StringOperator.notEqual => MachineRepresentation.boolean,
+        StringOperator.notEqual ||
+        StringOperator.isEmpty ||
+        StringOperator.isNotEmpty ||
+        StringOperator.startsWith => MachineRepresentation.boolean,
         StringOperator.concatenate ||
         StringOperator.indexAt => MachineRepresentation.string,
       },
@@ -183,7 +186,8 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
             argument,
             operator == StringOperator.concatenate ||
                     operator == StringOperator.equal ||
-                    operator == StringOperator.notEqual
+                    operator == StringOperator.notEqual ||
+                    operator == StringOperator.startsWith
                 ? MachineRepresentation.string
                 : integer,
           );

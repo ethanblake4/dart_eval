@@ -226,7 +226,7 @@ final class Intrinsics {
       );
     }
 
-    if ((method == '==' || method == '!=') &&
+    if ((method == '==' || method == '!=' || method == 'startsWith') &&
         args.length == 1 &&
         type.isSpec(CoreTypes.string) &&
         !type.nullable &&
@@ -242,7 +242,11 @@ final class Intrinsics {
           ctx,
           StringOperation(
             ctx.svar('string_equal'),
-            method == '==' ? StringOperator.equal : StringOperator.notEqual,
+            switch (method) {
+              '==' => StringOperator.equal,
+              '!=' => StringOperator.notEqual,
+              _ => StringOperator.startsWith,
+            },
             left.ssa,
             right.ssa,
           ),

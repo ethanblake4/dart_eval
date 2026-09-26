@@ -1405,9 +1405,16 @@ class _LoweringSession {
                 )
               : target;
           lowered.add(
-            TypedOperation(b._named(['eIsTypeR']), test, [
-              value(op.object),
-            ], immediate: op.typeId),
+            TypedOperation(
+              b._named([
+                b.context.runtimeTypes.list[op.typeId].requiresTypeEnvironment
+                    ? 'eIsTypeR'
+                    : 'eIsGroundTypeR',
+              ]),
+              test,
+              [value(op.object)],
+              immediate: op.typeId,
+            ),
           );
           if (op.not) {
             lowered.add(TypedOperation(b._named(['eNot']), target, [test]));
@@ -1866,6 +1873,9 @@ class _LoweringSession {
                   StringOperator.indexAt => 'rStringIndexA',
                   StringOperator.equal => 'eStringEqRS',
                   StringOperator.notEqual => 'eStringNeRS',
+                  StringOperator.isEmpty => 'eStringIsEmptyR',
+                  StringOperator.isNotEmpty => 'eStringIsNotEmptyR',
+                  StringOperator.startsWith => 'eStringStartsWithRS',
                 },
               ],
               [string, ?argument],
@@ -2482,9 +2492,8 @@ class _LoweringSession {
       for (final instruction in block) {
         final code = instruction.code;
         final spec = TypedOp.instructions[code];
-        final end = bytes.length +
-            spec.length +
-            (code >= TypedOp.extendedBase ? 1 : 0);
+        final end =
+            bytes.length + spec.length + (code >= TypedOp.extendedBase ? 1 : 0);
         if (code >= TypedOp.extendedBase) {
           bytes.addByte(TypedOp.ext);
           bytes.addByte(code - TypedOp.extendedBase);

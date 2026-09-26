@@ -1,6 +1,6 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/visitor.dart';
+import '../helpers/assigned_locals.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/condition.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
@@ -31,7 +31,7 @@ StatementInfo macroLoop(
   // Locals reassigned by the body or updaters can hold a differently-typed
   // value on the back edge, so their allocation proofs are dropped before
   // the header/condition is compiled against the pre-loop state.
-  ctx.widenAssignedLocals(_assignedLocalNames(assignedNamesScan));
+  ctx.widenAssignedLocals(assignedLocalNames(assignedNamesScan));
   final initialState = ctx.saveState();
   final edgeStates = <ContextSaveState>[];
   final header = BasicBlock<Operation>([], label: ctx.label('loop_header'));
@@ -143,56 +143,4 @@ StatementInfo macroLoop(
   return alwaysLoopOnce
       ? result.copyWith(willAlwaysBreak: false)
       : StatementInfo();
-}
-
-Set<String> _assignedLocalNames(Iterable<AstNode> nodes) {
-  final collector = _AssignedLocalNames();
-  for (final node in nodes) {
-    node.accept(collector);
-  }
-  return collector.names;
-}
-
-/// Collects the names of locals an AST subtree assigns to (assignments,
-/// `++`/`--`, `for (x in ...)` on an existing variable). Function bodies are
-/// skipped — they assign through capture cells, not the local binding.
-class _AssignedLocalNames extends GeneralizingAstVisitor<void> {
-  final Set<String> names = {};
-
-  @override
-  void visitFunctionExpression(FunctionExpression node) {}
-
-  @override
-  void visitFunctionDeclaration(FunctionDeclaration node) {}
-
-  @override
-  void visitAssignmentExpression(AssignmentExpression node) {
-    if (node.leftHandSide is SimpleIdentifier) {
-      names.add((node.leftHandSide as SimpleIdentifier).name);
-    }
-    super.visitAssignmentExpression(node);
-  }
-
-  @override
-  void visitPrefixExpression(PrefixExpression node) {
-    if ((node.operator.lexeme == '++' || node.operator.lexeme == '--') &&
-        node.operand is SimpleIdentifier) {
-      names.add((node.operand as SimpleIdentifier).name);
-    }
-    super.visitPrefixExpression(node);
-  }
-
-  @override
-  void visitPostfixExpression(PostfixExpression node) {
-    if (node.operand is SimpleIdentifier) {
-      names.add((node.operand as SimpleIdentifier).name);
-    }
-    super.visitPostfixExpression(node);
-  }
-
-  @override
-  void visitForEachPartsWithIdentifier(ForEachPartsWithIdentifier node) {
-    names.add(node.identifier.name);
-    super.visitForEachPartsWithIdentifier(node);
-  }
 }

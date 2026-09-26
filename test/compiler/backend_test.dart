@@ -136,10 +136,7 @@ void main() {
     final program = compile('int main(int x, int y) => x - y;');
     expect(TypedMachine.run(program, intArguments: [27, 8]), 19);
     expect(TypedMachine.run(program, intArguments: [8, 27]), -19);
-    expect(
-      program.instructions.map((e) => e.$2.family),
-      contains('Sub'),
-    );
+    expect(program.instructions.map((e) => e.$2.family), contains('Sub'));
   });
   test('duplicate operands remain two physical instruction inputs', () {
     final program = compile('int main(int x) => x + x;');
@@ -375,9 +372,7 @@ void main() {
     final program = compile(
       'int main(int first, int second) => second - first;',
     );
-    final names = [
-      for (final e in program.instructions) e.$2.name,
-    ];
+    final names = [for (final e in program.instructions) e.$2.name];
     expect(names.any((name) => name.endsWith('Argument')), isFalse);
     expect(TypedMachine.run(program, intArguments: [6, 21]), 15);
   });
@@ -417,9 +412,9 @@ void main() {
       );
       expect(program.functions.first.objectOutgoingCount, 2);
       expect(program.functions.first.argumentKinds, [
+        TypedArgumentKind.string,
         TypedArgumentKind.object,
-        TypedArgumentKind.object,
-        TypedArgumentKind.object,
+        TypedArgumentKind.string,
         TypedArgumentKind.object,
       ]);
     },
@@ -430,9 +425,7 @@ void main() {
       int main() => sum(1, 2, 3, 4, 5);''');
     expect(TypedMachine.run(program), 15);
     expect(program.functions.first.objectOutgoingCount, 0);
-    final names = [
-      for (final e in program.instructions) e.$2.name,
-    ];
+    final names = [for (final e in program.instructions) e.$2.name];
     expect(names, contains(anyOf('rFromA', 'rFromB')));
     expect(names.any((name) => name.startsWith('rBox')), isFalse);
     expect(names, isNot(contains('cLoadOutgoing')));

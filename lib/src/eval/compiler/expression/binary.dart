@@ -113,6 +113,20 @@ Variable compileBinaryExpression(
     _ => boundType,
   };
   var R = compileExpression(e.rightOperand, ctx, rightBound);
+  if ((method == '==' || method == '!=') &&
+      (L.type.isSpec(CoreTypes.nullType) ||
+          R.type.isSpec(CoreTypes.nullType))) {
+    final value = L.type.isSpec(CoreTypes.nullType) ? R : L;
+    final test = compileNullCondition(ctx, value);
+    return method == '=='
+        ? test
+        : Variable.ssa(
+            ctx,
+            LogicalNot(ctx.svar('not_null'), test.ssa),
+            CoreTypes.bool.ref(ctx),
+            rep: ValueRep.bool,
+          );
+  }
   final result = CallResolver(ctx).invokeOperator(L, method, [R]).result;
   if (!e.inConstantContext && !(leftConst && R.isConst)) return result;
   // Operators on const operands produce compile-time constants that must

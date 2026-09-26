@@ -137,13 +137,7 @@ String familyOf(String name) {
       terminates: true,
     );
   }
-  for (final (first, second) in [
-    (0, 1),
-    (2, 3),
-    (6, 7),
-    (6, 8),
-    (7, 8),
-  ]) {
+  for (final (first, second) in [(0, 1), (2, 3), (6, 7), (6, 8), (7, 8)]) {
     final left = names[first], right = names[second];
     add(
       '${left}From${right.toUpperCase()}',
@@ -645,6 +639,15 @@ String familyOf(String name) {
     mayThrow: true,
   );
   add(
+    'eIsGroundTypeR',
+    'e = runtime!.isTypedValueType(r, index);',
+    inputs: [6],
+    output: 4,
+    immediate: 'typeId',
+    mayThrow: true,
+    extended: true,
+  );
+  add(
     'rCreateRecord',
     '''r = TypedRecords.create(
             runtime!,
@@ -1126,14 +1129,10 @@ String familyOf(String name) {
     mayThrow: true,
     extended: true,
   );
-  add(
-    'returnNull',
-    '''if (frame.parent == null) return null;
+  add('returnNull', '''if (frame.parent == null) return null;
           pc = frame.returnPc;
           frame = frame.leave();
-          r = null; s = null; c = null;''',
-    terminates: true,
-  );
+          r = null; s = null; c = null;''', terminates: true);
   add(
     'callVirtual',
     '''final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
@@ -1172,6 +1171,25 @@ String familyOf(String name) {
       extended: true,
     );
   }
+  for (final (name, member) in [
+    ('IsEmpty', 'isEmpty'),
+    ('IsNotEmpty', 'isNotEmpty'),
+  ]) {
+    add(
+      'eString${name}R',
+      'e = (r as String).$member;',
+      inputs: [6],
+      output: 4,
+      extended: true,
+    );
+  }
+  add(
+    'eStringStartsWithRS',
+    'e = (r as String).startsWith(s as String);',
+    inputs: [6, 7],
+    output: 4,
+    extended: true,
+  );
   // Branch on the negated comparison, preserving unordered NaN semantics.
   for (final comparison in {
     'Eq': '==',

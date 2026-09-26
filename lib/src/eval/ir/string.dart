@@ -8,6 +8,9 @@ enum StringOperator {
   indexAt,
   equal,
   notEqual,
+  isEmpty,
+  isNotEmpty,
+  startsWith,
 }
 
 final class StringOperation extends Operation {

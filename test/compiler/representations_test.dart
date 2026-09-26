@@ -253,7 +253,7 @@ void main() {
         MachineRepresentation.integer,
         MachineRepresentation.doublePrecision,
         MachineRepresentation.boolean,
-        MachineRepresentation.object, // String parameters use the boxed ABI.
+        MachineRepresentation.string,
       ]);
       final ssa = compiler.ssaFunctionGraphs[id]!;
       final representations = analyzeRepresentations(ssa);

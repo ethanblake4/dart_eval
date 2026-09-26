@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 
 import 'expression.dart';
+import '../helpers/assigned_locals.dart';
 
 /// Compile a condition to its destinations without constructing a boolean join.
 BasicBlockBuilder compileCondition(
@@ -21,49 +22,63 @@ BasicBlockBuilder compileCondition(
 ) {
   final parent = ctx.builder;
   final initialState = ctx.saveState();
-  final lowerLogical = !_containsTypeTest(expression);
   recordConditionPromotions(ctx, expression, true);
 
   void emit(
     Expression expression,
     BasicBlock<Operation> yes,
     BasicBlock<Operation> no,
+    List<(Expression, bool)> promotions,
   ) {
     if (expression is ParenthesizedExpression) {
-      emit(expression.expression, yes, no);
+      emit(expression.expression, yes, no, promotions);
       return;
     }
-    // Type-test promotion is managed by the expression compiler's nested
-    // inference contexts. Keep that path until promotion itself is edge-aware.
-    if (lowerLogical) {
-      if (expression is PrefixExpression && expression.operator.lexeme == '!') {
-        emit(expression.operand, no, yes);
-        return;
+    if (expression is PrefixExpression && expression.operator.lexeme == '!') {
+      emit(expression.operand, no, yes, promotions);
+      return;
+    }
+    if (expression is BinaryExpression &&
+        (expression.operator.lexeme == '&&' ||
+            expression.operator.lexeme == '||')) {
+      final right = BasicBlock<Operation>(
+        [],
+        label: ctx.label('condition_rhs'),
+      );
+      if (expression.operator.lexeme == '&&') {
+        emit(expression.leftOperand, right, no, promotions);
+      } else {
+        emit(expression.leftOperand, yes, right, promotions);
       }
-      if (expression is BinaryExpression &&
-          (expression.operator.lexeme == '&&' ||
-              expression.operator.lexeme == '||')) {
-        final right = BasicBlock<Operation>(
-          [],
-          label: ctx.label('condition_rhs'),
-        );
-        if (expression.operator.lexeme == '&&') {
-          emit(expression.leftOperand, right, no);
-        } else {
-          emit(expression.leftOperand, yes, right);
-        }
-        ctx.builder = BasicBlockBuilder(ctx.activeGraph, [right], parent);
-        emit(expression.rightOperand, yes, no);
-        return;
-      }
+      ctx.builder = BasicBlockBuilder(ctx.activeGraph, [right], parent);
+      emit(expression.rightOperand, yes, no, [
+        ...promotions,
+        (expression.leftOperand, expression.operator.lexeme == '&&'),
+      ]);
+      return;
+    }
+    for (var i = 0; i < promotions.length; i++) {
+      final (condition, outcome) = promotions[i];
+      applyConditionPromotions(
+        ctx,
+        condition,
+        outcome,
+        excluded: assignedLocalNames(
+          promotions.skip(i + 1).map((edge) => edge.$1),
+        ),
+      );
     }
     // Conditions see `bool` as their context type — a `.m()` shorthand in
     // condition position resolves against it.
+    // Individual tests may promote on only one short-circuit edge. Do not
+    // leak their expression-local inference into the enclosing condition.
+    ctx.enterTypeInferenceContext();
     final compiledValue = compileExpression(
       expression,
       ctx,
       CoreTypes.bool.ref(ctx),
     );
+    ctx.typeInferenceSaveStates.removeLast();
     enforceConditionType(ctx, compiledValue, expression);
     final value = convertForAssignment(
       ctx,
@@ -85,7 +100,7 @@ BasicBlockBuilder compileCondition(
     ctx.mergeBranchState([leafState]);
   }
 
-  emit(expression, whenTrue, whenFalse);
+  emit(expression, whenTrue, whenFalse, const []);
   return BasicBlockBuilder(ctx.activeGraph, [whenTrue, whenFalse], parent);
 }
 
@@ -107,7 +122,3 @@ void enforceConditionType(
     throw CompileError("Conditions must have a static type of 'bool'", source);
   }
 }
-
-bool _containsTypeTest(AstNode node) =>
-    node is IsExpression ||
-    node.childEntities.whereType<AstNode>().any(_containsTypeTest);

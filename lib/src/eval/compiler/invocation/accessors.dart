@@ -203,6 +203,12 @@ sealed class GetTarget {
     List<TypeRef>? typeArguments,
     BoundExtension? extensionPin,
   }) {
+    if ((name == 'isEmpty' || name == 'isNotEmpty') &&
+        receiver.type.isSpec(CoreTypes.string) &&
+        !receiver.type.nullable &&
+        extensionPin == null) {
+      return IntrinsicGet(receiver, name, string: true, unbox: true);
+    }
     if (name == 'length' && !receiver.type.nullable) {
       final isString = receiver.type.isAssignableTo(
         ctx,
@@ -543,7 +549,7 @@ sealed class GetTarget {
   Variable emit(CompilerContext ctx);
 }
 
-/// A `String.length`, native-`List.length`, or `runtimeType` read.
+/// A native `String`/`List` getter or `runtimeType` read.
 final class IntrinsicGet extends GetTarget {
   const IntrinsicGet(
     this.receiver,
@@ -560,10 +566,10 @@ final class IntrinsicGet extends GetTarget {
   /// Whether [emit] unboxes the receiver first (native `length` reads).
   final bool unbox;
 
-  /// The member name — `length` or `runtimeType`.
+  /// The intrinsic getter's name.
   final String name;
 
-  /// `length` on a `String` (vs a native `List`).
+  /// A getter on `String` (vs native `List.length`).
   final bool string;
 
   /// `runtimeType` on a statically known concrete type: (type id, whether
@@ -575,7 +581,13 @@ final class IntrinsicGet extends GetTarget {
 
   @override
   Variable emit(CompilerContext ctx) {
-    final recv = unbox ? receiver.unboxIfNeeded(ctx, false) : receiver;
+    // Use the resolved receiver view: a null-aware selector may have narrowed
+    // its type without changing the nullable local it came from.
+    final recv = unbox && string && receiver.boxed
+        ? receiver.toRep(ctx, ValueRep.string, into: ctx.svar('string_receiver'))
+        : unbox
+        ? receiver.unboxIfNeeded(ctx, false)
+        : receiver;
     return switch (name) {
       'length' => Variable.ssa(
         ctx,
@@ -588,6 +600,18 @@ final class IntrinsicGet extends GetTarget {
             : ListLength(ctx.svar('list_length'), recv.ssa),
         CoreTypes.int.ref(ctx),
         rep: ValueRep.int,
+      ),
+      'isEmpty' || 'isNotEmpty' => Variable.ssa(
+        ctx,
+        StringOperation(
+          ctx.svar('string_empty'),
+          name == 'isEmpty'
+              ? StringOperator.isEmpty
+              : StringOperator.isNotEmpty,
+          recv.ssa,
+        ),
+        CoreTypes.bool.ref(ctx),
+        rep: ValueRep.bool,
       ),
       _ when constantType != null => Variable.ssa(
         ctx,

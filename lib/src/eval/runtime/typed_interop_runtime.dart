@@ -127,17 +127,17 @@ extension TypedRuntimeInterop on Runtime {
     if (expected < 0 || expected >= _typeDescriptors.length) return true;
     final expectedDescriptor = _typeDescriptors[expected];
     final expectedNominal = expectedDescriptor[0];
-    if (expectedNominal == _typedTypeId(CoreTypes.dynamic) ||
-        expectedNominal == _typedTypeId(CoreTypes.voidType)) {
+    if (expectedNominal == _dynamicTypeId ||
+        expectedNominal == _voidTypeId) {
       return true;
     }
     if (value == null || value is $null) {
       return expectedDescriptor[1] == 1 ||
-          expectedNominal == _typedTypeId(CoreTypes.nullType);
+          expectedNominal == _nullTypeId;
     }
     // Every non-null value satisfies Object. Host bridge values may be opaque
     // and unable to report a runtime type, so accept before reifying.
-    if (expectedNominal == _typedTypeId(CoreTypes.object)) return true;
+    if (expectedNominal == _objectTypeId) return true;
     final actual = (value as $Value).$getRuntimeType(this);
     return _isSubtypeMemoized(actual, expected, null);
   }
@@ -348,7 +348,8 @@ extension TypedRuntimeInterop on Runtime {
         fields[mapping[_constantPool[nameIndex] as String]!],
       );
       fieldIds.add(fieldType);
-      matchesTemplate &= fieldType == templateDescriptor[namedOffset + i * 2 + 1];
+      matchesTemplate &=
+          fieldType == templateDescriptor[namedOffset + i * 2 + 1];
     }
     // Every field's runtime type equals its declared type and the template
     // is non-nullable: the record's runtime type IS the template.
@@ -399,27 +400,27 @@ extension TypedRuntimeInterop on Runtime {
     if (expected < 0 || expected >= _typeDescriptors.length) return false;
     final expectedDescriptor = _typeDescriptors[expected];
     if (expectedDescriptor.length == 2 &&
-        (expectedDescriptor[0] == _typedTypeId(CoreTypes.dynamic) ||
-            expectedDescriptor[0] == _typedTypeId(CoreTypes.voidType))) {
+        (expectedDescriptor[0] == _dynamicTypeId ||
+            expectedDescriptor[0] == _voidTypeId)) {
       return true;
     }
     if (value == null || value is $null) {
       final descriptor = expectedDescriptor;
       final nominal = descriptor[0];
       if (descriptor[1] == 1 ||
-          nominal == _typedTypeId(CoreTypes.dynamic) ||
-          nominal == _typedTypeId(CoreTypes.nullType)) {
+          nominal == _dynamicTypeId ||
+          nominal == _nullTypeId) {
         return true;
       }
       final resolved = _resolveTypeParameter(expected, actualOwnerType);
       if (resolved == null) return true;
       final resolvedDescriptor = _typeDescriptors[resolved];
       return resolvedDescriptor[1] == 1 ||
-          resolvedDescriptor[0] == _typedTypeId(CoreTypes.dynamic) ||
-          resolvedDescriptor[0] == _typedTypeId(CoreTypes.nullType);
+          resolvedDescriptor[0] == _dynamicTypeId ||
+          resolvedDescriptor[0] == _nullTypeId;
     }
     if (expectedDescriptor.length == 2 &&
-        expectedDescriptor[0] == _typedTypeId(CoreTypes.object)) {
+        expectedDescriptor[0] == _objectTypeId) {
       return true;
     }
     final actual = (value as $Value).$getRuntimeType(this);
@@ -436,8 +437,8 @@ extension TypedRuntimeInterop on Runtime {
     if (expected < 0 || expected >= _typeDescriptors.length) return false;
     final expectedDescriptor = _typeDescriptors[expected];
     if (expectedDescriptor.length == 2 &&
-        (expectedDescriptor[0] == _typedTypeId(CoreTypes.dynamic) ||
-            expectedDescriptor[0] == _typedTypeId(CoreTypes.voidType))) {
+        (expectedDescriptor[0] == _dynamicTypeId ||
+            expectedDescriptor[0] == _voidTypeId)) {
       return true;
     }
     if (value == null || value is $null) {
@@ -451,11 +452,11 @@ extension TypedRuntimeInterop on Runtime {
       if (resolved == null) return true;
       final resolvedDescriptor = _typeDescriptors[resolved];
       return resolvedDescriptor[1] == 1 ||
-          resolvedDescriptor[0] == _typedTypeId(CoreTypes.dynamic) ||
-          resolvedDescriptor[0] == _typedTypeId(CoreTypes.nullType);
+          resolvedDescriptor[0] == _dynamicTypeId ||
+          resolvedDescriptor[0] == _nullTypeId;
     }
     if (expectedDescriptor.length == 2 &&
-        expectedDescriptor[0] == _typedTypeId(CoreTypes.object)) {
+        expectedDescriptor[0] == _objectTypeId) {
       return true;
     }
     final actual = (value as $Value).$getRuntimeType(this);
@@ -886,7 +887,7 @@ extension TypedRuntimeInterop on Runtime {
     // Never is a subtype of every type.
     if (sourceNominal == _typedTypeId(CoreTypes.never)) return true;
     // Null <: T only when T is nullable or a top type (dynamic handled above).
-    if (sourceNominal == _typedTypeId(CoreTypes.nullType)) {
+    if (sourceNominal == _nullTypeId) {
       return target[1] == 1 || nullableExpected;
     }
     if (source[1] == 1 && target[1] == 0 && !nullableExpected) return false;
@@ -1031,9 +1032,9 @@ extension TypedRuntimeInterop on Runtime {
         ) ??
         source[3];
     final sourceReturn = _typeDescriptors[sourceReturnId];
-    if (targetReturn[0] != _typedTypeId(CoreTypes.voidType) &&
-        sourceReturn[0] != _typedTypeId(CoreTypes.dynamic) &&
-        sourceReturn[0] != _typedTypeId(CoreTypes.voidType) &&
+    if (targetReturn[0] != _voidTypeId &&
+        sourceReturn[0] != _dynamicTypeId &&
+        sourceReturn[0] != _voidTypeId &&
         !_isTypedDescriptorSubtypeInEnvironment(
           source[3],
           target[3],
@@ -1099,16 +1100,12 @@ extension TypedRuntimeInterop on Runtime {
         source;
     final sourceDescriptor = _typeDescriptors[resolvedSource];
     final resolvedTarget =
-        _resolveTypeParameter(
-          target,
-          actualOwnerType,
-          callableTypeArguments,
-        ) ??
+        _resolveTypeParameter(target, actualOwnerType, callableTypeArguments) ??
         target;
-    if (sourceDescriptor[0] == _typedTypeId(CoreTypes.dynamic)) {
+    if (sourceDescriptor[0] == _dynamicTypeId) {
       final targetDescriptor = _typeDescriptors[resolvedTarget];
-      return targetDescriptor[0] == _typedTypeId(CoreTypes.dynamic) ||
-          (targetDescriptor[0] == _typedTypeId(CoreTypes.object) &&
+      return targetDescriptor[0] == _dynamicTypeId ||
+          (targetDescriptor[0] == _objectTypeId &&
               targetDescriptor[1] == 1);
     }
     return _isTypedDescriptorSubtypeInEnvironment(

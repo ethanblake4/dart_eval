@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'assigned_locals.dart';
 
 /// Records the local promotions that hold when [expression] has [value].
 ///
@@ -22,33 +23,62 @@ void recordConditionPromotions(
 void applyConditionPromotions(
   CompilerContext ctx,
   Expression expression,
-  bool value,
-) {
+  bool value, {
+  Set<String> excluded = const {},
+}) {
   _visitPromotions(ctx, expression, value, (local, type) {
     final promoted = local.withType(type);
     promoted.binding?.rebind(promoted);
-  });
+  }, excluded: excluded);
 }
 
 void _visitPromotions(
   CompilerContext ctx,
   Expression expression,
   bool value,
-  void Function(Variable local, TypeRef type) promote,
-) {
+  void Function(Variable local, TypeRef type) promote, {
+  Set<String> excluded = const {},
+}) {
   if (expression is ParenthesizedExpression) {
-    _visitPromotions(ctx, expression.expression, value, promote);
+    _visitPromotions(
+      ctx,
+      expression.expression,
+      value,
+      promote,
+      excluded: excluded,
+    );
     return;
   }
   if (expression is PrefixExpression && expression.operator.lexeme == '!') {
-    _visitPromotions(ctx, expression.operand, !value, promote);
+    _visitPromotions(
+      ctx,
+      expression.operand,
+      !value,
+      promote,
+      excluded: excluded,
+    );
     return;
   }
   if (expression is BinaryExpression) {
     final operator = expression.operator.lexeme;
     if ((operator == '&&' && value) || (operator == '||' && !value)) {
-      _visitPromotions(ctx, expression.leftOperand, value, promote);
-      _visitPromotions(ctx, expression.rightOperand, value, promote);
+      _visitPromotions(
+        ctx,
+        expression.leftOperand,
+        value,
+        promote,
+        excluded: {
+          ...excluded,
+          ...assignedLocalNames([expression.rightOperand]),
+        },
+      );
+      _visitPromotions(
+        ctx,
+        expression.rightOperand,
+        value,
+        promote,
+        excluded: excluded,
+      );
       return;
     }
     final identifier = switch ((
@@ -60,6 +90,7 @@ void _visitPromotions(
       _ => null,
     };
     if (identifier != null &&
+        !excluded.contains(identifier.name) &&
         ((operator == '!=' && value) || (operator == '==' && !value))) {
       final local = ctx.lookupLocal(identifier.name);
       if (local != null && local.type.nullable) {
@@ -70,7 +101,7 @@ void _visitPromotions(
   }
   if (expression is IsExpression) {
     final target = expression.expression;
-    if (target is! SimpleIdentifier) return;
+    if (target is! SimpleIdentifier || excluded.contains(target.name)) return;
     final matches = expression.notOperator == null ? value : !value;
     if (!matches) return;
     final local = ctx.lookupLocal(target.name);
@@ -87,11 +118,7 @@ void _visitPromotions(
 /// Whether [tested] narrows [current] for `is`-promotion — a subtype
 /// check strict about function variance (the looser assignability used
 /// for argument coercion treats all function types as compatible).
-bool isPromotionSubtype(
-  CompilerContext ctx,
-  TypeRef tested,
-  TypeRef current,
-) {
+bool isPromotionSubtype(CompilerContext ctx, TypeRef tested, TypeRef current) {
   // `x is C` where x is a type parameter produces the intersection `T&C`:
   // model it as the tested type — the value genuinely is a C afterwards.
   // `dynamic` narrows to whatever the test proves.

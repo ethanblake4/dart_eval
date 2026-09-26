@@ -8,25 +8,32 @@ import 'package:dart_eval/src/eval/compiler/expression/condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
-import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 import '../values/value_rep.dart';
+
+/// A null comparison never calls an overridden equality operator.
+Variable compileNullCondition(CompilerContext ctx, Variable value) =>
+    Variable.ssa(
+      ctx,
+      switch (value.representation) {
+        MachineRepresentation.integer ||
+        MachineRepresentation.doublePrecision ||
+        MachineRepresentation.boolean => LoadBool(ctx.svar('is_null'), false),
+        _ => IsNull(ctx.svar('is_null'), value.ssa),
+      },
+      CoreTypes.bool.ref(ctx),
+      rep: ValueRep.bool,
+    );
 
 /// Emits `value != null` as an unboxed-bool condition suitable for
 /// [macroBranch]'s `condition` closure.
 Variable compileNonNullCondition(CompilerContext ctx, Variable value) {
   final boolType = CoreTypes.bool.ref(ctx);
-  final nullConst = BuiltinValue().push(ctx).boxIfNeeded(ctx);
-  final eq = Variable.ssa(
-    ctx,
-    DynamicEquals(ctx.svar('nonnull_eq'), value.ssa, nullConst.ssa),
-    boolType,
-    rep: ValueRep.bool,
-  );
+  final eq = compileNullCondition(ctx, value);
   return Variable.ssa(
     ctx,
     LogicalNot(ctx.svar('nonnull_ne'), eq.ssa),

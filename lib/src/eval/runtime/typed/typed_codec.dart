@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 125;
+  static const version = 126;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);

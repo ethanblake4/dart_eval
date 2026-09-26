@@ -405,6 +405,11 @@ class Runtime {
 
   late final List<Set<int>> _typeTypes;
   late final List<List<int>> _typeDescriptors;
+  // Core nominal IDs stay fixed when imported structural types are appended.
+  late final _dynamicTypeId = _typedTypeId(CoreTypes.dynamic);
+  late final _voidTypeId = _typedTypeId(CoreTypes.voidType);
+  late final _nullTypeId = _typedTypeId(CoreTypes.nullType);
+  late final _objectTypeId = _typedTypeId(CoreTypes.object);
   final _typeEnvironmentRequirements = <int, bool>{};
   late final List<({String library, String name})?> _typeIdentities;
   final _nominalTypeIds = <({String library, String name}), int>{};
@@ -653,11 +658,7 @@ class Runtime {
             runtimeTypeToString(type),
         ];
         final named = [
-          for (
-            var i = 5 + descriptor[3];
-            i < descriptor.length;
-            i += 2
-          )
+          for (var i = 5 + descriptor[3]; i < descriptor.length; i += 2)
             '${_constantPool[descriptor[i]]}: '
                 '${runtimeTypeToString(descriptor[i + 1])}',
         ];
@@ -668,11 +669,7 @@ class Runtime {
             runtimeTypeToString(type),
         ];
         final named = [
-          for (
-            var i = 7 + descriptor[5];
-            i < descriptor.length;
-            i += 3
-          )
+          for (var i = 7 + descriptor[5]; i < descriptor.length; i += 3)
             '${descriptor[i + 1] == 0 ? '' : 'required '}'
                 '${_constantPool[descriptor[i]]}: '
                 '${runtimeTypeToString(descriptor[i + 2])}',

@@ -183,9 +183,21 @@ sealed class TypeRef {
 
   /// Whether the runtime descriptor for this type embeds a type parameter,
   /// so its id must be resolved against the active type environment.
-  bool get requiresTypeEnvironment =>
-      isTypeParameter ||
-      interfaceArgumentsOf(this).any((arg) => arg.requiresTypeEnvironment);
+  bool get requiresTypeEnvironment => switch (this) {
+    TypeParameterTypeRef() => true,
+    InterfaceTypeRef(:final arguments) => arguments.any(
+      (type) => type.requiresTypeEnvironment,
+    ),
+    RecordTypeRef(:final positional, :final named) =>
+      positional.any((type) => type.requiresTypeEnvironment) ||
+          named.values.any((type) => type.requiresTypeEnvironment),
+    FunctionTypeRef(:final signature) =>
+      signature.returnType.requiresTypeEnvironment ||
+          signature.positional.any((type) => type.requiresTypeEnvironment) ||
+          signature.named.values.any(
+            (parameter) => parameter.type.requiresTypeEnvironment,
+          ),
+  };
 
   /// Whether this type embeds a call-site type parameter — an inference
   /// variable to be bound by unification rather than a declared parameter
@@ -243,8 +255,7 @@ sealed class TypeRef {
   TypeRef lowerTypeParameters(
     CompilerContext ctx, {
     Set<TypeParameterDef>? only,
-  }) =>
-      ctx.typeSystem.lowerTypeParameters(this, only: only);
+  }) => ctx.typeSystem.lowerTypeParameters(this, only: only);
 
   /// Replaces every remaining type-parameter reference inside this type with
   /// `dynamic` — the fallback for bounds that cannot be represented (cyclic
