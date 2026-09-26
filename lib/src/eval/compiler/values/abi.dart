@@ -37,9 +37,8 @@ enum CallableKind {
 /// results, field storage, collection elements. The convention is a
 /// property of the boundary, not of the type.
 abstract final class Abi {
-  /// The rep a value of [type] has when it crosses a function boundary
-  /// unboxed-eligible: non-nullable scalars and strings use their native
-  /// representations. Type parameters keep the erased boxed convention.
+  /// Native representations for non-nullable scalar and String values at
+  /// direct call boundaries. Type parameters keep the erased boxed convention.
   static ValueRep unboxedAcrossCalls(TypeRef type) {
     if (type.nullable || type.isTypeParameter) return ValueRep.boxed;
     if (!type.isDartCore) return ValueRep.boxed;
@@ -97,9 +96,8 @@ abstract final class Abi {
     }
   }
 
-  /// The rep a local, global, or field storage slot of [type] takes:
-  /// scalar banks for scalars and boxed object storage
-  /// for everything else.
+  /// Local and global storage uses native scalars and strings; other values
+  /// use boxed object storage. Instance fields follow [fieldStorage].
   static ValueRep storageSlot(TypeRef type) =>
       repForType(type, representationForType(type));
 

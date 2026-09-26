@@ -33,10 +33,10 @@ Variable compileNullCondition(CompilerContext ctx, Variable value) =>
 /// [macroBranch]'s `condition` closure.
 Variable compileNonNullCondition(CompilerContext ctx, Variable value) {
   final boolType = CoreTypes.bool.ref(ctx);
-  final eq = compileNullCondition(ctx, value);
+  final isNull = compileNullCondition(ctx, value);
   return Variable.ssa(
     ctx,
-    LogicalNot(ctx.svar('nonnull_ne'), eq.ssa),
+    LogicalNot(ctx.svar('nonnull_ne'), isNull.ssa),
     boolType,
     rep: ValueRep.bool,
   );

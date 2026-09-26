@@ -57,6 +57,7 @@ BasicBlockBuilder compileCondition(
       ]);
       return;
     }
+    // Later operands can overwrite the value an earlier type test proved.
     for (var i = 0; i < promotions.length; i++) {
       final (condition, outcome) = promotions[i];
       applyConditionPromotions(
@@ -68,10 +69,9 @@ BasicBlockBuilder compileCondition(
         ),
       );
     }
-    // Conditions see `bool` as their context type — a `.m()` shorthand in
-    // condition position resolves against it.
     // Individual tests may promote on only one short-circuit edge. Do not
     // leak their expression-local inference into the enclosing condition.
+    // The bool context also resolves `.m()` shorthand in condition position.
     ctx.enterTypeInferenceContext();
     final compiledValue = compileExpression(
       expression,

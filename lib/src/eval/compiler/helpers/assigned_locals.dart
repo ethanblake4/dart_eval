@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 
+/// Local writes that invalidate allocation facts or earlier type promotions.
 Set<String> assignedLocalNames(Iterable<AstNode> nodes) {
   final collector = _AssignedLocalNames();
   for (final node in nodes) {

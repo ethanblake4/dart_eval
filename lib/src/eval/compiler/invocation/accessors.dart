@@ -583,11 +583,16 @@ final class IntrinsicGet extends GetTarget {
   Variable emit(CompilerContext ctx) {
     // Use the resolved receiver view: a null-aware selector may have narrowed
     // its type without changing the nullable local it came from.
-    final recv = unbox && string && receiver.boxed
-        ? receiver.toRep(ctx, ValueRep.string, into: ctx.svar('string_receiver'))
-        : unbox
-        ? receiver.unboxIfNeeded(ctx, false)
-        : receiver;
+    var recv = receiver;
+    if (unbox) {
+      recv = string && receiver.boxed
+          ? receiver.toRep(
+              ctx,
+              ValueRep.string,
+              into: ctx.svar('string_receiver'),
+            )
+          : receiver.unboxIfNeeded(ctx, false);
+    }
     return switch (name) {
       'length' => Variable.ssa(
         ctx,

@@ -110,3 +110,16 @@ short-circuit type promotions invalidated by assignments, generic structural
 type checks, null equality and operand order, nullable/dynamic string dispatch,
 and native String calls through constructors, defaults, generic/dynamic
 tear-offs and recursive finally blocks.
+
+## Final cleanup checkpoint
+
+The style pass replaced nested receiver-conversion selection with a short
+conditional, clarified native-string ABI comments and promotion invalidation,
+and named the shared null test by its result. The loop and condition compiler
+share the existing local-write collector; null guards share one null-test
+builder. No additional runtime path was introduced during cleanup.
+
+All 40 affected focused tests pass after cleanup, and analysis of the edited
+files is clean. `control_flow_graph` remains clean at `bd9c394`. Checkpoints
+`f863b94` and `b23366e` contain the SDK fix and performance work respectively;
+all checkpoints were pushed directly to `xv2`.
