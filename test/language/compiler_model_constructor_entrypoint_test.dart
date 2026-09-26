@@ -3,6 +3,35 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('explicit field and super formal types determine the call ABI', () {
+    final program = Compiler().compile({
+      'binding': {
+        'main.dart': '''
+          class Base {
+            final num value;
+            Base(int this.value);
+            Base.named({double this.value = 2.5});
+          }
+          class Inferred extends Base {
+            Inferred(super.value);
+          }
+          class Narrow extends Base {
+            Narrow(int super.value);
+          }
+          num main() => Base(3).value + Base.named().value +
+              Base.named(value: 4.5).value + Inferred(5).value +
+              Narrow(7).value;
+        ''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(runtime.executeLib('package:binding/main.dart', 'main'), 22);
+    }
+  });
+
   test('field formal requires a declared field', () {
     for (final declaration in [
       'class A { A(this.x); }',

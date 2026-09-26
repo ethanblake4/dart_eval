@@ -590,7 +590,6 @@ expect_fail:
     reason: 'infinite host recursion — eval stack overflow kills the isolate'
   - path: 'parameter/default_test.dart'
   - path: 'parameter/initializer_test.dart'
-  - path: 'parameter/named_with_dollars_test.dart'
   - path: 'part/of_uri2_test.dart'
     reason: const string canonicalization (identical on const-interpolated strings)
   - path: 'part/of_uri_test.dart'

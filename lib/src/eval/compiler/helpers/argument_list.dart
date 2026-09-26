@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'default_value.dart';
+import 'fpl.dart' show getFormalParameterType;
 
 import '../../../../dart_eval_bridge.dart';
 import '../builtins.dart';
@@ -165,26 +166,14 @@ TypeRef resolveSuperFormalType(
     if (target is BridgeParameter) {
       return TypeRef.fromBridgeAnnotation(ctx, target.type);
     }
-  } else if (target is RegularFormalParameter) {
-    final type0 = target.type;
-    if (type0 == null) {
-      return CoreTypes.dynamic.ref(ctx);
-    }
-    return TypeRef.fromAnnotation(ctx, superCstr.sourceLib, type0);
-  } else if (target is FieldFormalParameter) {
-    return resolveFieldFormalType(
-      ctx,
-      decLibrary,
-      target,
-      superCstr.declaration as ConstructorDeclaration,
-    );
-  } else if (target is SuperFormalParameter) {
-    return resolveSuperFormalType(
-      ctx,
-      decLibrary,
-      target,
-      superCstr.declaration as ConstructorDeclaration,
-    );
+  } else if (target is FormalParameter) {
+    return getFormalParameterType(
+          ctx,
+          target,
+          superCstr.sourceLib,
+          superCstr.declaration as ConstructorDeclaration,
+        ).$1 ??
+        CoreTypes.dynamic.ref(ctx);
   } else if (target != null) {
     throw CompileError('Unknown parameter type ${target.runtimeType}', param);
   }

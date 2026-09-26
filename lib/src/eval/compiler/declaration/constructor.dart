@@ -164,7 +164,9 @@ void compileConstructorDeclaration(
 
       fieldFormalNames.add(p.name.lexeme);
     } else if (p is SuperFormalParameter) {
-      final type = resolveSuperFormalType(ctx, ctx.library, p, d);
+      final type =
+          ctx.functionParameterTypes[ctx.currentFunctionId!]![i -
+              (isEnum ? 2 : 0)];
       vrep = Variable.of(
         ctx,
         SSA('arg_$i'),

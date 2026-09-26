@@ -136,18 +136,18 @@ List<FormalParameter> resolveFPLDefaults(
   Declaration? parameterHost, {
   Map<String, TypeRef> typeParameters = const {},
 }) {
+  final type = param.type;
+  if (type != null) {
+    return (
+      ctx.typeFactory.formalParameterAnnotationType(
+        decLibrary,
+        param,
+        typeParameters: typeParameters,
+      ),
+      type,
+    );
+  }
   if (param is RegularFormalParameter) {
-    final type = param.type;
-    if (type != null) {
-      return (
-        ctx.typeFactory.formalParameterAnnotationType(
-          decLibrary,
-          param,
-          typeParameters: typeParameters,
-        ),
-        type,
-      );
-    }
     // An unwritten parameter type on an instance method is inherited from
     // the overridden member's signature (Dart's override inference).
     return (

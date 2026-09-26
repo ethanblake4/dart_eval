@@ -305,7 +305,13 @@ class IndexedReference implements Reference {
       }
 
       final list = _variable.unboxIfNeeded(ctx);
-      _index = _index.unboxIfNeeded(ctx);
+      _index = convertForAssignment(
+        ctx,
+        _index,
+        CoreTypes.int.ref(ctx),
+        representation: MachineRepresentation.integer,
+        source: source,
+      );
       final listElementType = interfaceArgumentsOf(_variable.type).isNotEmpty
           ? interfaceArgumentsOf(_variable.type)[0]
           : CoreTypes.dynamic.ref(ctx);
