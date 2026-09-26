@@ -1010,7 +1010,7 @@ String familyOf(String name) {
   );
   add(
     'aLoadPropertyR',
-    'a = TypedInterop.toInt((r as TypedInstance).values[index]);',
+    'a = TypedInstance.intField((r as TypedInstance).values[index]);',
     inputs: [6],
     output: 0,
     immediate: 'field',
@@ -1042,14 +1042,14 @@ String familyOf(String name) {
   );
   add(
     'aFieldIncrementRA',
-    'final instance = r as TypedInstance; instance.values[index] = \$int(TypedInterop.toInt(instance.values[index]) + 1);',
+    'final instance = r as TypedInstance; instance.values[index] = TypedInstance.intField(instance.values[index]) + 1;',
     inputs: [6],
     immediate: 'field',
     mayThrow: true,
   );
   add(
     'aStringCodeUnitFieldsRR',
-    'final instance = r as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));',
+    'final instance = r as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInstance.intField(instance.values[index >> 8]));',
     inputs: [6],
     output: 0,
     immediate: 'integer',
@@ -1057,7 +1057,7 @@ String familyOf(String name) {
   );
   add(
     'eFieldLessStrLenRR',
-    'final instance = r as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;',
+    'final instance = r as TypedInstance; e = TypedInstance.intField(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;',
     inputs: [6],
     output: 4,
     immediate: 'integer',
@@ -1065,7 +1065,7 @@ String familyOf(String name) {
   );
   add(
     'setPropertyRA',
-    '(r as TypedInstance).values[index] = \$int(a);',
+    '(r as TypedInstance).values[index] = a;',
     inputs: [6, 0],
     immediate: 'field',
     mayThrow: true,
@@ -1227,7 +1227,7 @@ String familyOf(String name) {
     final R = rn.toUpperCase();
     add(
       'aLoadProperty$R',
-      'a = TypedInterop.toInt(($rn as TypedInstance).values[index]);',
+      'a = TypedInstance.intField(($rn as TypedInstance).values[index]);',
       inputs: [recv],
       output: 0,
       immediate: 'field',
@@ -1290,8 +1290,8 @@ String familyOf(String name) {
       extended: true,
     );
     for (final (vreg, vn, boxed) in [
-      (0, 'a', r'$int(a)'),
-      (1, 'b', r'$int(b)'),
+      (0, 'a', 'a'),
+      (1, 'b', 'b'),
       (7, 's', 's'),
       (8, 'c', 'c'),
       (2, 'f', 'f'),
@@ -1308,7 +1308,7 @@ String familyOf(String name) {
     }
     add(
       'aFieldIncrement${R}A',
-      'final instance = $rn as TypedInstance; instance.values[index] = \$int(TypedInterop.toInt(instance.values[index]) + 1);',
+      'final instance = $rn as TypedInstance; instance.values[index] = TypedInstance.intField(instance.values[index]) + 1;',
       inputs: [recv],
       immediate: 'field',
       mayThrow: true,
@@ -1316,7 +1316,7 @@ String familyOf(String name) {
     );
     add(
       'aStringCodeUnitFields${R}R',
-      'final instance = $rn as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));',
+      'final instance = $rn as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInstance.intField(instance.values[index >> 8]));',
       inputs: [recv],
       output: 0,
       immediate: 'integer',
@@ -1325,7 +1325,7 @@ String familyOf(String name) {
     );
     add(
       'eFieldLessStrLen${R}R',
-      'final instance = $rn as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;',
+      'final instance = $rn as TypedInstance; e = TypedInstance.intField(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;',
       inputs: [recv],
       output: 4,
       immediate: 'integer',

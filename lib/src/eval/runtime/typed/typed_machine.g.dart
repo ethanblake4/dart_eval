@@ -903,7 +903,7 @@ abstract final class TypedMachine {
            continue dispatch;
         case TypedOp.aLoadPropertyR:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-           a = TypedInterop.toInt((r as TypedInstance).values[index]);
+           a = TypedInstance.intField((r as TypedInstance).values[index]);
            continue dispatch;
         case TypedOp.fLoadPropertyR:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -919,19 +919,19 @@ abstract final class TypedMachine {
            continue dispatch;
         case TypedOp.aFieldIncrementRA:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-           final instance = r as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
+           final instance = r as TypedInstance; instance.values[index] = TypedInstance.intField(instance.values[index]) + 1;
            continue dispatch;
         case TypedOp.aStringCodeUnitFieldsRR:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-           final instance = r as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
+           final instance = r as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInstance.intField(instance.values[index >> 8]));
            continue dispatch;
         case TypedOp.eFieldLessStrLenRR:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-           final instance = r as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
+           final instance = r as TypedInstance; e = TypedInstance.intField(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
            continue dispatch;
         case TypedOp.setPropertyRA:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-           (r as TypedInstance).values[index] = $int(a);
+           (r as TypedInstance).values[index] = a;
            continue dispatch;
         case TypedOp.setPropertyRF:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1270,7 +1270,7 @@ abstract final class TypedMachine {
        break;
     case 300:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       a = TypedInterop.toInt((s as TypedInstance).values[index]);
+       a = TypedInstance.intField((s as TypedInstance).values[index]);
        break;
     case 301:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1298,11 +1298,11 @@ abstract final class TypedMachine {
        break;
     case 307:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (s as TypedInstance).values[index] = $int(a);
+       (s as TypedInstance).values[index] = a;
        break;
     case 308:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (s as TypedInstance).values[index] = $int(b);
+       (s as TypedInstance).values[index] = b;
        break;
     case 309:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1322,15 +1322,15 @@ abstract final class TypedMachine {
        break;
     case 313:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = s as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
+       final instance = s as TypedInstance; instance.values[index] = TypedInstance.intField(instance.values[index]) + 1;
        break;
     case 314:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = s as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
+       final instance = s as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInstance.intField(instance.values[index >> 8]));
        break;
     case 315:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = s as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
+       final instance = s as TypedInstance; e = TypedInstance.intField(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
        break;
     case 316:
        a = (s as String).length;
@@ -1456,7 +1456,7 @@ abstract final class TypedMachine {
        break;
     case 346:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       a = TypedInterop.toInt((c as TypedInstance).values[index]);
+       a = TypedInstance.intField((c as TypedInstance).values[index]);
        break;
     case 347:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1484,11 +1484,11 @@ abstract final class TypedMachine {
        break;
     case 353:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (c as TypedInstance).values[index] = $int(a);
+       (c as TypedInstance).values[index] = a;
        break;
     case 354:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       (c as TypedInstance).values[index] = $int(b);
+       (c as TypedInstance).values[index] = b;
        break;
     case 355:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1508,15 +1508,15 @@ abstract final class TypedMachine {
        break;
     case 359:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = c as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
+       final instance = c as TypedInstance; instance.values[index] = TypedInstance.intField(instance.values[index]) + 1;
        break;
     case 360:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = c as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
+       final instance = c as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInstance.intField(instance.values[index >> 8]));
        break;
     case 361:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       final instance = c as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
+       final instance = c as TypedInstance; e = TypedInstance.intField(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
        break;
     case 362:
        a = (c as String).length;

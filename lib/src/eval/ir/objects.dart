@@ -82,8 +82,8 @@ final class SetPropertyStatic extends Operation {
   final SSA value;
   final bool isLateFinal;
 
-  /// The register bank [value] arrives in. Scalar stores box the value,
-  /// except doubles, which can remain native until an object read.
+  /// The register bank [value] arrives in. Typed numeric stores can retain
+  /// native values until an object read needs a box.
   final MachineRepresentation rep;
 
   SetPropertyStatic(

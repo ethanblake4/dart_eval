@@ -38,9 +38,15 @@ Invocation _typedMethodInvocation(
 
 /// An evaluated object whose members belong to a typed program.
 final class TypedInstance implements $Instance {
-  /// Field writes may retain native doubles until an object read needs a box.
-  static Object? boxField(Object? value) =>
-      value is double ? $double(value) : value;
+  /// Scalar field writes can defer boxing until an object read.
+  static Object? boxField(Object? value) => switch (value) {
+    int() => $int(value),
+    double() => $double(value),
+    _ => value,
+  };
+
+  static int intField(Object? value) =>
+      value is int ? value : (value as $int).$value;
 
   static double doubleField(Object? value) =>
       value is double ? value : (value as $double).$value;
@@ -79,7 +85,7 @@ final class TypedInstance implements $Instance {
   final int classId;
   final $Instance? superclass;
 
-  /// Canonical boxed values, except doubles written from a scalar register.
+  /// Canonical boxed values or native scalar values written by typed stores.
   final List<Object?> values;
   TypedInstance? _dispatchRoot;
   final int? runtimeTypeId;
