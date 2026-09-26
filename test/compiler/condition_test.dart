@@ -30,6 +30,71 @@ Iterable<TypedInstruction> instructions(TypedProgram program) =>
     program.instructions.map((e) => e.$2);
 
 void main() {
+  test('boolean-valued short circuit expressions remain unboxed', () {
+    final program = compile('''
+      bool main(int bits) {
+        final a = (bits & 1) != 0;
+        final b = (bits & 2) != 0;
+        final c = (bits & 4) != 0;
+        final result = (a && b) || c;
+        return result;
+      }
+    ''');
+    expect(
+      instructions(program.typedProgram).where(
+        (op) =>
+            op.name.contains('Box') ||
+            op.name.contains('FromR') ||
+            op.name.contains('FromS') ||
+            op.name.contains('FromC'),
+      ),
+      isEmpty,
+    );
+    for (final a in [false, true]) {
+      for (final b in [false, true]) {
+        for (final c in [false, true]) {
+          expectResult(program, (a && b) || c, {
+            'bits': (a ? 1 : 0) + (b ? 2 : 0) + (c ? 4 : 0),
+          });
+        }
+      }
+    }
+  });
+
+  test('boolean value joins preserve side effects and dynamic checks', () {
+    final program = compile('''
+      int main(bool a, bool b) {
+        var effects = 0;
+        bool touch(bool value) { effects++; return value; }
+        final result = (a && touch(b)) || touch(!a);
+        dynamic bad = 1;
+        final skippedAnd = false && bad;
+        final skippedOr = true || bad;
+        var errors = 0;
+        try { final value = true && bad; } on TypeError { errors++; }
+        try { final value = false || bad; } on TypeError { errors++; }
+        try { final value = bad && false; } on TypeError { errors++; }
+        return (result ? 100 : 0) + effects + errors * 10 +
+            (skippedAnd ? 1000 : 0) + (skippedOr ? 10000 : 0);
+      }
+    ''');
+    for (final a in [false, true]) {
+      for (final b in [false, true]) {
+        var effects = 0;
+        bool touch(bool value) {
+          effects++;
+          return value;
+        }
+
+        final result = (a && touch(b)) || touch(!a);
+        expectResult(program, (result ? 100 : 0) + effects + 10030, {
+          'a': a,
+          'b': b,
+        });
+      }
+    }
+  });
+
   test('throwing guards retain only promotions on continuing paths', () {
     final program = compile('''
       Never reject() => throw 9;

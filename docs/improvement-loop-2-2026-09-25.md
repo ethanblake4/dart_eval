@@ -54,8 +54,10 @@ Mixed and nullable results keep the existing object representation. A wider SDK
 survey caught nominal common-ancestor selection dropping a nullable arm;
 the conditional join now preserves nullability from both arms explicitly.
 
-Pinned affinity mask `4`, sequential processes without concurrent test runs,
-100,000 appointments and 15 samples:
+Initial sequential comparison without concurrent test runs, 100,000 appointments
+and 15 samples. These runs were unpinned: a later audit found that the ctypes
+affinity call had the wrong Windows handle width and silently failed. Corrected,
+verified-affinity comparisons are recorded in the final review below.
 
 | Version | Median ms | Minimum ms | Maximum ms |
 | --- | ---: | ---: | ---: |
@@ -99,3 +101,42 @@ promotion present on only one arm. Fresh and serialized runtimes agree. All
 additional checks on ordinary boolean expressions were introduced.
 
 Full default suite: 1,599 passed, 62 skipped. Generated typed-machine check passed.
+
+## Step 3b: access-policy decisions
+
+`benchmark/access_policy.dart` and `.py` classify packed request records using
+tenant, ownership, role, expiry, suspension, verification and risk conditions.
+The 200,000-request dataset includes 50,000 tenant mismatches, 26,405 allows,
+7,969 reviews and 165,626 denials. Both ports use identical decision logic.
+The initial tenant check used constant low bits of the alternating generator;
+both ports were corrected before rebuilding the comparison binaries.
+
+Boolean-valued `&&` and `||` now keep their results in the boolean register bank.
+Chains consisting solely of non-nullable boolean locals and constants use the
+existing condition compiler and materialize one final result. Expressions with
+calls, mutations, type tests or other operands keep the general short-circuit
+path, including its type checks and promotions. Regression coverage verifies
+all truth-table combinations, captures, skipped invalid dynamic operands and
+required runtime type checks when the result is unused.
+
+Verified affinity mask `4`, 200,000 requests and 15 samples:
+
+| Version | Median ms | Minimum ms | Maximum ms |
+| --- | ---: | ---: | ---: |
+| Baseline | 257.466 | 224.886 | 600.237 |
+| Boolean registers and direct chains | 165.367 | 152.556 | 195.001 |
+| CPython | 141.598 | 138.270 | 151.558 |
+| Candidate repeat | 163.081 | 152.499 | 204.550 |
+
+All checksums are `396413532770`. The candidate is within 17% of Python, down
+from 82% in this comparison. The baseline is noisy; a preceding pinned run
+measured 201.775 ms for the same baseline and 184.841 ms with boolean registers
+alone. Do not interpret the full 36% median reduction as a stable speedup.
+Raw logs are `.dart_tool/access-chain-comparison.log` and
+`.dart_tool/loop2-pinned-comparisons.log`. No runtime or standard-library changes.
+
+The user requested more varied language-feature coverage at this point. The
+next workloads therefore focus on polymorphic template rendering and an event
+bus using closures, captures and bound methods, rather than scalar loops.
+
+Validation: full default suite passes 1,601 tests with 62 skipped; changed-file analysis is clean.

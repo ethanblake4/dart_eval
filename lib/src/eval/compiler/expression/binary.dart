@@ -2,7 +2,6 @@ import 'package:control_flow_graph/control_flow_graph.dart' show Assign;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
@@ -51,6 +50,30 @@ Variable compileBinaryExpression(
   BinaryExpression e, [
   TypeRef? boundType,
 ]) {
+  if ((e.operator.type == TokenType.AMPERSAND_AMPERSAND ||
+          e.operator.type == TokenType.BAR_BAR) &&
+      _hasOnlyBooleanLocals(e, ctx)) {
+    final output = ctx.svar('boolean_result');
+    macroBranch(
+      ctx,
+      null,
+      conditionExpression: e,
+      thenBranch: (ctx, _) {
+        ctx.pushOp(LoadBool(output, true));
+        return StatementInfo();
+      },
+      elseBranch: (ctx, _) {
+        ctx.pushOp(LoadBool(output, false));
+        return StatementInfo();
+      },
+    );
+    return Variable.of(
+      ctx,
+      output,
+      CoreTypes.bool.ref(ctx),
+      rep: ValueRep.bool,
+    );
+  }
   final method =
       binaryOpMap[e.operator.type] ??
       (throw CompileError('Unknown binary operator ${e.operator.type}'));
@@ -98,6 +121,29 @@ Variable compileBinaryExpression(
   return internConst(ctx, boxed, boxed.type);
 }
 
+// A chain of boolean locals has no promotions or terminating operands to
+// preserve. Branch directly and materialize only the final result, instead
+// of a separate boolean join for each &&/|| in the chain.
+bool _hasOnlyBooleanLocals(Expression expression, CompilerContext ctx) {
+  if (expression is ParenthesizedExpression) {
+    return _hasOnlyBooleanLocals(expression.expression, ctx);
+  }
+  if (expression is PrefixExpression && expression.operator.lexeme == '!') {
+    return _hasOnlyBooleanLocals(expression.operand, ctx);
+  }
+  if (expression is BinaryExpression &&
+      (expression.operator.lexeme == '&&' ||
+          expression.operator.lexeme == '||')) {
+    return _hasOnlyBooleanLocals(expression.leftOperand, ctx) &&
+        _hasOnlyBooleanLocals(expression.rightOperand, ctx);
+  }
+  if (expression is SimpleIdentifier) {
+    final type = ctx.lookupLocal(expression.name)?.type;
+    return type != null && !type.nullable && type.isSpec(CoreTypes.bool);
+  }
+  return expression is BooleanLiteral;
+}
+
 Variable _compileShortCircuit(
   CompilerContext ctx,
   Variable L,
@@ -107,9 +153,23 @@ Variable _compileShortCircuit(
   TypeRef? boundType,
 }) {
   late TypeRef rightType;
-  var outVar = BuiltinValue().push(ctx).boxIntoFreshSlot(ctx);
-  L = L.boxIfNeeded(ctx);
-  ctx.pushOp(Assign(outVar.ssa, L.ssa));
+  final boolType = CoreTypes.bool.ref(ctx);
+  L = operator == '??'
+      ? L.boxIfNeeded(ctx)
+      : convertForAssignment(
+          ctx,
+          L,
+          boolType,
+          representation: MachineRepresentation.boolean,
+          source: left,
+          description: 'Operands of $operator must be boolean',
+        );
+  final outVar = Variable.ssa(
+    ctx,
+    Assign(ctx.svar('short_circuit'), L.ssa),
+    L.type,
+    rep: L.rep,
+  );
 
   macroBranch(
     ctx,
@@ -123,19 +183,11 @@ Variable _compileShortCircuit(
           rep: ValueRep.bool,
         );
       }
-      final value = convertForAssignment(
-        ctx,
-        L,
-        CoreTypes.bool.ref(ctx),
-        representation: MachineRepresentation.boolean,
-        source: right,
-        description: 'Operands of $operator must be boolean',
-      );
-      if (operator == '&&') return value;
+      if (operator == '&&') return L;
       return Variable.ssa(
         ctx,
-        LogicalNot(ctx.svar('short_circuit_test'), value.ssa),
-        value.type,
+        LogicalNot(ctx.svar('short_circuit_test'), L.ssa),
+        boolType,
       );
     },
     thenBranch: (ctx, rt) {
@@ -157,8 +209,8 @@ Variable _compileShortCircuit(
         R = convertForAssignment(
           ctx,
           R,
-          CoreTypes.bool.ref(ctx),
-          representation: MachineRepresentation.object,
+          boolType,
+          representation: MachineRepresentation.boolean,
           source: right,
           description: 'Operands of $operator must be boolean',
         );
