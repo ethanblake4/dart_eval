@@ -216,9 +216,11 @@ final class TypeSystem {
   /// [maxEmittedArgDepth] bounds instantiated-supertype emission — a
   /// self-nesting interface (`F<T> implements Future<F<F<T>>>`) generates
   /// deeper instantiations at every hop and the closure would never
-  /// terminate. Supertypes deeper than the bound contribute only their
-  /// nominal index: no `is` target can be that deep anyway, since every
-  /// checkable type was written in the program.
+  /// terminate. The bound is relative to [type]'s own depth: instantiated
+  /// supertypes are legitimately deeper than any written type (bound
+  /// instantiation adds nesting at each hierarchy hop), but they can only
+  /// outgrow the root by a bounded amount. Supertypes beyond the bound
+  /// contribute only their nominal index.
   Set<int> supertypeIds(TypeRef type, {int? maxEmittedArgDepth}) {
     final selfId = _ctx.runtimeTypes.idOf(type);
     final indices = {
@@ -228,11 +230,13 @@ final class TypeSystem {
     };
     final seen = {type};
     final worklist = directSupertypes(type);
+    final maxSuperDepth =
+        maxEmittedArgDepth == null ? null : maxEmittedArgDepth + typeArgumentDepth(type);
     while (worklist.isNotEmpty) {
       final supertype = worklist.removeLast();
       if (!seen.add(supertype)) continue;
-      if (maxEmittedArgDepth != null &&
-          typeArgumentDepth(supertype) > maxEmittedArgDepth) {
+      if (maxSuperDepth != null &&
+          typeArgumentDepth(supertype) > maxSuperDepth) {
         if (supertype is InterfaceTypeRef) {
           indices.add(
             _ctx.runtimeTypes.indexMap[supertype.decl] ??

@@ -544,9 +544,9 @@ final class InstanceMemberDenotation extends Denotation {
         return materializeTearOff(
           ctx,
           DeferredOrOffset(
-            file: ctx.library,
+            file: ctx.enclosingLibrary ?? ctx.library,
             className: ctx.currentClassName!,
-            name: refName,
+            name: ctx.memberNameKey(refName),
           ),
           implicitReceiver: $this,
           boundContext: boundContext,

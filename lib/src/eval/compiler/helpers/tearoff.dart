@@ -34,10 +34,13 @@ Variable materializeTearOff(
 }) {
   final Declaration declaration;
   if (offset.className != null) {
-    declaration =
-        ctx.instanceDeclarationsMap[offset.file]![offset.className!]![offset
-                .name]!
-            as MethodDeclaration;
+    // Position tables qualify private names as `uri::_x`; the declaration
+    // map stores the raw `_x` — probe both spellings.
+    final classMap =
+        ctx.instanceDeclarationsMap[offset.file]![offset.className!]!;
+    declaration = (classMap[offset.name] ??
+            classMap[offset.name!.split('::').last])!
+        as MethodDeclaration;
   } else {
     final declared = ctx.topLevelDeclarationsMap[offset.file]?[offset.name];
     if (declared == null) {

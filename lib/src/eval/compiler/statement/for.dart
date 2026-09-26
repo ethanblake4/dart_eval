@@ -154,16 +154,22 @@ StatementInfo compileForEachLoop(
   // concurrent-modification check.
   final iterableRep = unboxedRepOf(itype);
   if (iterableRep == ValueRep.nativeList || iterableRep == ValueRep.nativeSet) {
-    StatementInfo indexForEach(CompilerContext ctx, TypeRef? ert) =>
-        _compileIndexForEach(
-          ctx,
-          parts,
-          iterable,
-          elementType,
-          ert,
-          body: body,
-          assignedNamesScan: assignedNamesScan,
-        );
+    // Each compiled branch owns a loop that attaches the pending labels —
+    // drain them once and re-seed inside each branch.
+    final labelNames = ctx.takePendingLabelNames();
+    StatementInfo indexForEach(CompilerContext ctx, TypeRef? ert) {
+      ctx.pendingLabelNames.addAll(labelNames);
+      return _compileIndexForEach(
+        ctx,
+        parts,
+        iterable,
+        elementType,
+        ert,
+        body: body,
+        assignedNamesScan: assignedNamesScan,
+      );
+    }
+
     if (iterable.boxed) {
       // A boxed value promoted to `List`/`Set` can still be an
       // evaluated-class implementation — VM-check the storage once and
@@ -180,15 +186,18 @@ StatementInfo compileForEachLoop(
           rep: ValueRep.bool,
         ),
         thenBranch: indexForEach,
-        elseBranch: (ctx, ert) => _compileIteratorForEach(
-          ctx,
-          parts,
-          iterable,
-          elementType,
-          ert,
-          body: body,
-          assignedNamesScan: assignedNamesScan,
-        ),
+        elseBranch: (ctx, ert) {
+          ctx.pendingLabelNames.addAll(labelNames);
+          return _compileIteratorForEach(
+            ctx,
+            parts,
+            iterable,
+            elementType,
+            ert,
+            body: body,
+            assignedNamesScan: assignedNamesScan,
+          );
+        },
       );
     }
     return indexForEach(ctx, expectedReturnType);

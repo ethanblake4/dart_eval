@@ -47,7 +47,9 @@ final class Devirtualizer {
       _ => null,
     };
     final name = target.name;
-    final memberName = MemberName.method(name);
+    // The member key as written in the current library — a private member
+    // folded in from another library registers under `uri::_name`.
+    final memberName = ctx.memberNameOf(name, MemberKind.method);
     var directOwner =
         lexicalSuper &&
             ctx.memberLookup.concreteMemberOn(L.type, memberName)
@@ -67,7 +69,7 @@ final class Devirtualizer {
       // overridden by any descendant of its static type.
       directOwner = ctx.memberLookup.directImplementationOwner(
         L.concreteTypes.first,
-        MemberName(name, MemberKind.method),
+        memberName,
       );
     }
     // A callee needs `this` bound to its declaring link only when its body
@@ -75,22 +77,16 @@ final class Devirtualizer {
     // works, which also allows devirtualizing non-exact receivers.
     final needsLink =
         directOwner != null &&
-        ctx.memberLookup.needsOwnerLink(
-          directOwner,
-          MemberName(name, MemberKind.method),
-        );
+        ctx.memberLookup.needsOwnerLink(directOwner, memberName);
     if (directOwner != null && (linkType != null || !needsLink)) {
-      final member = ctx.memberLookup.concreteMemberOn(
-        directOwner,
-        MemberName.method(name),
-      );
+      final member = ctx.memberLookup.concreteMemberOn(directOwner, memberName);
       if (member is! SourceMember) return target;
       return StaticCall(
         DeferredOrOffset(
           file: directOwner.file,
           className: directOwner.name,
           methodType: MemberKind.method,
-          name: name,
+          name: memberName.nameKey,
         ),
         receiver: L,
         ownerLink: linkType != null && needsLink
@@ -99,6 +95,10 @@ final class Devirtualizer {
         typeEnvironmentReceiver: L,
         declaringLink: directOwner,
         member: member,
+        // The interface signature binds the call — a devirtualized callee
+        // may narrow bounds (e.g. `H extends List<int>` vs `List<T>`) that
+        // only hold for the implementation's checked-stub, not statically.
+        signature: target.signature,
       );
     }
     return target;

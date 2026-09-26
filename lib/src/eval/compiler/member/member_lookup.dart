@@ -618,6 +618,10 @@ final class MemberLookup {
       return null;
     }
     for (final link in [type, ...ctx.typeSystem.superclassChain(type)]) {
+      // A mixin's members exist only as copies folded into each applying
+      // class — the mixin link itself hosts no compiled implementation.
+      final decl = ctx.types.find(link.file, link.name);
+      if (decl is SourceTypeDecl && decl.kind == TypeDeclKind.mixin) continue;
       final member = concreteMemberOn(link, name);
       if (member != null) return (link, member);
     }

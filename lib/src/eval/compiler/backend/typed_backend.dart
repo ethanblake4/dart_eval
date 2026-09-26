@@ -699,7 +699,9 @@ class TypedBackend {
     }
     id ??= context.topLevelDeclarationPositions[target.file]?[target.name];
     if (id == null || !context.ssaFunctionGraphs.containsKey(id)) {
-      throw UnsupportedError('Typed direct-call target $target');
+      throw UnsupportedError(
+        'Typed direct-call target $target className=${target.className} kind=${target.methodType}',
+      );
     }
     return id;
   }

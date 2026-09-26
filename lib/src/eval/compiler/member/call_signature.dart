@@ -439,7 +439,13 @@ final class CallSignature {
       ownerPrefix: prefix,
       returnFallback: CoreTypes.dynamic.ref(ctx),
       typeParameters: ownerParams,
-      parameterHost: dec,
+      // A constructor hosts its own field/super formal parameters; a
+      // method's host is the enclosing class-like declaration.
+      parameterHost: dec is ConstructorDeclaration
+          ? dec
+          : host is Declaration
+          ? host
+          : null,
     );
   }
 

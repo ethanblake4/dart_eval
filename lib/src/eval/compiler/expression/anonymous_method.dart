@@ -147,9 +147,14 @@ Variable _runBody(
     }
     ctx.builder.float(exit);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
-    result = ctx
-        .lookupLocal(resultName)!
-        .copyWith(type: TypeRef.commonBaseType(ctx, returnTarget.types));
+    final merged = ctx.lookupLocal(resultName)!;
+    result = merged.copyWith(
+      type: TypeRef.commonBaseType(ctx, returnTarget.types),
+    );
+    // The local's binding still points at the `Object?`-declared variable;
+    // rebind it so later bound-refresh (e.g. `boxIfNeeded`) keeps the
+    // least-upper-bound type.
+    merged.binding?.rebind(result);
   }
   ctx.anonymousThisReceiver = previousAnonymousThis;
   ctx.endScope();

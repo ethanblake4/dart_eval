@@ -848,7 +848,13 @@ final class CallResolver {
     final viewedAs = link == null
         ? resolved.viewedAs
         : ctx.typeSystem.asInstanceOf(link, owner) ?? link;
-    return ownerTypeArgumentsOf(owner, viewedAs);
+    // The bound signature is the interface member's — seed its owner's
+    // parameters from the receiver's view alongside the implementation
+    // owner's parameters from the declaring link.
+    return {
+      ...resolved.ownerTypeArguments,
+      ...ownerTypeArgumentsOf(owner, viewedAs),
+    };
   }
 
   /// `a + b`, `a[i]`, `!x`, `a == b`, `it.moveNext()` — the operator and

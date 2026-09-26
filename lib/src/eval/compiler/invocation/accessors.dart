@@ -455,6 +455,7 @@ sealed class GetTarget {
         if (forward != null) {
           return _TrivialGetterCall(
             receiver,
+            owner: link,
             hops: hops,
             chain: forward,
             fieldType: fieldType,
@@ -501,6 +502,7 @@ sealed class GetTarget {
         if (forward != null) {
           return _TrivialGetterCall(
             receiver,
+            owner: owner,
             hops: const [],
             chain: forward,
             fieldType: fieldType,
@@ -790,12 +792,14 @@ List<String>? _trivialGetterForward(
 final class _TrivialGetterCall extends GetTarget {
   const _TrivialGetterCall(
     this.receiver, {
+    required this.owner,
     required this.hops,
     required this.chain,
     required this.fieldType,
   });
 
   final Variable receiver;
+  final TypeRef owner;
   final List<TypeRef> hops;
   final List<String> chain;
   final TypeRef fieldType;
@@ -803,6 +807,10 @@ final class _TrivialGetterCall extends GetTarget {
   @override
   Variable emit(CompilerContext ctx) {
     var value = _throughSuperLinks(ctx, receiver.boxIfNeeded(ctx), hops);
+    // The chain was proven against [owner]'s implementation; re-resolve
+    // each link on it — the receiver's declared interface type may not
+    // declare the forwarded members (e.g. a private field).
+    value = value.copyWith(type: owner);
     for (final name in chain) {
       value = GetTarget.read(ctx, value, name);
     }

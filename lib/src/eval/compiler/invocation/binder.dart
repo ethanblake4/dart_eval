@@ -425,6 +425,9 @@ final class ArgumentBinder {
     /// left for the callee to bind (`calleeBinds`) — used for calls that stay
     /// virtual, where the dispatch target's own defaults apply at runtime.
     bool fillOmitted = true,
+
+    /// See [bindDeclaration.defaultsSignature].
+    CallSignature? defaultsSignature,
   }) {
     // A redirecting factory (`factory F(...) = T.g`) exposes the redirect
     // target's signature to callers: argument binding, conversion, and omitted
@@ -475,6 +478,21 @@ final class ArgumentBinder {
     final argumentSubstitution = Substitution.of(resolveGenerics);
     final candidates = <TypeParameterDef, Set<TypeRef>>{};
 
+    // The parameter in the dispatch implementation's own signature —
+    // omitted defaults come from the callee that will actually run, while
+    // coercion stays on the bound (interface) signature.
+    ParameterSpec _defaultsSpecFor(ParameterSpec spec) {
+      final position = signature.positional.indexOf(spec);
+      if (position >= 0) {
+        final impl = defaultsSignature!.positional;
+        return position < impl.length ? impl[position] : spec;
+      }
+      return defaultsSignature!.named.firstWhere(
+        (candidate) => candidate.name == spec.name,
+        orElse: () => spec,
+      );
+    }
+
     // Compiles or reads the supplied argument for [spec]: context typing,
     // coercion to the formal, and generic-inference recording.
     Variable compileMatched(ParameterSpec spec, ArgSource argument) {
@@ -496,8 +514,14 @@ final class ArgumentBinder {
       // bound (or `dynamic`): the erased boundary accepts whatever the
       // inferred type argument becomes — e.g. `typedef T<X> = C<X>` invoked
       // as `T(1)` leaves `C`'s parameters bound to `T.X` until inference.
+      // Only the callee's own parameters lower: class and enclosing-scope
+      // parameters stay meaningful through the frame's type environment,
+      // where the runtime check resolves them against the actual owner.
       final coercionType = paramType.requiresTypeEnvironment
-          ? paramType.lowerTypeParameters(ctx)
+          ? paramType.lowerTypeParameters(
+              ctx,
+              only: signature.typeParameters.toSet(),
+            )
           : paramType;
       // The placeholder-rich shape is the better context type everywhere:
       // its remaining type parameters act as inference variables (`[1]`
@@ -580,7 +604,7 @@ final class ArgumentBinder {
       omitted: (spec) => fillOmitted
           ? compileOmittedArgument(
               ctx,
-              spec,
+              defaultsSignature == null ? spec : _defaultsSpecFor(spec),
               parameterHost,
               spec.type.substituteTypeParameters(argumentSubstitution),
             )
@@ -902,6 +926,9 @@ final class ArgumentBinder {
       argIndexOffset: argIndexOffset,
       fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
       targetSignature: target.signature,
+      // A devirtualized call binds against the interface signature but
+      // fills omitted defaults from the implementation it dispatches to.
+      defaultsSignature: target is StaticCall ? target.member?.signature : null,
     );
   }
 
@@ -952,6 +979,7 @@ final class ArgumentBinder {
       fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
       source: source,
       targetSignature: signature,
+      defaultsSignature: target is StaticCall ? target.member?.signature : null,
     );
     final resolvedGenerics = args.typeArguments;
     final returnType = signature.returnType
@@ -998,6 +1026,11 @@ final class ArgumentBinder {
     /// See [bindParameterList.fillOmitted].
     bool fillOmitted = true,
     CallSignature? targetSignature,
+
+    /// The dispatch implementation's signature — supplied when binding
+    /// happens against a different (interface) signature. Only its default
+    /// values are read: coercion still follows [targetSignature].
+    CallSignature? defaultsSignature,
   }) {
     final signature =
         targetSignature ?? CallSignature.forDeclaration(ctx, sourceLib, dec);
@@ -1062,6 +1095,7 @@ final class ArgumentBinder {
       // infers the constructor's own generics).
       inferGenerics: !isCallableDecl || typeArguments == null,
       fillOmitted: fillOmitted,
+      defaultsSignature: defaultsSignature,
     );
 
     // Downward inference: parameters untouched by argument inference bind

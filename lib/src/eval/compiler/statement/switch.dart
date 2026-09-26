@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/statement/break.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import '../invocation/resolver.dart';
 
@@ -26,6 +27,28 @@ StatementInfo compileSwitchStatement(
   final endBlock = BasicBlock<Operation>([], label: ctx.label('switch_end'));
   final initialState = ctx.saveState();
   final breakStates = <ContextSaveState>[];
+  // `L: case e:` makes the label a `continue` target into the labeled
+  // case's body. Each labeled case gets a preallocated entry block the
+  // body is emitted into; the label's cleanup collects the jumping edge's
+  // state for merging at that entry.
+  final caseLabels =
+      <SwitchMember, (BasicBlock<Operation>, List<ContextSaveState>, CompilerLabel)>{};
+  for (final member in s.members) {
+    if (member.labels.isEmpty) continue;
+    final block = BasicBlock<Operation>([], label: ctx.label('switch_case'));
+    final states = <ContextSaveState>[];
+    final entry = CompilerLabel(
+      (ctx) {
+        ctx.resolveBranchStateDiscontinuity(initialState);
+        states.add(ctx.saveState());
+      },
+      exceptionDepth: ctx.exceptionDepth,
+      continueTarget: block,
+      names: {for (final label in member.labels) label.name.lexeme},
+    );
+    caseLabels[member] = (block, states, entry);
+    ctx.labels.add(entry);
+  }
   ctx.labels.add(
     CompilerLabel(
       (ctx) {
@@ -43,12 +66,19 @@ StatementInfo compileSwitchStatement(
     s.members,
     0,
     expectedReturnType,
+    caseLabels,
     source: s,
   );
 
   ctx.labels.removeLast();
+  for (final entry in caseLabels.values) {
+    ctx.labels.remove(entry.$3);
+  }
   ctx.flushBlock();
-  ctx.builder = ctx.builder.then(endBlock);
+  // Live tails (the "no case matched" path) link to the switch's end;
+  // terminated ones (e.g. a `default` ending in `break`) are skipped.
+  ctx.builder =
+      ctx.builder.thenUnlessTerminated(endBlock, CompilerContext.isTerminatorOp);
   final fallthroughState = ctx.saveState();
   ctx.restoreState(initialState);
   ctx.mergeBranchState([fallthroughState, ...breakStates]);
@@ -60,7 +90,9 @@ StatementInfo _compileSwitchCases(
   Variable switchExpr,
   List<SwitchMember> cases,
   int index,
-  TypeRef? expectedReturnType, {
+  TypeRef? expectedReturnType,
+  Map<SwitchMember, (BasicBlock<Operation>, List<ContextSaveState>,
+      CompilerLabel)> caseLabels, {
   AstNode? source,
 }) {
   if (index >= cases.length) {
@@ -72,6 +104,7 @@ StatementInfo _compileSwitchCases(
 
   // Handle default case
   if (currentCase is SwitchDefault) {
+    _enterLabeledCase(ctx, currentCase, caseLabels);
     return _executeSwitchBlock(ctx, currentCase.statements, expectedReturnType);
   }
 
@@ -113,6 +146,7 @@ StatementInfo _compileSwitchCases(
       }
     },
     thenBranch: (ctx, expectedReturnType) {
+      _enterLabeledCase(ctx, currentCase, caseLabels);
       // Execute this case and following empty cases (Dart fall-through)
       return _executeMatchingCases(ctx, cases, index, expectedReturnType);
     },
@@ -124,10 +158,32 @@ StatementInfo _compileSwitchCases(
         cases,
         index + 1,
         expectedReturnType,
+        caseLabels,
       );
     },
     source: source,
   );
+}
+
+/// When [member] carries labels (`L: case e:`), its body runs in the
+/// preallocated entry block `continue L` jumps to: end the current block
+/// with a jump there, resume emission inside it, and merge the collected
+/// `continue` edge states into the entry state.
+void _enterLabeledCase(
+  CompilerContext ctx,
+  SwitchMember member,
+  Map<SwitchMember, (BasicBlock<Operation>, List<ContextSaveState>,
+      CompilerLabel)> caseLabels,
+) {
+  final entry = caseLabels[member];
+  if (entry == null) return;
+  final (block, states, _) = entry;
+  states.insert(0, ctx.saveState());
+  ctx.pushOp(Jump(block.label!));
+  final tail = ctx.flushBlock();
+  ctx.builder.link(tail, block);
+  ctx.builder = BasicBlockBuilder(ctx.activeGraph, [block], ctx.builder);
+  ctx.mergeBranchState(states);
 }
 
 StatementInfo _executeMatchingCases(

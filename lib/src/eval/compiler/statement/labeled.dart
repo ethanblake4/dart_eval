@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 
 /// Compiles a `label:`-prefixed statement.
@@ -59,7 +60,25 @@ StatementInfo compileLabeledStatement(
   }
   ctx.builder.float(exit);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
+  // Declarations inside the labeled statement belong to the enclosing
+  // block's scope, so they must survive restoring the pre-statement state.
+  final declaredInside = <int, Map<String, LocalBinding>>{};
+  for (var i = 0; i < ctx.locals.length; i++) {
+    for (final entry in ctx.locals[i].entries) {
+      final prior = i < initialState.locals.length
+          ? initialState.locals[i][entry.key]
+          : null;
+      if (prior == null || !identical(prior.binding, entry.value)) {
+        (declaredInside[i] ??= {})[entry.key] = entry.value;
+      }
+    }
+  }
   ctx.restoreState(initialState);
+  declaredInside.forEach((i, declared) {
+    if (i < ctx.locals.length) {
+      ctx.locals[i].addAll(declared);
+    }
+  });
   // A break to this label reaches the following statement even when another
   // path returns or throws. Breaks to an outer label still leave this block.
   return ctx.activeGraph.graph.predecessorsOf(exit.id!).isNotEmpty

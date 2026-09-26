@@ -207,14 +207,19 @@ class CompilerContext with ScopeContext {
   int _nextFunctionId = 0;
   late ControlFlowGraph activeGraph;
 
+  /// Whether [op] ends a block's normal control flow — the frontend ops
+  /// don't declare [Operation.isTerminator], so they are matched here.
+  static bool isTerminatorOp(Operation op) =>
+      op is Return ||
+      op is ReturnAsync ||
+      op is Throw ||
+      op is Rethrow ||
+      op is CompleteJump ||
+      op is Jump;
+
   bool get blockEndsControlFlow =>
-      blockCode.isNotEmpty &&
-      (blockCode.last is Return ||
-          blockCode.last is ReturnAsync ||
-          blockCode.last is Throw ||
-          blockCode.last is Rethrow ||
-          blockCode.last is CompleteJump ||
-          blockCode.last is Jump);
+      blockCode.isNotEmpty && isTerminatorOp(blockCode.last);
+
 
   int beginFunction(String name) {
     finishMethod();
@@ -241,7 +246,9 @@ class CompilerContext with ScopeContext {
 
   BasicBlock flushBlock([String? name]) {
     final block = commitBlock(name);
-    builder = builder.then(block);
+    // A tail already ending in a terminator must not gain a fallthrough
+    // edge to the new block; it is parked and the block starts detached.
+    builder = builder.thenUnlessTerminated(block, isTerminatorOp);
     return block;
   }
 
