@@ -12,6 +12,59 @@ void check(String source, Object? expected) {
 }
 
 void main() {
+  test('recursive and forward calls select the most-derived declaration', () {
+    check('''
+      class Base {
+        int count(int n) => 100;
+        int value() => 2;
+      }
+      class Derived extends Base {
+        int count(int n) => n == 0 ? 0 : count(n - 1) + 1;
+        int before() => value();
+        int value() => 9;
+      }
+      int main() {
+        final d = Derived();
+        return d.count(3) * 10 + d.before();
+      }
+    ''', 39);
+  });
+
+  test('override inference supplies getter types and recursive call types', () {
+    final program = Compiler().compile({
+      'typed': {
+        'main.dart': '''
+      class Base {
+        num convert(int x) => x;
+        int get value => 2;
+      }
+      abstract class Wide {
+        int convert(num x);
+      }
+      class Derived extends Base implements Wide {
+        convert(x) => x > 1 ? convert(x - 1) + 1 : 1;
+        get value => 7;
+        int read() {
+          final inferred = [value];
+          List<int> typed = inferred;
+          return typed[0];
+        }
+      }
+      int main() {
+        final d = Derived();
+        return d.convert(2.5) * 10 + d.read();
+      }
+    ''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(runtime.executeLib('package:typed/main.dart', 'main'), 37);
+    }
+  });
+
   test('constructor fields and mutation survive serialized linking', () {
     check('''
       class Counter {

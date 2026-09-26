@@ -55,8 +55,6 @@ final class ResolvedMember {
       // unannotated accessor's signature carries the inherited type.
       raw = !m.isGetter && !m.isSetter
           ? member.signature.toFunctionType(member.ownerDecl!.ctx)
-          : m.returnType == null
-          ? null
           : member.signature.returnType;
     } else if (member is BridgeMember &&
         member.def is BridgeMethodDef &&

@@ -56,3 +56,21 @@ bytecode regression also confirms one code-unit read instead of two.
 Validation: 1,588 default tests passed, 62 skipped; 99 control_flow_graph tests
 passed. Changed-file analysis and control_flow_graph analysis are clean.
 No runtime or standard-library changes; no opcode or serialization changes.
+
+## Step 3a: declaration order and inherited getter types
+
+`class/override_inference_test.dart` exposed incorrect direct-call resolution.
+While compiling a recursive override, the override had no compiled position yet.
+The lookup skipped it and selected the already-compiled superclass body, whose
+parameter type could be narrower. Implementation lookup now uses declarations;
+the existing deferred call offsets resolve after compilation. Forward calls and
+recursive calls both retain the correct override.
+
+The same SDK test then exposed getter reads discarding inherited return types
+when the getter had no explicit annotation. ResolvedMember now uses the inferred
+signature. The SDK test passes. Regressions cover recursive and forward calls,
+conflicting inherited signatures, and getter-to-list inference in fresh and
+serialized programs. All 33 inheritance tests pass and changed-file analysis is
+clean. The full default run's only failure was a new test using a bare
+TypedMachine for host numeric dispatch; that test now uses Runtime and passes.
+No runtime changes or extra dynamic paths were added.

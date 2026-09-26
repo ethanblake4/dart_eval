@@ -437,15 +437,12 @@ final class MemberLookup {
     final named = [
       for (final name in names)
         _mergeParameter([
-          for (final s in signatures)
-            ...s.named.where((p) => p.name == name),
+          for (final s in signatures) ...s.named.where((p) => p.name == name),
         ]),
     ];
     final returnType = signatures.fold<TypeRef>(
       CoreTypes.dynamic.ref(ctx),
-      (most, s) => s.returnType.isAssignableTo(ctx, most)
-          ? s.returnType
-          : most,
+      (most, s) => s.returnType.isAssignableTo(ctx, most) ? s.returnType : most,
     );
     return ResolvedMember(
       first.member,
@@ -469,10 +466,9 @@ final class MemberLookup {
   /// requiredness relaxes to the most permissive.
   ParameterSpec _mergeParameter(List<ParameterSpec> candidates) {
     final first = candidates.first;
-    final type = TypeRef.commonBaseType(
-      ctx,
-      {for (final c in candidates) c.type},
-    );
+    final type = TypeRef.commonBaseType(ctx, {
+      for (final c in candidates) c.type,
+    });
     final isRequired = candidates.every((c) => c.isRequired);
     return ParameterSpec(
       first.name,
@@ -614,24 +610,14 @@ final class MemberLookup {
   }
 
   /// The first link in [type]'s chain concretely implementing [name],
-  /// with the member itself. `memberOwner` only counts members that are
-  /// actually compiled — registration in `instanceDeclarationPositions`
-  /// happens when the body is compiled.
+  /// with the member itself. Resolve declarations rather than compiled body
+  /// positions: an override may be recursive or declared later in the file.
+  /// Its call offset is resolved after all bodies have been compiled.
   (TypeRef, Member)? _implementationAt(TypeRef type, MemberName name) {
     if (hasBridgeSuperclass(ctx, type)) {
       return null;
     }
     for (final link in [type, ...ctx.typeSystem.superclassChain(type)]) {
-      final positions =
-          ctx.instanceDeclarationPositions[link.file]?[link.name]?[name.kind];
-      final positionsHit =
-          positions != null &&
-          (positions.containsKey(name.name) ||
-              (name.name.startsWith('_') &&
-                  positions.containsKey(
-                    '${ctx.libraryUri(link.file)}::${name.name}',
-                  )));
-      if (!positionsHit) continue;
       final member = concreteMemberOn(link, name);
       if (member != null) return (link, member);
     }
@@ -727,9 +713,7 @@ final class MemberLookup {
       final decl = nominalDeclOf(type);
       // A field formal binds a real field, which lives at the bare name —
       // an inherited abstract accessor can occupy the getter slot instead.
-      final member = decl?.declaredMember(
-        MemberName(name, MemberKind.method),
-      );
+      final member = decl?.declaredMember(MemberName(name, MemberKind.method));
       if (member == null || !member.isField) {
         throw CompileError(
           'Field formals did not find field $name in class $type',
