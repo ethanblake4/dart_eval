@@ -12,16 +12,9 @@ Iterable<(String, Runtime)> _runtimes(Program program) sync* {
   yield ('serialized', Runtime(program.write().buffer));
 }
 
-Set<String> _opNames(Program program) {
-  final result = <String>{};
-  final typed = program.typedProgram;
-  for (var pc = 0; pc < typed.code.length;) {
-    final op = TypedOp.instructions[typed.code[pc]];
-    result.add(op.name);
-    pc += op.length;
-  }
-  return result;
-}
+Set<String> _opNames(Program program) => {
+  for (final e in program.typedProgram.instructions) e.$2.family,
+};
 
 void main() {
   test('map literals use direct index and store operations', () {
@@ -40,7 +33,7 @@ void main() {
     ''');
     expect(
       _opNames(program),
-      containsAll(['cNewMap', 'mapSetCSR', 'rMapIndexCS', 'rBoxMap']),
+      containsAll(['NewMap', 'mapSet', 'MapIndex', 'BoxMap']),
     );
     for (final (kind, runtime) in _runtimes(program)) {
       expect(runtime.executeLib(_library, 'main'), 17, reason: kind);
@@ -62,7 +55,7 @@ void main() {
             (removed ? 10000 : 0);
       }
     ''');
-    expect(_opNames(program), containsAll(['cNewSet', 'setAddCR', 'rBoxSet']));
+    expect(_opNames(program), containsAll(['NewSet', 'BoxSet']));
     for (final (kind, runtime) in _runtimes(program)) {
       expect(runtime.executeLib(_library, 'main'), 11012, reason: kind);
     }

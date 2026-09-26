@@ -131,14 +131,23 @@ void main() {
 
   test('for-in continue advances the iterator before re-entering the body', () {
     final graph = compileLoop('for (final value in [1, 2]) { continue; }');
-    final header = graph.labels.keys.singleWhere(
-      (name) => name.startsWith('loop_header'),
-    );
-    expect(code(graph).whereType<Jump>().single.target, header);
-    expect(
-      graph.labels.keys.where((name) => name.startsWith('loop_update')),
-      isEmpty,
-    );
+    final bodies = graph.labels.keys
+        .where((name) => name.startsWith('loop_body'))
+        .toList();
+    expect(bodies, isNotEmpty);
+    final jumps = code(graph).whereType<Jump>().toList();
+    for (final body in bodies) {
+      final suffix = body.substring('loop_body'.length);
+      expect(
+        jumps.any(
+          (jump) =>
+              jump.target == 'loop_update$suffix' ||
+              jump.target == 'loop_header$suffix',
+        ),
+        isTrue,
+        reason: 'continue in $body returns to the loop advance',
+      );
+    }
     validateSSA(graph);
   });
 

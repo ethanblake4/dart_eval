@@ -16,7 +16,7 @@ SHA = os.listdir(os.path.join(REPO, ".dart_tool", "sdk_language"))[0]
 LANG = os.path.join(REPO, ".dart_tool", "sdk_language", SHA, "tests", "language")
 RUN_ONE = "/tmp/run_one"
 TIMEOUT = 60
-WORKERS = 4
+WORKERS = 16
 
 
 def tests():

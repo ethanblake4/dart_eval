@@ -1,4 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'representation.dart';
 
 /// A private field-slot marker, distinct from an initialized nullable value.
 final class LoadUninitializedField extends Operation {
@@ -81,11 +82,17 @@ final class SetPropertyStatic extends Operation {
   final SSA value;
   final bool isLateFinal;
 
+  /// The register bank [value] arrives in; `object` means it is stored
+  /// boxed, a scalar bank means the op wraps it into the declared field's
+  /// `$Value` subclass itself.
+  final MachineRepresentation rep;
+
   SetPropertyStatic(
     this.object,
     this.index,
     this.value, {
     this.isLateFinal = false,
+    this.rep = MachineRepresentation.object,
   });
 
   @override
@@ -100,11 +107,16 @@ final class SetPropertyStatic extends Operation {
       object == other.object &&
       index == other.index &&
       isLateFinal == other.isLateFinal &&
+      rep == other.rep &&
       value == other.value;
 
   @override
   int get hashCode =>
-      object.hashCode ^ index.hashCode ^ value.hashCode ^ isLateFinal.hashCode;
+      object.hashCode ^
+      index.hashCode ^
+      value.hashCode ^
+      isLateFinal.hashCode ^
+      rep.hashCode;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
@@ -114,6 +126,7 @@ final class SetPropertyStatic extends Operation {
       index,
       inputs[1],
       isLateFinal: isLateFinal,
+      rep: rep,
     );
   }
 }
@@ -124,11 +137,16 @@ final class LoadPropertyStatic extends Operation {
   final int index;
   final bool isLate;
 
+  /// The bank the read lands in; `object` yields the stored `$Value`, a
+  /// scalar bank unboxes the field directly into it.
+  final MachineRepresentation rep;
+
   LoadPropertyStatic(
     this.target,
     this.object,
     this.index, {
     this.isLate = false,
+    this.rep = MachineRepresentation.object,
   });
 
   @override
@@ -146,11 +164,16 @@ final class LoadPropertyStatic extends Operation {
       target == other.target &&
       object == other.object &&
       index == other.index &&
-      isLate == other.isLate;
+      isLate == other.isLate &&
+      rep == other.rep;
 
   @override
   int get hashCode =>
-      target.hashCode ^ object.hashCode ^ index.hashCode ^ isLate.hashCode;
+      target.hashCode ^
+      object.hashCode ^
+      index.hashCode ^
+      isLate.hashCode ^
+      rep.hashCode;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
@@ -159,6 +182,7 @@ final class LoadPropertyStatic extends Operation {
       readsFrom?.first ?? object,
       index,
       isLate: isLate,
+      rep: rep,
     );
   }
 }
@@ -432,4 +456,32 @@ final class InternConst extends Operation {
     readsFrom?.first ?? value,
     typeId: typeId,
   );
+}
+
+/// `StringBuffer.write`: appends the reified `toString` of the object-bank
+/// value to the buffer's native backing store.
+final class BufferWrite extends Operation {
+  final SSA buffer;
+  final SSA value;
+
+  BufferWrite(this.buffer, this.value);
+
+  @override
+  Set<SSA> get readsFrom => {buffer, value};
+
+  @override
+  String toString() => 'bufwrite $buffer.write($value)';
+
+  @override
+  bool operator ==(Object other) =>
+      other is BufferWrite && buffer == other.buffer && value == other.value;
+
+  @override
+  int get hashCode => buffer.hashCode ^ value.hashCode;
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    final inputs = renameOperands([buffer, value], this.readsFrom, readsFrom);
+    return BufferWrite(inputs[0], inputs[1]);
+  }
 }

@@ -16,6 +16,17 @@ import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
+/// Exchange object for the secondary dispatch in [_dispatchCold].
+final class _ColdCall {
+  int op = 0;
+  int pc = 0;
+  int a = 0, b = 0;
+  double f = 0.0, g = 0.0;
+  bool e = false;
+  Object? r, s, c;
+  TypedFrame? frame;
+}
+
 abstract final class TypedMachine {
   /// Public host boundary. Internal calls keep their machine representation.
   static Object? run(TypedProgram program, {
@@ -89,491 +100,474 @@ abstract final class TypedMachine {
     var a = arguments.a, b = arguments.b;
     var f = arguments.f, g = arguments.g;
     var e = arguments.e;
+    final cold = _ColdCall();
       dispatch: while (true) {
       switch (code[pc++]) {
         case TypedOp.eTrue:
-          e = true;
-          continue dispatch;
+           e = true;
+           continue dispatch;
         case TypedOp.eFalse:
-          e = false;
-          continue dispatch;
+           e = false;
+           continue dispatch;
         case TypedOp.aFromB:
-          a = b;
-          continue dispatch;
+           a = b;
+           continue dispatch;
         case TypedOp.bFromA:
-          b = a;
-          continue dispatch;
+           b = a;
+           continue dispatch;
         case TypedOp.aBSwap:
-          final temporary = a; a = b; b = temporary;
-          continue dispatch;
+           final temporary = a; a = b; b = temporary;
+           continue dispatch;
         case TypedOp.fFromG:
-          f = g;
-          continue dispatch;
+           f = g;
+           continue dispatch;
         case TypedOp.gFromF:
-          g = f;
-          continue dispatch;
+           g = f;
+           continue dispatch;
         case TypedOp.fGSwap:
-          final temporary = f; f = g; g = temporary;
-          continue dispatch;
+           final temporary = f; f = g; g = temporary;
+           continue dispatch;
         case TypedOp.rFromS:
-          r = s;
-          continue dispatch;
+           r = s;
+           continue dispatch;
         case TypedOp.sFromR:
-          s = r;
-          continue dispatch;
+           s = r;
+           continue dispatch;
         case TypedOp.rSSwap:
-          final temporary = r; r = s; s = temporary;
-          continue dispatch;
+           final temporary = r; r = s; s = temporary;
+           continue dispatch;
         case TypedOp.rFromC:
-          r = c;
-          continue dispatch;
+           r = c;
+           continue dispatch;
         case TypedOp.cFromR:
-          c = r;
-          continue dispatch;
+           c = r;
+           continue dispatch;
         case TypedOp.rCSwap:
-          final temporary = r; r = c; c = temporary;
-          continue dispatch;
+           final temporary = r; r = c; c = temporary;
+           continue dispatch;
         case TypedOp.sFromC:
-          s = c;
-          continue dispatch;
+           s = c;
+           continue dispatch;
         case TypedOp.cFromS:
-          c = s;
-          continue dispatch;
+           c = s;
+           continue dispatch;
         case TypedOp.sCSwap:
-          final temporary = s; s = c; c = temporary;
-          continue dispatch;
+           final temporary = s; s = c; c = temporary;
+           continue dispatch;
         case TypedOp.aAddB:
-          a = a + b;
-          continue dispatch;
+           a = a + b;
+           continue dispatch;
         case TypedOp.aSubB:
-          a = a - b;
-          continue dispatch;
+           a = a - b;
+           continue dispatch;
         case TypedOp.bSubA:
-          b = b - a;
-          continue dispatch;
+           b = b - a;
+           continue dispatch;
         case TypedOp.aMulB:
-          a = a * b;
-          continue dispatch;
+           a = a * b;
+           continue dispatch;
         case TypedOp.aAndB:
-          a = a & b;
-          continue dispatch;
+           a = a & b;
+           continue dispatch;
         case TypedOp.aOrB:
-          a = a | b;
-          continue dispatch;
+           a = a | b;
+           continue dispatch;
         case TypedOp.aXorB:
-          a = a ^ b;
-          continue dispatch;
+           a = a ^ b;
+           continue dispatch;
         case TypedOp.fAddG:
-          f = f + g;
-          continue dispatch;
+           f = f + g;
+           continue dispatch;
         case TypedOp.fSubG:
-          f = f - g;
-          continue dispatch;
+           f = f - g;
+           continue dispatch;
         case TypedOp.gSubF:
-          g = g - f;
-          continue dispatch;
+           g = g - f;
+           continue dispatch;
         case TypedOp.fMulG:
-          f = f * g;
-          continue dispatch;
+           f = f * g;
+           continue dispatch;
         case TypedOp.fDivG:
-          f = f / g;
-          continue dispatch;
+           f = f / g;
+           continue dispatch;
         case TypedOp.gDivF:
-          g = g / f;
-          continue dispatch;
+           g = g / f;
+           continue dispatch;
         case TypedOp.aIncrement:
-          a++;
-          continue dispatch;
+           a++;
+           continue dispatch;
         case TypedOp.aDecrement:
-          a--;
-          continue dispatch;
+           a--;
+           continue dispatch;
         case TypedOp.aNegate:
-          a = -a;
-          continue dispatch;
-        case TypedOp.aBitNot:
-          a = ~a;
-          continue dispatch;
+           a = -a;
+           continue dispatch;
         case TypedOp.bIncrement:
-          b++;
-          continue dispatch;
+           b++;
+           continue dispatch;
         case TypedOp.bDecrement:
-          b--;
-          continue dispatch;
+           b--;
+           continue dispatch;
         case TypedOp.bNegate:
-          b = -b;
-          continue dispatch;
-        case TypedOp.bBitNot:
-          b = ~b;
-          continue dispatch;
+           b = -b;
+           continue dispatch;
         case TypedOp.fNegate:
-          f = -f;
-          continue dispatch;
+           f = -f;
+           continue dispatch;
         case TypedOp.gNegate:
-          g = -g;
-          continue dispatch;
+           g = -g;
+           continue dispatch;
         case TypedOp.eEqAB:
-          e = a == b;
-          continue dispatch;
+           e = a == b;
+           continue dispatch;
         case TypedOp.eEqFG:
-          e = f == g;
-          continue dispatch;
+           e = f == g;
+           continue dispatch;
         case TypedOp.eNeAB:
-          e = a != b;
-          continue dispatch;
+           e = a != b;
+           continue dispatch;
         case TypedOp.eNeFG:
-          e = f != g;
-          continue dispatch;
+           e = f != g;
+           continue dispatch;
         case TypedOp.eLtAB:
-          e = a < b;
-          continue dispatch;
+           e = a < b;
+           continue dispatch;
         case TypedOp.eLtFG:
-          e = f < g;
-          continue dispatch;
+           e = f < g;
+           continue dispatch;
         case TypedOp.eLteAB:
-          e = a <= b;
-          continue dispatch;
+           e = a <= b;
+           continue dispatch;
         case TypedOp.eLteFG:
-          e = f <= g;
-          continue dispatch;
+           e = f <= g;
+           continue dispatch;
         case TypedOp.eGtAB:
-          e = a > b;
-          continue dispatch;
+           e = a > b;
+           continue dispatch;
         case TypedOp.eGtFG:
-          e = f > g;
-          continue dispatch;
+           e = f > g;
+           continue dispatch;
         case TypedOp.eGteAB:
-          e = a >= b;
-          continue dispatch;
+           e = a >= b;
+           continue dispatch;
         case TypedOp.eGteFG:
-          e = f >= g;
-          continue dispatch;
+           e = f >= g;
+           continue dispatch;
         case TypedOp.eAPositive:
-          e = a > 0;
-          continue dispatch;
+           e = a > 0;
+           continue dispatch;
         case TypedOp.eBPositive:
-          e = b > 0;
-          continue dispatch;
+           e = b > 0;
+           continue dispatch;
         case TypedOp.eNot:
-          e = !e;
-          continue dispatch;
+           e = !e;
+           continue dispatch;
         case TypedOp.fFromA:
-          f = a.toDouble();
-          continue dispatch;
+           f = a.toDouble();
+           continue dispatch;
         case TypedOp.gFromA:
-          g = a.toDouble();
-          continue dispatch;
+           g = a.toDouble();
+           continue dispatch;
         case TypedOp.fFromB:
-          f = b.toDouble();
-          continue dispatch;
+           f = b.toDouble();
+           continue dispatch;
         case TypedOp.gFromB:
-          g = b.toDouble();
-          continue dispatch;
+           g = b.toDouble();
+           continue dispatch;
         case TypedOp.cLoadOutgoing:
-          c = frame.objectOutgoing;
-          continue dispatch;
+           c = frame.objectOutgoing;
+           continue dispatch;
         case TypedOp.rSetCallTypeReceiver:
-          frame.pendingTypeEnvironmentReceiver = r;
-          continue dispatch;
+           frame.pendingTypeEnvironmentReceiver = r;
+           continue dispatch;
         case TypedOp.rNull:
-          r = null;
-          continue dispatch;
+           r = null;
+           continue dispatch;
         case TypedOp.eIsNullR:
-          e = TypedInterop.isNull(r);
-          continue dispatch;
+           e = TypedInterop.isNull(r);
+           continue dispatch;
         case TypedOp.sNull:
-          s = null;
-          continue dispatch;
+           s = null;
+           continue dispatch;
         case TypedOp.eIsNullS:
-          e = TypedInterop.isNull(s);
-          continue dispatch;
+           e = TypedInterop.isNull(s);
+           continue dispatch;
         case TypedOp.cNull:
-          c = null;
-          continue dispatch;
+           c = null;
+           continue dispatch;
         case TypedOp.eIsNullC:
-          e = TypedInterop.isNull(c);
-          continue dispatch;
+           e = TypedInterop.isNull(c);
+           continue dispatch;
         case TypedOp.rFromA:
-          r = a;
-          continue dispatch;
+           r = a;
+           continue dispatch;
         case TypedOp.rBoxA:
-          r = $int(a);
-          continue dispatch;
+           r = $int(a);
+           continue dispatch;
         case TypedOp.rFromB:
-          r = b;
-          continue dispatch;
+           r = b;
+           continue dispatch;
         case TypedOp.rBoxB:
-          r = $int(b);
-          continue dispatch;
+           r = $int(b);
+           continue dispatch;
         case TypedOp.rFromF:
-          r = f;
-          continue dispatch;
+           r = f;
+           continue dispatch;
         case TypedOp.rBoxF:
-          r = $double(f);
-          continue dispatch;
+           r = $double(f);
+           continue dispatch;
         case TypedOp.rFromG:
-          r = g;
-          continue dispatch;
+           r = g;
+           continue dispatch;
         case TypedOp.rBoxG:
-          r = $double(g);
-          continue dispatch;
+           r = $double(g);
+           continue dispatch;
         case TypedOp.rFromE:
-          r = e;
-          continue dispatch;
+           r = e;
+           continue dispatch;
         case TypedOp.rBoxE:
-          r = $bool(e);
-          continue dispatch;
+           r = $bool(e);
+           continue dispatch;
         case TypedOp.rBridgeArgument:
-          r ??= const $null();
-          continue dispatch;
+           r ??= const $null();
+           continue dispatch;
         case TypedOp.leaveTry:
-          TypedExceptions.leave(frame);
-          continue dispatch;
-        case TypedOp.rCaughtException:
-          r = TypedExceptions.caught(frame);
-          continue dispatch;
-        case TypedOp.rCaughtStackTrace:
-          r = TypedExceptions.trace(frame);
-          continue dispatch;
-        case TypedOp.aSetTypeEnvironment:
-          frame.typeEnvironmentReceiver = a;
-          continue dispatch;
-        case TypedOp.rUninitializedField:
-          r = TypedLateField.uninitialized;
-          continue dispatch;
+           TypedExceptions.leave(frame);
+           continue dispatch;
         case TypedOp.aConstant:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          a = program.integerAt(index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           a = program.integerAt(index);
+           continue dispatch;
         case TypedOp.aSpill:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.intSpills[index] = a;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.intSpills[index] = a;
+           continue dispatch;
         case TypedOp.aReload:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          a = frame.intSpills[index];
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           a = frame.intSpills[index];
+           continue dispatch;
         case TypedOp.aReturn:
-          if (frame.parent == null) return a;
+           if (frame.parent == null) return a;
           final returned = a;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           a = returned;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.bConstant:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          b = program.integerAt(index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           b = program.integerAt(index);
+           continue dispatch;
         case TypedOp.bSpill:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.intSpills[index] = b;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.intSpills[index] = b;
+           continue dispatch;
         case TypedOp.bReload:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          b = frame.intSpills[index];
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           b = frame.intSpills[index];
+           continue dispatch;
         case TypedOp.bReturn:
-          if (frame.parent == null) return b;
+           if (frame.parent == null) return b;
           final returned = b;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           a = returned;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.fConstant:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          f = program.doubleAt(index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           f = program.doubleAt(index);
+           continue dispatch;
         case TypedOp.fSpill:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.doubleSpills[index] = f;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.doubleSpills[index] = f;
+           continue dispatch;
         case TypedOp.fReload:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          f = frame.doubleSpills[index];
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           f = frame.doubleSpills[index];
+           continue dispatch;
         case TypedOp.fReturn:
-          if (frame.parent == null) return f;
+           if (frame.parent == null) return f;
           final returned = f;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           f = returned;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.gConstant:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          g = program.doubleAt(index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           g = program.doubleAt(index);
+           continue dispatch;
         case TypedOp.gSpill:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.doubleSpills[index] = g;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.doubleSpills[index] = g;
+           continue dispatch;
         case TypedOp.gReload:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          g = frame.doubleSpills[index];
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           g = frame.doubleSpills[index];
+           continue dispatch;
         case TypedOp.gReturn:
-          if (frame.parent == null) return g;
+           if (frame.parent == null) return g;
           final returned = g;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           f = returned;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.eSpill:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.boolSpills[index] = e ? 1 : 0;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.boolSpills[index] = e ? 1 : 0;
+           continue dispatch;
         case TypedOp.eReload:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          e = frame.boolSpills[index] != 0;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           e = frame.boolSpills[index] != 0;
+           continue dispatch;
         case TypedOp.eReturn:
-          if (frame.parent == null) return e;
+           if (frame.parent == null) return e;
           final returned = e;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           e = returned;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.rConstant:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = program.objectAt(index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = program.objectAt(index);
+           continue dispatch;
         case TypedOp.rSpill:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.objectSpills[index] = r;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.objectSpills[index] = r;
+           continue dispatch;
         case TypedOp.rReload:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = frame.objectSpills[index];
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = frame.objectSpills[index];
+           continue dispatch;
         case TypedOp.rReturn:
-          if (frame.parent == null) return r;
+           if (frame.parent == null) return r;
           final returned = r;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           r = returned;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.sConstant:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          s = program.objectAt(index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           s = program.objectAt(index);
+           continue dispatch;
         case TypedOp.sSpill:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.objectSpills[index] = s;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.objectSpills[index] = s;
+           continue dispatch;
         case TypedOp.sReload:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          s = frame.objectSpills[index];
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           s = frame.objectSpills[index];
+           continue dispatch;
         case TypedOp.sReturn:
-          if (frame.parent == null) return s;
+           if (frame.parent == null) return s;
           final returned = s;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           r = returned;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.cConstant:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          c = program.objectAt(index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           c = program.objectAt(index);
+           continue dispatch;
         case TypedOp.cSpill:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.objectSpills[index] = c;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.objectSpills[index] = c;
+           continue dispatch;
         case TypedOp.cReload:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          c = frame.objectSpills[index];
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           c = frame.objectSpills[index];
+           continue dispatch;
         case TypedOp.cReturn:
-          if (frame.parent == null) return c;
+           if (frame.parent == null) return c;
           final returned = c;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
           r = returned;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.aDivB:
-          a = a ~/ b;
-          continue dispatch;
+           a = a ~/ b;
+           continue dispatch;
         case TypedOp.bDivA:
-          b = b ~/ a;
-          continue dispatch;
+           b = b ~/ a;
+           continue dispatch;
         case TypedOp.aModB:
-          a = a % b;
-          continue dispatch;
+           a = a % b;
+           continue dispatch;
         case TypedOp.bModA:
-          b = b % a;
-          continue dispatch;
+           b = b % a;
+           continue dispatch;
         case TypedOp.aShiftLeftB:
-          a = a << b;
-          continue dispatch;
+           a = a << b;
+           continue dispatch;
         case TypedOp.bShiftLeftA:
-          b = b << a;
-          continue dispatch;
+           b = b << a;
+           continue dispatch;
         case TypedOp.aShiftRightB:
-          a = a >> b;
-          continue dispatch;
+           a = a >> b;
+           continue dispatch;
         case TypedOp.bShiftRightA:
-          b = b >> a;
-          continue dispatch;
+           b = b >> a;
+           continue dispatch;
         case TypedOp.aUnsignedShiftRightB:
-          a = a >>> b;
-          continue dispatch;
+           a = a >>> b;
+           continue dispatch;
         case TypedOp.bUnsignedShiftRightA:
-          b = b >>> a;
-          continue dispatch;
+           b = b >>> a;
+           continue dispatch;
         case TypedOp.aImmediate:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          a = index.toSigned(16);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           a = index.toSigned(16);
+           continue dispatch;
         case TypedOp.bImmediate:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          b = index.toSigned(16);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           b = index.toSigned(16);
+           continue dispatch;
         case TypedOp.jumpETrue:
-          if (e) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
+           if (e) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+           continue dispatch;
         case TypedOp.jumpEFalse:
-          if (!e) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
+           if (!e) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+           continue dispatch;
         case TypedOp.aFromF:
-          a = f.toInt();
-          continue dispatch;
+           a = f.toInt();
+           continue dispatch;
         case TypedOp.aFromG:
-          a = g.toInt();
-          continue dispatch;
+           a = g.toInt();
+           continue dispatch;
         case TypedOp.bFromF:
-          b = f.toInt();
-          continue dispatch;
+           b = f.toInt();
+           continue dispatch;
         case TypedOp.bFromG:
-          b = g.toInt();
-          continue dispatch;
+           b = g.toInt();
+           continue dispatch;
         case TypedOp.jump:
-          pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24);
-          continue dispatch;
+           pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24);
+           continue dispatch;
         case TypedOp.rOutgoing:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.objectOutgoing[index] = r;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.objectOutgoing[index] = r;
+           continue dispatch;
         case TypedOp.sOutgoing:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.objectOutgoing[index] = s;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.objectOutgoing[index] = s;
+           continue dispatch;
         case TypedOp.cOutgoing:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          frame.objectOutgoing[index] = c;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame.objectOutgoing[index] = c;
+           continue dispatch;
         case TypedOp.rOverflow:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = (c as List<Object?>)[index];
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = (c as List<Object?>)[index];
+           continue dispatch;
         case TypedOp.call:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final typeEnvironmentReceiver = frame.pendingTypeEnvironmentReceiver;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final typeEnvironmentReceiver = frame.pendingTypeEnvironmentReceiver;
           final typeArguments = frame.pendingTypeArguments;
           frame.pendingTypeEnvironmentReceiver = null;
           frame.pendingTypeArguments = const [];
@@ -585,87 +579,59 @@ abstract final class TypedMachine {
             typeArguments: typeArguments,
           );
           pc = frame.function.entry;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.setCallTypeArguments:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final constant = (runtime!.typedConstant(index) as List).cast<int>();
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final constant = (runtime!.typedConstant(index) as List).cast<int>();
           frame.pendingTypeArguments = runtime.resolveTypedCallTypeArguments(
             constant,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
             callableTypeArguments: frame.effectiveTypeArguments,
           );
-          continue dispatch;
+           continue dispatch;
         case TypedOp.eEqRS:
-          e = TypedInterop.equals(runtime, r, s);
-          continue dispatch;
+           e = TypedInterop.equals(runtime, r, s);
+           continue dispatch;
         case TypedOp.aFromR:
-          a = TypedInterop.toInt(r);
-          continue dispatch;
+           a = TypedInterop.toInt(r);
+           continue dispatch;
         case TypedOp.aNativeFromR:
-          a = r as int;
-          continue dispatch;
+           a = r as int;
+           continue dispatch;
         case TypedOp.fFromR:
-          f = TypedInterop.toDouble(r);
-          continue dispatch;
+           f = TypedInterop.toDouble(r);
+           continue dispatch;
         case TypedOp.fNativeFromR:
-          f = r as double;
-          continue dispatch;
+           f = r as double;
+           continue dispatch;
         case TypedOp.eFromR:
-          e = TypedInterop.toBool(r);
-          continue dispatch;
+           e = TypedInterop.toBool(r);
+           continue dispatch;
         case TypedOp.eNativeFromR:
-          e = r as bool;
-          continue dispatch;
+           e = r as bool;
+           continue dispatch;
         case TypedOp.rBoxString:
-          r = $String(r as String);
-          continue dispatch;
+           r = $String(r as String);
+           continue dispatch;
         case TypedOp.rUnboxString:
-          r = TypedInterop.toStringValue(r);
-          continue dispatch;
-        case TypedOp.callExternal:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedInterop.invokeExternal(program, runtime, r, s, c, index); s = null; c = null;
-          continue dispatch;
-        case TypedOp.rNewBridgeSuperShim:
-          r = TypedInterop.newBridgeSuperShim();
-          continue dispatch;
-        case TypedOp.parentBridgeSuperShim:
-          TypedInterop.parentBridgeSuperShim(r, s);
-          continue dispatch;
-        case TypedOp.rAttachBridge:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedInterop.attachBridge(runtime, r, s, index);
-          continue dispatch;
-        case TypedOp.rRuntimeType:
-          r = TypedInterop.runtimeTypeOf(runtime, r);
-          continue dispatch;
+           r = TypedInterop.toStringValue(r);
+           continue dispatch;
         case TypedOp.rNewCaptureCell:
-          r = TypedCaptureCell(r);
-          continue dispatch;
+           r = TypedCaptureCell(r);
+           continue dispatch;
         case TypedOp.rReadCaptureCell:
-          r = (r as TypedCaptureCell).value;
-          continue dispatch;
+           r = (r as TypedCaptureCell).value;
+           continue dispatch;
         case TypedOp.writeCaptureCellRS:
-          (r as TypedCaptureCell).value = s;
-          continue dispatch;
-        case TypedOp.rCreateClosure:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedClosure.create(
-          program,
-          index,
-          frame.objectOutgoing,
-          runtime,
-          frame.effectiveTypeEnvironmentReceiver,
-          frame.effectiveTypeArguments,
-        );
-          continue dispatch;
+           (r as TypedCaptureCell).value = s;
+           continue dispatch;
         case TypedOp.rLoadCapture:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = frame.captureAt(index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = frame.captureAt(index);
+           continue dispatch;
         case TypedOp.callClosure:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final site = program.closureCalls[index];
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final site = program.closureCalls[index];
           final callTypeArguments = runtime == null
               ? site.typeArguments
               : runtime.resolveTypedCallTypeArguments(
@@ -697,199 +663,122 @@ abstract final class TypedMachine {
             );
             s = null; c = null;
           }
-          continue dispatch;
+           continue dispatch;
         case TypedOp.enterTry:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          TypedExceptions.enter(program, frame, index);
-          continue dispatch;
-        case TypedOp.rBeginAsync:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final runtimeTypeId = runtime == null
-              ? index
-              : runtime.resolveTypedEnvironmentType(
-                  index,
-                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
-                  callableTypeArguments: frame.effectiveTypeArguments,
-                );
-          r = TypedAsync.begin(frame, runtimeTypeId, runtime);
-          continue dispatch;
-        case TypedOp.rAwait:
-          final caller = frame.parent;
-          final returnPc = frame.returnPc;
-          final future = TypedAsync.suspend(program, frame, pc, r, runtime, _resumeAsync);
-          if (caller == null) return future;
-          frame = caller; pc = returnPc;
-          r = future; s = null; c = null;
-          continue dispatch;
-        case TypedOp.rReturnAsync:
-          final returned = TypedAsync.complete(frame, r);
-          if (frame.parent == null) return returned;
-          pc = frame.returnPc;
-          frame = frame.leave();
-          r = returned; s = null; c = null;
-          continue dispatch;
-        case TypedOp.returnAsyncNull:
-          final returned = TypedAsync.complete(frame, null);
-          if (frame.parent == null) return returned;
-          pc = frame.returnPc;
-          frame = frame.leave();
-          r = returned; s = null; c = null;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           TypedExceptions.enter(program, frame, index);
+           continue dispatch;
         case TypedOp.completeJump:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          pc = TypedExceptions.jump(program, frame, index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           pc = TypedExceptions.jump(program, frame, index);
+           continue dispatch;
         case TypedOp.resumeCompletion:
-          pc = TypedExceptions.resume(frame, pc);
-          continue dispatch;
-        case TypedOp.eAssertR:
-          if (!e) throw WrappedException(r!);
-          continue dispatch;
-        case TypedOp.rThrow:
-          throw WrappedException(r!);
-        case TypedOp.rethrowCaught:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          TypedExceptions.rethrowCaught(program, frame, index);
+           pc = TypedExceptions.resume(frame, pc);
+           continue dispatch;
         case TypedOp.eIsTypeR:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          e = runtime!.isTypedValueTypeInCallableEnvironment(
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           e = runtime!.isTypedValueTypeInCallableEnvironment(
             r,
             index,
             frame.effectiveTypeArguments,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           );
-          continue dispatch;
-        case TypedOp.rCreateRecord:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedRecords.create(
-            runtime!,
-            r,
-            index,
-            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
-            callableTypeArguments: frame.effectiveTypeArguments,
-          );
-          continue dispatch;
+           continue dispatch;
         case TypedOp.rLoadType:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = $TypeImpl(index, runtime);
-          continue dispatch;
-        case TypedOp.aResolveType:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          a = runtime == null
-            ? index
-            : runtime.resolveTypedEnvironmentType(
-                index,
-                actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
-                callableTypeArguments: frame.effectiveTypeArguments,
-              );
-          continue dispatch;
-        case TypedOp.rLoadTypeParameter:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = $TypeImpl(
-            runtime!.resolveTypeParameterInEnvironment(
-              index,
-              frame.typeEnvironmentOwnerType(runtime),
-              frame.effectiveTypeArguments,
-            ),
-            runtime,
-          );
-          continue dispatch;
-        case TypedOp.rAssertType:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          if (runtime != null) {
-          if (!runtime.isTypedValueTypeInCallableEnvironment(
-            r,
-            index,
-            frame.effectiveTypeArguments,
-            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
-          )) {
-            throw TypeError();
-          }
-        }
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = $TypeImpl(index, runtime);
+           continue dispatch;
         case TypedOp.aLoadGlobal:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          a = TypedGlobalState.loadInteger(runtime, index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           a = TypedGlobalState.loadInteger(runtime, index);
+           continue dispatch;
         case TypedOp.aSetGlobal:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          TypedGlobalState.storeInteger(runtime, index, a);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           TypedGlobalState.storeInteger(runtime, index, a);
+           continue dispatch;
         case TypedOp.fLoadGlobal:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          f = TypedGlobalState.loadDouble(runtime, index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           f = TypedGlobalState.loadDouble(runtime, index);
+           continue dispatch;
         case TypedOp.fSetGlobal:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          TypedGlobalState.storeDouble(runtime, index, f);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           TypedGlobalState.storeDouble(runtime, index, f);
+           continue dispatch;
         case TypedOp.eLoadGlobal:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          e = TypedGlobalState.loadBoolean(runtime, index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           e = TypedGlobalState.loadBoolean(runtime, index);
+           continue dispatch;
         case TypedOp.eSetGlobal:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          TypedGlobalState.storeBoolean(runtime, index, e);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           TypedGlobalState.storeBoolean(runtime, index, e);
+           continue dispatch;
         case TypedOp.rLoadGlobal:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedGlobalState.loadObject(runtime, index);
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = TypedGlobalState.loadObject(runtime, index);
+           continue dispatch;
         case TypedOp.rSetGlobal:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          TypedGlobalState.storeObject(runtime, index, r);
-          continue dispatch;
-        case TypedOp.callHost:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final args = frame.takeObjectArguments(index);
-          final (hfirst, hrest) = TypedInterop.splitVector(args);
-          final result = TypedInterop.call(runtime, r, args.length, hfirst, hrest); r = result; s = null; c = null;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           TypedGlobalState.storeObject(runtime, index, r);
+           continue dispatch;
         case TypedOp.callMethod:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final args = frame.takeObjectArguments(index);
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final args = frame.takeObjectArguments(index);
           final (hfirst, hrest) = TypedInterop.splitVector(args);
           final result = TypedInterop.invoke(runtime, r, s as String, args.length, hfirst, hrest); r = result; s = null; c = null;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.aStringLengthR:
-          a = (r as String).length;
-          continue dispatch;
+           a = (r as String).length;
+           continue dispatch;
         case TypedOp.rStringConcatS:
-          r = (r as String) + (s as String);
-          continue dispatch;
+           r = (r as String) + (s as String);
+           continue dispatch;
         case TypedOp.aStringCodeUnitR:
-          a = (r as String).codeUnitAt(a);
-          continue dispatch;
+           a = (r as String).codeUnitAt(a);
+           continue dispatch;
         case TypedOp.rStringIndexA:
-          r = (r as String)[a];
-          continue dispatch;
+           r = (r as String)[a];
+           continue dispatch;
+        case TypedOp.rStringSubRAB:
+           r = (r as String).substring(a, b);
+           continue dispatch;
         case TypedOp.cNewList:
-          c = <Object?>[];
-          continue dispatch;
+           c = <Object?>[];
+           continue dispatch;
         case TypedOp.cNewMap:
-          c = TypedCollections.newMap(runtime);
-          continue dispatch;
+           c = TypedCollections.newMap(runtime);
+           continue dispatch;
         case TypedOp.cNewConstMap:
-          c = TypedCollections.newConstMap(runtime);
-          continue dispatch;
+           c = TypedCollections.newConstMap(runtime);
+           continue dispatch;
         case TypedOp.cNewSet:
-          c = TypedCollections.newSet(runtime);
-          continue dispatch;
+           c = TypedCollections.newSet(runtime);
+           continue dispatch;
         case TypedOp.cNewConstSet:
-          c = TypedCollections.newConstSet(runtime);
-          continue dispatch;
+           c = TypedCollections.newConstSet(runtime);
+           continue dispatch;
         case TypedOp.rMapIndexCS:
-          r = (c as Map<Object?, Object?>)[s];
-          continue dispatch;
+           r = (c as Map<Object?, Object?>)[s];
+           continue dispatch;
         case TypedOp.mapSetCSR:
-          (c as Map<Object?, Object?>)[s] = r;
-          continue dispatch;
+           (c as Map<Object?, Object?>)[s] = r;
+           continue dispatch;
         case TypedOp.setAddCR:
-          (c as Set<Object?>).add(r);
-          continue dispatch;
+           (c as Set<Object?>).add(r);
+           continue dispatch;
+        case TypedOp.eSetAddCR:
+           e = (c as Set<Object?>).add(r);
+           continue dispatch;
+        case TypedOp.cNativeElementsC:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           c = index == 0 ? (c as Set<Object?>).toList() : (c as Map<Object?, Object?>).keys.toList();
+           continue dispatch;
+        case TypedOp.eIsNativeR:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           e = index == 0 ? r is List : index == 1 ? r is Set : r is Map;
+           continue dispatch;
         case TypedOp.rBoxMap:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final runtimeTypeId = runtime == null
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final runtimeTypeId = runtime == null
               ? index
               : runtime.resolveTypedEnvironmentType(
                   index,
@@ -901,10 +790,10 @@ abstract final class TypedMachine {
             runtimeTypeId: runtimeTypeId,
             runtime: runtime,
           );
-          continue dispatch;
+           continue dispatch;
         case TypedOp.rBoxSet:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final runtimeTypeId = runtime == null
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final runtimeTypeId = runtime == null
               ? index
               : runtime.resolveTypedEnvironmentType(
                   index,
@@ -916,10 +805,10 @@ abstract final class TypedMachine {
             runtimeTypeId: runtimeTypeId,
             runtime: runtime,
           );
-          continue dispatch;
+           continue dispatch;
         case TypedOp.eInternConstR:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = runtime == null
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = runtime == null
               ? r
               : runtime.internConst(
                   r,
@@ -929,10 +818,10 @@ abstract final class TypedMachine {
                     callableTypeArguments: frame.effectiveTypeArguments,
                   ),
                 );
-          continue dispatch;
+           continue dispatch;
         case TypedOp.eInternConstS:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = runtime == null
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = runtime == null
               ? s
               : runtime.internConst(
                   s,
@@ -942,10 +831,10 @@ abstract final class TypedMachine {
                     callableTypeArguments: frame.effectiveTypeArguments,
                   ),
                 );
-          continue dispatch;
+           continue dispatch;
         case TypedOp.eInternConstC:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = runtime == null
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = runtime == null
               ? c
               : runtime.internConst(
                   c,
@@ -955,25 +844,25 @@ abstract final class TypedMachine {
                     callableTypeArguments: frame.effectiveTypeArguments,
                   ),
                 );
-          continue dispatch;
+           continue dispatch;
         case TypedOp.aListLengthR:
-          a = (r as List).length;
-          continue dispatch;
+           a = (r as List).length;
+           continue dispatch;
         case TypedOp.rListIndexCA:
-          r = (c as List<Object?>)[a];
-          continue dispatch;
+           r = (c as List<Object?>)[a];
+           continue dispatch;
         case TypedOp.listSetCAR:
-          (c as List<Object?>)[a] = r;
-          continue dispatch;
+           (c as List<Object?>)[a] = r;
+           continue dispatch;
         case TypedOp.listAppendCR:
-          (c as List<Object?>).add(r);
-          continue dispatch;
+           (c as List<Object?>).add(r);
+           continue dispatch;
         case TypedOp.rBoxList:
-          r = $List.wrap(r as List);
-          continue dispatch;
+           r = $List.wrap(r as List);
+           continue dispatch;
         case TypedOp.rBoxListTyped:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final runtimeTypeId = runtime == null
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final runtimeTypeId = runtime == null
               ? index
               : runtime.resolveTypedEnvironmentType(
                   index,
@@ -985,10 +874,10 @@ abstract final class TypedMachine {
             runtimeTypeId: runtimeTypeId,
             runtime: runtime,
           );
-          continue dispatch;
+           continue dispatch;
         case TypedOp.rCreateClassRA:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final runtimeTypeId = runtime == null
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final runtimeTypeId = runtime == null
               ? a
               : runtime.resolveTypedEnvironmentType(
                   a,
@@ -1002,38 +891,67 @@ abstract final class TypedMachine {
             runtime,
             runtimeTypeId,
           );
-          continue dispatch;
+           continue dispatch;
         case TypedOp.rLoadPropertyR:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = (r as TypedInstance).values[index];
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = (r as TypedInstance).values[index];
+           continue dispatch;
         case TypedOp.setPropertyRS:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          (r as TypedInstance).values[index] = s;
-          continue dispatch;
-        case TypedOp.rLoadSuperR:
-          r = (r as TypedInstance).superclass;
-          continue dispatch;
-        case TypedOp.rLoadLatePropertyR:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          r = TypedLateField.read(r, index);
-          continue dispatch;
-        case TypedOp.setLateFinalPropertyRS:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          TypedLateField.writeFinal(r, index, s);
-          continue dispatch;
-        case TypedOp.rLoadThisR:
-          r = (r as TypedInstance).dispatchRoot;
-          continue dispatch;
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           (r as TypedInstance).values[index] = s;
+           continue dispatch;
+        case TypedOp.aLoadPropertyR:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           a = TypedInterop.toInt((r as TypedInstance).values[index]);
+           continue dispatch;
+        case TypedOp.fLoadPropertyR:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           f = TypedInterop.toDouble((r as TypedInstance).values[index]);
+           continue dispatch;
+        case TypedOp.eLoadPropertyR:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           e = TypedInterop.toBool((r as TypedInstance).values[index]);
+           continue dispatch;
+        case TypedOp.rLoadPropertyStringR:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           r = TypedInterop.toStringValue((r as TypedInstance).values[index]);
+           continue dispatch;
+        case TypedOp.aFieldIncrementRA:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final instance = r as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
+           continue dispatch;
+        case TypedOp.aStringCodeUnitFieldsRR:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final instance = r as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
+           continue dispatch;
+        case TypedOp.eFieldLessStrLenRR:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final instance = r as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
+           continue dispatch;
+        case TypedOp.setPropertyRA:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           (r as TypedInstance).values[index] = $int(a);
+           continue dispatch;
+        case TypedOp.setPropertyRF:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           (r as TypedInstance).values[index] = $double(f);
+           continue dispatch;
+        case TypedOp.setPropertyRE:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           (r as TypedInstance).values[index] = $bool(e);
+           continue dispatch;
+        case TypedOp.bufWriteRS:
+           (r as $StringBuffer).$value.write(TypedInterop.reify(s));
+           continue dispatch;
         case TypedOp.returnNull:
-          if (frame.parent == null) return null;
+           if (frame.parent == null) return null;
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
-          continue dispatch;
+           continue dispatch;
         case TypedOp.callVirtual:
-          final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-          final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
           if (member != null) {
             final function = member.function;
             r = member.receiver;
@@ -1057,90 +975,724 @@ abstract final class TypedMachine {
             );
             s = null; c = null;
           }
-          continue dispatch;
-        case TypedOp.jumpNotEqAB:
-          if (!(a == b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotEqFG:
-          if (!(f == g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotNeAB:
-          if (!(a != b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotNeFG:
-          if (!(f != g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotLtAB:
-          if (!(a < b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotLtFG:
-          if (!(f < g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotLteAB:
-          if (!(a <= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotLteFG:
-          if (!(f <= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotGtAB:
-          if (!(a > b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotGtFG:
-          if (!(f > g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotGteAB:
-          if (!(a >= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
-        case TypedOp.jumpNotGteFG:
-          if (!(f >= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
-          continue dispatch;
+           continue dispatch;
         case TypedOp.jumpETrueShort:
-          if (e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpEFalseShort:
-          if (!e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpShort:
-          pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16);
-          continue dispatch;
+           pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16);
+           continue dispatch;
         case TypedOp.jumpNotEqABShort:
-          if (!(a == b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(a == b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotEqFGShort:
-          if (!(f == g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(f == g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotNeABShort:
-          if (!(a != b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(a != b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotNeFGShort:
-          if (!(f != g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(f != g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotLtABShort:
-          if (!(a < b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(a < b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotLtFGShort:
-          if (!(f < g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(f < g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotLteABShort:
-          if (!(a <= b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(a <= b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotLteFGShort:
-          if (!(f <= g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(f <= g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotGtABShort:
-          if (!(a > b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(a > b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotGtFGShort:
-          if (!(f > g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(f > g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotGteABShort:
-          if (!(a >= b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(a >= b)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
         case TypedOp.jumpNotGteFGShort:
-          if (!(f >= g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
-          continue dispatch;
+           if (!(f >= g)) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
+           continue dispatch;
+        case TypedOp.ext:
+          switch (256 + code[pc++]) {
+            case 263:
+             final caller = frame.parent;
+          final returnPc = frame.returnPc;
+          final future = TypedAsync.suspend(program, frame, pc, r, runtime, _resumeAsync);
+          if (caller == null) return future;
+          frame = caller; pc = returnPc;
+          r = future; s = null; c = null;
+             continue dispatch;
+            case 264:
+             final returned = TypedAsync.complete(frame, r);
+          if (frame.parent == null) return returned;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = returned; s = null; c = null;
+             continue dispatch;
+            case 265:
+             final returned = TypedAsync.complete(frame, null);
+          if (frame.parent == null) return returned;
+          pc = frame.returnPc;
+          frame = frame.leave();
+          r = returned; s = null; c = null;
+             continue dispatch;
+            default:
+              cold.op = code[pc - 1];
+              cold.pc = pc;
+              cold.a = a;
+              cold.b = b;
+              cold.f = f;
+              cold.g = g;
+              cold.e = e;
+              cold.r = r;
+              cold.s = s;
+              cold.c = c;
+              cold.frame = frame;
+              _dispatchCold(program, cold, runtime);
+              pc = cold.pc;
+              a = cold.a;
+              b = cold.b;
+              f = cold.f;
+              g = cold.g;
+              e = cold.e;
+              r = cold.r;
+              s = cold.s;
+              c = cold.c;
+              continue dispatch;
+          }
         default: throw StateError('Invalid typed opcode at byte ${pc - 1}');
       }
     }
+  }
+
+  // Cold half of the extended dispatch. Ops that do not need to mutate
+  // `frame` or leave the interpreter delegate here so `_dispatch` stays
+  // small; registers travel in and out through [st].
+  @pragma('vm:never-inline')
+  static void _dispatchCold(
+      TypedProgram program, _ColdCall st, Runtime? runtime) {
+    final code = program.code;
+    var pc = st.pc;
+    var a = st.a, b = st.b;
+    var f = st.f, g = st.g;
+    var e = st.e;
+    Object? r = st.r, s = st.s, c = st.c;
+    final frame = st.frame!;
+    switch (256 + st.op) {
+
+    case 256:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       r = TypedInterop.invokeExternal(program, runtime, r, s, c, index); s = null; c = null;
+       break;
+    case 257:
+       r = TypedInterop.newBridgeSuperShim();
+       break;
+    case 258:
+       TypedInterop.parentBridgeSuperShim(r, s);
+       break;
+    case 259:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       r = TypedInterop.attachBridge(runtime, r, s, index);
+       break;
+    case 260:
+       r = TypedInterop.runtimeTypeOf(runtime, r);
+       break;
+    case 261:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       r = TypedClosure.create(
+          program,
+          index,
+          frame.objectOutgoing,
+          runtime,
+          frame.effectiveTypeEnvironmentReceiver,
+          frame.effectiveTypeArguments,
+        );
+       break;
+    case 262:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          r = TypedAsync.begin(frame, runtimeTypeId, runtime);
+       break;
+    case 266:
+       if (!e) throw WrappedException(r!);
+       break;
+    case 267:
+       r = TypedExceptions.caught(frame);
+       break;
+    case 268:
+       r = TypedExceptions.trace(frame);
+       break;
+    case 269:
+       throw WrappedException(r!);
+    case 270:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       TypedExceptions.rethrowCaught(program, frame, index);
+    case 271:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       r = TypedRecords.create(
+            runtime!,
+            r,
+            index,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+            callableTypeArguments: frame.effectiveTypeArguments,
+          );
+       break;
+    case 272:
+       frame.typeEnvironmentReceiver = a;
+       break;
+    case 273:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       a = runtime == null
+            ? index
+            : runtime.resolveTypedEnvironmentType(
+                index,
+                actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                callableTypeArguments: frame.effectiveTypeArguments,
+              );
+       break;
+    case 274:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       r = $TypeImpl(
+            runtime!.resolveTypeParameterInEnvironment(
+              index,
+              frame.typeEnvironmentOwnerType(runtime),
+              frame.effectiveTypeArguments,
+            ),
+            runtime,
+          );
+       break;
+    case 275:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       if (runtime != null) {
+          if (!runtime.isTypedValueTypeInCallableEnvironment(
+            r,
+            index,
+            frame.effectiveTypeArguments,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+          )) {
+            throw TypeError();
+          }
+        }
+       break;
+    case 276:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final args = frame.takeObjectArguments(index);
+          final (hfirst, hrest) = TypedInterop.splitVector(args);
+          final result = TypedInterop.call(runtime, r, args.length, hfirst, hrest); r = result; s = null; c = null;
+       break;
+    case 277:
+       r = (r as TypedInstance).superclass;
+       break;
+    case 278:
+       r = TypedLateField.uninitialized;
+       break;
+    case 279:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       r = TypedLateField.read(r, index);
+       break;
+    case 280:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       TypedLateField.writeFinal(r, index, s);
+       break;
+    case 281:
+       r = (r as TypedInstance).dispatchRoot;
+       break;
+    case 282:
+       if (!(a == b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 283:
+       if (!(f == g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 284:
+       if (!(a != b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 285:
+       if (!(f != g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 286:
+       if (!(a < b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 287:
+       if (!(f < g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 288:
+       if (!(a <= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 289:
+       if (!(f <= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 290:
+       if (!(a > b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 291:
+       if (!(f > g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 292:
+       if (!(a >= b)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 293:
+       if (!(f >= g)) { pc = code[pc] | (code[pc + 1] << 8) | (code[pc + 2] << 16) | (code[pc + 3] << 24); } else { pc += 4; }
+       break;
+    case 294:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       a = TypedInterop.toInt((s as TypedInstance).values[index]);
+       break;
+    case 295:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       f = TypedInterop.toDouble((s as TypedInstance).values[index]);
+       break;
+    case 296:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       e = TypedInterop.toBool((s as TypedInstance).values[index]);
+       break;
+    case 297:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       s = (s as TypedInstance).values[index];
+       break;
+    case 298:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       s = TypedInterop.toStringValue((s as TypedInstance).values[index]);
+       break;
+    case 299:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       s = (r as TypedInstance).values[index];
+       break;
+    case 300:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       s = TypedInterop.toStringValue((r as TypedInstance).values[index]);
+       break;
+    case 301:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (s as TypedInstance).values[index] = $int(a);
+       break;
+    case 302:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (s as TypedInstance).values[index] = $int(b);
+       break;
+    case 303:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (s as TypedInstance).values[index] = s;
+       break;
+    case 304:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (s as TypedInstance).values[index] = c;
+       break;
+    case 305:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (s as TypedInstance).values[index] = $double(f);
+       break;
+    case 306:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (s as TypedInstance).values[index] = $bool(e);
+       break;
+    case 307:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = s as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
+       break;
+    case 308:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = s as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
+       break;
+    case 309:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = s as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
+       break;
+    case 310:
+       a = (s as String).length;
+       break;
+    case 311:
+       a = (s as String).codeUnitAt(a);
+       break;
+    case 312:
+       s = (s as String)[a];
+       break;
+    case 313:
+       s = (s as String).substring(a, b);
+       break;
+    case 314:
+       s = $String(s as String);
+       break;
+    case 315:
+       s = TypedInterop.toStringValue(s);
+       break;
+    case 316:
+       a = (s as List).length;
+       break;
+    case 317:
+       a = s as int;
+       break;
+    case 318:
+       f = s as double;
+       break;
+    case 319:
+       e = s as bool;
+       break;
+    case 320:
+       a = TypedInterop.toInt(s);
+       break;
+    case 321:
+       f = TypedInterop.toDouble(s);
+       break;
+    case 322:
+       e = TypedInterop.toBool(s);
+       break;
+    case 323:
+       s = $List.wrap(s as List);
+       break;
+    case 324:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          s = $Map.wrap(
+            s as Map<Object?, Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );
+       break;
+    case 325:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          s = $Set.wrap(
+            s as Set<Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );
+       break;
+    case 326:
+       s = (s as TypedInstance).dispatchRoot;
+       break;
+    case 327:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       e = index == 0 ? s is List : index == 1 ? s is Set : s is Map;
+       break;
+    case 328:
+       throw WrappedException(s!);
+    case 329:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       s = TypedGlobalState.loadObject(runtime, index);
+       break;
+    case 330:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       TypedGlobalState.storeObject(runtime, index, s);
+       break;
+    case 331:
+       if (!e) throw WrappedException(s!);
+       break;
+    case 332:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       e = runtime!.isTypedValueTypeInCallableEnvironment(
+            s,
+            index,
+            frame.effectiveTypeArguments,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+          );
+       break;
+    case 333:
+       s = a;
+       break;
+    case 334:
+       s = $int(a);
+       break;
+    case 335:
+       s = b;
+       break;
+    case 336:
+       s = $int(b);
+       break;
+    case 337:
+       s = f;
+       break;
+    case 338:
+       s = g;
+       break;
+    case 339:
+       s = e;
+       break;
+    case 340:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       a = TypedInterop.toInt((c as TypedInstance).values[index]);
+       break;
+    case 341:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       f = TypedInterop.toDouble((c as TypedInstance).values[index]);
+       break;
+    case 342:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       e = TypedInterop.toBool((c as TypedInstance).values[index]);
+       break;
+    case 343:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       c = (c as TypedInstance).values[index];
+       break;
+    case 344:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       c = TypedInterop.toStringValue((c as TypedInstance).values[index]);
+       break;
+    case 345:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       c = (r as TypedInstance).values[index];
+       break;
+    case 346:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       c = TypedInterop.toStringValue((r as TypedInstance).values[index]);
+       break;
+    case 347:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (c as TypedInstance).values[index] = $int(a);
+       break;
+    case 348:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (c as TypedInstance).values[index] = $int(b);
+       break;
+    case 349:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (c as TypedInstance).values[index] = s;
+       break;
+    case 350:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (c as TypedInstance).values[index] = c;
+       break;
+    case 351:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (c as TypedInstance).values[index] = $double(f);
+       break;
+    case 352:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       (c as TypedInstance).values[index] = $bool(e);
+       break;
+    case 353:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = c as TypedInstance; instance.values[index] = $int(TypedInterop.toInt(instance.values[index]) + 1);
+       break;
+    case 354:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = c as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));
+       break;
+    case 355:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final instance = c as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;
+       break;
+    case 356:
+       a = (c as String).length;
+       break;
+    case 357:
+       a = (c as String).codeUnitAt(a);
+       break;
+    case 358:
+       c = (c as String)[a];
+       break;
+    case 359:
+       c = (c as String).substring(a, b);
+       break;
+    case 360:
+       c = $String(c as String);
+       break;
+    case 361:
+       c = TypedInterop.toStringValue(c);
+       break;
+    case 362:
+       a = (c as List).length;
+       break;
+    case 363:
+       a = c as int;
+       break;
+    case 364:
+       f = c as double;
+       break;
+    case 365:
+       e = c as bool;
+       break;
+    case 366:
+       a = TypedInterop.toInt(c);
+       break;
+    case 367:
+       f = TypedInterop.toDouble(c);
+       break;
+    case 368:
+       e = TypedInterop.toBool(c);
+       break;
+    case 369:
+       c = $List.wrap(c as List);
+       break;
+    case 370:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          c = $Map.wrap(
+            c as Map<Object?, Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );
+       break;
+    case 371:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          c = $Set.wrap(
+            c as Set<Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );
+       break;
+    case 372:
+       c = (c as TypedInstance).dispatchRoot;
+       break;
+    case 373:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       e = index == 0 ? c is List : index == 1 ? c is Set : c is Map;
+       break;
+    case 374:
+       throw WrappedException(c!);
+    case 375:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       c = TypedGlobalState.loadObject(runtime, index);
+       break;
+    case 376:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       TypedGlobalState.storeObject(runtime, index, c);
+       break;
+    case 377:
+       if (!e) throw WrappedException(c!);
+       break;
+    case 378:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       e = runtime!.isTypedValueTypeInCallableEnvironment(
+            c,
+            index,
+            frame.effectiveTypeArguments,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+          );
+       break;
+    case 379:
+       (r as $StringBuffer).$value.write(TypedInterop.reify(c));
+       break;
+    case 380:
+       c = a;
+       break;
+    case 381:
+       c = $int(a);
+       break;
+    case 382:
+       c = b;
+       break;
+    case 383:
+       c = $int(b);
+       break;
+    case 384:
+       c = f;
+       break;
+    case 385:
+       c = g;
+       break;
+    case 386:
+       c = e;
+       break;
+    case 387:
+       r = (r as List<Object?>)[a];
+       break;
+    case 388:
+       (r as List<Object?>)[a] = r;
+       break;
+    case 389:
+       (r as List<Object?>).add(r);
+       break;
+    case 390:
+       r = (r as Map<Object?, Object?>)[s];
+       break;
+    case 391:
+       (r as Map<Object?, Object?>)[s] = r;
+       break;
+    case 392:
+       (r as Set<Object?>).add(r);
+       break;
+    case 393:
+       e = (r as Set<Object?>).add(r);
+       break;
+    case 394:
+       r = <Object?>[];
+       break;
+    case 395:
+       r = frame.objectOutgoing;
+       break;
+    case 396:
+       r = (s as List<Object?>)[a];
+       break;
+    case 397:
+       (s as List<Object?>)[a] = r;
+       break;
+    case 398:
+       (s as List<Object?>).add(r);
+       break;
+    case 399:
+       r = (s as Map<Object?, Object?>)[s];
+       break;
+    case 400:
+       (s as Map<Object?, Object?>)[s] = r;
+       break;
+    case 401:
+       (s as Set<Object?>).add(r);
+       break;
+    case 402:
+       e = (s as Set<Object?>).add(r);
+       break;
+    case 403:
+       s = <Object?>[];
+       break;
+    case 404:
+       s = frame.objectOutgoing;
+       break;
+    case 405:
+       e = TypedInterop.equals(runtime, r, c);
+       break;
+    case 406:
+       e = TypedInterop.equals(runtime, s, c);
+       break;
+    default: throw StateError('Invalid extended typed opcode');
+    }
+    st.pc = pc;
+    st.a = a;
+    st.b = b;
+    st.f = f;
+    st.g = g;
+    st.e = e;
+    st.r = r;
+    st.s = s;
+    st.c = c;
   }
 }

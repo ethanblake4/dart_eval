@@ -442,6 +442,11 @@ class CompilerContext with ScopeContext {
     return false;
   }
 
+  /// Whether any class in the program declares `'$file:$cls'` as an
+  /// ancestor — a receiver typed `cls` may then hold a subclass instance.
+  bool hasSubclasses(int file, String cls) =>
+      _descendants().containsKey('$file:$cls');
+
   /// Transitive descendant sets keyed by ancestor 'file:class'.
   Map<String, Set<String>> _descendants() {
     final memo = _descendantMemo;

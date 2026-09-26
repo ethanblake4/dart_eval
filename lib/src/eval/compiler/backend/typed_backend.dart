@@ -116,6 +116,7 @@ final class _Bytes extends cfg.Instruction {
   int get length => code < 0
       ? 0
       : TypedOp.instructions[code].length +
+            (code >= TypedOp.extendedBase ? 1 : 0) +
             (otherTarget == null
                 ? 0
                 : TypedOp.instructions[TypedOp.jump].length);
@@ -390,15 +391,21 @@ class TypedBackend {
       final code = function.code;
       final data = ByteData.sublistView(code);
       for (var pc = 0; pc < code.length;) {
-        final instruction = TypedOp.instructions[code[pc]];
+        var opcode = code[pc];
+        var escape = 0;
+        if (opcode == TypedOp.ext) {
+          escape = 1;
+          opcode = TypedOp.extendedBase + code[pc + 1];
+        }
+        final instruction = TypedOp.instructions[opcode];
         if (instruction.immediate == TypedImmediate.branch) {
           data.setUint32(
-            pc + 1,
-            data.getUint32(pc + 1, Endian.little) + base,
+            pc + 1 + escape,
+            data.getUint32(pc + 1 + escape, Endian.little) + base,
             Endian.little,
           );
         }
-        pc += instruction.length;
+        pc += instruction.length + escape;
       }
       functions.add(
         TypedFunction(
@@ -1856,6 +1863,10 @@ class _LoweringSession {
               ],
               [string, ?argument],
             ),
+          StringSubstring(:final string, :final start, :final end) => make(
+            ['rStringSubRAB', 'sStringSubSAB', 'cStringSubCAB'],
+            [string, start, end],
+          ),
           collection.NewList() => make(['cNewList'], []),
           collection.NewRecord(
             :final fields,
@@ -1930,7 +1941,36 @@ class _LoweringSession {
             ['listAppendCR'],
             [list, value],
           ),
+          collection.IsNativeList(:final value) => make(
+            ['eIsNativeR', 'eIsNativeS', 'eIsNativeC'],
+            [value],
+            immediate: 0,
+          ),
+          collection.IsNativeSet(:final value) => make(
+            ['eIsNativeR', 'eIsNativeS', 'eIsNativeC'],
+            [value],
+            immediate: 1,
+          ),
+          collection.IsNativeMap(:final value) => make(
+            ['eIsNativeR', 'eIsNativeS', 'eIsNativeC'],
+            [value],
+            immediate: 2,
+          ),
           collection.ListLength(:final list) => make(['aListLengthR'], [list]),
+          collection.IterableLength(:final iterable) => make(
+            ['aListLengthR'],
+            [iterable],
+          ),
+          collection.SetToList(:final set) => make(
+            ['cNativeElementsC'],
+            [set],
+            immediate: 0,
+          ),
+          collection.MapKeys(:final map) => make(
+            ['cNativeElementsC'],
+            [map],
+            immediate: 1,
+          ),
           primitives.BoxList(:final source, :final runtimeTypeId) =>
             runtimeTypeId == null
                 ? make(['rBoxList'], [source])
@@ -1959,13 +1999,50 @@ class _LoweringSession {
           objects_ir.LoadUninitializedField() => make([
             'rUninitializedField',
           ], []),
+          objects_ir.BufferWrite(:final buffer, :final value) => make(
+            ['bufWriteRS', 'bufWriteRC'],
+            [buffer, value],
+          ),
           objects_ir.LoadPropertyStatic(
             :final object,
             :final index,
             :final isLate,
+            :final rep,
           ) =>
             make(
-              [isLate ? 'rLoadLatePropertyR' : 'rLoadPropertyR'],
+              isLate
+                  ? const ['rLoadLatePropertyR']
+                  : switch (rep) {
+                      MachineRepresentation.integer => const [
+                        'aLoadPropertyR',
+                        'aLoadPropertyS',
+                        'aLoadPropertyC',
+                      ],
+                      MachineRepresentation.doublePrecision => const [
+                        'fLoadPropertyR',
+                        'fLoadPropertyS',
+                        'fLoadPropertyC',
+                      ],
+                      MachineRepresentation.boolean => const [
+                        'eLoadPropertyR',
+                        'eLoadPropertyS',
+                        'eLoadPropertyC',
+                      ],
+                      MachineRepresentation.string => const [
+                        'rLoadPropertyStringR',
+                        'sLoadPropertyStringS',
+                        'sLoadPropertyStringR',
+                        'cLoadPropertyStringC',
+                        'cLoadPropertyStringR',
+                      ],
+                      _ => const [
+                        'rLoadPropertyR',
+                        'sLoadPropertyS',
+                        'sLoadPropertyR',
+                        'cLoadPropertyC',
+                        'cLoadPropertyR',
+                      ],
+                    },
               [object],
               immediate: index,
             ),
@@ -1974,9 +2051,37 @@ class _LoweringSession {
             :final index,
             :final value,
             :final isLateFinal,
+            :final rep,
           ) =>
             make(
-              [isLateFinal ? 'setLateFinalPropertyRS' : 'setPropertyRS'],
+              isLateFinal
+                  ? const ['setLateFinalPropertyRS']
+                  : switch (rep) {
+                      MachineRepresentation.integer => const [
+                        'setPropertyRA',
+                        'setPropertySA',
+                        'setPropertySB',
+                        'setPropertyCA',
+                        'setPropertyCB',
+                      ],
+                      MachineRepresentation.doublePrecision => const [
+                        'setPropertyRF',
+                        'setPropertySF',
+                        'setPropertyCF',
+                      ],
+                      MachineRepresentation.boolean => const [
+                        'setPropertyRE',
+                        'setPropertySE',
+                        'setPropertyCE',
+                      ],
+                      _ => const [
+                        'setPropertyRS',
+                        'setPropertySS',
+                        'setPropertySC',
+                        'setPropertyCS',
+                        'setPropertyCC',
+                      ],
+                    },
               [object, value],
               immediate: index,
             ),
@@ -2370,8 +2475,15 @@ class _LoweringSession {
       for (final instruction in block) {
         final code = instruction.code;
         final spec = TypedOp.instructions[code];
-        final end = bytes.length + spec.length;
-        bytes.addByte(code);
+        final end = bytes.length +
+            spec.length +
+            (code >= TypedOp.extendedBase ? 1 : 0);
+        if (code >= TypedOp.extendedBase) {
+          bytes.addByte(TypedOp.ext);
+          bytes.addByte(code - TypedOp.extendedBase);
+        } else {
+          bytes.addByte(code);
+        }
         if (spec.immediate == TypedImmediate.none) continue;
         final number = switch (spec.immediate) {
           TypedImmediate.branch => offsets[instruction.immediate]!,

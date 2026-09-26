@@ -1,3 +1,5 @@
+import '../../ir/collection.dart' show ListAppend, ListSet, MapSet, SetAdd;
+import '../../ir/objects.dart' show BufferWrite;
 import '../../ir/string.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -27,6 +29,103 @@ final class Intrinsics {
   ) {
     final type = receiver.type;
     final boolType = CoreTypes.bool.ref(ctx);
+    if (method == 'write' &&
+        args.length == 1 &&
+        type.isAssignableTo(
+          ctx,
+          CoreTypes.stringBuffer.ref(ctx),
+          forceAllowDynamic: false,
+        )) {
+      final buffer = receiver.boxIfNeeded(ctx);
+      final argument = args.single.boxIfNeeded(ctx);
+      ctx.pushOp(BufferWrite(buffer.ssa, argument.ssa));
+      return (
+        target: buffer,
+        result: Variable.of(
+          ctx,
+          ctx.svar('buffer_write'),
+          CoreTypes.voidType.ref(ctx),
+          rep: ValueRep.boxed,
+        ),
+        args: [argument],
+        namedArgs: const {},
+      );
+    }
+    // Collection writes go direct only for unboxed natives with statically
+    // proven element types — a boxed $List/$Set carries its reified element
+    // type, and an unchecked write must stay on the member path.
+    if (args.length == 1 && method == 'add' && !receiver.boxed) {
+      final collectionRep = unboxedRepOf(type);
+      final isList = collectionRep == ValueRep.nativeList;
+      final typeArgs = interfaceArgumentsOf(type);
+      final elementType = typeArgs.isEmpty ? null : typeArgs.first;
+      if ((isList || collectionRep == ValueRep.nativeSet) &&
+          (elementType == null ||
+              args.single.type.isAssignableTo(
+                ctx,
+                elementType,
+                forceAllowDynamic: false,
+              ))) {
+        final collection = receiver.unboxIfNeeded(ctx);
+        final value = args.single.boxIfNeeded(ctx);
+        final ssa = ctx.svar(isList ? 'list_add' : 'set_add');
+        ctx.pushOp(
+          isList
+              ? ListAppend(collection.ssa, value.ssa)
+              : SetAdd(collection.ssa, value.ssa, target: ssa),
+        );
+        return (
+          target: collection,
+          result: Variable.of(
+            ctx,
+            ssa,
+            isList ? CoreTypes.voidType.ref(ctx) : boolType,
+            rep: isList ? ValueRep.boxed : ValueRep.bool,
+          ),
+          args: [value],
+          namedArgs: const {},
+        );
+      }
+    }
+    if (args.length == 2 && method == '[]=' && !receiver.boxed) {
+      final collectionRep = unboxedRepOf(type);
+      final typeArgs = interfaceArgumentsOf(type);
+      bool storable(Variable arg, int parameter) =>
+          typeArgs.length <= parameter ||
+          arg.type.isAssignableTo(
+            ctx,
+            typeArgs[parameter],
+            forceAllowDynamic: false,
+          );
+      if (collectionRep == ValueRep.nativeMap &&
+          storable(args[0], 0) &&
+          storable(args[1], 1)) {
+        final map = receiver.unboxIfNeeded(ctx);
+        final key = args[0].boxIfNeeded(ctx);
+        final value = args[1].boxIfNeeded(ctx);
+        ctx.pushOp(MapSet(map.ssa, key.ssa, value.ssa));
+        return (
+          target: map,
+          result: value,
+          args: [key, value],
+          namedArgs: const {},
+        );
+      }
+      if (collectionRep == ValueRep.nativeList &&
+          args[0].type.isAssignableTo(ctx, CoreTypes.int.ref(ctx)) &&
+          storable(args[1], 0)) {
+        final list = receiver.unboxIfNeeded(ctx);
+        final index = args[0].unboxIfNeeded(ctx);
+        final value = args[1].boxIfNeeded(ctx);
+        ctx.pushOp(ListSet(list.ssa, index.ssa, value.ssa));
+        return (
+          target: list,
+          result: value,
+          args: [index, value],
+          namedArgs: const {},
+        );
+      }
+    }
     if (args.length == 1 &&
         type.isAssignableTo(
           ctx,
@@ -73,6 +172,45 @@ final class Intrinsics {
               : ValueRep.string,
         ),
         args: [argument],
+        namedArgs: const {},
+      );
+    }
+
+    if (args.length == 2 &&
+        method == 'substring' &&
+        type.isAssignableTo(
+          ctx,
+          CoreTypes.string.ref(ctx),
+          forceAllowDynamic: false,
+        ) &&
+        args.every(
+          (arg) => arg.type.isAssignableTo(
+            ctx,
+            CoreTypes.int.ref(ctx),
+            forceAllowDynamic: false,
+          ),
+        )) {
+      final receiverUnboxed = receiver.unboxIfNeeded(ctx, false);
+      final start = args[0].ssa == receiver.ssa
+          ? receiverUnboxed
+          : args[0].unboxIfNeeded(ctx, false);
+      final end = args[1].ssa == receiver.ssa
+          ? receiverUnboxed
+          : args[1].unboxIfNeeded(ctx, false);
+      return (
+        target: receiverUnboxed,
+        result: Variable.ssa(
+          ctx,
+          StringSubstring(
+            ctx.svar('string_result'),
+            receiverUnboxed.ssa,
+            start.ssa,
+            end.ssa,
+          ),
+          CoreTypes.string.ref(ctx),
+          rep: ValueRep.string,
+        ),
+        args: [start, end],
         namedArgs: const {},
       );
     }

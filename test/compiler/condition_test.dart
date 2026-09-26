@@ -25,13 +25,8 @@ void expectResult(
   }
 }
 
-Iterable<TypedInstruction> instructions(TypedProgram program) sync* {
-  for (var pc = 0; pc < program.code.length;) {
-    final instruction = TypedOp.instructions[program.code[pc]];
-    yield instruction;
-    pc += instruction.length;
-  }
-}
+Iterable<TypedInstruction> instructions(TypedProgram program) =>
+    program.instructions.map((e) => e.$2);
 
 void main() {
   test('compound numeric conditions branch without boolean temporaries', () {

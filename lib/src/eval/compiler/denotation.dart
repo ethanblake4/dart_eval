@@ -21,7 +21,6 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
-import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
@@ -529,7 +528,6 @@ final class InstanceMemberDenotation extends Denotation {
     List<TypeRef>? typeArguments,
   ) {
     final resolvedMember = declared!;
-    final $type = resolvedMember.viewedAs;
     final member = resolvedMember.member;
     final $this =
         ctx.lookupLocal('#this') ??
@@ -557,17 +555,13 @@ final class InstanceMemberDenotation extends Denotation {
       }
     }
 
-    final resvar = ctx.svar(name);
-    ctx.pushOp(
-      LoadPropertyDynamic(resvar, $this.ssa, name, callerLibrary: ctx.library),
-    );
-
-    return Variable.of(
+    return GetTarget.read(
       ctx,
-      resvar,
-      ctx.memberLookup.fieldType($type, name, source: source) ??
-          CoreTypes.dynamic.ref(ctx),
-      rep: ValueRep.boxed,
+      $this,
+      name,
+      source: source,
+      boundContext: boundContext,
+      typeArguments: typeArguments,
     );
   }
 
@@ -629,18 +623,6 @@ final class InstanceMemberDenotation extends Denotation {
         : ctx.lookupLocal('#this');
     if (object == null) {
       throw CompileError('Cannot access instance member $name', source);
-    }
-    if (declared != null) {
-      // A member declared on the enclosing class itself.
-      final fieldType =
-          ctx.memberLookup.fieldType(
-            declared!.viewedAs,
-            name,
-            forSet: true,
-            source: source,
-          ) ??
-          CoreTypes.dynamic.ref(ctx);
-      return DynamicSet(object, name, fieldType).emit(ctx, value);
     }
     return SetTarget.write(ctx, object, name, value, source: source);
   }

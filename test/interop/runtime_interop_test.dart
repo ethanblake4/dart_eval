@@ -158,7 +158,8 @@ void main() {
     final bridge = $Function((runtime, target, r, s, c) => $int(37));
     final call = TypedProgram(
       Uint8List.fromList([
-        TypedOp.callHost,
+        TypedOp.ext,
+        TypedOp.callHost - TypedOp.extendedBase,
         0,
         0,
         TypedOp.aFromR,
@@ -174,7 +175,8 @@ void main() {
     );
     expect(
       () => TypedProgram(
-        Uint8List.fromList([TypedOp.callHost, 1, 0, TypedOp.rReturn]),
+        Uint8List.fromList([TypedOp.ext,
+        TypedOp.callHost - TypedOp.extendedBase, 1, 0, TypedOp.rReturn]),
       ),
       throwsFormatException,
     );

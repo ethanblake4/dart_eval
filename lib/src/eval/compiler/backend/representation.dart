@@ -48,6 +48,7 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
                 operator == StringOperator.codeUnitAt
             ? MachineRepresentation.integer
             : MachineRepresentation.string,
+      StringSubstring() => MachineRepresentation.string,
       NumericBinary(:final resultRepresentation) => resultRepresentation,
       IntToDouble() => MachineRepresentation.doublePrecision,
       memory.LoadInt() ||
@@ -71,6 +72,9 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       logic.LogicalOr() ||
       memory.IsNull() ||
       objects.DynamicEquals() ||
+      collection.IsNativeList() ||
+      collection.IsNativeSet() ||
+      collection.IsNativeMap() ||
       types.IsType() => MachineRepresentation.boolean,
       memory.LoadString() => MachineRepresentation.string,
       primitives.Unbox(:final representation) => representation,
@@ -88,7 +92,6 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       memory.LoadNull() ||
       objects.LoadUninitializedField() ||
       objects.InvokeDynamic() ||
-      objects.LoadPropertyStatic() ||
       objects.LoadPropertyDynamic() ||
       objects.LoadSuper() ||
       objects.LoadThis() ||
@@ -112,10 +115,15 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       collection.NewSet() ||
       collection.IndexList() ||
       collection.IndexMap() ||
+      collection.SetToList() ||
+      collection.MapKeys() ||
       collection.NewRecord() ||
       types.LoadConstantType() ||
       types.LoadTypeParameter() ||
       types.LoadRuntimeType() => MachineRepresentation.object,
+      objects.LoadPropertyStatic(:final rep) => rep,
+      collection.SetAdd(:final target) =>
+        target == null ? null : MachineRepresentation.boolean,
       _ => null,
     };
 
@@ -182,6 +190,11 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
               ? integer
               : MachineRepresentation.string,
         );
+      case StringSubstring(:final string, :final start, :final end):
+        constrain(string, MachineRepresentation.string);
+        constrain(start, integer);
+        constrain(end, integer);
+        output(operation, MachineRepresentation.string);
       case NumericBinary(
         :final operandRepresentation,
         :final resultRepresentation,
@@ -279,7 +292,11 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         constrain(condition, object);
       case memory.IsNull():
         output(operation, boolean);
-      case objects.DynamicEquals() || types.IsType():
+      case objects.DynamicEquals() ||
+          types.IsType() ||
+          collection.IsNativeList() ||
+          collection.IsNativeSet() ||
+          collection.IsNativeMap():
         inputs(operation, object);
         output(operation, boolean);
       case collection.IterableLength() || collection.ListLength():
@@ -317,15 +334,19 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
       case primitives.BoxList() ||
           primitives.BoxMap() ||
           primitives.BoxSet() ||
-          objects.LoadPropertyStatic() ||
           objects.LoadPropertyDynamic() ||
           objects.LoadSuper() ||
           objects.LoadThis() ||
+          collection.SetToList() ||
+          collection.MapKeys() ||
           types.LoadRuntimeType() ||
           bridge.BridgeInstantiate() ||
           async.Await():
         inputs(operation, object);
         output(operation, object);
+      case objects.LoadPropertyStatic(:final object, :final rep):
+        constrain(object, MachineRepresentation.object);
+        output(operation, rep);
       case objects.CreateClass(:final $super, :final runtimeTypeDescriptor):
         constrain($super, object);
         constrain(runtimeTypeDescriptor, integer);
@@ -369,13 +390,18 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           flow.Rethrow() ||
           flow.ReturnAsync() ||
           types.AssertType() ||
-          objects.SetPropertyStatic() ||
           objects.SetPropertyDynamic() ||
+          objects.BufferWrite() ||
           collection.MapSet() ||
           collection.ListAppend() ||
-          collection.SetAdd() ||
           bridge.ParentBridgeSuperShim():
         inputs(operation, object);
+      case collection.SetAdd(:final target):
+        inputs(operation, object);
+        if (target != null) output(operation, boolean);
+      case objects.SetPropertyStatic(:final object, :final value, :final rep):
+        constrain(object, MachineRepresentation.object);
+        constrain(value, rep);
       case collection.ListSet(:final list, :final index, :final value):
         constrain(list, object);
         constrain(index, integer);

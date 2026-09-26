@@ -339,7 +339,9 @@ final class TypedInstance implements $Instance {
       identifier,
       callerLibrary: callerLibrary,
     );
-    if (method != null) return method;
+    if (method != null) {
+      return method;
+    }
     var parent = superclass;
     while (parent is TypedInstance) {
       parent = parent.superclass;

@@ -32,8 +32,10 @@ final class MemberLookup {
 
   /// The exact earlier mixin body visible from the current member's lexical
   /// layer. Runtime member lookup on the host would see a later override.
-  FoldedMemberBody? lexicalSuperBody(String name, MemberKind kind) =>
-      ctx.lexicalSuperMembers[MemberName(name, kind).key];
+  FoldedMemberBody? lexicalSuperBody(String name, MemberKind kind) {
+    final hit = ctx.lexicalSuperMembers[MemberName(name, kind).key];
+    return hit;
+  }
 
   /// Resolve a folded body's source declaration without consulting the
   /// host's dispatch table, which may already contain a later override.

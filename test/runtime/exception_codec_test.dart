@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 void main() {
   TypedProgram make({
     List<TypedExceptionRegion> regions = const [
-      TypedExceptionRegion(0, catchTarget: 6, finallyTarget: 7),
+      TypedExceptionRegion(0, catchTarget: 6, finallyTarget: 8),
     ],
     List<TypedCompletionJump> jumps = const [TypedCompletionJump(0, 8, 0)],
   }) => TypedProgram(
@@ -17,7 +17,8 @@ void main() {
       TypedOp.completeJump,
       0,
       0,
-      TypedOp.rCaughtException,
+      TypedOp.ext,
+      TypedOp.rCaughtException - TypedOp.extendedBase,
       TypedOp.resumeCompletion,
       TypedOp.rReturn,
     ]),
@@ -30,7 +31,7 @@ void main() {
     () {
       final restored = TypedProgram.read(make().write().buffer);
       expect(restored.exceptionRegions.single.catchTarget, 6);
-      expect(restored.exceptionRegions.single.finallyTarget, 7);
+      expect(restored.exceptionRegions.single.finallyTarget, 8);
       expect(restored.completionJumps.single.target, 8);
       expect(restored.completionJumps.single.targetDepth, 0);
       expect(() => restored.exceptionRegions.clear(), throwsUnsupportedError);
@@ -45,7 +46,7 @@ void main() {
       const TypedExceptionRegion(-1, catchTarget: 6),
       const TypedExceptionRegion(1, catchTarget: 6),
       const TypedExceptionRegion(0, catchTarget: 1),
-      const TypedExceptionRegion(0, finallyTarget: 9),
+      const TypedExceptionRegion(0, finallyTarget: 7),
     ]) {
       expect(() => make(regions: [region]), throwsFormatException);
     }

@@ -85,7 +85,7 @@ StatementInfo _compileSwitchCases(
         _checkPrimitiveEquality(ctx, caseVar, currentCase.expression);
         return CallResolver(
           ctx,
-        ).invokeOperator(subject, '==', [caseVar]).result;
+        ).invokeOperator(caseVar, '==', [subject]).result;
       } else if (currentCase is SwitchPatternCase) {
         final matches = patternMatchAndBind(
           ctx,

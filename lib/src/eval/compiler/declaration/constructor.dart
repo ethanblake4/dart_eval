@@ -30,6 +30,7 @@ import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 
 import '../variable.dart';
+import '../variable/value_facts.dart';
 import '../values/abi.dart';
 
 void compileConstructorDeclaration(
@@ -458,6 +459,7 @@ void compileConstructorDeclaration(
       fieldIdx,
     ),
     TypeRef.$this(ctx)!,
+    facts: ValueFacts(possibleClasses: [TypeRef.$this(ctx)!]),
   );
 
   if (parent is EnumDeclaration) {

@@ -204,7 +204,8 @@ void main() {
         requiredPositional: 0,
       );
       final code = Uint8List.fromList([
-        TypedOp.rCreateClosure,
+        TypedOp.ext,
+        TypedOp.rCreateClosure - TypedOp.extendedBase,
         0,
         0,
         TypedOp.rReturn,
@@ -214,7 +215,7 @@ void main() {
         TypedOp.rReturn,
       ]);
       final target = const TypedFunction(
-        4,
+        5,
         argumentKinds: [TypedArgumentKind.object],
       );
       final p = TypedProgram(
@@ -231,7 +232,7 @@ void main() {
         ),
         throwsFormatException,
       );
-      final badCapture = Uint8List.fromList(code)..[5] = 1;
+      final badCapture = Uint8List.fromList(code)..[6] = 1;
       expect(
         () => TypedProgram(
           badCapture,
@@ -317,7 +318,8 @@ void main() {
   test('external call descriptors round trip and keep the table immutable', () {
     final calls = [const TypedExternalCall(0xffffffff, 4)];
     final p = TypedProgram(
-      Uint8List.fromList([TypedOp.callExternal, 0, 0, TypedOp.rReturn]),
+      Uint8List.fromList([TypedOp.ext,
+        TypedOp.callExternal - TypedOp.extendedBase, 0, 0, TypedOp.rReturn]),
       functions: const [TypedFunction(0, objectOutgoingCount: 2)],
       externalCalls: calls,
     );
@@ -334,7 +336,8 @@ void main() {
     'external calls validate IDs, counts, table references and overflow',
     () {
       final code = Uint8List.fromList([
-        TypedOp.callExternal,
+        TypedOp.ext,
+        TypedOp.callExternal - TypedOp.extendedBase,
         0,
         0,
         TypedOp.rReturn,

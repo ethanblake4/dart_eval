@@ -284,19 +284,26 @@ final class SetAdd extends Operation {
   final SSA set;
   final SSA value;
 
-  SetAdd(this.set, this.value);
+  /// Present when the `Set.add` boolean result is consumed.
+  final SSA? target;
+
+  SetAdd(this.set, this.value, {this.target});
 
   @override
   Set<SSA> get readsFrom => {set, value};
 
   @override
+  SSA? get writesTo => target;
+
+  @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
     final inputs = renameOperands([set, value], this.readsFrom, readsFrom);
-    return SetAdd(inputs[0], inputs[1]);
+    return SetAdd(inputs[0], inputs[1], target: writesTo ?? target);
   }
 
   @override
-  String toString() => 'setadd $set, $value';
+  String toString() =>
+      target == null ? 'setadd $set, $value' : '$target = setadd $set, $value';
 }
 
 final class IterableLength extends Operation {
@@ -337,4 +344,112 @@ final class ListLength extends Operation {
 
   @override
   String toString() => '$target = length $list';
+}
+
+/// `Set.toList()`: materializes a native set into a native list so its
+/// elements can be iterated by index.
+final class SetToList extends Operation {
+  final SSA target;
+  final SSA set;
+
+  SetToList(this.target, this.set);
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Set<SSA> get readsFrom => {set};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      SetToList(writesTo ?? target, readsFrom?.single ?? set);
+
+  @override
+  String toString() => '$target = setToList $set';
+}
+
+/// `Map.keys.toList()`: materializes a native map's keys into a native list
+/// so entries can be iterated by index.
+final class MapKeys extends Operation {
+  final SSA target;
+  final SSA map;
+
+  MapKeys(this.target, this.map);
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Set<SSA> get readsFrom => {map};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      MapKeys(writesTo ?? target, readsFrom?.single ?? map);
+
+  @override
+  String toString() => '$target = mapKeys $map';
+}
+
+/// `value is List` at the VM level: true for raw natives and the canonical
+/// `$List` wrapper, false for evaluated-class implementations.
+final class IsNativeList extends Operation {
+  final SSA target;
+  final SSA value;
+
+  IsNativeList(this.target, this.value);
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Set<SSA> get readsFrom => {value};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      IsNativeList(writesTo ?? target, readsFrom?.single ?? value);
+
+  @override
+  String toString() => '$target = isNativeList $value';
+}
+
+/// `value is Set` at the VM level: raw natives and `$Set` only.
+final class IsNativeSet extends Operation {
+  final SSA target;
+  final SSA value;
+
+  IsNativeSet(this.target, this.value);
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Set<SSA> get readsFrom => {value};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      IsNativeSet(writesTo ?? target, readsFrom?.single ?? value);
+
+  @override
+  String toString() => '$target = isNativeSet $value';
+}
+
+/// `value is Map` at the VM level: raw natives and `$Map` only.
+final class IsNativeMap extends Operation {
+  final SSA target;
+  final SSA value;
+
+  IsNativeMap(this.target, this.value);
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Set<SSA> get readsFrom => {value};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      IsNativeMap(writesTo ?? target, readsFrom?.single ?? value);
+
+  @override
+  String toString() => '$target = isNativeMap $value';
 }

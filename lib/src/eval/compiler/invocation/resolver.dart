@@ -4,9 +4,18 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/variable/value_facts.dart';
+import 'package:dart_eval/src/eval/ir/alu.dart';
+import 'package:dart_eval/src/eval/ir/collection.dart';
+import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
+import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
+import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
+import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
+import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../member/call_signature.dart';
@@ -554,6 +563,14 @@ final class CallResolver {
         !isStatic &&
         e.typeArguments == null &&
         arguments.named.isEmpty) {
+      if (e.methodName.name == 'forEach') {
+        final forEach = _tryCompileNativeForEach(
+          L,
+          arguments.positional,
+          resolved,
+        );
+        if (forEach != null) return forEach;
+      }
       final intrinsic = Intrinsics(
         ctx,
       ).tryEmit(L, e.methodName.name, arguments.positional);
@@ -1047,6 +1064,168 @@ final class CallResolver {
       result: result,
       args: bound.positional,
       namedArgs: {for (final e in bound.named) e.$1: e.$2},
+    );
+  }
+
+  /// `forEach` on a natively-held collection: an index pump that invokes
+  /// the closure in place of a per-element bridge round-trip. Mutation
+  /// during iteration follows index semantics, not the iterable's
+  /// concurrent-modification check.
+  Variable? _tryCompileNativeForEach(
+    Variable receiver,
+    List<Variable> args,
+    ResolvedMember? resolved,
+  ) {
+    if (args.length != 1) return null;
+    final collectionRep = unboxedRepOf(receiver.type);
+    final isMap = collectionRep == ValueRep.nativeMap;
+    final isSet = collectionRep == ValueRep.nativeSet;
+    if (!isMap && !isSet && collectionRep != ValueRep.nativeList) {
+      return null;
+    }
+    final function = args.single;
+    if (receiver.boxed) {
+      // A boxed value promoted to a collection type can still be an
+      // evaluated-class implementation — VM-check the storage once and
+      // fall back to the bridged member for non-natives.
+      macroBranch(
+        ctx,
+        null,
+        condition: (ctx) => Variable.ssa(
+          ctx,
+          isMap
+              ? IsNativeMap(ctx.svar('is_native'), receiver.ssa)
+              : isSet
+              ? IsNativeSet(ctx.svar('is_native'), receiver.ssa)
+              : IsNativeList(ctx.svar('is_native'), receiver.ssa),
+          CoreTypes.bool.ref(ctx),
+          rep: ValueRep.bool,
+        ),
+        thenBranch: (ctx, ert) => _compileNativeForEachPump(
+          ctx,
+          receiver,
+          function,
+          isMap,
+          isSet,
+        ),
+        elseBranch: (ctx, ert) {
+          _invokeResolvedOperator(
+            receiver,
+            'forEach',
+            args,
+            null,
+            resolved: resolved,
+          );
+          return StatementInfo();
+        },
+      );
+      return _forEachResult();
+    }
+    _compileNativeForEachPump(ctx, receiver, function, isMap, isSet);
+    return _forEachResult();
+  }
+
+  Variable _forEachResult() => Variable.of(
+    ctx,
+    ctx.svar('for_each_result'),
+    CoreTypes.voidType.ref(ctx),
+    rep: ValueRep.boxed,
+  );
+
+  /// The index-pump loop for [_tryCompileNativeForEach].
+  StatementInfo _compileNativeForEachPump(
+    CompilerContext ctx,
+    Variable receiver,
+    Variable function,
+    bool isMap,
+    bool isSet,
+  ) {
+    final intType = CoreTypes.int.ref(ctx);
+    final elements = receiver.unboxIfNeeded(ctx);
+    final list = isMap
+        ? Variable.ssa(
+            ctx,
+            MapKeys(ctx.svar('for_each_keys'), elements.ssa),
+            CoreTypes.list.ref(ctx),
+          )
+        : isSet
+        ? Variable.ssa(
+            ctx,
+            SetToList(ctx.svar('for_each_set'), elements.ssa),
+            receiver.type,
+          )
+        : elements;
+    final length = Variable.ssa(
+      ctx,
+      ListLength(ctx.svar('for_each_length'), list.ssa),
+      intType,
+      rep: ValueRep.int,
+    );
+    late LocalBinding index;
+    return macroLoop(
+      ctx,
+      null,
+      initialization: (ctx) {
+        index = ctx.setLocal(
+          '#forEachIndex',
+          BuiltinValue().push(ctx).copyWith(type: intType, rep: ValueRep.int),
+          declaredType: intType,
+        );
+        index.write(
+          ctx,
+          Variable.ssa(
+            ctx,
+            LoadInt(ctx.svar('for_each_init'), 0),
+            intType,
+            rep: ValueRep.int,
+          ),
+        );
+      },
+      condition: (ctx) => Variable.ssa(
+        ctx,
+        IntLessThan(
+          ctx.svar('for_each_cond'),
+          index.read(ctx).ssa,
+          length.ssa,
+        ),
+        CoreTypes.bool.ref(ctx),
+        rep: ValueRep.bool,
+      ),
+      body: (ctx, ert) {
+        final key = Variable.ssa(
+          ctx,
+          IndexList(
+            ctx.svar('for_each_element'),
+            list.ssa,
+            index.read(ctx).ssa,
+          ),
+          CoreTypes.dynamic.ref(ctx),
+          rep: ValueRep.boxed,
+        );
+        if (isMap) {
+          final value = Variable.ssa(
+            ctx,
+            IndexMap(ctx.svar('for_each_value'), elements.ssa, key.ssa),
+            CoreTypes.dynamic.ref(ctx),
+            rep: ValueRep.boxed,
+          );
+          invokeFunctionValue(function, [key, value], null);
+        } else {
+          invokeFunctionValue(function, [key], null);
+        }
+        return StatementInfo();
+      },
+      update: (ctx) {
+        index.write(
+          ctx,
+          Variable.ssa(
+            ctx,
+            Increment(ctx.svar('for_each_next'), index.read(ctx).ssa),
+            intType,
+            rep: ValueRep.int,
+          ),
+        );
+      },
     );
   }
 

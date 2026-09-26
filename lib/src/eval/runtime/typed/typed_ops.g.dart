@@ -13,7 +13,7 @@ enum TypedImmediate { none, intConstant, doubleConstant,
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
-      this.mayThrow, this.terminates, this.commutative);
+      this.mayThrow, this.terminates, this.commutative, this.family);
   final String name;
   final List<int> inputs;
   final List<int> outputs;
@@ -23,6 +23,10 @@ class TypedInstruction {
   /// Operand order may change during allocation without changing the result.
   /// Floating operations retain order, including NaN payload propagation.
   final bool commutative;
+  /// Register-agnostic operation kind: the name with the output-register
+  /// prefix and parameter-encoding suffix removed. Register variants of one
+  /// operation (rBoxMap, cBoxMap) share a family (BoxMap).
+  final String family;
   List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite || immediate == TypedImmediate.externalCall || immediate == TypedImmediate.closureCall)
       ? const [0, 1, 2, 3, 4, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
@@ -63,461 +67,752 @@ abstract final class TypedOp {
   static const aIncrement = 30;
   static const aDecrement = 31;
   static const aNegate = 32;
-  static const aBitNot = 33;
-  static const bIncrement = 34;
-  static const bDecrement = 35;
-  static const bNegate = 36;
-  static const bBitNot = 37;
-  static const fNegate = 38;
-  static const gNegate = 39;
-  static const eEqAB = 40;
-  static const eEqFG = 41;
-  static const eNeAB = 42;
-  static const eNeFG = 43;
-  static const eLtAB = 44;
-  static const eLtFG = 45;
-  static const eLteAB = 46;
-  static const eLteFG = 47;
-  static const eGtAB = 48;
-  static const eGtFG = 49;
-  static const eGteAB = 50;
-  static const eGteFG = 51;
-  static const eAPositive = 52;
-  static const eBPositive = 53;
-  static const eNot = 54;
-  static const fFromA = 55;
-  static const gFromA = 56;
-  static const fFromB = 57;
-  static const gFromB = 58;
-  static const cLoadOutgoing = 59;
-  static const rSetCallTypeReceiver = 60;
-  static const rNull = 61;
-  static const eIsNullR = 62;
-  static const sNull = 63;
-  static const eIsNullS = 64;
-  static const cNull = 65;
-  static const eIsNullC = 66;
-  static const rFromA = 67;
-  static const rBoxA = 68;
-  static const rFromB = 69;
-  static const rBoxB = 70;
-  static const rFromF = 71;
-  static const rBoxF = 72;
-  static const rFromG = 73;
-  static const rBoxG = 74;
-  static const rFromE = 75;
-  static const rBoxE = 76;
-  static const rBridgeArgument = 77;
-  static const leaveTry = 78;
-  static const rCaughtException = 79;
-  static const rCaughtStackTrace = 80;
-  static const aSetTypeEnvironment = 81;
-  static const rUninitializedField = 82;
-  static const aConstant = 83;
-  static const aSpill = 84;
-  static const aReload = 85;
-  static const aReturn = 86;
-  static const bConstant = 87;
-  static const bSpill = 88;
-  static const bReload = 89;
-  static const bReturn = 90;
-  static const fConstant = 91;
-  static const fSpill = 92;
-  static const fReload = 93;
-  static const fReturn = 94;
-  static const gConstant = 95;
-  static const gSpill = 96;
-  static const gReload = 97;
-  static const gReturn = 98;
-  static const eSpill = 99;
-  static const eReload = 100;
-  static const eReturn = 101;
-  static const rConstant = 102;
-  static const rSpill = 103;
-  static const rReload = 104;
-  static const rReturn = 105;
-  static const sConstant = 106;
-  static const sSpill = 107;
-  static const sReload = 108;
-  static const sReturn = 109;
-  static const cConstant = 110;
-  static const cSpill = 111;
-  static const cReload = 112;
-  static const cReturn = 113;
-  static const aDivB = 114;
-  static const bDivA = 115;
-  static const aModB = 116;
-  static const bModA = 117;
-  static const aShiftLeftB = 118;
-  static const bShiftLeftA = 119;
-  static const aShiftRightB = 120;
-  static const bShiftRightA = 121;
-  static const aUnsignedShiftRightB = 122;
-  static const bUnsignedShiftRightA = 123;
-  static const aImmediate = 124;
-  static const bImmediate = 125;
-  static const jumpETrue = 126;
-  static const jumpEFalse = 127;
-  static const aFromF = 128;
-  static const aFromG = 129;
-  static const bFromF = 130;
-  static const bFromG = 131;
-  static const jump = 132;
-  static const rOutgoing = 133;
-  static const sOutgoing = 134;
-  static const cOutgoing = 135;
-  static const rOverflow = 136;
-  static const call = 137;
-  static const setCallTypeArguments = 138;
-  static const eEqRS = 139;
-  static const aFromR = 140;
-  static const aNativeFromR = 141;
-  static const fFromR = 142;
-  static const fNativeFromR = 143;
-  static const eFromR = 144;
-  static const eNativeFromR = 145;
-  static const rBoxString = 146;
-  static const rUnboxString = 147;
-  static const callExternal = 148;
-  static const rNewBridgeSuperShim = 149;
-  static const parentBridgeSuperShim = 150;
-  static const rAttachBridge = 151;
-  static const rRuntimeType = 152;
-  static const rNewCaptureCell = 153;
-  static const rReadCaptureCell = 154;
-  static const writeCaptureCellRS = 155;
-  static const rCreateClosure = 156;
-  static const rLoadCapture = 157;
-  static const callClosure = 158;
-  static const enterTry = 159;
-  static const rBeginAsync = 160;
-  static const rAwait = 161;
-  static const rReturnAsync = 162;
-  static const returnAsyncNull = 163;
-  static const completeJump = 164;
-  static const resumeCompletion = 165;
-  static const eAssertR = 166;
-  static const rThrow = 167;
-  static const rethrowCaught = 168;
-  static const eIsTypeR = 169;
-  static const rCreateRecord = 170;
-  static const rLoadType = 171;
-  static const aResolveType = 172;
-  static const rLoadTypeParameter = 173;
-  static const rAssertType = 174;
-  static const aLoadGlobal = 175;
-  static const aSetGlobal = 176;
-  static const fLoadGlobal = 177;
-  static const fSetGlobal = 178;
-  static const eLoadGlobal = 179;
-  static const eSetGlobal = 180;
-  static const rLoadGlobal = 181;
-  static const rSetGlobal = 182;
-  static const callHost = 183;
-  static const callMethod = 184;
-  static const aStringLengthR = 185;
-  static const rStringConcatS = 186;
-  static const aStringCodeUnitR = 187;
-  static const rStringIndexA = 188;
-  static const cNewList = 189;
-  static const cNewMap = 190;
-  static const cNewConstMap = 191;
-  static const cNewSet = 192;
-  static const cNewConstSet = 193;
-  static const rMapIndexCS = 194;
-  static const mapSetCSR = 195;
-  static const setAddCR = 196;
-  static const rBoxMap = 197;
-  static const rBoxSet = 198;
-  static const eInternConstR = 199;
-  static const eInternConstS = 200;
-  static const eInternConstC = 201;
-  static const aListLengthR = 202;
-  static const rListIndexCA = 203;
-  static const listSetCAR = 204;
-  static const listAppendCR = 205;
-  static const rBoxList = 206;
-  static const rBoxListTyped = 207;
-  static const rCreateClassRA = 208;
-  static const rLoadPropertyR = 209;
-  static const setPropertyRS = 210;
-  static const rLoadSuperR = 211;
-  static const rLoadLatePropertyR = 212;
-  static const setLateFinalPropertyRS = 213;
-  static const rLoadThisR = 214;
-  static const returnNull = 215;
-  static const callVirtual = 216;
-  static const jumpNotEqAB = 217;
-  static const jumpNotEqFG = 218;
-  static const jumpNotNeAB = 219;
-  static const jumpNotNeFG = 220;
-  static const jumpNotLtAB = 221;
-  static const jumpNotLtFG = 222;
-  static const jumpNotLteAB = 223;
-  static const jumpNotLteFG = 224;
-  static const jumpNotGtAB = 225;
-  static const jumpNotGtFG = 226;
-  static const jumpNotGteAB = 227;
-  static const jumpNotGteFG = 228;
-  static const jumpETrueShort = 229;
-  static const jumpEFalseShort = 230;
-  static const jumpShort = 231;
-  static const jumpNotEqABShort = 232;
-  static const jumpNotEqFGShort = 233;
-  static const jumpNotNeABShort = 234;
-  static const jumpNotNeFGShort = 235;
-  static const jumpNotLtABShort = 236;
-  static const jumpNotLtFGShort = 237;
-  static const jumpNotLteABShort = 238;
-  static const jumpNotLteFGShort = 239;
-  static const jumpNotGtABShort = 240;
-  static const jumpNotGtFGShort = 241;
-  static const jumpNotGteABShort = 242;
-  static const jumpNotGteFGShort = 243;
+  static const bIncrement = 33;
+  static const bDecrement = 34;
+  static const bNegate = 35;
+  static const fNegate = 36;
+  static const gNegate = 37;
+  static const eEqAB = 38;
+  static const eEqFG = 39;
+  static const eNeAB = 40;
+  static const eNeFG = 41;
+  static const eLtAB = 42;
+  static const eLtFG = 43;
+  static const eLteAB = 44;
+  static const eLteFG = 45;
+  static const eGtAB = 46;
+  static const eGtFG = 47;
+  static const eGteAB = 48;
+  static const eGteFG = 49;
+  static const eAPositive = 50;
+  static const eBPositive = 51;
+  static const eNot = 52;
+  static const fFromA = 53;
+  static const gFromA = 54;
+  static const fFromB = 55;
+  static const gFromB = 56;
+  static const cLoadOutgoing = 57;
+  static const rSetCallTypeReceiver = 58;
+  static const rNull = 59;
+  static const eIsNullR = 60;
+  static const sNull = 61;
+  static const eIsNullS = 62;
+  static const cNull = 63;
+  static const eIsNullC = 64;
+  static const rFromA = 65;
+  static const rBoxA = 66;
+  static const rFromB = 67;
+  static const rBoxB = 68;
+  static const rFromF = 69;
+  static const rBoxF = 70;
+  static const rFromG = 71;
+  static const rBoxG = 72;
+  static const rFromE = 73;
+  static const rBoxE = 74;
+  static const rBridgeArgument = 75;
+  static const leaveTry = 76;
+  static const aConstant = 77;
+  static const aSpill = 78;
+  static const aReload = 79;
+  static const aReturn = 80;
+  static const bConstant = 81;
+  static const bSpill = 82;
+  static const bReload = 83;
+  static const bReturn = 84;
+  static const fConstant = 85;
+  static const fSpill = 86;
+  static const fReload = 87;
+  static const fReturn = 88;
+  static const gConstant = 89;
+  static const gSpill = 90;
+  static const gReload = 91;
+  static const gReturn = 92;
+  static const eSpill = 93;
+  static const eReload = 94;
+  static const eReturn = 95;
+  static const rConstant = 96;
+  static const rSpill = 97;
+  static const rReload = 98;
+  static const rReturn = 99;
+  static const sConstant = 100;
+  static const sSpill = 101;
+  static const sReload = 102;
+  static const sReturn = 103;
+  static const cConstant = 104;
+  static const cSpill = 105;
+  static const cReload = 106;
+  static const cReturn = 107;
+  static const aDivB = 108;
+  static const bDivA = 109;
+  static const aModB = 110;
+  static const bModA = 111;
+  static const aShiftLeftB = 112;
+  static const bShiftLeftA = 113;
+  static const aShiftRightB = 114;
+  static const bShiftRightA = 115;
+  static const aUnsignedShiftRightB = 116;
+  static const bUnsignedShiftRightA = 117;
+  static const aImmediate = 118;
+  static const bImmediate = 119;
+  static const jumpETrue = 120;
+  static const jumpEFalse = 121;
+  static const aFromF = 122;
+  static const aFromG = 123;
+  static const bFromF = 124;
+  static const bFromG = 125;
+  static const jump = 126;
+  static const rOutgoing = 127;
+  static const sOutgoing = 128;
+  static const cOutgoing = 129;
+  static const rOverflow = 130;
+  static const call = 131;
+  static const setCallTypeArguments = 132;
+  static const eEqRS = 133;
+  static const aFromR = 134;
+  static const aNativeFromR = 135;
+  static const fFromR = 136;
+  static const fNativeFromR = 137;
+  static const eFromR = 138;
+  static const eNativeFromR = 139;
+  static const rBoxString = 140;
+  static const rUnboxString = 141;
+  static const rNewCaptureCell = 142;
+  static const rReadCaptureCell = 143;
+  static const writeCaptureCellRS = 144;
+  static const rLoadCapture = 145;
+  static const callClosure = 146;
+  static const enterTry = 147;
+  static const completeJump = 148;
+  static const resumeCompletion = 149;
+  static const eIsTypeR = 150;
+  static const rLoadType = 151;
+  static const aLoadGlobal = 152;
+  static const aSetGlobal = 153;
+  static const fLoadGlobal = 154;
+  static const fSetGlobal = 155;
+  static const eLoadGlobal = 156;
+  static const eSetGlobal = 157;
+  static const rLoadGlobal = 158;
+  static const rSetGlobal = 159;
+  static const callMethod = 160;
+  static const aStringLengthR = 161;
+  static const rStringConcatS = 162;
+  static const aStringCodeUnitR = 163;
+  static const rStringIndexA = 164;
+  static const rStringSubRAB = 165;
+  static const cNewList = 166;
+  static const cNewMap = 167;
+  static const cNewConstMap = 168;
+  static const cNewSet = 169;
+  static const cNewConstSet = 170;
+  static const rMapIndexCS = 171;
+  static const mapSetCSR = 172;
+  static const setAddCR = 173;
+  static const eSetAddCR = 174;
+  static const cNativeElementsC = 175;
+  static const eIsNativeR = 176;
+  static const rBoxMap = 177;
+  static const rBoxSet = 178;
+  static const eInternConstR = 179;
+  static const eInternConstS = 180;
+  static const eInternConstC = 181;
+  static const aListLengthR = 182;
+  static const rListIndexCA = 183;
+  static const listSetCAR = 184;
+  static const listAppendCR = 185;
+  static const rBoxList = 186;
+  static const rBoxListTyped = 187;
+  static const rCreateClassRA = 188;
+  static const rLoadPropertyR = 189;
+  static const setPropertyRS = 190;
+  static const aLoadPropertyR = 191;
+  static const fLoadPropertyR = 192;
+  static const eLoadPropertyR = 193;
+  static const rLoadPropertyStringR = 194;
+  static const aFieldIncrementRA = 195;
+  static const aStringCodeUnitFieldsRR = 196;
+  static const eFieldLessStrLenRR = 197;
+  static const setPropertyRA = 198;
+  static const setPropertyRF = 199;
+  static const setPropertyRE = 200;
+  static const bufWriteRS = 201;
+  static const returnNull = 202;
+  static const callVirtual = 203;
+  static const jumpETrueShort = 204;
+  static const jumpEFalseShort = 205;
+  static const jumpShort = 206;
+  static const jumpNotEqABShort = 207;
+  static const jumpNotEqFGShort = 208;
+  static const jumpNotNeABShort = 209;
+  static const jumpNotNeFGShort = 210;
+  static const jumpNotLtABShort = 211;
+  static const jumpNotLtFGShort = 212;
+  static const jumpNotLteABShort = 213;
+  static const jumpNotLteFGShort = 214;
+  static const jumpNotGtABShort = 215;
+  static const jumpNotGtFGShort = 216;
+  static const jumpNotGteABShort = 217;
+  static const jumpNotGteFGShort = 218;
+  static const ext = 219;
+  static const extendedBase = 256;
+  static const callExternal = 256;
+  static const rNewBridgeSuperShim = 257;
+  static const parentBridgeSuperShim = 258;
+  static const rAttachBridge = 259;
+  static const rRuntimeType = 260;
+  static const rCreateClosure = 261;
+  static const rBeginAsync = 262;
+  static const rAwait = 263;
+  static const rReturnAsync = 264;
+  static const returnAsyncNull = 265;
+  static const eAssertR = 266;
+  static const rCaughtException = 267;
+  static const rCaughtStackTrace = 268;
+  static const rThrow = 269;
+  static const rethrowCaught = 270;
+  static const rCreateRecord = 271;
+  static const aSetTypeEnvironment = 272;
+  static const aResolveType = 273;
+  static const rLoadTypeParameter = 274;
+  static const rAssertType = 275;
+  static const callHost = 276;
+  static const rLoadSuperR = 277;
+  static const rUninitializedField = 278;
+  static const rLoadLatePropertyR = 279;
+  static const setLateFinalPropertyRS = 280;
+  static const rLoadThisR = 281;
+  static const jumpNotEqAB = 282;
+  static const jumpNotEqFG = 283;
+  static const jumpNotNeAB = 284;
+  static const jumpNotNeFG = 285;
+  static const jumpNotLtAB = 286;
+  static const jumpNotLtFG = 287;
+  static const jumpNotLteAB = 288;
+  static const jumpNotLteFG = 289;
+  static const jumpNotGtAB = 290;
+  static const jumpNotGtFG = 291;
+  static const jumpNotGteAB = 292;
+  static const jumpNotGteFG = 293;
+  static const aLoadPropertyS = 294;
+  static const fLoadPropertyS = 295;
+  static const eLoadPropertyS = 296;
+  static const sLoadPropertyS = 297;
+  static const sLoadPropertyStringS = 298;
+  static const sLoadPropertyR = 299;
+  static const sLoadPropertyStringR = 300;
+  static const setPropertySA = 301;
+  static const setPropertySB = 302;
+  static const setPropertySS = 303;
+  static const setPropertySC = 304;
+  static const setPropertySF = 305;
+  static const setPropertySE = 306;
+  static const aFieldIncrementSA = 307;
+  static const aStringCodeUnitFieldsSR = 308;
+  static const eFieldLessStrLenSR = 309;
+  static const aStringLengthS = 310;
+  static const aStringCodeUnitS = 311;
+  static const sStringIndexSA = 312;
+  static const sStringSubSAB = 313;
+  static const sBoxString = 314;
+  static const sUnboxString = 315;
+  static const aListLengthS = 316;
+  static const aNativeFromS = 317;
+  static const fNativeFromS = 318;
+  static const eNativeFromS = 319;
+  static const aFromS = 320;
+  static const fFromS = 321;
+  static const eFromS = 322;
+  static const sBoxList = 323;
+  static const sBoxMap = 324;
+  static const sBoxSet = 325;
+  static const sLoadThisS = 326;
+  static const eIsNativeS = 327;
+  static const sThrow = 328;
+  static const sLoadGlobal = 329;
+  static const sSetGlobal = 330;
+  static const eAssertS = 331;
+  static const eIsTypeS = 332;
+  static const sFromA = 333;
+  static const sBoxA = 334;
+  static const sFromB = 335;
+  static const sBoxB = 336;
+  static const sFromF = 337;
+  static const sFromG = 338;
+  static const sFromE = 339;
+  static const aLoadPropertyC = 340;
+  static const fLoadPropertyC = 341;
+  static const eLoadPropertyC = 342;
+  static const cLoadPropertyC = 343;
+  static const cLoadPropertyStringC = 344;
+  static const cLoadPropertyR = 345;
+  static const cLoadPropertyStringR = 346;
+  static const setPropertyCA = 347;
+  static const setPropertyCB = 348;
+  static const setPropertyCS = 349;
+  static const setPropertyCC = 350;
+  static const setPropertyCF = 351;
+  static const setPropertyCE = 352;
+  static const aFieldIncrementCA = 353;
+  static const aStringCodeUnitFieldsCR = 354;
+  static const eFieldLessStrLenCR = 355;
+  static const aStringLengthC = 356;
+  static const aStringCodeUnitC = 357;
+  static const cStringIndexCA = 358;
+  static const cStringSubCAB = 359;
+  static const cBoxString = 360;
+  static const cUnboxString = 361;
+  static const aListLengthC = 362;
+  static const aNativeFromC = 363;
+  static const fNativeFromC = 364;
+  static const eNativeFromC = 365;
+  static const aFromC = 366;
+  static const fFromC = 367;
+  static const eFromC = 368;
+  static const cBoxList = 369;
+  static const cBoxMap = 370;
+  static const cBoxSet = 371;
+  static const cLoadThisC = 372;
+  static const eIsNativeC = 373;
+  static const cThrow = 374;
+  static const cLoadGlobal = 375;
+  static const cSetGlobal = 376;
+  static const eAssertC = 377;
+  static const eIsTypeC = 378;
+  static const bufWriteRC = 379;
+  static const cFromA = 380;
+  static const cBoxA = 381;
+  static const cFromB = 382;
+  static const cBoxB = 383;
+  static const cFromF = 384;
+  static const cFromG = 385;
+  static const cFromE = 386;
+  static const rListIndexRA = 387;
+  static const listSetRAR = 388;
+  static const listAppendRR = 389;
+  static const rMapIndexRS = 390;
+  static const mapSetRSR = 391;
+  static const setAddRR = 392;
+  static const eSetAddRR = 393;
+  static const rNewList = 394;
+  static const rLoadOutgoing = 395;
+  static const rListIndexSA = 396;
+  static const listSetSAR = 397;
+  static const listAppendSR = 398;
+  static const rMapIndexSS = 399;
+  static const mapSetSSR = 400;
+  static const setAddSR = 401;
+  static const eSetAddSR = 402;
+  static const sNewList = 403;
+  static const sLoadOutgoing = 404;
+  static const eEqRC = 405;
+  static const eEqSC = 406;
   static const instructions = <TypedInstruction>[
-    TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('aFromB', [1], [0], TypedImmediate.none, false, false, false),
-    TypedInstruction('bFromA', [0], [1], TypedImmediate.none, false, false, false),
-    TypedInstruction('aBSwap', [0, 1], [0, 1], TypedImmediate.none, false, false, false),
-    TypedInstruction('fFromG', [3], [2], TypedImmediate.none, false, false, false),
-    TypedInstruction('gFromF', [2], [3], TypedImmediate.none, false, false, false),
-    TypedInstruction('fGSwap', [2, 3], [2, 3], TypedImmediate.none, false, false, false),
-    TypedInstruction('rFromS', [7], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('sFromR', [6], [7], TypedImmediate.none, false, false, false),
-    TypedInstruction('rSSwap', [6, 7], [6, 7], TypedImmediate.none, false, false, false),
-    TypedInstruction('rFromC', [8], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('cFromR', [6], [8], TypedImmediate.none, false, false, false),
-    TypedInstruction('rCSwap', [6, 8], [6, 8], TypedImmediate.none, false, false, false),
-    TypedInstruction('sFromC', [8], [7], TypedImmediate.none, false, false, false),
-    TypedInstruction('cFromS', [7], [8], TypedImmediate.none, false, false, false),
-    TypedInstruction('sCSwap', [7, 8], [7, 8], TypedImmediate.none, false, false, false),
-    TypedInstruction('aAddB', [0, 1], [0], TypedImmediate.none, false, false, true),
-    TypedInstruction('aSubB', [0, 1], [0], TypedImmediate.none, false, false, false),
-    TypedInstruction('bSubA', [1, 0], [1], TypedImmediate.none, false, false, false),
-    TypedInstruction('aMulB', [0, 1], [0], TypedImmediate.none, false, false, true),
-    TypedInstruction('aAndB', [0, 1], [0], TypedImmediate.none, false, false, true),
-    TypedInstruction('aOrB', [0, 1], [0], TypedImmediate.none, false, false, true),
-    TypedInstruction('aXorB', [0, 1], [0], TypedImmediate.none, false, false, true),
-    TypedInstruction('fAddG', [2, 3], [2], TypedImmediate.none, false, false, false),
-    TypedInstruction('fSubG', [2, 3], [2], TypedImmediate.none, false, false, false),
-    TypedInstruction('gSubF', [3, 2], [3], TypedImmediate.none, false, false, false),
-    TypedInstruction('fMulG', [2, 3], [2], TypedImmediate.none, false, false, false),
-    TypedInstruction('fDivG', [2, 3], [2], TypedImmediate.none, false, false, false),
-    TypedInstruction('gDivF', [3, 2], [3], TypedImmediate.none, false, false, false),
-    TypedInstruction('aIncrement', [0], [0], TypedImmediate.none, false, false, false),
-    TypedInstruction('aDecrement', [0], [0], TypedImmediate.none, false, false, false),
-    TypedInstruction('aNegate', [0], [0], TypedImmediate.none, false, false, false),
-    TypedInstruction('aBitNot', [0], [0], TypedImmediate.none, false, false, false),
-    TypedInstruction('bIncrement', [1], [1], TypedImmediate.none, false, false, false),
-    TypedInstruction('bDecrement', [1], [1], TypedImmediate.none, false, false, false),
-    TypedInstruction('bNegate', [1], [1], TypedImmediate.none, false, false, false),
-    TypedInstruction('bBitNot', [1], [1], TypedImmediate.none, false, false, false),
-    TypedInstruction('fNegate', [2], [2], TypedImmediate.none, false, false, false),
-    TypedInstruction('gNegate', [3], [3], TypedImmediate.none, false, false, false),
-    TypedInstruction('eEqAB', [0, 1], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eEqFG', [2, 3], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eNeAB', [0, 1], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eNeFG', [2, 3], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eLtAB', [0, 1], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eLtFG', [2, 3], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eLteAB', [0, 1], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eLteFG', [2, 3], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eGtAB', [0, 1], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eGtFG', [2, 3], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eGteAB', [0, 1], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eGteFG', [2, 3], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eAPositive', [0], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eBPositive', [1], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('eNot', [4], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('fFromA', [0], [2], TypedImmediate.none, false, false, false),
-    TypedInstruction('gFromA', [0], [3], TypedImmediate.none, false, false, false),
-    TypedInstruction('fFromB', [1], [2], TypedImmediate.none, false, false, false),
-    TypedInstruction('gFromB', [1], [3], TypedImmediate.none, false, false, false),
-    TypedInstruction('cLoadOutgoing', [], [8], TypedImmediate.none, false, false, false),
-    TypedInstruction('rSetCallTypeReceiver', [6], [], TypedImmediate.none, false, false, false),
-    TypedInstruction('rNull', [], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('eIsNullR', [6], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('sNull', [], [7], TypedImmediate.none, false, false, false),
-    TypedInstruction('eIsNullS', [7], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('cNull', [], [8], TypedImmediate.none, false, false, false),
-    TypedInstruction('eIsNullC', [8], [4], TypedImmediate.none, false, false, false),
-    TypedInstruction('rFromA', [0], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rBoxA', [0], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rFromB', [1], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rBoxB', [1], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rFromF', [2], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rBoxF', [2], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rFromG', [3], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rBoxG', [3], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rFromE', [4], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rBoxE', [4], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rBridgeArgument', [6], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('leaveTry', [], [], TypedImmediate.none, false, false, false),
-    TypedInstruction('rCaughtException', [], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('rCaughtStackTrace', [], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('aSetTypeEnvironment', [0], [], TypedImmediate.none, false, false, false),
-    TypedInstruction('rUninitializedField', [], [6], TypedImmediate.none, false, false, false),
-    TypedInstruction('aConstant', [], [0], TypedImmediate.intConstant, false, false, false),
-    TypedInstruction('aSpill', [0], [], TypedImmediate.intSpill, false, false, false),
-    TypedInstruction('aReload', [], [0], TypedImmediate.intSpill, false, false, false),
-    TypedInstruction('aReturn', [0], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('bConstant', [], [1], TypedImmediate.intConstant, false, false, false),
-    TypedInstruction('bSpill', [1], [], TypedImmediate.intSpill, false, false, false),
-    TypedInstruction('bReload', [], [1], TypedImmediate.intSpill, false, false, false),
-    TypedInstruction('bReturn', [1], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('fConstant', [], [2], TypedImmediate.doubleConstant, false, false, false),
-    TypedInstruction('fSpill', [2], [], TypedImmediate.doubleSpill, false, false, false),
-    TypedInstruction('fReload', [], [2], TypedImmediate.doubleSpill, false, false, false),
-    TypedInstruction('fReturn', [2], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('gConstant', [], [3], TypedImmediate.doubleConstant, false, false, false),
-    TypedInstruction('gSpill', [3], [], TypedImmediate.doubleSpill, false, false, false),
-    TypedInstruction('gReload', [], [3], TypedImmediate.doubleSpill, false, false, false),
-    TypedInstruction('gReturn', [3], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('eSpill', [4], [], TypedImmediate.boolSpill, false, false, false),
-    TypedInstruction('eReload', [], [4], TypedImmediate.boolSpill, false, false, false),
-    TypedInstruction('eReturn', [4], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('rConstant', [], [6], TypedImmediate.objectConstant, false, false, false),
-    TypedInstruction('rSpill', [6], [], TypedImmediate.objectSpill, false, false, false),
-    TypedInstruction('rReload', [], [6], TypedImmediate.objectSpill, false, false, false),
-    TypedInstruction('rReturn', [6], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('sConstant', [], [7], TypedImmediate.objectConstant, false, false, false),
-    TypedInstruction('sSpill', [7], [], TypedImmediate.objectSpill, false, false, false),
-    TypedInstruction('sReload', [], [7], TypedImmediate.objectSpill, false, false, false),
-    TypedInstruction('sReturn', [7], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('cConstant', [], [8], TypedImmediate.objectConstant, false, false, false),
-    TypedInstruction('cSpill', [8], [], TypedImmediate.objectSpill, false, false, false),
-    TypedInstruction('cReload', [], [8], TypedImmediate.objectSpill, false, false, false),
-    TypedInstruction('cReturn', [8], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('aDivB', [0, 1], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('bDivA', [1, 0], [1], TypedImmediate.none, true, false, false),
-    TypedInstruction('aModB', [0, 1], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('bModA', [1, 0], [1], TypedImmediate.none, true, false, false),
-    TypedInstruction('aShiftLeftB', [0, 1], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('bShiftLeftA', [1, 0], [1], TypedImmediate.none, true, false, false),
-    TypedInstruction('aShiftRightB', [0, 1], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('bShiftRightA', [1, 0], [1], TypedImmediate.none, true, false, false),
-    TypedInstruction('aUnsignedShiftRightB', [0, 1], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('bUnsignedShiftRightA', [1, 0], [1], TypedImmediate.none, true, false, false),
-    TypedInstruction('aImmediate', [], [0], TypedImmediate.integer, false, false, false),
-    TypedInstruction('bImmediate', [], [1], TypedImmediate.integer, false, false, false),
-    TypedInstruction('jumpETrue', [4], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpEFalse', [4], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('aFromF', [2], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('aFromG', [3], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('bFromF', [2], [1], TypedImmediate.none, true, false, false),
-    TypedInstruction('bFromG', [3], [1], TypedImmediate.none, true, false, false),
-    TypedInstruction('jump', [], [], TypedImmediate.branch, false, true, false),
-    TypedInstruction('rOutgoing', [6], [], TypedImmediate.objectOutgoing, false, false, false),
-    TypedInstruction('sOutgoing', [7], [], TypedImmediate.objectOutgoing, false, false, false),
-    TypedInstruction('cOutgoing', [8], [], TypedImmediate.objectOutgoing, false, false, false),
-    TypedInstruction('rOverflow', [8], [6], TypedImmediate.overflow, true, false, false),
-    TypedInstruction('call', [], [], TypedImmediate.function, true, false, false),
-    TypedInstruction('setCallTypeArguments', [], [], TypedImmediate.runtimeConstant, true, false, false),
-    TypedInstruction('eEqRS', [6, 7], [4], TypedImmediate.none, true, false, false),
-    TypedInstruction('aFromR', [6], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('aNativeFromR', [6], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('fFromR', [6], [2], TypedImmediate.none, true, false, false),
-    TypedInstruction('fNativeFromR', [6], [2], TypedImmediate.none, true, false, false),
-    TypedInstruction('eFromR', [6], [4], TypedImmediate.none, true, false, false),
-    TypedInstruction('eNativeFromR', [6], [4], TypedImmediate.none, true, false, false),
-    TypedInstruction('rBoxString', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('rUnboxString', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('callExternal', [], [6], TypedImmediate.externalCall, true, false, false),
-    TypedInstruction('rNewBridgeSuperShim', [], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('parentBridgeSuperShim', [6, 7], [], TypedImmediate.none, true, false, false),
-    TypedInstruction('rAttachBridge', [6, 7], [6], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('rRuntimeType', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('rNewCaptureCell', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('rReadCaptureCell', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('writeCaptureCellRS', [6, 7], [], TypedImmediate.none, true, false, false),
-    TypedInstruction('rCreateClosure', [], [6], TypedImmediate.closureIndex, true, false, false),
-    TypedInstruction('rLoadCapture', [], [6], TypedImmediate.captureIndex, true, false, false),
-    TypedInstruction('callClosure', [], [], TypedImmediate.closureCall, true, false, false),
-    TypedInstruction('enterTry', [], [], TypedImmediate.exceptionRegion, true, false, false),
-    TypedInstruction('rBeginAsync', [], [6], TypedImmediate.typeId, false, false, false),
-    TypedInstruction('rAwait', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('rReturnAsync', [6], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('returnAsyncNull', [], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('completeJump', [], [], TypedImmediate.completionJump, false, true, false),
-    TypedInstruction('resumeCompletion', [], [], TypedImmediate.none, true, true, false),
-    TypedInstruction('eAssertR', [4, 6], [], TypedImmediate.none, true, false, false),
-    TypedInstruction('rThrow', [6], [], TypedImmediate.none, true, true, false),
-    TypedInstruction('rethrowCaught', [], [], TypedImmediate.exceptionRegion, true, true, false),
-    TypedInstruction('eIsTypeR', [6], [4], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('rCreateRecord', [6], [6], TypedImmediate.runtimeConstant, true, false, false),
-    TypedInstruction('rLoadType', [], [6], TypedImmediate.typeId, false, false, false),
-    TypedInstruction('aResolveType', [], [0], TypedImmediate.typeId, false, false, false),
-    TypedInstruction('rLoadTypeParameter', [], [6], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('rAssertType', [6], [], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('aLoadGlobal', [], [0], TypedImmediate.globalIndex, true, false, false),
-    TypedInstruction('aSetGlobal', [0], [], TypedImmediate.globalIndex, true, false, false),
-    TypedInstruction('fLoadGlobal', [], [2], TypedImmediate.globalIndex, true, false, false),
-    TypedInstruction('fSetGlobal', [2], [], TypedImmediate.globalIndex, true, false, false),
-    TypedInstruction('eLoadGlobal', [], [4], TypedImmediate.globalIndex, true, false, false),
-    TypedInstruction('eSetGlobal', [4], [], TypedImmediate.globalIndex, true, false, false),
-    TypedInstruction('rLoadGlobal', [], [6], TypedImmediate.globalIndex, true, false, false),
-    TypedInstruction('rSetGlobal', [6], [], TypedImmediate.globalIndex, true, false, false),
-    TypedInstruction('callHost', [6], [6], TypedImmediate.hostCall, true, false, false),
-    TypedInstruction('callMethod', [6, 7], [6], TypedImmediate.hostCall, true, false, false),
-    TypedInstruction('aStringLengthR', [6], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('rStringConcatS', [6, 7], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('aStringCodeUnitR', [6, 0], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('rStringIndexA', [6, 0], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('cNewList', [], [8], TypedImmediate.none, true, false, false),
-    TypedInstruction('cNewMap', [], [8], TypedImmediate.none, true, false, false),
-    TypedInstruction('cNewConstMap', [], [8], TypedImmediate.none, true, false, false),
-    TypedInstruction('cNewSet', [], [8], TypedImmediate.none, true, false, false),
-    TypedInstruction('cNewConstSet', [], [8], TypedImmediate.none, true, false, false),
-    TypedInstruction('rMapIndexCS', [8, 7], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('mapSetCSR', [8, 7, 6], [], TypedImmediate.none, true, false, false),
-    TypedInstruction('setAddCR', [8, 6], [], TypedImmediate.none, true, false, false),
-    TypedInstruction('rBoxMap', [6], [6], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('rBoxSet', [6], [6], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('eInternConstR', [6], [6], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('eInternConstS', [7], [6], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('eInternConstC', [8], [6], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('aListLengthR', [6], [0], TypedImmediate.none, true, false, false),
-    TypedInstruction('rListIndexCA', [8, 0], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('listSetCAR', [8, 0, 6], [], TypedImmediate.none, true, false, false),
-    TypedInstruction('listAppendCR', [8, 6], [], TypedImmediate.none, true, false, false),
-    TypedInstruction('rBoxList', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('rBoxListTyped', [6], [6], TypedImmediate.typeId, true, false, false),
-    TypedInstruction('rCreateClassRA', [6, 0], [6], TypedImmediate.classIndex, true, false, false),
-    TypedInstruction('rLoadPropertyR', [6], [6], TypedImmediate.field, true, false, false),
-    TypedInstruction('setPropertyRS', [6, 7], [], TypedImmediate.field, true, false, false),
-    TypedInstruction('rLoadSuperR', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('rLoadLatePropertyR', [6], [6], TypedImmediate.field, true, false, false),
-    TypedInstruction('setLateFinalPropertyRS', [6, 7], [], TypedImmediate.field, true, false, false),
-    TypedInstruction('rLoadThisR', [6], [6], TypedImmediate.none, true, false, false),
-    TypedInstruction('returnNull', [], [], TypedImmediate.none, false, true, false),
-    TypedInstruction('callVirtual', [], [], TypedImmediate.callSite, true, false, false),
-    TypedInstruction('jumpNotEqAB', [0, 1], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotEqFG', [2, 3], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotNeAB', [0, 1], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotNeFG', [2, 3], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotLtAB', [0, 1], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotLtFG', [2, 3], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotLteAB', [0, 1], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotLteFG', [2, 3], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotGtAB', [0, 1], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotGtFG', [2, 3], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotGteAB', [0, 1], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpNotGteFG', [2, 3], [], TypedImmediate.branch, false, false, false),
-    TypedInstruction('jumpETrueShort', [4], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpEFalseShort', [4], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpShort', [], [], TypedImmediate.shortBranch, false, true, false),
-    TypedInstruction('jumpNotEqABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotEqFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotNeABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotNeFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotLtABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotLtFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotLteABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotLteFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotGtABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotGtFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotGteABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false),
-    TypedInstruction('jumpNotGteFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false),
+    TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false, 'True'),
+    TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false, 'False'),
+    TypedInstruction('aFromB', [1], [0], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('bFromA', [0], [1], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('aBSwap', [0, 1], [0, 1], TypedImmediate.none, false, false, false, 'BSwap'),
+    TypedInstruction('fFromG', [3], [2], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('gFromF', [2], [3], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('fGSwap', [2, 3], [2, 3], TypedImmediate.none, false, false, false, 'GSwap'),
+    TypedInstruction('rFromS', [7], [6], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('sFromR', [6], [7], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('rSSwap', [6, 7], [6, 7], TypedImmediate.none, false, false, false, 'SSwap'),
+    TypedInstruction('rFromC', [8], [6], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('cFromR', [6], [8], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('rCSwap', [6, 8], [6, 8], TypedImmediate.none, false, false, false, 'CSwap'),
+    TypedInstruction('sFromC', [8], [7], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('cFromS', [7], [8], TypedImmediate.none, false, false, false, 'Move'),
+    TypedInstruction('sCSwap', [7, 8], [7, 8], TypedImmediate.none, false, false, false, 'CSwap'),
+    TypedInstruction('aAddB', [0, 1], [0], TypedImmediate.none, false, false, true, 'Add'),
+    TypedInstruction('aSubB', [0, 1], [0], TypedImmediate.none, false, false, false, 'Sub'),
+    TypedInstruction('bSubA', [1, 0], [1], TypedImmediate.none, false, false, false, 'Sub'),
+    TypedInstruction('aMulB', [0, 1], [0], TypedImmediate.none, false, false, true, 'Mul'),
+    TypedInstruction('aAndB', [0, 1], [0], TypedImmediate.none, false, false, true, 'And'),
+    TypedInstruction('aOrB', [0, 1], [0], TypedImmediate.none, false, false, true, 'Or'),
+    TypedInstruction('aXorB', [0, 1], [0], TypedImmediate.none, false, false, true, 'Xor'),
+    TypedInstruction('fAddG', [2, 3], [2], TypedImmediate.none, false, false, false, 'Add'),
+    TypedInstruction('fSubG', [2, 3], [2], TypedImmediate.none, false, false, false, 'Sub'),
+    TypedInstruction('gSubF', [3, 2], [3], TypedImmediate.none, false, false, false, 'Sub'),
+    TypedInstruction('fMulG', [2, 3], [2], TypedImmediate.none, false, false, false, 'Mul'),
+    TypedInstruction('fDivG', [2, 3], [2], TypedImmediate.none, false, false, false, 'Div'),
+    TypedInstruction('gDivF', [3, 2], [3], TypedImmediate.none, false, false, false, 'Div'),
+    TypedInstruction('aIncrement', [0], [0], TypedImmediate.none, false, false, false, 'Increment'),
+    TypedInstruction('aDecrement', [0], [0], TypedImmediate.none, false, false, false, 'Decrement'),
+    TypedInstruction('aNegate', [0], [0], TypedImmediate.none, false, false, false, 'Negate'),
+    TypedInstruction('bIncrement', [1], [1], TypedImmediate.none, false, false, false, 'Increment'),
+    TypedInstruction('bDecrement', [1], [1], TypedImmediate.none, false, false, false, 'Decrement'),
+    TypedInstruction('bNegate', [1], [1], TypedImmediate.none, false, false, false, 'Negate'),
+    TypedInstruction('fNegate', [2], [2], TypedImmediate.none, false, false, false, 'Negate'),
+    TypedInstruction('gNegate', [3], [3], TypedImmediate.none, false, false, false, 'Negate'),
+    TypedInstruction('eEqAB', [0, 1], [4], TypedImmediate.none, false, false, false, 'Eq'),
+    TypedInstruction('eEqFG', [2, 3], [4], TypedImmediate.none, false, false, false, 'Eq'),
+    TypedInstruction('eNeAB', [0, 1], [4], TypedImmediate.none, false, false, false, 'Ne'),
+    TypedInstruction('eNeFG', [2, 3], [4], TypedImmediate.none, false, false, false, 'Ne'),
+    TypedInstruction('eLtAB', [0, 1], [4], TypedImmediate.none, false, false, false, 'Lt'),
+    TypedInstruction('eLtFG', [2, 3], [4], TypedImmediate.none, false, false, false, 'Lt'),
+    TypedInstruction('eLteAB', [0, 1], [4], TypedImmediate.none, false, false, false, 'Lte'),
+    TypedInstruction('eLteFG', [2, 3], [4], TypedImmediate.none, false, false, false, 'Lte'),
+    TypedInstruction('eGtAB', [0, 1], [4], TypedImmediate.none, false, false, false, 'Gt'),
+    TypedInstruction('eGtFG', [2, 3], [4], TypedImmediate.none, false, false, false, 'Gt'),
+    TypedInstruction('eGteAB', [0, 1], [4], TypedImmediate.none, false, false, false, 'Gte'),
+    TypedInstruction('eGteFG', [2, 3], [4], TypedImmediate.none, false, false, false, 'Gte'),
+    TypedInstruction('eAPositive', [0], [4], TypedImmediate.none, false, false, false, 'APositive'),
+    TypedInstruction('eBPositive', [1], [4], TypedImmediate.none, false, false, false, 'BPositive'),
+    TypedInstruction('eNot', [4], [4], TypedImmediate.none, false, false, false, 'Not'),
+    TypedInstruction('fFromA', [0], [2], TypedImmediate.none, false, false, false, 'From'),
+    TypedInstruction('gFromA', [0], [3], TypedImmediate.none, false, false, false, 'From'),
+    TypedInstruction('fFromB', [1], [2], TypedImmediate.none, false, false, false, 'From'),
+    TypedInstruction('gFromB', [1], [3], TypedImmediate.none, false, false, false, 'From'),
+    TypedInstruction('cLoadOutgoing', [], [8], TypedImmediate.none, false, false, false, 'LoadOutgoing'),
+    TypedInstruction('rSetCallTypeReceiver', [6], [], TypedImmediate.none, false, false, false, 'SetCallTypeReceiver'),
+    TypedInstruction('rNull', [], [6], TypedImmediate.none, false, false, false, 'Null'),
+    TypedInstruction('eIsNullR', [6], [4], TypedImmediate.none, false, false, false, 'IsNull'),
+    TypedInstruction('sNull', [], [7], TypedImmediate.none, false, false, false, 'Null'),
+    TypedInstruction('eIsNullS', [7], [4], TypedImmediate.none, false, false, false, 'IsNull'),
+    TypedInstruction('cNull', [], [8], TypedImmediate.none, false, false, false, 'Null'),
+    TypedInstruction('eIsNullC', [8], [4], TypedImmediate.none, false, false, false, 'IsNull'),
+    TypedInstruction('rFromA', [0], [6], TypedImmediate.none, false, false, false, 'From'),
+    TypedInstruction('rBoxA', [0], [6], TypedImmediate.none, false, false, false, 'Box'),
+    TypedInstruction('rFromB', [1], [6], TypedImmediate.none, false, false, false, 'From'),
+    TypedInstruction('rBoxB', [1], [6], TypedImmediate.none, false, false, false, 'Box'),
+    TypedInstruction('rFromF', [2], [6], TypedImmediate.none, false, false, false, 'From'),
+    TypedInstruction('rBoxF', [2], [6], TypedImmediate.none, false, false, false, 'Box'),
+    TypedInstruction('rFromG', [3], [6], TypedImmediate.none, false, false, false, 'From'),
+    TypedInstruction('rBoxG', [3], [6], TypedImmediate.none, false, false, false, 'Box'),
+    TypedInstruction('rFromE', [4], [6], TypedImmediate.none, false, false, false, 'From'),
+    TypedInstruction('rBoxE', [4], [6], TypedImmediate.none, false, false, false, 'Box'),
+    TypedInstruction('rBridgeArgument', [6], [6], TypedImmediate.none, false, false, false, 'BridgeArgument'),
+    TypedInstruction('leaveTry', [], [], TypedImmediate.none, false, false, false, 'leaveTry'),
+    TypedInstruction('aConstant', [], [0], TypedImmediate.intConstant, false, false, false, 'Constant'),
+    TypedInstruction('aSpill', [0], [], TypedImmediate.intSpill, false, false, false, 'Spill'),
+    TypedInstruction('aReload', [], [0], TypedImmediate.intSpill, false, false, false, 'Reload'),
+    TypedInstruction('aReturn', [0], [], TypedImmediate.none, false, true, false, 'Return'),
+    TypedInstruction('bConstant', [], [1], TypedImmediate.intConstant, false, false, false, 'Constant'),
+    TypedInstruction('bSpill', [1], [], TypedImmediate.intSpill, false, false, false, 'Spill'),
+    TypedInstruction('bReload', [], [1], TypedImmediate.intSpill, false, false, false, 'Reload'),
+    TypedInstruction('bReturn', [1], [], TypedImmediate.none, false, true, false, 'Return'),
+    TypedInstruction('fConstant', [], [2], TypedImmediate.doubleConstant, false, false, false, 'Constant'),
+    TypedInstruction('fSpill', [2], [], TypedImmediate.doubleSpill, false, false, false, 'Spill'),
+    TypedInstruction('fReload', [], [2], TypedImmediate.doubleSpill, false, false, false, 'Reload'),
+    TypedInstruction('fReturn', [2], [], TypedImmediate.none, false, true, false, 'Return'),
+    TypedInstruction('gConstant', [], [3], TypedImmediate.doubleConstant, false, false, false, 'Constant'),
+    TypedInstruction('gSpill', [3], [], TypedImmediate.doubleSpill, false, false, false, 'Spill'),
+    TypedInstruction('gReload', [], [3], TypedImmediate.doubleSpill, false, false, false, 'Reload'),
+    TypedInstruction('gReturn', [3], [], TypedImmediate.none, false, true, false, 'Return'),
+    TypedInstruction('eSpill', [4], [], TypedImmediate.boolSpill, false, false, false, 'Spill'),
+    TypedInstruction('eReload', [], [4], TypedImmediate.boolSpill, false, false, false, 'Reload'),
+    TypedInstruction('eReturn', [4], [], TypedImmediate.none, false, true, false, 'Return'),
+    TypedInstruction('rConstant', [], [6], TypedImmediate.objectConstant, false, false, false, 'Constant'),
+    TypedInstruction('rSpill', [6], [], TypedImmediate.objectSpill, false, false, false, 'Spill'),
+    TypedInstruction('rReload', [], [6], TypedImmediate.objectSpill, false, false, false, 'Reload'),
+    TypedInstruction('rReturn', [6], [], TypedImmediate.none, false, true, false, 'Return'),
+    TypedInstruction('sConstant', [], [7], TypedImmediate.objectConstant, false, false, false, 'Constant'),
+    TypedInstruction('sSpill', [7], [], TypedImmediate.objectSpill, false, false, false, 'Spill'),
+    TypedInstruction('sReload', [], [7], TypedImmediate.objectSpill, false, false, false, 'Reload'),
+    TypedInstruction('sReturn', [7], [], TypedImmediate.none, false, true, false, 'Return'),
+    TypedInstruction('cConstant', [], [8], TypedImmediate.objectConstant, false, false, false, 'Constant'),
+    TypedInstruction('cSpill', [8], [], TypedImmediate.objectSpill, false, false, false, 'Spill'),
+    TypedInstruction('cReload', [], [8], TypedImmediate.objectSpill, false, false, false, 'Reload'),
+    TypedInstruction('cReturn', [8], [], TypedImmediate.none, false, true, false, 'Return'),
+    TypedInstruction('aDivB', [0, 1], [0], TypedImmediate.none, true, false, false, 'Div'),
+    TypedInstruction('bDivA', [1, 0], [1], TypedImmediate.none, true, false, false, 'Div'),
+    TypedInstruction('aModB', [0, 1], [0], TypedImmediate.none, true, false, false, 'Mod'),
+    TypedInstruction('bModA', [1, 0], [1], TypedImmediate.none, true, false, false, 'Mod'),
+    TypedInstruction('aShiftLeftB', [0, 1], [0], TypedImmediate.none, true, false, false, 'ShiftLeft'),
+    TypedInstruction('bShiftLeftA', [1, 0], [1], TypedImmediate.none, true, false, false, 'ShiftLeft'),
+    TypedInstruction('aShiftRightB', [0, 1], [0], TypedImmediate.none, true, false, false, 'ShiftRight'),
+    TypedInstruction('bShiftRightA', [1, 0], [1], TypedImmediate.none, true, false, false, 'ShiftRight'),
+    TypedInstruction('aUnsignedShiftRightB', [0, 1], [0], TypedImmediate.none, true, false, false, 'UnsignedShiftRight'),
+    TypedInstruction('bUnsignedShiftRightA', [1, 0], [1], TypedImmediate.none, true, false, false, 'UnsignedShiftRight'),
+    TypedInstruction('aImmediate', [], [0], TypedImmediate.integer, false, false, false, 'Immediate'),
+    TypedInstruction('bImmediate', [], [1], TypedImmediate.integer, false, false, false, 'Immediate'),
+    TypedInstruction('jumpETrue', [4], [], TypedImmediate.branch, false, false, false, 'jumpETrue'),
+    TypedInstruction('jumpEFalse', [4], [], TypedImmediate.branch, false, false, false, 'jumpEFalse'),
+    TypedInstruction('aFromF', [2], [0], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('aFromG', [3], [0], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('bFromF', [2], [1], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('bFromG', [3], [1], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('jump', [], [], TypedImmediate.branch, false, true, false, 'jump'),
+    TypedInstruction('rOutgoing', [6], [], TypedImmediate.objectOutgoing, false, false, false, 'Outgoing'),
+    TypedInstruction('sOutgoing', [7], [], TypedImmediate.objectOutgoing, false, false, false, 'Outgoing'),
+    TypedInstruction('cOutgoing', [8], [], TypedImmediate.objectOutgoing, false, false, false, 'Outgoing'),
+    TypedInstruction('rOverflow', [8], [6], TypedImmediate.overflow, true, false, false, 'Overflow'),
+    TypedInstruction('call', [], [], TypedImmediate.function, true, false, false, 'call'),
+    TypedInstruction('setCallTypeArguments', [], [], TypedImmediate.runtimeConstant, true, false, false, 'setCallTypeArguments'),
+    TypedInstruction('eEqRS', [6, 7], [4], TypedImmediate.none, true, false, false, 'Eq'),
+    TypedInstruction('aFromR', [6], [0], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('aNativeFromR', [6], [0], TypedImmediate.none, true, false, false, 'NativeFrom'),
+    TypedInstruction('fFromR', [6], [2], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('fNativeFromR', [6], [2], TypedImmediate.none, true, false, false, 'NativeFrom'),
+    TypedInstruction('eFromR', [6], [4], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('eNativeFromR', [6], [4], TypedImmediate.none, true, false, false, 'NativeFrom'),
+    TypedInstruction('rBoxString', [6], [6], TypedImmediate.none, true, false, false, 'BoxString'),
+    TypedInstruction('rUnboxString', [6], [6], TypedImmediate.none, true, false, false, 'UnboxString'),
+    TypedInstruction('rNewCaptureCell', [6], [6], TypedImmediate.none, true, false, false, 'NewCaptureCell'),
+    TypedInstruction('rReadCaptureCell', [6], [6], TypedImmediate.none, true, false, false, 'ReadCaptureCell'),
+    TypedInstruction('writeCaptureCellRS', [6, 7], [], TypedImmediate.none, true, false, false, 'writeCaptureCell'),
+    TypedInstruction('rLoadCapture', [], [6], TypedImmediate.captureIndex, true, false, false, 'LoadCapture'),
+    TypedInstruction('callClosure', [], [], TypedImmediate.closureCall, true, false, false, 'callClosure'),
+    TypedInstruction('enterTry', [], [], TypedImmediate.exceptionRegion, true, false, false, 'enterTry'),
+    TypedInstruction('completeJump', [], [], TypedImmediate.completionJump, false, true, false, 'completeJump'),
+    TypedInstruction('resumeCompletion', [], [], TypedImmediate.none, true, true, false, 'resumeCompletion'),
+    TypedInstruction('eIsTypeR', [6], [4], TypedImmediate.typeId, true, false, false, 'IsType'),
+    TypedInstruction('rLoadType', [], [6], TypedImmediate.typeId, false, false, false, 'LoadType'),
+    TypedInstruction('aLoadGlobal', [], [0], TypedImmediate.globalIndex, true, false, false, 'LoadGlobal'),
+    TypedInstruction('aSetGlobal', [0], [], TypedImmediate.globalIndex, true, false, false, 'SetGlobal'),
+    TypedInstruction('fLoadGlobal', [], [2], TypedImmediate.globalIndex, true, false, false, 'LoadGlobal'),
+    TypedInstruction('fSetGlobal', [2], [], TypedImmediate.globalIndex, true, false, false, 'SetGlobal'),
+    TypedInstruction('eLoadGlobal', [], [4], TypedImmediate.globalIndex, true, false, false, 'LoadGlobal'),
+    TypedInstruction('eSetGlobal', [4], [], TypedImmediate.globalIndex, true, false, false, 'SetGlobal'),
+    TypedInstruction('rLoadGlobal', [], [6], TypedImmediate.globalIndex, true, false, false, 'LoadGlobal'),
+    TypedInstruction('rSetGlobal', [6], [], TypedImmediate.globalIndex, true, false, false, 'SetGlobal'),
+    TypedInstruction('callMethod', [6, 7], [6], TypedImmediate.hostCall, true, false, false, 'callMethod'),
+    TypedInstruction('aStringLengthR', [6], [0], TypedImmediate.none, true, false, false, 'StringLength'),
+    TypedInstruction('rStringConcatS', [6, 7], [6], TypedImmediate.none, true, false, false, 'StringConcat'),
+    TypedInstruction('aStringCodeUnitR', [6, 0], [0], TypedImmediate.none, true, false, false, 'StringCodeUnit'),
+    TypedInstruction('rStringIndexA', [6, 0], [6], TypedImmediate.none, true, false, false, 'StringIndex'),
+    TypedInstruction('rStringSubRAB', [6, 0, 1], [6], TypedImmediate.none, true, false, false, 'StringSub'),
+    TypedInstruction('cNewList', [], [8], TypedImmediate.none, true, false, false, 'NewList'),
+    TypedInstruction('cNewMap', [], [8], TypedImmediate.none, true, false, false, 'NewMap'),
+    TypedInstruction('cNewConstMap', [], [8], TypedImmediate.none, true, false, false, 'NewConstMap'),
+    TypedInstruction('cNewSet', [], [8], TypedImmediate.none, true, false, false, 'NewSet'),
+    TypedInstruction('cNewConstSet', [], [8], TypedImmediate.none, true, false, false, 'NewConstSet'),
+    TypedInstruction('rMapIndexCS', [8, 7], [6], TypedImmediate.none, true, false, false, 'MapIndex'),
+    TypedInstruction('mapSetCSR', [8, 7, 6], [], TypedImmediate.none, true, false, false, 'mapSet'),
+    TypedInstruction('setAddCR', [8, 6], [], TypedImmediate.none, true, false, false, 'setAdd'),
+    TypedInstruction('eSetAddCR', [8, 6], [4], TypedImmediate.none, true, false, false, 'SetAdd'),
+    TypedInstruction('cNativeElementsC', [8], [8], TypedImmediate.integer, true, false, false, 'NativeElements'),
+    TypedInstruction('eIsNativeR', [6], [4], TypedImmediate.integer, false, false, false, 'IsNative'),
+    TypedInstruction('rBoxMap', [6], [6], TypedImmediate.typeId, true, false, false, 'BoxMap'),
+    TypedInstruction('rBoxSet', [6], [6], TypedImmediate.typeId, true, false, false, 'BoxSet'),
+    TypedInstruction('eInternConstR', [6], [6], TypedImmediate.typeId, true, false, false, 'InternConst'),
+    TypedInstruction('eInternConstS', [7], [6], TypedImmediate.typeId, true, false, false, 'InternConst'),
+    TypedInstruction('eInternConstC', [8], [6], TypedImmediate.typeId, true, false, false, 'InternConst'),
+    TypedInstruction('aListLengthR', [6], [0], TypedImmediate.none, true, false, false, 'ListLength'),
+    TypedInstruction('rListIndexCA', [8, 0], [6], TypedImmediate.none, true, false, false, 'ListIndex'),
+    TypedInstruction('listSetCAR', [8, 0, 6], [], TypedImmediate.none, true, false, false, 'listSet'),
+    TypedInstruction('listAppendCR', [8, 6], [], TypedImmediate.none, true, false, false, 'listAppend'),
+    TypedInstruction('rBoxList', [6], [6], TypedImmediate.none, true, false, false, 'BoxList'),
+    TypedInstruction('rBoxListTyped', [6], [6], TypedImmediate.typeId, true, false, false, 'BoxListTyped'),
+    TypedInstruction('rCreateClassRA', [6, 0], [6], TypedImmediate.classIndex, true, false, false, 'CreateClass'),
+    TypedInstruction('rLoadPropertyR', [6], [6], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('setPropertyRS', [6, 7], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('aLoadPropertyR', [6], [0], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('fLoadPropertyR', [6], [2], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('eLoadPropertyR', [6], [4], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('rLoadPropertyStringR', [6], [6], TypedImmediate.field, true, false, false, 'LoadPropertyString'),
+    TypedInstruction('aFieldIncrementRA', [6], [], TypedImmediate.field, true, false, false, 'FieldIncrement'),
+    TypedInstruction('aStringCodeUnitFieldsRR', [6], [0], TypedImmediate.integer, true, false, false, 'StringCodeUnitFields'),
+    TypedInstruction('eFieldLessStrLenRR', [6], [4], TypedImmediate.integer, true, false, false, 'FieldLessStrLen'),
+    TypedInstruction('setPropertyRA', [6, 0], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertyRF', [6, 2], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertyRE', [6, 4], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('bufWriteRS', [6, 7], [], TypedImmediate.none, true, false, false, 'bufWrite'),
+    TypedInstruction('returnNull', [], [], TypedImmediate.none, false, true, false, 'returnNull'),
+    TypedInstruction('callVirtual', [], [], TypedImmediate.callSite, true, false, false, 'callVirtual'),
+    TypedInstruction('jumpETrueShort', [4], [], TypedImmediate.shortBranch, false, false, false, 'jumpETrueShort'),
+    TypedInstruction('jumpEFalseShort', [4], [], TypedImmediate.shortBranch, false, false, false, 'jumpEFalseShort'),
+    TypedInstruction('jumpShort', [], [], TypedImmediate.shortBranch, false, true, false, 'jumpShort'),
+    TypedInstruction('jumpNotEqABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotEqABShort'),
+    TypedInstruction('jumpNotEqFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotEqFGShort'),
+    TypedInstruction('jumpNotNeABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotNeABShort'),
+    TypedInstruction('jumpNotNeFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotNeFGShort'),
+    TypedInstruction('jumpNotLtABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotLtABShort'),
+    TypedInstruction('jumpNotLtFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotLtFGShort'),
+    TypedInstruction('jumpNotLteABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotLteABShort'),
+    TypedInstruction('jumpNotLteFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotLteFGShort'),
+    TypedInstruction('jumpNotGtABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotGtABShort'),
+    TypedInstruction('jumpNotGtFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotGtFGShort'),
+    TypedInstruction('jumpNotGteABShort', [0, 1], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotGteABShort'),
+    TypedInstruction('jumpNotGteFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotGteFGShort'),
+    TypedInstruction('ext', [], [], TypedImmediate.none, false, false, false, 'ext'),
+    TypedInstruction('reserved220', [], [], TypedImmediate.none, false, false, false, 'reserved220'),
+    TypedInstruction('reserved221', [], [], TypedImmediate.none, false, false, false, 'reserved221'),
+    TypedInstruction('reserved222', [], [], TypedImmediate.none, false, false, false, 'reserved222'),
+    TypedInstruction('reserved223', [], [], TypedImmediate.none, false, false, false, 'reserved223'),
+    TypedInstruction('reserved224', [], [], TypedImmediate.none, false, false, false, 'reserved224'),
+    TypedInstruction('reserved225', [], [], TypedImmediate.none, false, false, false, 'reserved225'),
+    TypedInstruction('reserved226', [], [], TypedImmediate.none, false, false, false, 'reserved226'),
+    TypedInstruction('reserved227', [], [], TypedImmediate.none, false, false, false, 'reserved227'),
+    TypedInstruction('reserved228', [], [], TypedImmediate.none, false, false, false, 'reserved228'),
+    TypedInstruction('reserved229', [], [], TypedImmediate.none, false, false, false, 'reserved229'),
+    TypedInstruction('reserved230', [], [], TypedImmediate.none, false, false, false, 'reserved230'),
+    TypedInstruction('reserved231', [], [], TypedImmediate.none, false, false, false, 'reserved231'),
+    TypedInstruction('reserved232', [], [], TypedImmediate.none, false, false, false, 'reserved232'),
+    TypedInstruction('reserved233', [], [], TypedImmediate.none, false, false, false, 'reserved233'),
+    TypedInstruction('reserved234', [], [], TypedImmediate.none, false, false, false, 'reserved234'),
+    TypedInstruction('reserved235', [], [], TypedImmediate.none, false, false, false, 'reserved235'),
+    TypedInstruction('reserved236', [], [], TypedImmediate.none, false, false, false, 'reserved236'),
+    TypedInstruction('reserved237', [], [], TypedImmediate.none, false, false, false, 'reserved237'),
+    TypedInstruction('reserved238', [], [], TypedImmediate.none, false, false, false, 'reserved238'),
+    TypedInstruction('reserved239', [], [], TypedImmediate.none, false, false, false, 'reserved239'),
+    TypedInstruction('reserved240', [], [], TypedImmediate.none, false, false, false, 'reserved240'),
+    TypedInstruction('reserved241', [], [], TypedImmediate.none, false, false, false, 'reserved241'),
+    TypedInstruction('reserved242', [], [], TypedImmediate.none, false, false, false, 'reserved242'),
+    TypedInstruction('reserved243', [], [], TypedImmediate.none, false, false, false, 'reserved243'),
+    TypedInstruction('reserved244', [], [], TypedImmediate.none, false, false, false, 'reserved244'),
+    TypedInstruction('reserved245', [], [], TypedImmediate.none, false, false, false, 'reserved245'),
+    TypedInstruction('reserved246', [], [], TypedImmediate.none, false, false, false, 'reserved246'),
+    TypedInstruction('reserved247', [], [], TypedImmediate.none, false, false, false, 'reserved247'),
+    TypedInstruction('reserved248', [], [], TypedImmediate.none, false, false, false, 'reserved248'),
+    TypedInstruction('reserved249', [], [], TypedImmediate.none, false, false, false, 'reserved249'),
+    TypedInstruction('reserved250', [], [], TypedImmediate.none, false, false, false, 'reserved250'),
+    TypedInstruction('reserved251', [], [], TypedImmediate.none, false, false, false, 'reserved251'),
+    TypedInstruction('reserved252', [], [], TypedImmediate.none, false, false, false, 'reserved252'),
+    TypedInstruction('reserved253', [], [], TypedImmediate.none, false, false, false, 'reserved253'),
+    TypedInstruction('reserved254', [], [], TypedImmediate.none, false, false, false, 'reserved254'),
+    TypedInstruction('reserved255', [], [], TypedImmediate.none, false, false, false, 'reserved255'),
+    TypedInstruction('callExternal', [], [6], TypedImmediate.externalCall, true, false, false, 'callExternal'),
+    TypedInstruction('rNewBridgeSuperShim', [], [6], TypedImmediate.none, true, false, false, 'NewBridgeSuperShim'),
+    TypedInstruction('parentBridgeSuperShim', [6, 7], [], TypedImmediate.none, true, false, false, 'parentBridgeSuperShim'),
+    TypedInstruction('rAttachBridge', [6, 7], [6], TypedImmediate.typeId, true, false, false, 'AttachBridge'),
+    TypedInstruction('rRuntimeType', [6], [6], TypedImmediate.none, true, false, false, 'RuntimeType'),
+    TypedInstruction('rCreateClosure', [], [6], TypedImmediate.closureIndex, true, false, false, 'CreateClosure'),
+    TypedInstruction('rBeginAsync', [], [6], TypedImmediate.typeId, false, false, false, 'BeginAsync'),
+    TypedInstruction('rAwait', [6], [6], TypedImmediate.none, true, false, false, 'Await'),
+    TypedInstruction('rReturnAsync', [6], [], TypedImmediate.none, false, true, false, 'ReturnAsync'),
+    TypedInstruction('returnAsyncNull', [], [], TypedImmediate.none, false, true, false, 'returnAsyncNull'),
+    TypedInstruction('eAssertR', [4, 6], [], TypedImmediate.none, true, false, false, 'Assert'),
+    TypedInstruction('rCaughtException', [], [6], TypedImmediate.none, false, false, false, 'CaughtException'),
+    TypedInstruction('rCaughtStackTrace', [], [6], TypedImmediate.none, false, false, false, 'CaughtStackTrace'),
+    TypedInstruction('rThrow', [6], [], TypedImmediate.none, true, true, false, 'Throw'),
+    TypedInstruction('rethrowCaught', [], [], TypedImmediate.exceptionRegion, true, true, false, 'rethrowCaught'),
+    TypedInstruction('rCreateRecord', [6], [6], TypedImmediate.runtimeConstant, true, false, false, 'CreateRecord'),
+    TypedInstruction('aSetTypeEnvironment', [0], [], TypedImmediate.none, false, false, false, 'SetTypeEnvironment'),
+    TypedInstruction('aResolveType', [], [0], TypedImmediate.typeId, false, false, false, 'ResolveType'),
+    TypedInstruction('rLoadTypeParameter', [], [6], TypedImmediate.typeId, true, false, false, 'LoadTypeParameter'),
+    TypedInstruction('rAssertType', [6], [], TypedImmediate.typeId, true, false, false, 'AssertType'),
+    TypedInstruction('callHost', [6], [6], TypedImmediate.hostCall, true, false, false, 'callHost'),
+    TypedInstruction('rLoadSuperR', [6], [6], TypedImmediate.none, true, false, false, 'LoadSuper'),
+    TypedInstruction('rUninitializedField', [], [6], TypedImmediate.none, false, false, false, 'UninitializedField'),
+    TypedInstruction('rLoadLatePropertyR', [6], [6], TypedImmediate.field, true, false, false, 'LoadLateProperty'),
+    TypedInstruction('setLateFinalPropertyRS', [6, 7], [], TypedImmediate.field, true, false, false, 'setLateFinalProperty'),
+    TypedInstruction('rLoadThisR', [6], [6], TypedImmediate.none, true, false, false, 'LoadThis'),
+    TypedInstruction('jumpNotEqAB', [0, 1], [], TypedImmediate.branch, false, false, false, 'jumpNotEq'),
+    TypedInstruction('jumpNotEqFG', [2, 3], [], TypedImmediate.branch, false, false, false, 'jumpNotEq'),
+    TypedInstruction('jumpNotNeAB', [0, 1], [], TypedImmediate.branch, false, false, false, 'jumpNotNe'),
+    TypedInstruction('jumpNotNeFG', [2, 3], [], TypedImmediate.branch, false, false, false, 'jumpNotNe'),
+    TypedInstruction('jumpNotLtAB', [0, 1], [], TypedImmediate.branch, false, false, false, 'jumpNotLt'),
+    TypedInstruction('jumpNotLtFG', [2, 3], [], TypedImmediate.branch, false, false, false, 'jumpNotLt'),
+    TypedInstruction('jumpNotLteAB', [0, 1], [], TypedImmediate.branch, false, false, false, 'jumpNotLte'),
+    TypedInstruction('jumpNotLteFG', [2, 3], [], TypedImmediate.branch, false, false, false, 'jumpNotLte'),
+    TypedInstruction('jumpNotGtAB', [0, 1], [], TypedImmediate.branch, false, false, false, 'jumpNotGt'),
+    TypedInstruction('jumpNotGtFG', [2, 3], [], TypedImmediate.branch, false, false, false, 'jumpNotGt'),
+    TypedInstruction('jumpNotGteAB', [0, 1], [], TypedImmediate.branch, false, false, false, 'jumpNotGte'),
+    TypedInstruction('jumpNotGteFG', [2, 3], [], TypedImmediate.branch, false, false, false, 'jumpNotGte'),
+    TypedInstruction('aLoadPropertyS', [7], [0], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('fLoadPropertyS', [7], [2], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('eLoadPropertyS', [7], [4], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('sLoadPropertyS', [7], [7], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('sLoadPropertyStringS', [7], [7], TypedImmediate.field, true, false, false, 'LoadPropertyString'),
+    TypedInstruction('sLoadPropertyR', [6], [7], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('sLoadPropertyStringR', [6], [7], TypedImmediate.field, true, false, false, 'LoadPropertyString'),
+    TypedInstruction('setPropertySA', [7, 0], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertySB', [7, 1], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertySS', [7, 7], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertySC', [7, 8], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertySF', [7, 2], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertySE', [7, 4], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('aFieldIncrementSA', [7], [], TypedImmediate.field, true, false, false, 'FieldIncrement'),
+    TypedInstruction('aStringCodeUnitFieldsSR', [7], [0], TypedImmediate.integer, true, false, false, 'StringCodeUnitFields'),
+    TypedInstruction('eFieldLessStrLenSR', [7], [4], TypedImmediate.integer, true, false, false, 'FieldLessStrLen'),
+    TypedInstruction('aStringLengthS', [7], [0], TypedImmediate.none, true, false, false, 'StringLength'),
+    TypedInstruction('aStringCodeUnitS', [7, 0], [0], TypedImmediate.none, true, false, false, 'StringCodeUnit'),
+    TypedInstruction('sStringIndexSA', [7, 0], [7], TypedImmediate.none, true, false, false, 'StringIndex'),
+    TypedInstruction('sStringSubSAB', [7, 0, 1], [7], TypedImmediate.none, true, false, false, 'StringSub'),
+    TypedInstruction('sBoxString', [7], [7], TypedImmediate.none, true, false, false, 'BoxString'),
+    TypedInstruction('sUnboxString', [7], [7], TypedImmediate.none, true, false, false, 'UnboxString'),
+    TypedInstruction('aListLengthS', [7], [0], TypedImmediate.none, true, false, false, 'ListLength'),
+    TypedInstruction('aNativeFromS', [7], [0], TypedImmediate.none, true, false, false, 'NativeFrom'),
+    TypedInstruction('fNativeFromS', [7], [2], TypedImmediate.none, true, false, false, 'NativeFrom'),
+    TypedInstruction('eNativeFromS', [7], [4], TypedImmediate.none, true, false, false, 'NativeFrom'),
+    TypedInstruction('aFromS', [7], [0], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('fFromS', [7], [2], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('eFromS', [7], [4], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('sBoxList', [7], [7], TypedImmediate.none, true, false, false, 'BoxList'),
+    TypedInstruction('sBoxMap', [7], [7], TypedImmediate.typeId, true, false, false, 'BoxMap'),
+    TypedInstruction('sBoxSet', [7], [7], TypedImmediate.typeId, true, false, false, 'BoxSet'),
+    TypedInstruction('sLoadThisS', [7], [7], TypedImmediate.none, true, false, false, 'LoadThis'),
+    TypedInstruction('eIsNativeS', [7], [4], TypedImmediate.integer, false, false, false, 'IsNative'),
+    TypedInstruction('sThrow', [7], [], TypedImmediate.none, true, true, false, 'Throw'),
+    TypedInstruction('sLoadGlobal', [], [7], TypedImmediate.globalIndex, true, false, false, 'LoadGlobal'),
+    TypedInstruction('sSetGlobal', [7], [], TypedImmediate.globalIndex, true, false, false, 'SetGlobal'),
+    TypedInstruction('eAssertS', [4, 7], [], TypedImmediate.none, true, false, false, 'Assert'),
+    TypedInstruction('eIsTypeS', [7], [4], TypedImmediate.typeId, true, false, false, 'IsType'),
+    TypedInstruction('sFromA', [0], [7], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('sBoxA', [0], [7], TypedImmediate.none, false, false, false, 'Box'),
+    TypedInstruction('sFromB', [1], [7], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('sBoxB', [1], [7], TypedImmediate.none, false, false, false, 'Box'),
+    TypedInstruction('sFromF', [2], [7], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('sFromG', [3], [7], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('sFromE', [4], [7], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('aLoadPropertyC', [8], [0], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('fLoadPropertyC', [8], [2], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('eLoadPropertyC', [8], [4], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('cLoadPropertyC', [8], [8], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('cLoadPropertyStringC', [8], [8], TypedImmediate.field, true, false, false, 'LoadPropertyString'),
+    TypedInstruction('cLoadPropertyR', [6], [8], TypedImmediate.field, true, false, false, 'LoadProperty'),
+    TypedInstruction('cLoadPropertyStringR', [6], [8], TypedImmediate.field, true, false, false, 'LoadPropertyString'),
+    TypedInstruction('setPropertyCA', [8, 0], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertyCB', [8, 1], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertyCS', [8, 7], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertyCC', [8, 8], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertyCF', [8, 2], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('setPropertyCE', [8, 4], [], TypedImmediate.field, true, false, false, 'setProperty'),
+    TypedInstruction('aFieldIncrementCA', [8], [], TypedImmediate.field, true, false, false, 'FieldIncrement'),
+    TypedInstruction('aStringCodeUnitFieldsCR', [8], [0], TypedImmediate.integer, true, false, false, 'StringCodeUnitFields'),
+    TypedInstruction('eFieldLessStrLenCR', [8], [4], TypedImmediate.integer, true, false, false, 'FieldLessStrLen'),
+    TypedInstruction('aStringLengthC', [8], [0], TypedImmediate.none, true, false, false, 'StringLength'),
+    TypedInstruction('aStringCodeUnitC', [8, 0], [0], TypedImmediate.none, true, false, false, 'StringCodeUnit'),
+    TypedInstruction('cStringIndexCA', [8, 0], [8], TypedImmediate.none, true, false, false, 'StringIndex'),
+    TypedInstruction('cStringSubCAB', [8, 0, 1], [8], TypedImmediate.none, true, false, false, 'StringSub'),
+    TypedInstruction('cBoxString', [8], [8], TypedImmediate.none, true, false, false, 'BoxString'),
+    TypedInstruction('cUnboxString', [8], [8], TypedImmediate.none, true, false, false, 'UnboxString'),
+    TypedInstruction('aListLengthC', [8], [0], TypedImmediate.none, true, false, false, 'ListLength'),
+    TypedInstruction('aNativeFromC', [8], [0], TypedImmediate.none, true, false, false, 'NativeFrom'),
+    TypedInstruction('fNativeFromC', [8], [2], TypedImmediate.none, true, false, false, 'NativeFrom'),
+    TypedInstruction('eNativeFromC', [8], [4], TypedImmediate.none, true, false, false, 'NativeFrom'),
+    TypedInstruction('aFromC', [8], [0], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('fFromC', [8], [2], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('eFromC', [8], [4], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('cBoxList', [8], [8], TypedImmediate.none, true, false, false, 'BoxList'),
+    TypedInstruction('cBoxMap', [8], [8], TypedImmediate.typeId, true, false, false, 'BoxMap'),
+    TypedInstruction('cBoxSet', [8], [8], TypedImmediate.typeId, true, false, false, 'BoxSet'),
+    TypedInstruction('cLoadThisC', [8], [8], TypedImmediate.none, true, false, false, 'LoadThis'),
+    TypedInstruction('eIsNativeC', [8], [4], TypedImmediate.integer, false, false, false, 'IsNative'),
+    TypedInstruction('cThrow', [8], [], TypedImmediate.none, true, true, false, 'Throw'),
+    TypedInstruction('cLoadGlobal', [], [8], TypedImmediate.globalIndex, true, false, false, 'LoadGlobal'),
+    TypedInstruction('cSetGlobal', [8], [], TypedImmediate.globalIndex, true, false, false, 'SetGlobal'),
+    TypedInstruction('eAssertC', [4, 8], [], TypedImmediate.none, true, false, false, 'Assert'),
+    TypedInstruction('eIsTypeC', [8], [4], TypedImmediate.typeId, true, false, false, 'IsType'),
+    TypedInstruction('bufWriteRC', [6, 8], [], TypedImmediate.none, true, false, false, 'bufWrite'),
+    TypedInstruction('cFromA', [0], [8], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('cBoxA', [0], [8], TypedImmediate.none, false, false, false, 'Box'),
+    TypedInstruction('cFromB', [1], [8], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('cBoxB', [1], [8], TypedImmediate.none, false, false, false, 'Box'),
+    TypedInstruction('cFromF', [2], [8], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('cFromG', [3], [8], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('cFromE', [4], [8], TypedImmediate.none, true, false, false, 'From'),
+    TypedInstruction('rListIndexRA', [6, 0], [6], TypedImmediate.none, true, false, false, 'ListIndex'),
+    TypedInstruction('listSetRAR', [6, 0, 6], [], TypedImmediate.none, true, false, false, 'listSet'),
+    TypedInstruction('listAppendRR', [6, 6], [], TypedImmediate.none, true, false, false, 'listAppend'),
+    TypedInstruction('rMapIndexRS', [6, 7], [6], TypedImmediate.none, true, false, false, 'MapIndex'),
+    TypedInstruction('mapSetRSR', [6, 7, 6], [], TypedImmediate.none, true, false, false, 'mapSet'),
+    TypedInstruction('setAddRR', [6, 6], [], TypedImmediate.none, true, false, false, 'setAdd'),
+    TypedInstruction('eSetAddRR', [6, 6], [4], TypedImmediate.none, true, false, false, 'SetAdd'),
+    TypedInstruction('rNewList', [], [6], TypedImmediate.none, true, false, false, 'NewList'),
+    TypedInstruction('rLoadOutgoing', [], [6], TypedImmediate.none, true, false, false, 'LoadOutgoing'),
+    TypedInstruction('rListIndexSA', [7, 0], [6], TypedImmediate.none, true, false, false, 'ListIndex'),
+    TypedInstruction('listSetSAR', [7, 0, 6], [], TypedImmediate.none, true, false, false, 'listSet'),
+    TypedInstruction('listAppendSR', [7, 6], [], TypedImmediate.none, true, false, false, 'listAppend'),
+    TypedInstruction('rMapIndexSS', [7, 7], [6], TypedImmediate.none, true, false, false, 'MapIndex'),
+    TypedInstruction('mapSetSSR', [7, 7, 6], [], TypedImmediate.none, true, false, false, 'mapSet'),
+    TypedInstruction('setAddSR', [7, 6], [], TypedImmediate.none, true, false, false, 'setAdd'),
+    TypedInstruction('eSetAddSR', [7, 6], [4], TypedImmediate.none, true, false, false, 'SetAdd'),
+    TypedInstruction('sNewList', [], [7], TypedImmediate.none, true, false, false, 'NewList'),
+    TypedInstruction('sLoadOutgoing', [], [7], TypedImmediate.none, true, false, false, 'LoadOutgoing'),
+    TypedInstruction('eEqRC', [6, 8], [4], TypedImmediate.none, true, false, false, 'Eq'),
+    TypedInstruction('eEqSC', [7, 8], [4], TypedImmediate.none, true, false, false, 'Eq'),
   ];
 }

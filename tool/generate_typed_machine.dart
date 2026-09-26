@@ -23,8 +23,40 @@ class Instruction {
   final bool commutative;
 }
 
-List<Instruction> specification() {
+/// Register-agnostic operation kind for [TypedInstruction.family]: drop the
+/// leading output-register letter (a lowercase register name followed by an
+/// uppercase base) and the trailing uppercase parameter-encoding letters.
+/// `aListLengthR` → `ListLength`, `mapSetCSR` → `mapSet`.
+String familyOf(String name) {
+  var end = name.length;
+  while (end > 0 &&
+      name.codeUnitAt(end - 1) >= 0x41 &&
+      name.codeUnitAt(end - 1) <= 0x5A) {
+    end--;
+  }
+  var start = 0;
+  if (name.length > 1 &&
+      'abfgersc'.contains(name[0]) &&
+      name.codeUnitAt(1) >= 0x41 &&
+      name.codeUnitAt(1) <= 0x5A) {
+    start = 1;
+  }
+  if (start >= end) return name;
+  final family = name.substring(start, end);
+  // xFromY between registers of one bank is a plain copy, not a conversion.
+  if (family == 'From' && start == 1 && end == name.length - 1) {
+    const domains = ['ab', 'fg', 'e', 'rsc'];
+    final source = name.substring(name.length - 1).toLowerCase();
+    for (final domain in domains) {
+      if (domain.contains(name[0]) && domain.contains(source)) return 'Move';
+    }
+  }
+  return family;
+}
+
+({List<Instruction> ops, List<Instruction> extended}) specification() {
   final ops = <Instruction>[];
+  final extendedOps = <Instruction>[];
   void add(
     String name,
     String body, {
@@ -34,7 +66,8 @@ List<Instruction> specification() {
     bool mayThrow = false,
     bool terminates = false,
     bool commutative = false,
-  }) => ops.add(
+    bool extended = false,
+  }) => (extended ? extendedOps : ops).add(
     Instruction(
       name,
       body,
@@ -46,7 +79,6 @@ List<Instruction> specification() {
       commutative: commutative,
     ),
   );
-  // Register ID 5 is retired; keep the remaining allocator IDs stable.
   const names = ['a', 'b', 'f', 'g', 'e', '', 'r', 's', 'c'];
   for (var register = 0; register < names.length; register++) {
     final name = names[register];
@@ -105,7 +137,13 @@ List<Instruction> specification() {
       terminates: true,
     );
   }
-  for (final (first, second) in [(0, 1), (2, 3), (6, 7), (6, 8), (7, 8)]) {
+  for (final (first, second) in [
+    (0, 1),
+    (2, 3),
+    (6, 7),
+    (6, 8),
+    (7, 8),
+  ]) {
     final left = names[first], right = names[second];
     add(
       '${left}From${right.toUpperCase()}',
@@ -189,7 +227,6 @@ List<Instruction> specification() {
     add('${name}Increment', '$name++;', inputs: [target], output: target);
     add('${name}Decrement', '$name--;', inputs: [target], output: target);
     add('${name}Negate', '$name = -$name;', inputs: [target], output: target);
-    add('${name}BitNot', '$name = ~$name;', inputs: [target], output: target);
   }
   for (final target in [2, 3]) {
     final name = names[target];
@@ -386,18 +423,21 @@ List<Instruction> specification() {
     output: 6,
     immediate: 'externalCall',
     mayThrow: true,
+    extended: true,
   );
   add(
     'rNewBridgeSuperShim',
     'r = TypedInterop.newBridgeSuperShim();',
     output: 6,
     mayThrow: true,
+    extended: true,
   );
   add(
     'parentBridgeSuperShim',
     'TypedInterop.parentBridgeSuperShim(r, s);',
     inputs: [6, 7],
     mayThrow: true,
+    extended: true,
   );
   add(
     'rAttachBridge',
@@ -406,6 +446,7 @@ List<Instruction> specification() {
     output: 6,
     immediate: 'typeId',
     mayThrow: true,
+    extended: true,
   );
   add(
     'rRuntimeType',
@@ -413,6 +454,7 @@ List<Instruction> specification() {
     inputs: [6],
     output: 6,
     mayThrow: true,
+    extended: true,
   );
   add(
     'rNewCaptureCell',
@@ -447,6 +489,7 @@ List<Instruction> specification() {
     output: 6,
     immediate: 'closureIndex',
     mayThrow: true,
+    extended: true,
   );
   add(
     'rLoadCapture',
@@ -512,6 +555,7 @@ List<Instruction> specification() {
           r = TypedAsync.begin(frame, runtimeTypeId, runtime);''',
     output: 6,
     immediate: 'typeId',
+    extended: true,
   );
   add(
     'rAwait',
@@ -524,6 +568,7 @@ List<Instruction> specification() {
     inputs: [6],
     output: 6,
     mayThrow: true,
+    extended: true,
   );
   for (final withValue in [true, false]) {
     add(
@@ -535,6 +580,7 @@ List<Instruction> specification() {
           r = returned; s = null; c = null;''',
       inputs: withValue ? [6] : [],
       terminates: true,
+      extended: true,
     );
   }
   add(
@@ -554,15 +600,27 @@ List<Instruction> specification() {
     'if (!e) throw WrappedException(r!);',
     inputs: [4, 6],
     mayThrow: true,
+    extended: true,
   );
-  add('rCaughtException', 'r = TypedExceptions.caught(frame);', output: 6);
-  add('rCaughtStackTrace', 'r = TypedExceptions.trace(frame);', output: 6);
+  add(
+    'rCaughtException',
+    'r = TypedExceptions.caught(frame);',
+    output: 6,
+    extended: true,
+  );
+  add(
+    'rCaughtStackTrace',
+    'r = TypedExceptions.trace(frame);',
+    output: 6,
+    extended: true,
+  );
   add(
     'rThrow',
     'throw WrappedException(r!);',
     inputs: [6],
     mayThrow: true,
     terminates: true,
+    extended: true,
   );
   add(
     'rethrowCaught',
@@ -570,6 +628,7 @@ List<Instruction> specification() {
     immediate: 'exceptionRegion',
     mayThrow: true,
     terminates: true,
+    extended: true,
   );
   add(
     'eIsTypeR',
@@ -597,6 +656,7 @@ List<Instruction> specification() {
     output: 6,
     immediate: 'runtimeConstant',
     mayThrow: true,
+    extended: true,
   );
   add(
     'rLoadType',
@@ -608,6 +668,7 @@ List<Instruction> specification() {
     'aSetTypeEnvironment',
     'frame.typeEnvironmentReceiver = a;',
     inputs: [0],
+    extended: true,
   );
   add(
     'aResolveType',
@@ -620,6 +681,7 @@ List<Instruction> specification() {
               );''',
     output: 0,
     immediate: 'typeId',
+    extended: true,
   );
   add(
     'rLoadTypeParameter',
@@ -634,6 +696,7 @@ List<Instruction> specification() {
     output: 6,
     immediate: 'typeId',
     mayThrow: true,
+    extended: true,
   );
   add(
     'rAssertType',
@@ -650,6 +713,7 @@ List<Instruction> specification() {
     inputs: [6],
     immediate: 'typeId',
     mayThrow: true,
+    extended: true,
   );
   for (final (register, index, type) in [
     ('a', 0, 'Integer'),
@@ -681,6 +745,7 @@ List<Instruction> specification() {
     output: 6,
     immediate: 'hostCall',
     mayThrow: true,
+    extended: true,
   );
   add(
     'callMethod',
@@ -717,6 +782,13 @@ List<Instruction> specification() {
     'rStringIndexA',
     'r = (r as String)[a];',
     inputs: [6, 0],
+    output: 6,
+    mayThrow: true,
+  );
+  add(
+    'rStringSubRAB',
+    'r = (r as String).substring(a, b);',
+    inputs: [6, 0, 1],
     output: 6,
     mayThrow: true,
   );
@@ -763,6 +835,28 @@ List<Instruction> specification() {
     '(c as Set<Object?>).add(r);',
     inputs: [8, 6],
     mayThrow: true,
+  );
+  add(
+    'eSetAddCR',
+    'e = (c as Set<Object?>).add(r);',
+    inputs: [8, 6],
+    output: 4,
+    mayThrow: true,
+  );
+  add(
+    'cNativeElementsC',
+    'c = index == 0 ? (c as Set<Object?>).toList() : (c as Map<Object?, Object?>).keys.toList();',
+    inputs: [8],
+    output: 8,
+    immediate: 'integer',
+    mayThrow: true,
+  );
+  add(
+    'eIsNativeR',
+    'e = index == 0 ? r is List : index == 1 ? r is Set : r is Map;',
+    inputs: [6],
+    output: 4,
+    immediate: 'integer',
   );
   add(
     'rBoxMap',
@@ -911,13 +1005,101 @@ List<Instruction> specification() {
     mayThrow: true,
   );
   add(
+    'aLoadPropertyR',
+    'a = TypedInterop.toInt((r as TypedInstance).values[index]);',
+    inputs: [6],
+    output: 0,
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'fLoadPropertyR',
+    'f = TypedInterop.toDouble((r as TypedInstance).values[index]);',
+    inputs: [6],
+    output: 2,
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'eLoadPropertyR',
+    'e = TypedInterop.toBool((r as TypedInstance).values[index]);',
+    inputs: [6],
+    output: 4,
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'rLoadPropertyStringR',
+    'r = TypedInterop.toStringValue((r as TypedInstance).values[index]);',
+    inputs: [6],
+    output: 6,
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'aFieldIncrementRA',
+    'final instance = r as TypedInstance; instance.values[index] = \$int(TypedInterop.toInt(instance.values[index]) + 1);',
+    inputs: [6],
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'aStringCodeUnitFieldsRR',
+    'final instance = r as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));',
+    inputs: [6],
+    output: 0,
+    immediate: 'integer',
+    mayThrow: true,
+  );
+  add(
+    'eFieldLessStrLenRR',
+    'final instance = r as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;',
+    inputs: [6],
+    output: 4,
+    immediate: 'integer',
+    mayThrow: true,
+  );
+  add(
+    'setPropertyRA',
+    '(r as TypedInstance).values[index] = \$int(a);',
+    inputs: [6, 0],
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'setPropertyRF',
+    '(r as TypedInstance).values[index] = \$double(f);',
+    inputs: [6, 2],
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'setPropertyRE',
+    '(r as TypedInstance).values[index] = \$bool(e);',
+    inputs: [6, 4],
+    immediate: 'field',
+    mayThrow: true,
+  );
+  add(
+    'bufWriteRS',
+    '(r as \$StringBuffer).\$value.write(TypedInterop.reify(s));',
+    inputs: [6, 7],
+    mayThrow: true,
+  );
+  add(
     'rLoadSuperR',
     'r = (r as TypedInstance).superclass;',
     inputs: [6],
     output: 6,
     mayThrow: true,
+    extended: true,
   );
-  add('rUninitializedField', 'r = TypedLateField.uninitialized;', output: 6);
+  add(
+    'rUninitializedField',
+    'r = TypedLateField.uninitialized;',
+    output: 6,
+    extended: true,
+  );
   add(
     'rLoadLatePropertyR',
     'r = TypedLateField.read(r, index);',
@@ -925,6 +1107,7 @@ List<Instruction> specification() {
     output: 6,
     immediate: 'field',
     mayThrow: true,
+    extended: true,
   );
   add(
     'setLateFinalPropertyRS',
@@ -932,6 +1115,7 @@ List<Instruction> specification() {
     inputs: [6, 7],
     immediate: 'field',
     mayThrow: true,
+    extended: true,
   );
   add(
     'rLoadThisR',
@@ -939,11 +1123,16 @@ List<Instruction> specification() {
     inputs: [6],
     output: 6,
     mayThrow: true,
+    extended: true,
   );
-  add('returnNull', '''if (frame.parent == null) return null;
+  add(
+    'returnNull',
+    '''if (frame.parent == null) return null;
           pc = frame.returnPc;
           frame = frame.leave();
-          r = null; s = null; c = null;''', terminates: true);
+          r = null; s = null; c = null;''',
+    terminates: true,
+  );
   add(
     'callVirtual',
     '''final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
@@ -988,10 +1177,11 @@ List<Instruction> specification() {
         'if (!(${names[left]} ${comparison.value} ${names[right]})) pc = address;',
         inputs: [left, right],
         immediate: 'branch',
+        extended: true,
       );
     }
   }
-  for (final op in [...ops]) {
+  for (final op in [...ops, ...extendedOps]) {
     if (op.immediate != 'branch') continue;
     add(
       '${op.name}Short',
@@ -1001,24 +1191,471 @@ List<Instruction> specification() {
       terminates: op.terminates,
     );
   }
+
+  // Register variants of hot object-register ops, dispatched through `ext`:
+  // the canonical op uses `r`; variants let the allocator keep values in
+  // s/c/d (and ints in w) without shuffling through r.
+  for (final (recv, rn) in [(7, 's'), (8, 'c')]) {
+    final R = rn.toUpperCase();
+    add(
+      'aLoadProperty$R',
+      'a = TypedInterop.toInt(($rn as TypedInstance).values[index]);',
+      inputs: [recv],
+      output: 0,
+      immediate: 'field',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'fLoadProperty$R',
+      'f = TypedInterop.toDouble(($rn as TypedInstance).values[index]);',
+      inputs: [recv],
+      output: 2,
+      immediate: 'field',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'eLoadProperty$R',
+      'e = TypedInterop.toBool(($rn as TypedInstance).values[index]);',
+      inputs: [recv],
+      output: 4,
+      immediate: 'field',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}LoadProperty$R',
+      '$rn = ($rn as TypedInstance).values[index];',
+      inputs: [recv],
+      output: recv,
+      immediate: 'field',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}LoadPropertyString$R',
+      '$rn = TypedInterop.toStringValue(($rn as TypedInstance).values[index]);',
+      inputs: [recv],
+      output: recv,
+      immediate: 'field',
+      mayThrow: true,
+      extended: true,
+    );
+    // A field of `this` (r) loaded straight into another object register.
+    add(
+      '${rn}LoadPropertyR',
+      '$rn = (r as TypedInstance).values[index];',
+      inputs: [6],
+      output: recv,
+      immediate: 'field',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}LoadPropertyStringR',
+      '$rn = TypedInterop.toStringValue((r as TypedInstance).values[index]);',
+      inputs: [6],
+      output: recv,
+      immediate: 'field',
+      mayThrow: true,
+      extended: true,
+    );
+    for (final (vreg, vn, boxed) in [
+      (0, 'a', r'$int(a)'),
+      (1, 'b', r'$int(b)'),
+      (7, 's', 's'),
+      (8, 'c', 'c'),
+      (2, 'f', r'$double(f)'),
+      (4, 'e', r'$bool(e)'),
+    ]) {
+      add(
+        'setProperty$R${vn.toUpperCase()}',
+        '($rn as TypedInstance).values[index] = $boxed;',
+        inputs: [recv, vreg],
+        immediate: 'field',
+        mayThrow: true,
+        extended: true,
+      );
+    }
+    add(
+      'aFieldIncrement${R}A',
+      'final instance = $rn as TypedInstance; instance.values[index] = \$int(TypedInterop.toInt(instance.values[index]) + 1);',
+      inputs: [recv],
+      immediate: 'field',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'aStringCodeUnitFields${R}R',
+      'final instance = $rn as TypedInstance; a = TypedInterop.toStringValue(instance.values[index & 255]).codeUnitAt(TypedInterop.toInt(instance.values[index >> 8]));',
+      inputs: [recv],
+      output: 0,
+      immediate: 'integer',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'eFieldLessStrLen${R}R',
+      'final instance = $rn as TypedInstance; e = TypedInterop.toInt(instance.values[index & 255]) < TypedInterop.toStringValue(instance.values[index >> 8]).length;',
+      inputs: [recv],
+      output: 4,
+      immediate: 'integer',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'aStringLength$R',
+      'a = ($rn as String).length;',
+      inputs: [recv],
+      output: 0,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'aStringCodeUnit$R',
+      'a = ($rn as String).codeUnitAt(a);',
+      inputs: [recv, 0],
+      output: 0,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}StringIndex${R}A',
+      '$rn = ($rn as String)[a];',
+      inputs: [recv, 0],
+      output: recv,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}StringSub${R}AB',
+      '$rn = ($rn as String).substring(a, b);',
+      inputs: [recv, 0, 1],
+      output: recv,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}BoxString',
+      '$rn = \$String($rn as String);',
+      inputs: [recv],
+      output: recv,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}UnboxString',
+      '$rn = TypedInterop.toStringValue($rn);',
+      inputs: [recv],
+      output: recv,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'aListLength$R',
+      'a = ($rn as List).length;',
+      inputs: [recv],
+      output: 0,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'aNativeFrom$R',
+      'a = $rn as int;',
+      inputs: [recv],
+      output: 0,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'fNativeFrom$R',
+      'f = $rn as double;',
+      inputs: [recv],
+      output: 2,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'eNativeFrom$R',
+      'e = $rn as bool;',
+      inputs: [recv],
+      output: 4,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'aFrom$R',
+      'a = TypedInterop.toInt($rn);',
+      inputs: [recv],
+      output: 0,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'fFrom$R',
+      'f = TypedInterop.toDouble($rn);',
+      inputs: [recv],
+      output: 2,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'eFrom$R',
+      'e = TypedInterop.toBool($rn);',
+      inputs: [recv],
+      output: 4,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}BoxList',
+      '$rn = \$List.wrap($rn as List);',
+      inputs: [recv],
+      output: recv,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}BoxMap',
+      '''final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          $rn = \$Map.wrap(
+            $rn as Map<Object?, Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );''',
+      inputs: [recv],
+      output: recv,
+      immediate: 'typeId',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}BoxSet',
+      '''final runtimeTypeId = runtime == null
+              ? index
+              : runtime.resolveTypedEnvironmentType(
+                  index,
+                  actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                  callableTypeArguments: frame.effectiveTypeArguments,
+                );
+          $rn = \$Set.wrap(
+            $rn as Set<Object?>,
+            runtimeTypeId: runtimeTypeId,
+            runtime: runtime,
+          );''',
+      inputs: [recv],
+      output: recv,
+      immediate: 'typeId',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}LoadThis$R',
+      '$rn = ($rn as TypedInstance).dispatchRoot;',
+      inputs: [recv],
+      output: recv,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'eIsNative$R',
+      'e = index == 0 ? $rn is List : index == 1 ? $rn is Set : $rn is Map;',
+      inputs: [recv],
+      output: 4,
+      immediate: 'integer',
+      extended: true,
+    );
+    add(
+      '${rn}Throw',
+      'throw WrappedException($rn!);',
+      inputs: [recv],
+      mayThrow: true,
+      terminates: true,
+      extended: true,
+    );
+    add(
+      '${rn}LoadGlobal',
+      '$rn = TypedGlobalState.loadObject(runtime, index);',
+      output: recv,
+      immediate: 'globalIndex',
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}SetGlobal',
+      'TypedGlobalState.storeObject(runtime, index, $rn);',
+      inputs: [recv],
+      immediate: 'globalIndex',
+      mayThrow: true,
+      extended: true,
+    );
+
+    add(
+      'eAssert$R',
+      'if (!e) throw WrappedException($rn!);',
+      inputs: [4, recv],
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'eIsType$R',
+      '''e = runtime!.isTypedValueTypeInCallableEnvironment(
+            $rn,
+            index,
+            frame.effectiveTypeArguments,
+            actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+          );''',
+      inputs: [recv],
+      output: 4,
+      immediate: 'typeId',
+      mayThrow: true,
+      extended: true,
+    );
+    if (recv != 7) {
+      add(
+        'bufWriteR$R',
+        '(r as \$StringBuffer).\$value.write(TypedInterop.reify($rn));',
+        inputs: [6, recv],
+        mayThrow: true,
+        extended: true,
+      );
+    }
+    for (final src in [0, 1, 2, 3, 4]) {
+      final sn = names[src];
+      add(
+        '${rn}From${sn.toUpperCase()}',
+        '$rn = $sn;',
+        inputs: [src],
+        output: recv,
+        mayThrow: true,
+        extended: true,
+      );
+      if (src < 2 || false) {
+        add(
+          '${rn}Box${sn.toUpperCase()}',
+          '$rn = \$int($sn);',
+          inputs: [src],
+          output: recv,
+          extended: true,
+        );
+      }
+    }
+  }
+
+  // Ops whose canonical receiver is `c` get r/s/d variants.
+  for (final (recv, rn) in [(6, 'r'), (7, 's')]) {
+    final R = rn.toUpperCase();
+    add(
+      'rListIndex${R}A',
+      'r = ($rn as List<Object?>)[a];',
+      inputs: [recv, 0],
+      output: 6,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'listSet${R}AR',
+      '($rn as List<Object?>)[a] = r;',
+      inputs: [recv, 0, 6],
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'listAppend${R}R',
+      '($rn as List<Object?>).add(r);',
+      inputs: [recv, 6],
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'rMapIndex${R}S',
+      'r = ($rn as Map<Object?, Object?>)[s];',
+      inputs: [recv, 7],
+      output: 6,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'mapSet${R}SR',
+      '($rn as Map<Object?, Object?>)[s] = r;',
+      inputs: [recv, 7, 6],
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'setAdd${R}R',
+      '($rn as Set<Object?>).add(r);',
+      inputs: [recv, 6],
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      'eSetAdd${R}R',
+      'e = ($rn as Set<Object?>).add(r);',
+      inputs: [recv, 6],
+      output: 4,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}NewList',
+      '$rn = <Object?>[];',
+      output: recv,
+      mayThrow: true,
+      extended: true,
+    );
+    add(
+      '${rn}LoadOutgoing',
+      '$rn = frame.objectOutgoing;',
+      output: recv,
+      mayThrow: true,
+      extended: true,
+    );
+  }
+  for (final (x, y) in [(6, 8), (7, 8)]) {
+    final xn = names[x], yn = names[y];
+    add(
+      'eEq${xn.toUpperCase()}${yn.toUpperCase()}',
+      'e = TypedInterop.equals(runtime, $xn, $yn);',
+      inputs: [x, y],
+      output: 4,
+      mayThrow: true,
+      extended: true,
+    );
+  }
+  ops.add(Instruction('ext', '', inputs: const [], immediate: 'none'));
   // AOT allocation follows the numeric case order. Keep simple register-only
   // operations ahead of handlers with decoding, calls and exceptional edges.
   final originalOrder = {for (var i = 0; i < ops.length; i++) ops[i]: i};
   int rank(Instruction op) =>
-      op.immediate == 'none' && !op.terminates && !op.mayThrow ? 0 : 1;
+      op.name != 'ext' &&
+          op.immediate == 'none' &&
+          !op.terminates &&
+          !op.mayThrow
+      ? 0
+      : 1;
   ops.sort((a, b) {
     final r = rank(a).compareTo(rank(b));
     return r != 0 ? r : originalOrder[a]!.compareTo(originalOrder[b]!);
   });
-  return ops;
+  return (ops: ops, extended: extendedOps);
 }
 
 void main(List<String> arguments) {
-  final ops = specification();
+  final (:ops, :extended) = specification();
   if (ops.length > 256 ||
+      extended.length > 256 ||
       ops.map((op) => op.name).toSet().length != ops.length) {
     throw StateError('Opcode names must be unique and fit in one byte');
   }
+
   final constants = StringBuffer(
     '''// GENERATED by tool/generate_typed_machine.dart. Do not edit.
 
@@ -1035,7 +1672,7 @@ enum TypedImmediate { none, intConstant, doubleConstant,
 
 class TypedInstruction {
   const TypedInstruction(this.name, this.inputs, this.outputs, this.immediate,
-      this.mayThrow, this.terminates, this.commutative);
+      this.mayThrow, this.terminates, this.commutative, this.family);
   final String name;
   final List<int> inputs;
   final List<int> outputs;
@@ -1045,6 +1682,10 @@ class TypedInstruction {
   /// Operand order may change during allocation without changing the result.
   /// Floating operations retain order, including NaN payload propagation.
   final bool commutative;
+  /// Register-agnostic operation kind: the name with the output-register
+  /// prefix and parameter-encoding suffix removed. Register variants of one
+  /// operation (rBoxMap, cBoxMap) share a family (BoxMap).
+  final String family;
   List<int> get clobberedRegisters => (immediate == TypedImmediate.function || immediate == TypedImmediate.hostCall || immediate == TypedImmediate.callSite || immediate == TypedImmediate.externalCall || immediate == TypedImmediate.closureCall)
       ? const [0, 1, 2, 3, 4, 6, 7, 8] : const [];
   int get length => immediate == TypedImmediate.none ? 1
@@ -1057,14 +1698,33 @@ abstract final class TypedOp {
   for (var i = 0; i < ops.length; i++) {
     constants.writeln('  static const ${ops[i].name} = $i;');
   }
+  // Extended opcodes dispatch behind [ext]: their logical code is
+  // `extendedBase + index` — an escape byte followed by the sub-index.
+  constants.writeln('  static const extendedBase = 256;');
+  for (var i = 0; i < extended.length; i++) {
+    constants.writeln('  static const ${extended[i].name} = ${256 + i};');
+  }
   constants.writeln('  static const instructions = <TypedInstruction>[');
-  for (final op in ops) {
+  void writeSpec(Instruction op) {
     final outputs = op.name.endsWith('Swap')
         ? op.inputs
         : [if (op.output != null) op.output!];
     constants.writeln(
-      "    TypedInstruction('${op.name}', ${op.inputs}, $outputs, TypedImmediate.${op.immediate}, ${op.mayThrow}, ${op.terminates}, ${op.commutative}),",
+      "    TypedInstruction('${op.name}', ${op.inputs}, $outputs, TypedImmediate.${op.immediate}, ${op.mayThrow}, ${op.terminates}, ${op.commutative}, '${familyOf(op.name)}'),",
     );
+  }
+
+  for (final op in ops) {
+    writeSpec(op);
+  }
+  // Pad to the extended base so `instructions[code]` indexes both spaces.
+  for (var i = ops.length; i < 256; i++) {
+    constants.writeln(
+      "    TypedInstruction('reserved$i', [], [], TypedImmediate.none, false, false, false, 'reserved$i'),",
+    );
+  }
+  for (final op in extended) {
+    writeSpec(op);
   }
   constants.writeln('  ];\n}');
   final machine = StringBuffer(
@@ -1085,6 +1745,17 @@ import 'typed_async.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
+
+/// Exchange object for the secondary dispatch in [_dispatchCold].
+final class _ColdCall {
+  int op = 0;
+  int pc = 0;
+  int a = 0, b = 0;
+  double f = 0.0, g = 0.0;
+  bool e = false;
+  Object? r, s, c;
+  TypedFrame? frame;
+}
 
 abstract final class TypedMachine {
   /// Public host boundary. Internal calls keep their machine representation.
@@ -1159,12 +1830,24 @@ abstract final class TypedMachine {
     var a = arguments.a, b = arguments.b;
     var f = arguments.f, g = arguments.g;
     var e = arguments.e;
+    final cold = _ColdCall();
       dispatch: while (true) {
       switch (code[pc++]) {
 ''',
   );
-  for (final op in ops) {
-    machine.writeln('        case TypedOp.${op.name}:');
+  // Extended ops that must stay in `_dispatch`: they reassign `frame`
+  // (stack discipline) or return a result out of the interpreter.
+  bool inlineCold(Instruction op) =>
+      op.body.contains('frame =') || op.body.contains('return ');
+
+  void emitCaseBody(
+    Instruction op,
+    String pad, {
+    StringBuffer? sink,
+    bool cold = false,
+  }) {
+    final out = sink ?? machine;
+    final next = cold ? 'break;' : 'continue dispatch;';
     if (op.immediate == 'branch' || op.immediate == 'shortBranch') {
       final short = op.immediate == 'shortBranch';
       final width = short ? 2 : 4;
@@ -1174,32 +1857,110 @@ abstract final class TypedMachine {
       final condition = RegExp(
         r'^if \((.+)\) pc = address;$',
       ).firstMatch(op.body)?.group(1);
-      machine.writeln(
+      out.writeln(
         condition == null
-            ? '          pc = $expression;'
-            : '          if ($condition) { pc = $expression; } else { pc += $width; }',
+            ? '$pad pc = $expression;'
+            : '$pad if ($condition) { pc = $expression; } else { pc += $width; }',
       );
-      machine.writeln('          continue dispatch;');
-      continue;
+      out.writeln('$pad $next');
+      return;
     } else if (op.immediate != 'none') {
-      machine.writeln(
-        '          final index = code[pc] | (code[pc + 1] << 8); pc += 2;',
+      out.writeln(
+        '$pad final index = code[pc] | (code[pc + 1] << 8); pc += 2;',
       );
     }
-    machine.writeln('          ${op.body.trimRight()}');
-    if (!op.body.startsWith('return ') &&
-        op.name != 'rThrow' &&
+    out.writeln('$pad ${op.body.trimRight()}');
+    final last = op.body.trimRight().split('\n').last.trimLeft();
+    if (!last.startsWith('return ') &&
+        !last.startsWith('return;') &&
+        !last.startsWith('throw') &&
         op.name != 'rethrowCaught') {
-      machine.writeln('          continue dispatch;');
+      out.writeln('$pad $next');
     }
+  }
+
+  for (final op in ops) {
+    machine.writeln('        case TypedOp.${op.name}:');
+    if (op.name == 'ext') {
+      // Secondary dispatch: the next byte selects an extended opcode. Ops that
+      // mutate `frame` or leave the interpreter stay inline; the rest run in
+      // [_dispatchCold] so the hot switch stays small enough to optimize.
+      machine.writeln('          switch (256 + code[pc++]) {');
+      for (var i = 0; i < extended.length; i++) {
+        if (!inlineCold(extended[i])) continue;
+        machine.writeln('            case ${256 + i}:');
+        emitCaseBody(extended[i], '            ');
+      }
+      machine.writeln('''            default:
+              cold.op = code[pc - 1];
+              cold.pc = pc;
+              cold.a = a;
+              cold.b = b;
+              cold.f = f;
+              cold.g = g;
+              cold.e = e;
+              cold.r = r;
+              cold.s = s;
+              cold.c = c;
+              cold.frame = frame;
+              _dispatchCold(program, cold, runtime);
+              pc = cold.pc;
+              a = cold.a;
+              b = cold.b;
+              f = cold.f;
+              g = cold.g;
+              e = cold.e;
+              r = cold.r;
+              s = cold.s;
+              c = cold.c;
+              continue dispatch;
+          }''');
+      continue;
+    }
+    emitCaseBody(op, '          ');
   }
   machine.writeln(
     """        default: throw StateError('Invalid typed opcode at byte \${pc - 1}');
       }
     }
   }
-}
+
+  // Cold half of the extended dispatch. Ops that do not need to mutate
+  // `frame` or leave the interpreter delegate here so `_dispatch` stays
+  // small; registers travel in and out through [st].
+  @pragma('vm:never-inline')
+  static void _dispatchCold(
+      TypedProgram program, _ColdCall st, Runtime? runtime) {
+    final code = program.code;
+    var pc = st.pc;
+    var a = st.a, b = st.b;
+    var f = st.f, g = st.g;
+    var e = st.e;
+    Object? r = st.r, s = st.s, c = st.c;
+    final frame = st.frame!;
+    switch (256 + st.op) {
 """,
+  );
+  for (var i = 0; i < extended.length; i++) {
+    if (inlineCold(extended[i])) continue;
+    machine.writeln('    case ${256 + i}:');
+    emitCaseBody(extended[i], '      ', sink: machine, cold: true);
+  }
+  machine.writeln(
+    '''    default: throw StateError('Invalid extended typed opcode');
+    }
+    st.pc = pc;
+    st.a = a;
+    st.b = b;
+    st.f = f;
+    st.g = g;
+    st.e = e;
+    st.r = r;
+    st.s = s;
+    st.c = c;
+  }
+}
+''',
   );
   final outputs = {
     'lib/src/eval/runtime/typed/typed_ops.g.dart': constants.toString(),
@@ -1218,5 +1979,7 @@ abstract final class TypedMachine {
       file.writeAsStringSync(output.value);
     }
   }
-  stdout.writeln('${ops.length} typed instructions');
+  stdout.writeln(
+    '${ops.length} typed instructions (${extended.length} extended)',
+  );
 }

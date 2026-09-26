@@ -6,15 +6,12 @@ TypedProgram compile(String source) => Compiler().compileTyped({
 }, entrypoint: 'package:typed/main.dart');
 
 List<String> callSetup(TypedProgram program) {
+  final entry = program.functions[program.entryFunction].entry;
   final result = <String>[];
-  for (
-    var pc = program.functions[program.entryFunction].entry;
-    pc < program.code.length;
-  ) {
-    final instruction = TypedOp.instructions[program.code[pc]];
-    if (program.code[pc] == TypedOp.call) return result;
+  for (final (pc, instruction) in program.instructions) {
+    if (pc < entry) continue;
+    if (instruction.name == 'call') return result;
     result.add(instruction.name);
-    pc += instruction.length;
   }
   throw StateError('Expected a direct call');
 }
@@ -71,10 +68,9 @@ void main() {
       }
       int main(int n) => sum(n);
     ''');
-    final instructions = <String>[];
-    for (var pc = 0; pc < program.code.length;) {
-      final instruction = TypedOp.instructions[program.code[pc]];
-      instructions.add(instruction.immediate.name);
+    final immediates = <String>[];
+    for (final (pc, instruction) in program.instructions) {
+      immediates.add(instruction.immediate.name);
       if (instruction.immediate == TypedImmediate.shortBranch) {
         final encoded = program.code[pc + 1] | (program.code[pc + 2] << 8);
         final displacement = encoded >= 0x8000 ? encoded - 0x10000 : encoded;
@@ -85,10 +81,9 @@ void main() {
           reason: 'Loop branches should bypass jump-only blocks',
         );
       }
-      pc += instruction.length;
     }
-    expect(instructions.contains('shortBranch'), isTrue);
-    expect(instructions.contains('branch'), isFalse);
+    expect(immediates.contains('shortBranch'), isTrue);
+    expect(immediates.contains('branch'), isFalse);
     expect(TypedMachine.run(program, intArguments: [10]), 45);
     expect(
       TypedMachine.run(
@@ -103,12 +98,9 @@ void main() {
     final program = compile('''int increment(int n) => n + 1;
       int main(int n, bool run) { if (run) { $body } return n; }
     ''');
-    var hasLongBranch = false;
-    for (var pc = 0; pc < program.code.length;) {
-      final instruction = TypedOp.instructions[program.code[pc]];
-      hasLongBranch |= instruction.immediate == TypedImmediate.branch;
-      pc += instruction.length;
-    }
+    final hasLongBranch = program.instructions.any(
+      (e) => e.$2.immediate == TypedImmediate.branch,
+    );
     expect(hasLongBranch, isTrue);
     expect(
       TypedMachine.run(program, intArguments: [7], boolArguments: [false]),
@@ -124,7 +116,7 @@ void main() {
       final program = compile('int main() => $value;');
       expect(program.integers, isEmpty);
       expect(
-        TypedOp.instructions[program.code.first].name,
+        program.instructions.first.$2.name,
         anyOf('aImmediate', 'bImmediate'),
       );
       expect(TypedMachine.run(program), value);
@@ -144,7 +136,10 @@ void main() {
     final program = compile('int main(int x, int y) => x - y;');
     expect(TypedMachine.run(program, intArguments: [27, 8]), 19);
     expect(TypedMachine.run(program, intArguments: [8, 27]), -19);
-    expect(program.code, contains(anyOf(TypedOp.aSubB, TypedOp.bSubA)));
+    expect(
+      program.instructions.map((e) => e.$2.family),
+      contains('Sub'),
+    );
   });
   test('duplicate operands remain two physical instruction inputs', () {
     final program = compile('int main(int x) => x + x;');
@@ -380,12 +375,9 @@ void main() {
     final program = compile(
       'int main(int first, int second) => second - first;',
     );
-    final names = <String>[];
-    for (var pc = 0; pc < program.code.length;) {
-      final instruction = TypedOp.instructions[program.code[pc]];
-      names.add(instruction.name);
-      pc += instruction.length;
-    }
+    final names = [
+      for (final e in program.instructions) e.$2.name,
+    ];
     expect(names.any((name) => name.endsWith('Argument')), isFalse);
     expect(TypedMachine.run(program, intArguments: [6, 21]), 15);
   });
@@ -438,12 +430,9 @@ void main() {
       int main() => sum(1, 2, 3, 4, 5);''');
     expect(TypedMachine.run(program), 15);
     expect(program.functions.first.objectOutgoingCount, 0);
-    final names = <String>[];
-    for (var pc = 0; pc < program.code.length;) {
-      final instruction = TypedOp.instructions[program.code[pc]];
-      names.add(instruction.name);
-      pc += instruction.length;
-    }
+    final names = [
+      for (final e in program.instructions) e.$2.name,
+    ];
     expect(names, contains(anyOf('rFromA', 'rFromB')));
     expect(names.any((name) => name.startsWith('rBox')), isFalse);
     expect(names, isNot(contains('cLoadOutgoing')));

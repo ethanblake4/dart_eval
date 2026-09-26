@@ -244,8 +244,13 @@ sealed class GetTarget {
             'runtimeType',
           );
       if (!overridable) {
-        if (receiver.concreteTypes.isNotEmpty) {
-          final concrete = receiver.concreteTypes[0];
+        // A concrete type is the runtime type only when the receiver can't
+        // be a subclass instance — a link shares the root's type.
+        final concrete = receiver.concreteTypes.isNotEmpty
+            ? receiver.concreteTypes[0]
+            : null;
+        if (concrete != null &&
+            !ctx.hasSubclasses(concrete.file, concrete.name)) {
           return IntrinsicGet(
             receiver,
             name,
@@ -382,11 +387,27 @@ sealed class GetTarget {
       methodSignature = null;
     }
     final exact = receiver.exactType;
-    if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
+    // A provably-class receiver can reach member storage directly. An
+    // exact receiver is never a subclass instance; a concreteTypes
+    // receiver may be, so the slot is only valid when no descendant
+    // redeclares the member.
+    final directType =
+        exact ??
+        (receiver.concreteTypes.length == 1 &&
+                !ctx.memberOverriddenInSubclass(
+                  receiver.concreteTypes.first.file,
+                  receiver.concreteTypes.first.name,
+                  name,
+                )
+            ? receiver.concreteTypes.first
+            : null);
+    if (directType != null) {
       // Storage for an inherited field lives on its declaring class's
-      // link, reached from the receiver by LoadSuper hops.
+      // link, reached from the receiver by LoadSuper hops. The slot walk
+      // only matches guest members — bridged ancestors never appear in
+      // `instanceGetterIndices`, so a native member simply falls through.
       final slot = ctx.memberLookup.accessorSlot(
-        exact,
+        directType,
         name,
         MemberKind.getter,
       );
@@ -424,6 +445,15 @@ sealed class GetTarget {
             fieldType: fieldType,
           );
         }
+        final forward = _trivialGetterForward(ctx, link, decl);
+        if (forward != null) {
+          return _TrivialGetterCall(
+            receiver,
+            hops: hops,
+            chain: forward,
+            fieldType: fieldType,
+          );
+        }
         return DirectGetterCall(
           receiver,
           hops: hops,
@@ -451,6 +481,25 @@ sealed class GetTarget {
             owner,
             MemberName(name, MemberKind.getter),
           )) {
+        final ownerMember = ctx.memberLookup.tryInterfaceMember(
+          owner,
+          MemberName(name, MemberKind.getter),
+        );
+        final forward = _trivialGetterForward(
+          ctx,
+          owner,
+          ownerMember?.member is SourceMember
+              ? (ownerMember!.member as SourceMember).sourceDeclaration
+              : null,
+        );
+        if (forward != null) {
+          return _TrivialGetterCall(
+            receiver,
+            hops: const [],
+            chain: forward,
+            fieldType: fieldType,
+          );
+        }
         final key = name.startsWith('_')
             ? '${ctx.libraryUri(owner.file)}::$name'
             : name;
@@ -591,11 +640,18 @@ final class FieldSlotGet extends GetTarget {
       receiver.boxIfNeeded(ctx),
       hops,
     ).ssa;
+    final rep = isLate ? MachineRepresentation.object : _loadSlotRep(fieldType);
     return Variable.ssa(
       ctx,
-      LoadPropertyStatic(ctx.svar(name), linkSsa, index, isLate: isLate),
+      LoadPropertyStatic(
+        ctx.svar(name),
+        linkSsa,
+        index,
+        isLate: isLate,
+        rep: rep,
+      ),
       fieldType,
-      rep: ValueRep.boxed,
+      rep: repForType(fieldType, rep),
     );
   }
 }
@@ -643,6 +699,85 @@ final class DirectGetterCall extends GetTarget {
       fieldType,
       rep: ValueRep.boxed,
     );
+  }
+}
+
+/// The member chain a trivial `=>`-bodied getter forwards to — e.g.
+/// `int get len => s.length` yields `['s', 'length']` — when the chain's
+/// first element resolves to an instance member on [link]. A `=>` body is
+/// a single expression, so the head name can only bind a member (never a
+/// local); the rest of the chain resolves normally on each read's type.
+List<String>? _trivialGetterForward(
+  CompilerContext ctx,
+  TypeRef link,
+  Declaration? decl,
+) {
+  if (decl is! MethodDeclaration ||
+      !decl.isGetter ||
+      decl.body is! ExpressionFunctionBody) {
+    return null;
+  }
+  final chain = <String>[];
+  Expression? expr = (decl.body as ExpressionFunctionBody).expression;
+  while (true) {
+    switch (expr) {
+      case PrefixedIdentifier(:final prefix, :final identifier):
+        chain.insert(0, identifier.name);
+        expr = prefix;
+        continue;
+      case PropertyAccess(:final target, :final propertyName):
+        if (expr.isNullAware) return null;
+        chain.insert(0, propertyName.name);
+        expr = target;
+        continue;
+      case SimpleIdentifier(:final name):
+        chain.insert(0, name);
+      case SuperExpression():
+        // `super.m` is not a member read on the receiver — it binds the
+        // impl above the declaring class. Forwarding it as `receiver.m`
+        // would dispatch from the root.
+        return null;
+      case ThisExpression():
+      default:
+        break;
+    }
+    break;
+  }
+  if (chain.isEmpty) return null;
+  final head = ctx.memberLookup.tryInterfaceMember(
+    link,
+    MemberName(chain.first, MemberKind.getter),
+  );
+  final headMember = head?.member;
+  if (headMember == null ||
+      (headMember is SourceMember && headMember.isStatic)) {
+    return null;
+  }
+  return chain;
+}
+
+/// A trivial getter inlined as the member chain it forwards to:
+/// `=> s.length` emits `receiver.s.length` through the normal read path.
+final class _TrivialGetterCall extends GetTarget {
+  const _TrivialGetterCall(
+    this.receiver, {
+    required this.hops,
+    required this.chain,
+    required this.fieldType,
+  });
+
+  final Variable receiver;
+  final List<TypeRef> hops;
+  final List<String> chain;
+  final TypeRef fieldType;
+
+  @override
+  Variable emit(CompilerContext ctx) {
+    var value = _throughSuperLinks(ctx, receiver.boxIfNeeded(ctx), hops);
+    for (final name in chain) {
+      value = GetTarget.read(ctx, value, name);
+    }
+    return value.copyWith(type: fieldType);
   }
 }
 
@@ -898,11 +1033,23 @@ sealed class SetTarget {
         );
     final fieldType = declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
     final exact = object.exactType;
-    if (exact != null && !hasBridgeSuperclass(ctx, exact)) {
+    final directType =
+        exact ??
+        (object.concreteTypes.length == 1 &&
+                !ctx.memberOverriddenInSubclass(
+                  object.concreteTypes.first.file,
+                  object.concreteTypes.first.name,
+                  name,
+                )
+            ? object.concreteTypes.first
+            : null);
+    if (directType != null) {
       // Storage for an inherited field lives on its declaring class's
-      // link, reached from the receiver by LoadSuper hops.
+      // link, reached from the receiver by LoadSuper hops. The slot walk
+      // only matches guest members — bridged ancestors never appear in
+      // `instanceGetterIndices`, so a native member simply falls through.
       final slot = ctx.memberLookup.accessorSlot(
-        exact,
+        directType,
         name,
         MemberKind.setter,
       );
@@ -1009,16 +1156,39 @@ Variable _convertForMember(
   CompilerContext ctx,
   Variable value,
   TypeRef fieldType,
-  String name,
-) => convertForAssignment(
+  String name, {
+  MachineRepresentation representation = MachineRepresentation.object,
+}) => convertForAssignment(
   ctx,
   value,
   fieldType,
-  representation: MachineRepresentation.object,
+  representation: representation,
   description:
       'Cannot assign value of type ${value.type} to field "$name" '
       'of type $fieldType',
 );
+
+/// The bank a field read can land in directly: scalars and strings unbox
+/// in the load op, other types stay boxed.
+MachineRepresentation _loadSlotRep(TypeRef fieldType) =>
+    switch (unboxedRepOf(fieldType)) {
+      ValueRep.int => MachineRepresentation.integer,
+      ValueRep.double => MachineRepresentation.doublePrecision,
+      ValueRep.bool => MachineRepresentation.boolean,
+      ValueRep.string => MachineRepresentation.string,
+      _ => MachineRepresentation.object,
+    };
+
+/// The bank a field write accepts directly. String stays boxed: it shares
+/// the object bank with the receiver, so an unboxed store would need the
+/// value and receiver in one register.
+MachineRepresentation _storeSlotRep(TypeRef fieldType) =>
+    switch (unboxedRepOf(fieldType)) {
+      ValueRep.int => MachineRepresentation.integer,
+      ValueRep.double => MachineRepresentation.doublePrecision,
+      ValueRep.bool => MachineRepresentation.boolean,
+      _ => MachineRepresentation.object,
+    };
 
 /// A field-slot write on a link reached by LoadSuper hops.
 final class FieldSlotSet extends SetTarget {
@@ -1041,10 +1211,25 @@ final class FieldSlotSet extends SetTarget {
 
   @override
   Variable emit(CompilerContext ctx, Variable value) {
-    final val = _convertForMember(ctx, value, fieldType, name);
+    final rep = isLateFinal
+        ? MachineRepresentation.object
+        : _storeSlotRep(fieldType);
+    final val = _convertForMember(
+      ctx,
+      value,
+      fieldType,
+      name,
+      representation: rep,
+    );
     final linkSsa = _throughSuperLinks(ctx, object.boxIfNeeded(ctx), hops).ssa;
     ctx.pushOp(
-      SetPropertyStatic(linkSsa, index, val.ssa, isLateFinal: isLateFinal),
+      SetPropertyStatic(
+        linkSsa,
+        index,
+        val.ssa,
+        isLateFinal: isLateFinal,
+        rep: rep,
+      ),
     );
     return val;
   }

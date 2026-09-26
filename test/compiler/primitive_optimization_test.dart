@@ -1,15 +1,9 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
-List<String> opNames(TypedProgram program) {
-  final names = <String>[];
-  for (var pc = 0; pc < program.code.length;) {
-    final instruction = TypedOp.instructions[program.code[pc]];
-    names.add(instruction.name);
-    pc += instruction.length;
-  }
-  return names;
-}
+List<String> opNames(TypedProgram program) => [
+  for (final e in program.instructions) e.$2.family,
+];
 
 Program compile(String source) => Compiler().compile({
   'test': {'main.dart': source},
@@ -61,7 +55,7 @@ void main() {
         checkBoth(program, expected);
         final names = opNames(program.typedProgram);
         expect(names, isNot(contains('callVirtual')), reason: operator);
-        expect(names.where((name) => name.startsWith('rBox')), isEmpty);
+        expect(names.where((name) => name == 'Box'), isEmpty);
       }
     },
   );
@@ -103,13 +97,13 @@ void main() {
       );
       checkBoth(program, 1);
       final names = opNames(program.typedProgram);
-      expect(names.where((name) => name == 'aListLengthR').length, 2);
+      expect(names.where((name) => name == 'ListLength').length, 2);
       // The element 9 escapes to add and must still be boxed. Lengths do not.
       expect(
-        names.where((name) => name == 'rBoxA' || name == 'rBoxB').length,
+        names.where((name) => name == 'Box').length,
         1,
       );
-      expect(names, isNot(contains('aFromR')));
+      expect(names, isNot(contains('From')));
     },
   );
 

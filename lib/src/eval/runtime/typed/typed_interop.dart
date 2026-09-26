@@ -14,6 +14,11 @@ import 'typed_closure.dart';
 /// The compiler emits every scalar box and unbox operation. Host functions must
 /// use an explicit bridge wrapper, such as $Function or $Closure.
 abstract final class TypedInterop {
+  /// The host-side value of an object-bank slot: `$Value`s unwrap to their
+  /// reified form, raw host objects pass through.
+  static Object? reify(Object? value) =>
+      value is $Value ? value.$reified : value;
+
   static $Value runtimeTypeOf(Runtime? runtime, Object? value) {
     final target = _runtime(runtime);
     return $TypeImpl(

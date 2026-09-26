@@ -6,15 +6,9 @@ TypedProgram compile(String source) => Compiler().compileTyped({
   'typed': {'main.dart': source},
 }, entrypoint: 'package:typed/main.dart');
 
-Set<String> opNames(TypedProgram program) {
-  final result = <String>{};
-  for (var pc = 0; pc < program.code.length;) {
-    final op = TypedOp.instructions[program.code[pc]];
-    result.add(op.name);
-    pc += op.length;
-  }
-  return result;
-}
+Set<String> opNames(TypedProgram program) => {
+  for (final e in program.instructions) e.$2.family,
+};
 
 void main() {
   test(
@@ -147,10 +141,10 @@ void main() {
     expect(
       opNames(program),
       containsAll([
-        'rStringConcatS',
-        'aStringLengthR',
-        'rStringIndexA',
-        'aStringCodeUnitR',
+        'StringConcat',
+        'StringLength',
+        'StringIndex',
+        'StringCodeUnit',
       ]),
     );
     expect(opNames(program), isNot(contains('callMethod')));
@@ -190,11 +184,10 @@ void main() {
     expect(
       opNames(program),
       containsAll([
-        'cNewList',
-        'listAppendCR',
-        'callVirtual',
-        'rListIndexCA',
-        'aListLengthR',
+        'NewList',
+        'listAppend',
+        'ListIndex',
+        'ListLength',
       ]),
     );
     for (final (runtime, value, expected) in [

@@ -10,7 +10,10 @@ void main() {
     'commutative operands use one opcode without swapping resident inputs',
     () {
       final program = compileNumeric('int main(int a, int b) => b * a;');
-      expect(program.code, [TypedOp.aMulB, TypedOp.aReturn]);
+      expect(
+        program.instructions.map((e) => e.$2.family),
+        ['Mul', 'Return'],
+      );
       expect(TypedMachine.run(program, intArguments: [7, 11]), 77);
 
       final live = compileNumeric('int main(int a, int b) => b * a + a;');

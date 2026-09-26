@@ -5,15 +5,9 @@ TypedProgram compile(String source) => Compiler().compileTyped({
   'typed': {'main.dart': source},
 }, entrypoint: 'package:typed/main.dart');
 
-List<String> names(TypedProgram program) {
-  final result = <String>[];
-  for (var pc = 0; pc < program.code.length;) {
-    final op = TypedOp.instructions[program.code[pc]];
-    result.add(op.name);
-    pc += op.length;
-  }
-  return result;
-}
+List<String> names(TypedProgram program) => [
+  for (final e in program.instructions) e.$2.family,
+];
 
 void main() {
   for (final (suffix, symbol, compare)
@@ -91,7 +85,7 @@ void main() {
         return sum;
       }
     ''');
-    expect(names(program), contains('eLtAB'));
+    expect(names(program), contains('Lt'));
     expect(TypedMachine.run(program, intArguments: [1, 2]), 10);
     expect(TypedMachine.run(program, intArguments: [2, 1]), 11);
   });
@@ -123,7 +117,7 @@ void main() {
       int increment(int n) => n + 1;
       int main(int n, int limit) { if (n < limit) { $body } return n; }
     ''');
-    expect(names(program), contains('jumpNotLtAB'));
+    expect(names(program), contains('jumpNotLt'));
     expect(TypedMachine.run(program, intArguments: [7, 0]), 7);
     expect(TypedMachine.run(program, intArguments: [7, 9]), 12007);
   });

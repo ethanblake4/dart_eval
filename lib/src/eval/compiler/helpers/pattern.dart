@@ -141,7 +141,7 @@ Variable patternMatchAndBind(
       // The pattern's context type is the matched value's type — this is
       // what lets `case .blue:` resolve the shorthand.
       final constant = compileExpression(pat.expression, ctx, V.type);
-      return CallResolver(ctx).invokeOperator(V, '==', [constant]).result;
+      return CallResolver(ctx).invokeOperator(constant, '==', [V]).result;
     case RecordPattern pat:
       var positionalFields = 1;
       Variable? result;

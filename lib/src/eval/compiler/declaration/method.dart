@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/compiler/variable/value_facts.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import '../values/abi.dart';
@@ -123,16 +124,27 @@ int compileMethodDeclaration(
             _ => null,
           };
           ctx.pushOp(Parameter(SSA('arg_0'), 0));
+          // `this` binds the method's declaring link only when the class has
+          // no subclasses — otherwise the receiver may be a subclass link
+          // whose field storage lives elsewhere in the chain.
+          final thisType =
+              receiverType ??
+              (isExtensionMember ? null : TypeRef.$this(ctx));
+          final concrete =
+              thisType != null &&
+                  !ctx.hasSubclasses(thisType.file, thisType.name)
+              ? thisType
+              : null;
           ctx.setLocal(
             '#this',
             Variable.of(
               ctx,
               SSA('arg_0'),
-              receiverType ??
-                  (isExtensionMember
-                      ? CoreTypes.dynamic.ref(ctx)
-                      : TypeRef.$this(ctx)!),
+              thisType ?? CoreTypes.dynamic.ref(ctx),
               rep: ValueRep.boxed,
+              facts: concrete != null
+                  ? ValueFacts(possibleClasses: [concrete])
+                  : null,
             ),
           );
         }

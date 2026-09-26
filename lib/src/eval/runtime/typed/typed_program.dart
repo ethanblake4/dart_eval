@@ -118,6 +118,21 @@ class TypedProgram {
   ByteData write() => TypedCodec.write(this);
   factory TypedProgram.read(ByteBuffer buffer) => TypedCodec.read(buffer);
 
+  /// Decoded instructions paired with their byte offset in [code].
+  Iterable<(int, TypedInstruction)> get instructions sync* {
+    for (var pc = 0; pc < code.length;) {
+      var opcode = code[pc];
+      var escape = 0;
+      if (opcode == TypedOp.ext) {
+        escape = 1;
+        opcode = TypedOp.extendedBase + code[pc + 1];
+      }
+      final instruction = TypedOp.instructions[opcode];
+      yield (pc, instruction);
+      pc += instruction.length + escape;
+    }
+  }
+
   Iterable<int> get runtimeTypeReferences sync* {
     for (final declaration in exports) {
       if (declaration.generativeConstructorRuntimeTypeId >= 0) {
@@ -139,23 +154,34 @@ class TypedProgram {
       yield* site.typeArguments;
     }
     for (var pc = 0; pc < code.length;) {
-      final instruction = TypedOp.instructions[code[pc]];
-      if (instruction.immediate == TypedImmediate.typeId) {
-        yield code[pc + 1] | (code[pc + 2] << 8);
+      var opcode = code[pc];
+      var escape = 0;
+      if (opcode == TypedOp.ext) {
+        escape = 1;
+        opcode = TypedOp.extendedBase + code[pc + 1];
       }
-      pc += instruction.length;
+      final instruction = TypedOp.instructions[opcode];
+      if (instruction.immediate == TypedImmediate.typeId) {
+        yield code[pc + 1 + escape] | (code[pc + 2 + escape] << 8);
+      }
+      pc += instruction.length + escape;
     }
   }
 
   /// Constant-pool entries containing descriptor IDs staged for direct calls.
   Iterable<int> get callTypeArgumentConstants sync* {
     for (var pc = 0; pc < code.length;) {
-      final opcode = code[pc];
+      var opcode = code[pc];
+      var escape = 0;
+      if (opcode == TypedOp.ext) {
+        escape = 1;
+        opcode = TypedOp.extendedBase + code[pc + 1];
+      }
       final instruction = TypedOp.instructions[opcode];
       if (opcode == TypedOp.setCallTypeArguments) {
-        yield code[pc + 1] | (code[pc + 2] << 8);
+        yield code[pc + 1 + escape] | (code[pc + 2 + escape] << 8);
       }
-      pc += instruction.length;
+      pc += instruction.length + escape;
     }
   }
 
@@ -479,29 +505,34 @@ class TypedProgram {
         functionIndex++;
       }
       final function = ordered[functionIndex];
-      final opcode = code[pc];
+      var opcode = code[pc];
+      var escape = 0;
+      if (opcode == TypedOp.ext) {
+        escape = 1;
+        opcode = TypedOp.extendedBase + code[pc + 1];
+      }
       if (opcode >= TypedOp.instructions.length) {
         throw FormatException('Unknown typed opcode $opcode', code, pc);
       }
       last = TypedOp.instructions[opcode];
-      final end = pc + last.length;
+      final end = pc + escape + last.length;
       if (end > code.length) {
         throw FormatException('Truncated ${last.name}', code, pc);
       }
       if (last.immediate == TypedImmediate.branch) {
         branches.add((
           function.entry,
-          code[pc + 1] |
-              (code[pc + 2] << 8) |
-              (code[pc + 3] << 16) |
-              (code[pc + 4] << 24),
+          code[pc + 1 + escape] |
+              (code[pc + 2 + escape] << 8) |
+              (code[pc + 3 + escape] << 16) |
+              (code[pc + 4 + escape] << 24),
         ));
       } else if (last.immediate == TypedImmediate.shortBranch) {
-        final encoded = code[pc + 1] | (code[pc + 2] << 8);
+        final encoded = code[pc + 1 + escape] | (code[pc + 2 + escape] << 8);
         final displacement = encoded >= 0x8000 ? encoded - 0x10000 : encoded;
         branches.add((function.entry, end + displacement));
       } else if (last.immediate != TypedImmediate.none) {
-        final index = code[pc + 1] | (code[pc + 2] << 8);
+        final index = code[pc + 1 + escape] | (code[pc + 2 + escape] << 8);
         final limit = switch (last.immediate) {
           TypedImmediate.intConstant => integers.length,
           TypedImmediate.doubleConstant => doubles.length,
