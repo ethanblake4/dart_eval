@@ -5,6 +5,8 @@ import '../../ir/memory.dart' as memory;
 import '../../ir/objects.dart' as objects;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/representation.dart';
+import '../../ir/string.dart';
+import '../../ir/exception.dart' as exceptions;
 
 /// Values proven to contain a native list before any list operation is lowered.
 /// Boxing and copies preserve that property; a phi does so only when all of
@@ -97,6 +99,26 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
         }
       }
     }
+  }
+  // Catch edges can leave before a block's last definition has executed.
+  // Normal block dominance is sufficient only without these edges.
+  if (!operations().any((op) => op is exceptions.EnterTry)) {
+    cfg.eliminateCommonExpressions(
+      graph,
+      (op, resolve) => switch (op) {
+        StringOperation(:final operator, :final string, :final argument)
+            when operator != StringOperator.concatenate =>
+          (
+            operator,
+            resolve(string),
+            argument == null ? null : resolve(argument),
+          ),
+        primitives.Unbox(:final source, :final representation)
+            when representation == MachineRepresentation.string =>
+          (primitives.Unbox, resolve(source), representation),
+        _ => null,
+      },
+    );
   }
   // Keep escaped wrappers, arbitrary unboxing, and potentially effectful reads.
   graph.removeUnusedDefines(

@@ -19,6 +19,56 @@ void checkBoth(Program program, Object? expected) {
 }
 
 void main() {
+  test('dominating string reads are shared through copies and branches', () {
+    final program = compile('''
+      int scan(String text, int index) {
+        final c = text.codeUnitAt(index);
+        if (c == 58) return 0;
+        final copy = text;
+        return copy.codeUnitAt(index) + 1;
+      }
+      int main() => scan('abc', 1);
+    ''');
+    checkBoth(program, 99);
+    expect(
+      opNames(
+        program.typedProgram,
+      ).where((name) => name.contains('StringCodeUnit')).length,
+      1,
+    );
+  });
+
+  test('string reads after catches retain their bounds errors', () {
+    checkBoth(
+      compile('''
+      int scan(String text, int index) {
+        var failures = 0;
+        try { text.codeUnitAt(index); } catch (e) { failures++; }
+        try { text.codeUnitAt(index); } catch (e) { failures++; }
+        return failures;
+      }
+      int main() => scan('', 0);
+    '''),
+      2,
+    );
+  });
+
+  test('string reads follow loop-carried index changes', () {
+    checkBoth(
+      compile('''
+      int main() {
+        final text = 'abc';
+        var sum = 0;
+        for (var i = 0; i < text.length; i++) {
+          if (text.codeUnitAt(i) > 0) sum += text.codeUnitAt(i);
+        }
+        return sum;
+      }
+    '''),
+      294,
+    );
+  });
+
   test(
     'implicit field prefix and compound assignment return stored representation',
     () {
@@ -99,10 +149,7 @@ void main() {
       final names = opNames(program.typedProgram);
       expect(names.where((name) => name == 'ListLength').length, 2);
       // The element 9 escapes to add and must still be boxed. Lengths do not.
-      expect(
-        names.where((name) => name == 'Box').length,
-        1,
-      );
+      expect(names.where((name) => name == 'Box').length, 1);
       expect(names, isNot(contains('From')));
     },
   );

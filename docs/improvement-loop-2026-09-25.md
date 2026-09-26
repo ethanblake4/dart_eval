@@ -24,3 +24,35 @@ test passes and its expected-failure entry is removed. Focused loop, collection,
 closure and statement-graph tests pass; analysis of changed files is clean.
 
 Full default suite: 1,585 passed, 62 skipped; targeted SDK case: one passed.
+
+## Step 2: HTTP header scanning
+
+`benchmark/http_headers.dart` and `.py` generate 32 headers per request, fold
+ASCII names, hash values and extract content lengths. Inputs, integer masks,
+warmups and accumulated checksums match. Guest compilation is outside timing.
+
+The scanner read the same string/index in its loop condition and body.
+control_flow_graph now offers deterministic expression reuse using dominance
+and caller-supplied keys. dart_eval applies it to immutable string reads and
+string unboxing, excluding functions with exceptional CFG edges. It retains
+the first potentially throwing read, excludes mutable reads and allocations,
+and preserves operand positions by emitting Assign nodes for duplicates.
+
+An initial experiment applied source copy propagation too broadly. Existing
+operand-order and loop tests caught it. The final pass resolves copies only
+when building expression keys; the typed backend still handles operand copies.
+
+Pinned CPU affinity 4, alternating runs, 3,000 requests and 15 samples:
+
+| Run | Baseline AOT ms | Candidate AOT ms | CPython ms |
+| --- | ---: | ---: | ---: |
+| 1 | 332.325 | 220.486 | 344.430 |
+| 2 | 240.317 | 222.509 | 348.477 |
+
+The first baseline was noisy. The second comparison is a 7.4% improvement and
+1.57x faster than CPython. All checksums are `48278969359664`. The focused
+bytecode regression also confirms one code-unit read instead of two.
+
+Validation: 1,588 default tests passed, 62 skipped; 99 control_flow_graph tests
+passed. Changed-file analysis and control_flow_graph analysis are clean.
+No runtime or standard-library changes; no opcode or serialization changes.
