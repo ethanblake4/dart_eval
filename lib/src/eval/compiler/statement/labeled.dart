@@ -60,5 +60,9 @@ StatementInfo compileLabeledStatement(
   ctx.builder.float(exit);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
   ctx.restoreState(initialState);
-  return result.copyWith(willAlwaysBreak: false);
+  // A break to this label reaches the following statement even when another
+  // path returns or throws. Breaks to an outer label still leave this block.
+  return ctx.activeGraph.graph.predecessorsOf(exit.id!).isNotEmpty
+      ? StatementInfo()
+      : result;
 }
