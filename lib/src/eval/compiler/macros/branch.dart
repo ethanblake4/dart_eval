@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/expression/condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
@@ -51,6 +52,8 @@ StatementInfo macroBranch(
   MacroStatementClosure? elseBranch,
   AstNode? source,
   bool testNullish = false,
+  bool Function()? thenEdgeUnreachable,
+  bool Function()? elseEdgeUnreachable,
 }) {
   assert((condition == null) != (conditionExpression == null));
   assert(!testNullish || conditionExpression == null);
@@ -61,8 +64,18 @@ StatementInfo macroBranch(
   final elseBlock = BasicBlock<Operation>([], label: ctx.label('if_false'));
   final endBlock = BasicBlock<Operation>([], label: ctx.label('if_end'));
   final BasicBlockBuilder branches;
+  var thenReachable = true;
+  var elseReachable = true;
   if (conditionExpression != null) {
-    branches = compileCondition(conditionExpression, ctx, thenBlock, elseBlock);
+    final condition = compileCondition(
+      conditionExpression,
+      ctx,
+      thenBlock,
+      elseBlock,
+    );
+    branches = condition.$1;
+    thenReachable = condition.$2;
+    elseReachable = condition.$3;
   } else {
     final rawCondition = condition!(ctx);
     if (!testNullish) {
@@ -95,10 +108,11 @@ StatementInfo macroBranch(
   ctx.endScope();
   final thenState = ctx.saveState();
   ctx.uninferTypes();
+  final thenEndsFlow = ctx.flowTerminated;
   if (!thenResult.willAlwaysReturn &&
       !thenResult.willAlwaysThrow &&
       !thenResult.willAlwaysBreak &&
-      !ctx.blockEndsControlFlow) {
+      !thenEndsFlow) {
     ctx.resolveBranchStateDiscontinuity(initialState);
     ctx.pushOp(Jump(endBlock.label!));
     final tail = ctx.flushBlock();
@@ -116,10 +130,12 @@ StatementInfo macroBranch(
   final elseResult =
       elseBranch?.call(ctx, expectedReturnType) ?? StatementInfo();
   ctx.endScope();
+  final elseEndsFlow = ctx.flowTerminated;
+  final elseState = ctx.saveState();
   if (!elseResult.willAlwaysReturn &&
       !elseResult.willAlwaysThrow &&
       !elseResult.willAlwaysBreak &&
-      !ctx.blockEndsControlFlow) {
+      !elseEndsFlow) {
     ctx.resolveBranchStateDiscontinuity(initialState);
     ctx.pushOp(Jump(endBlock.label!));
     final tail = ctx.flushBlock();
@@ -127,15 +143,21 @@ StatementInfo macroBranch(
   } else if (ctx.blockCode.isNotEmpty) {
     ctx.flushBlock();
   }
-  final elseState = ctx.saveState();
-  // Select the join without introducing edges from terminated branches.
+  // Select the join without introducing edges from terminated or statically
+  // unreachable branches.
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [endBlock], branches);
   ctx.builder.float(endBlock);
   final thenContinues =
+      thenReachable &&
+      thenEdgeUnreachable?.call() != true &&
+      !thenEndsFlow &&
       !thenResult.willAlwaysReturn &&
       !thenResult.willAlwaysThrow &&
       !thenResult.willAlwaysBreak;
   final elseContinues =
+      elseReachable &&
+      elseEdgeUnreachable?.call() != true &&
+      !elseEndsFlow &&
       !elseResult.willAlwaysReturn &&
       !elseResult.willAlwaysThrow &&
       !elseResult.willAlwaysBreak;
@@ -162,5 +184,12 @@ StatementInfo macroBranch(
     }
   }
   ctx.endScope();
-  return thenResult | elseResult;
+  final info = thenResult | elseResult;
+  if (!thenContinues && !elseContinues) {
+    // No edge reaches the join — anything after is dead code. It still
+    // analyzes, so keep compiling, but report that control never continues
+    // (willAlwaysThrow doubles as the "unreachable" marker elsewhere).
+    return info.copyWith(willAlwaysThrow: markNeverTerminates(ctx).willAlwaysThrow || info.willAlwaysThrow);
+  }
+  return info;
 }

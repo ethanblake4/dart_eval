@@ -4,6 +4,8 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -35,7 +37,14 @@ Variable compilePostfixExpression(
     if (isNullShorted(operand)) {
       return emitNullGuard(ctx, L, assertNonNull, source: e);
     }
-    return assertNonNull(L);
+    // `x!` on a statically-`Null` operand always throws; on a `Never`
+    // operand it never runs — either way nothing follows.
+    if (L.type.isSpec(CoreTypes.nullType) || L.type.isSpec(CoreTypes.never)) {
+      markNeverTerminates(ctx);
+    }
+    final result = assertNonNull(L);
+    promoteNonNull(ctx, operand);
+    return result;
   }
 
   // `e1?[e2]++`, `a?.b++`: a null target nulls the whole expression; the

@@ -503,8 +503,8 @@ class TypedProgram {
       while (functionIndex + 1 < ordered.length &&
           pc >= ordered[functionIndex + 1].entry) {
         if (!last.terminates) {
-          throw const FormatException(
-            'Typed function can fall into next function',
+          throw FormatException(
+            'Typed function can fall into next function: entry=${ordered[functionIndex].entry}',
           );
         }
         functionIndex++;
@@ -653,7 +653,11 @@ class TypedProgram {
       if (address < entry ||
           address >= functionEnds[entry]! ||
           !boundaries.contains(address)) {
-        throw FormatException('Branch target $address is not an instruction');
+        throw FormatException(
+          'Branch target $address is not an instruction',
+          code,
+          address,
+        );
       }
     }
     void target(int functionId, int address) {

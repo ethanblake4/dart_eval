@@ -112,6 +112,15 @@ class Variable {
   /// rather than writing back through `ctx.locals`.
   LocalBinding? binding;
 
+  /// Assignment generation of the local value this represents — bumped by
+  /// [LocalBinding.write] and [LocalBinding.clearValueFacts]. A fact
+  /// recorded against a local (`bool b = x != null` records `x != null`)
+  /// stores the epoch it saw so a later reassignment of `x` invalidates
+  /// it. It lives on the snapshotted value rather than the binding so
+  /// branch save/restore rewinds it — a write on a discarded edge must
+  /// not poison records on the surviving one.
+  int writeEpoch = 0;
+
   /// Converts this value to [target] rep.
   ///
   /// Emits the needed op into [into] (a fresh SSA leaving this slot
@@ -349,14 +358,24 @@ class Variable {
       type ?? this.type,
       rep: rep ?? this.rep,
       facts: newFacts,
-    )..binding = binding;
+    )
+      ..binding = binding
+      ..writeEpoch = writeEpoch;
   }
 
-  void inferType(CompilerContext ctx, TypeRef type) {
+  /// Records a promotion into the current type-inference save state —
+  /// [member] names a promotable slot on this value (`c._f`) rather than
+  /// this variable's own type. Applied when [inferTypes] restores it.
+  void inferType(CompilerContext ctx, TypeRef type, [String? member]) {
     final b = binding;
     if (b != null && ctx.typeInferenceSaveStates.isNotEmpty) {
       final locals = ctx.typeInferenceSaveStates.last.locals;
-      locals[b.frameIndex][b.name]?.promote(type);
+      final saved = locals[b.frameIndex][b.name];
+      if (member == null) {
+        saved?.promote(type);
+      } else {
+        saved?.promoteMember(member, type);
+      }
     }
   }
 

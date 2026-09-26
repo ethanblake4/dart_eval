@@ -189,6 +189,26 @@ Variable materializeTearOff(
     _ => CoreTypes.function.ref(ctx),
   };
 
+  final boundReceiver =
+      declaration is MethodDeclaration && !declaration.isStatic;
+  // A bound member tear-off reports the covariant-erased signature:
+  // parameters mentioning the class's type parameters (or marked
+  // `covariant` anywhere in the override closure) reify as `Object?`.
+  TypeRef runtimeSignature() {
+    if (!boundReceiver) return functionType;
+    final host = memberHost;
+    return ctx.memberLookup.tearOffRuntimeSignature(
+      host is Declaration
+          ? ctx.visibleTypes[offset.file ?? ctx.library]![declarationName(host)]
+          : null,
+      offset.name ?? '',
+      MemberKind.method,
+      functionType,
+      allParameters,
+      parameterTypes,
+    );
+  }
+
   final captures = <SSA>[];
   if (declaration is MethodDeclaration && !declaration.isStatic) {
     final receiver = implicitReceiver != null
@@ -235,7 +255,7 @@ Variable materializeTearOff(
         for (final parameter in named)
           if (parameter.isRequired) parameter.name!.lexeme,
       ],
-      boundReceiver: declaration is MethodDeclaration && !declaration.isStatic,
+      boundReceiver: boundReceiver,
       positionalUnboxed: [
         for (var i = 0; i < positional.length; i++)
           !callableAbi.parameters[i + parameterOffset].isBoxed,
@@ -246,7 +266,7 @@ Variable materializeTearOff(
               .parameters[i + positional.length + parameterOffset]
               .isBoxed,
       ],
-      runtimeTypeId: ctx.runtimeTypes.idOf(functionType),
+      runtimeTypeId: ctx.runtimeTypes.idOf(runtimeSignature()),
     ),
     functionType,
     facts: ValueFacts(
@@ -408,7 +428,15 @@ Variable instantiateRuntimeCallable(
     }
   } else {
     ctx.typeSystem.unify(type, boundContext!, bindings);
-    if (signature.typeParameters.any((p) => bindings[p] == null)) return value;
+    // Parameters inference can't pin down instantiate to their bounds —
+    // `test<T>([T? x])` under a `void Function()` context is `test<Object?>`.
+    for (final parameter in signature.typeParameters) {
+      bindings.putIfAbsent(
+        parameter,
+        () => (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
+            .lowerTypeParameters(ctx),
+      );
+    }
   }
   // The adapter forwards optional parameters through its own defaults, which
   // only a fresh tear-off can supply — instantiating a stored closure loses

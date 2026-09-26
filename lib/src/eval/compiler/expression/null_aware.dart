@@ -74,6 +74,10 @@ Variable emitNullGuard(
   macroBranch(
     ctx,
     null,
+    // `x?.y` with a statically non-nullable `x` never takes the null path;
+    // that edge still compiles but contributes nothing to the flow join.
+    elseEdgeUnreachable: () =>
+        !target.type.nullable && !target.type.isSpec(CoreTypes.dynamic),
     condition: (ctx) => compileNonNullCondition(ctx, target),
     thenBranch: (ctx, rt) {
       // The receiver is provably non-null here: promote it so member and
@@ -82,11 +86,16 @@ Variable emitNullGuard(
       final V = body(
         target.copyWith(type: target.type.withNullable(false)),
       ).boxIfNeeded(ctx);
+      // `x?.m` can yield null only when `x` itself can be null — on a
+      // statically non-nullable receiver the result is `m`'s own type, which
+      // also lets a chained `?.` see its null edge is statically dead.
+      final canBeNull =
+          target.type.nullable || target.type.isSpec(CoreTypes.dynamic);
       out = out.copyWith(
-        type: V.type.withNullable(true),
+        type: canBeNull ? V.type.withNullable(true) : V.type,
         possibleClasses: {
           ...V.concreteTypes,
-          CoreTypes.nullType.ref(ctx),
+          if (canBeNull) CoreTypes.nullType.ref(ctx),
         }.toList(),
       );
       ctx.pushOp(Assign(out.ssa, V.ssa));

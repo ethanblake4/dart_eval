@@ -17,6 +17,44 @@ import '../invocation/resolver.dart';
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
+/// The names a pattern binds — [declared] selects declared variables (fresh
+/// bindings, e.g. `var (a, b) = ...`) vs assigned variables (writes to
+/// existing locals, e.g. `(a, b) = ...`).
+Iterable<String> patternBoundNames(AstNode pattern, {required bool declared})
+    sync* {
+  switch (pattern) {
+    case DeclaredVariablePattern pat:
+      if (declared && pat.name.lexeme != '_') yield pat.name.lexeme;
+    case AssignedVariablePattern pat:
+      if (!declared) yield pat.name.lexeme;
+    case RecordPattern pat:
+      yield* pat.fields.expand(
+        (f) => patternBoundNames(f.pattern, declared: declared),
+      );
+    case ListPattern pat:
+      yield* pat.elements.expand((e) => patternBoundNames(e, declared: declared));
+    case ParenthesizedPattern pat:
+      yield* patternBoundNames(pat.pattern, declared: declared);
+    case LogicalOrPattern pat:
+      yield* patternBoundNames(pat.leftOperand, declared: declared);
+      yield* patternBoundNames(pat.rightOperand, declared: declared);
+    case LogicalAndPattern pat:
+      yield* patternBoundNames(pat.leftOperand, declared: declared);
+      yield* patternBoundNames(pat.rightOperand, declared: declared);
+    case ObjectPattern pat:
+      yield* pat.fields.expand(
+        (f) => patternBoundNames(f.pattern, declared: declared),
+      );
+    case CastPattern pat:
+      yield* patternBoundNames(pat.pattern, declared: declared);
+    case NullCheckPattern pat:
+      yield* patternBoundNames(pat.pattern, declared: declared);
+    case NullAssertPattern pat:
+      yield* patternBoundNames(pat.pattern, declared: declared);
+    default:
+  }
+}
+
 TypeRef patternTypeBound(
   CompilerContext ctx,
   ListPatternElement pattern, {

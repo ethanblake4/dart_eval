@@ -202,14 +202,14 @@ extension TypedRuntimeInterop on Runtime {
   bool isSupportedTypedFunctionAdapterDescriptor(int type) {
     if (!isTypedFunctionTypeDescriptor(type)) return false;
     final descriptor = _typeDescriptors[type];
-    if (descriptor[6] != 0) return false;
+    if (descriptor[6] != 0 || descriptor[7] != 0) return false;
 
     bool containsCallableTypeParameter(int current, Set<int> visiting) {
       if (!visiting.add(current)) return false;
       final value = _typeDescriptors[current];
       if (value.length > 2 &&
           value[2] == RuntimeTypeDescriptorTag.typeParameter &&
-          value[3] == RuntimeTypeDescriptorTag.callableTypeParameterOwner) {
+          value[3] < 0) {
         return true;
       }
       for (final child in _descriptorChildren(value)) {
@@ -233,8 +233,9 @@ extension TypedRuntimeInterop on Runtime {
         Invocation.method(#call, arguments),
       );
     }
+    final offset = 9 + descriptor[7];
     for (var i = 0; i < arguments.length; i++) {
-      if (!isTypedValueType(arguments[i], descriptor[7 + i])) {
+      if (!isTypedValueType(arguments[i], descriptor[offset + i])) {
         throw TypeError();
       }
     }
@@ -373,7 +374,14 @@ extension TypedRuntimeInterop on Runtime {
     final existing = _findRuntimeTypeDescriptor(descriptor);
     final typeId = existing >= 0
         ? existing
-        : _internResolvedType(descriptor, template, null, const [], {});
+        : _internResolvedType(
+            descriptor,
+            template,
+            null,
+            const [],
+            <(int, Set<int>), int>{},
+            const {},
+          );
     bucket.add((List.of(fieldIds), typeId));
     fieldIds.length = 0;
     return typeId;
@@ -509,7 +517,7 @@ extension TypedRuntimeInterop on Runtime {
                     type,
                     actualOwnerType,
                     callableTypeArguments,
-                    <int, int>{},
+                    <(int, Set<int>), int>{},
                   ),
         ];
 
@@ -534,7 +542,7 @@ extension TypedRuntimeInterop on Runtime {
           type,
           actualOwnerType,
           const [],
-          <int, int>{},
+          <(int, Set<int>), int>{},
         ),
       );
     }
@@ -542,7 +550,7 @@ extension TypedRuntimeInterop on Runtime {
       type,
       actualOwnerType,
       callableTypeArguments,
-      <int, int>{},
+      <(int, Set<int>), int>{},
     );
   }
 
@@ -564,9 +572,10 @@ extension TypedRuntimeInterop on Runtime {
       yield* descriptor.skip(2);
     } else if (descriptor[2] == RuntimeTypeDescriptorTag.function) {
       yield descriptor[3];
-      yield* descriptor.skip(7).take(descriptor[5]);
+      yield* descriptor.skip(9).take(descriptor[7]);
+      yield* descriptor.skip(9 + descriptor[7]).take(descriptor[5]);
       for (
-        var index = 7 + descriptor[5];
+        var index = 9 + descriptor[7] + descriptor[5];
         index < descriptor.length;
         index += 3
       ) {
@@ -588,23 +597,34 @@ extension TypedRuntimeInterop on Runtime {
     int type,
     int? actualOwnerType,
     List<int> callableTypeArguments,
-    Map<int, int> resolved,
-  ) {
-    final cached = resolved[type];
+    Map<(int, Set<int>), int> resolved, [
+    Set<int> signatureBoundOwners = const {},
+  ]) {
+    final cached = resolved[(type, signatureBoundOwners)];
     if (cached != null) return cached;
-    resolved[type] = type;
+    resolved[(type, signatureBoundOwners)] = type;
     final descriptor = _typeDescriptors[type];
-    final parameter = _resolveTypeParameter(
-      type,
-      actualOwnerType,
-      callableTypeArguments,
-    );
+    if (signatureBoundOwners.isNotEmpty &&
+        descriptor.length == 6 &&
+        descriptor[2] == RuntimeTypeDescriptorTag.typeParameter &&
+        signatureBoundOwners.contains(descriptor[3])) {
+      // A callable-owned reference in a generic signature's components is
+      // bound by an enclosing signature — keep it abstract rather than
+      // substituting an environment argument or bound.
+      return type;
+    }
+    final parameter =
+        descriptor.length == 6 &&
+            descriptor[2] == RuntimeTypeDescriptorTag.typeParameter
+        ? _resolveTypeParameter(type, actualOwnerType, callableTypeArguments)
+        : null;
     if (parameter != null && parameter != type) {
       var result = _resolveEnvironmentType(
         parameter,
         actualOwnerType,
         callableTypeArguments,
         resolved,
+        signatureBoundOwners,
       );
       if (descriptor[1] == 1 && _typeDescriptors[result][1] == 0) {
         result = _internResolvedType(
@@ -613,9 +633,10 @@ extension TypedRuntimeInterop on Runtime {
           actualOwnerType,
           callableTypeArguments,
           resolved,
+          signatureBoundOwners,
         );
       }
-      return resolved[type] = result;
+      return resolved[(type, signatureBoundOwners)] = result;
     }
     if (descriptor.length < 3) return type;
 
@@ -628,6 +649,7 @@ extension TypedRuntimeInterop on Runtime {
             actualOwnerType,
             callableTypeArguments,
             resolved,
+            signatureBoundOwners,
           ),
       ]);
     } else {
@@ -641,6 +663,7 @@ extension TypedRuntimeInterop on Runtime {
                 actualOwnerType,
                 callableTypeArguments,
                 resolved,
+                signatureBoundOwners,
               ),
             );
           }
@@ -656,10 +679,20 @@ extension TypedRuntimeInterop on Runtime {
                 actualOwnerType,
                 callableTypeArguments,
                 resolved,
+                signatureBoundOwners,
               ),
             );
           }
         case RuntimeTypeDescriptorTag.function:
+          // Only parameters owned by an enclosing signature's binder stay
+          // abstract inside it — a ref owned by a different callable (the
+          // enclosing function's `T` inside `F Function<F>(T)`) still
+          // resolves against the environment.
+          final boundOwners = descriptor[7] > 0
+              ? (signatureBoundOwners.isEmpty
+                    ? {descriptor[8]}
+                    : {...signatureBoundOwners, descriptor[8]})
+              : signatureBoundOwners;
           translated.addAll([
             descriptor[2],
             _resolveEnvironmentType(
@@ -667,23 +700,42 @@ extension TypedRuntimeInterop on Runtime {
               actualOwnerType,
               callableTypeArguments,
               resolved,
+              boundOwners,
             ),
             descriptor[4],
             descriptor[5],
             descriptor[6],
+            descriptor[7],
+            descriptor[8],
           ]);
-          for (final parameter in descriptor.skip(7).take(descriptor[5])) {
+          for (final bound in descriptor.skip(9).take(descriptor[7])) {
+            translated.add(
+              _resolveEnvironmentType(
+                bound,
+                actualOwnerType,
+                callableTypeArguments,
+                resolved,
+                boundOwners,
+              ),
+            );
+          }
+          for (
+            final parameter in descriptor
+                .skip(9 + descriptor[7])
+                .take(descriptor[5])
+          ) {
             translated.add(
               _resolveEnvironmentType(
                 parameter,
                 actualOwnerType,
                 callableTypeArguments,
                 resolved,
+                boundOwners,
               ),
             );
           }
           for (
-            var index = 7 + descriptor[5];
+            var index = 9 + descriptor[7] + descriptor[5];
             index < descriptor.length;
             index += 3
           ) {
@@ -694,6 +746,7 @@ extension TypedRuntimeInterop on Runtime {
                 actualOwnerType,
                 callableTypeArguments,
                 resolved,
+                boundOwners,
               ),
             );
           }
@@ -706,16 +759,18 @@ extension TypedRuntimeInterop on Runtime {
             actualOwnerType,
             callableTypeArguments,
             resolved,
+            signatureBoundOwners,
           );
       }
     }
     if (_sameTypeDescriptor(descriptor, translated)) return type;
-    return resolved[type] = _internResolvedType(
+    return resolved[(type, signatureBoundOwners)] = _internResolvedType(
       translated,
       type,
       actualOwnerType,
       callableTypeArguments,
       resolved,
+      signatureBoundOwners,
     );
   }
 
@@ -724,7 +779,8 @@ extension TypedRuntimeInterop on Runtime {
     int source,
     int? actualOwnerType,
     List<int> callableTypeArguments,
-    Map<int, int> resolved,
+    Map<(int, Set<int>), int> resolved,
+    Set<int> signatureBoundOwners,
   ) {
     final existing = _findRuntimeTypeDescriptor(descriptor);
     if (existing >= 0) return existing;
@@ -733,7 +789,7 @@ extension TypedRuntimeInterop on Runtime {
     _typeIdentities.add(null);
     _typeTypes.add({id});
     _typeTableVersion++;
-    resolved[source] = id;
+    resolved[(source, signatureBoundOwners)] = id;
     if (source < _typeTypes.length) {
       for (final supertype in _typeTypes[source]) {
         _typeTypes[id].add(
@@ -797,8 +853,9 @@ extension TypedRuntimeInterop on Runtime {
     }
     final ownerNominalType = descriptor[3];
     final parameterIndex = descriptor[4];
-    if (ownerNominalType ==
-        RuntimeTypeDescriptorTag.callableTypeParameterOwner) {
+    if (ownerNominalType < 0) {
+      // Any callable owner (function, method, signature binder) resolves
+      // positionally against the active callable's type arguments.
       return parameterIndex < callableTypeArguments.length
           ? callableTypeArguments[parameterIndex]
           : descriptor[5];
@@ -843,6 +900,7 @@ extension TypedRuntimeInterop on Runtime {
     int? actualOwnerType,
     List<int> callableTypeArguments, {
     bool nullableExpected = false,
+    Map<int, int>? signatureParameterRenames,
   }) {
     if (actual < 0 ||
         actual >= _typeDescriptors.length ||
@@ -851,6 +909,41 @@ extension TypedRuntimeInterop on Runtime {
       return false;
     }
     if (actual == expected) return true;
+    if (signatureParameterRenames != null) {
+      final expectedRow = _typeDescriptors[expected];
+      if (expectedRow.length == 6 &&
+          expectedRow[2] == RuntimeTypeDescriptorTag.typeParameter &&
+          expectedRow[3] < 0 &&
+          signatureParameterRenames.containsKey(expectedRow[3])) {
+        // Generic signatures compare by renaming their type parameters, so
+        // a bound expected-side parameter is an abstract variable: it
+        // accepts only the corresponding renamed variable, another variable
+        // bounded by it, or a bottom type — never the variable's bound.
+        final renamed = signatureParameterRenames[expectedRow[3]]!;
+        final actualRow = _typeDescriptors[actual];
+        if (actualRow.length == 6 &&
+            actualRow[2] == RuntimeTypeDescriptorTag.typeParameter &&
+            actualRow[3] < 0) {
+          if (actualRow[3] == renamed &&
+              actualRow[4] == expectedRow[4]) {
+            return actualRow[1] == 0 ||
+                expectedRow[1] == 1 ||
+                nullableExpected;
+          }
+          return _isTypedDescriptorSubtypeInEnvironment(
+            actualRow[5],
+            expected,
+            actualOwnerType,
+            callableTypeArguments,
+            nullableExpected: nullableExpected,
+            signatureParameterRenames: signatureParameterRenames,
+          );
+        }
+        if (actualRow[0] == _typedTypeId(CoreTypes.never)) return true;
+        return actualRow[0] == _nullTypeId &&
+            (expectedRow[1] == 1 || nullableExpected);
+      }
+    }
     final resolvedExpected = _resolveTypeParameter(
       expected,
       actualOwnerType,
@@ -864,6 +957,7 @@ extension TypedRuntimeInterop on Runtime {
         actualOwnerType,
         callableTypeArguments,
         nullableExpected: _typeDescriptors[expected][1] == 1,
+        signatureParameterRenames: signatureParameterRenames,
       );
     }
     final resolvedActual = _resolveTypeParameter(
@@ -878,6 +972,7 @@ extension TypedRuntimeInterop on Runtime {
         actualOwnerType,
         callableTypeArguments,
         nullableExpected: nullableExpected,
+        signatureParameterRenames: signatureParameterRenames,
       );
     }
     final source = _typeDescriptors[actual];
@@ -907,6 +1002,8 @@ extension TypedRuntimeInterop on Runtime {
                   expected,
                   actual,
                   callableTypeArguments,
+                  signatureParameterRenames:
+                      signatureParameterRenames,
                 )) {
               return true;
             }
@@ -921,6 +1018,7 @@ extension TypedRuntimeInterop on Runtime {
             target,
             actualOwnerType,
             callableTypeArguments,
+            signatureParameterRenames,
           ),
         RuntimeTypeDescriptorTag.function =>
           _isTypedFunctionSubtypeInClassEnvironment(
@@ -928,6 +1026,7 @@ extension TypedRuntimeInterop on Runtime {
             target,
             actualOwnerType,
             callableTypeArguments,
+            signatureParameterRenames,
           ),
         _ => false,
       };
@@ -941,6 +1040,8 @@ extension TypedRuntimeInterop on Runtime {
               expected,
               actualOwnerType,
               callableTypeArguments,
+              signatureParameterRenames:
+                  signatureParameterRenames,
             )) {
           return true;
         }
@@ -955,6 +1056,7 @@ extension TypedRuntimeInterop on Runtime {
         target[index],
         actualOwnerType,
         callableTypeArguments,
+        signatureParameterRenames: signatureParameterRenames,
       )) {
         return false;
       }
@@ -967,6 +1069,7 @@ extension TypedRuntimeInterop on Runtime {
     List<int> target,
     int? actualOwnerType, [
     List<int> callableTypeArguments = const [],
+    Map<int, int>? signatureParameterRenames,
   ]) {
     final sourcePositional = source[3], sourceNamed = source[4];
     final targetPositional = target[3], targetNamed = target[4];
@@ -979,6 +1082,7 @@ extension TypedRuntimeInterop on Runtime {
         target[5 + i],
         actualOwnerType,
         callableTypeArguments,
+        signatureParameterRenames: signatureParameterRenames,
       )) {
         return false;
       }
@@ -994,6 +1098,7 @@ extension TypedRuntimeInterop on Runtime {
             target[targetOffset + i * 2 + 1],
             actualOwnerType,
             callableTypeArguments,
+            signatureParameterRenames: signatureParameterRenames,
           )) {
         return false;
       }
@@ -1006,6 +1111,7 @@ extension TypedRuntimeInterop on Runtime {
     List<int> target,
     int? actualOwnerType, [
     List<int> callableTypeArguments = const [],
+    Map<int, int>? signatureParameterRenames,
   ]) {
     final sourceRequired = source[4], sourcePositional = source[5];
     final targetRequired = target[4], targetPositional = target[5];
@@ -1013,42 +1119,89 @@ extension TypedRuntimeInterop on Runtime {
         sourcePositional < targetPositional) {
       return false;
     }
-    final targetReturnId =
-        _resolveTypeParameter(
-          target[3],
-          actualOwnerType,
-          callableTypeArguments,
-        ) ??
-        target[3];
+    // Generic signatures subtype only when arities agree and each bound is
+    // mutually compatible (the source must work wherever the target's own
+    // parameter could be used). The parameters compare as renamed variables:
+    // the target's binder (descriptor[8]) is mapped onto the source's, and
+    // bound expected-side references accept only their renamed counterpart.
+    final sourceParameters = source[7], targetParameters = target[7];
+    if (sourceParameters != targetParameters) return false;
+    // Bound-parameter references compare across the pair by owner identity:
+    // the map is bidirectional so a parameter appearing on either side of a
+    // nested contravariant check still resolves to its counterpart.
+    final renames = targetParameters > 0
+        ? {
+            ...?signatureParameterRenames,
+            target[8]: source[8],
+            source[8]: target[8],
+          }
+        : signatureParameterRenames;
+    int resolveSignatureReturn(int type) {
+      final descriptor = _typeDescriptors[type];
+      if (renames != null &&
+          descriptor.length == 6 &&
+          descriptor[2] == RuntimeTypeDescriptorTag.typeParameter &&
+          renames.containsKey(descriptor[3])) {
+        return type;
+      }
+      return _resolveTypeParameter(
+            type,
+            actualOwnerType,
+            callableTypeArguments,
+          ) ??
+          type;
+    }
+    for (var i = 0; i < targetParameters; i++) {
+      final sourceBound = source[9 + i], targetBound = target[9 + i];
+      if (!_isTypedDescriptorSubtypeInEnvironment(
+            sourceBound,
+            targetBound,
+            actualOwnerType,
+            callableTypeArguments,
+            signatureParameterRenames: renames,
+          ) ||
+          !_isTypedDescriptorSubtypeInEnvironment(
+            targetBound,
+            sourceBound,
+            actualOwnerType,
+            callableTypeArguments,
+            signatureParameterRenames: renames,
+          )) {
+        return false;
+      }
+    }
+    final sourceOffset = 9 + sourceParameters;
+    final targetOffset = 9 + targetParameters;
+    final targetReturnId = resolveSignatureReturn(target[3]);
     final targetReturn = _typeDescriptors[targetReturnId];
-    // In component positions dynamic and void are permissive — a `dynamic`
-    // return satisfies any target return type, and a `void` target accepts
-    // any source return.
-    final sourceReturnId =
-        _resolveTypeParameter(
-          source[3],
-          actualOwnerType,
-          callableTypeArguments,
-        ) ??
-        source[3];
+    // In component positions a `void` target accepts any return, and a
+    // `dynamic` return satisfies any target return type. A `void` source
+    // return is NOT permissive: `void Function() <: int Function()` fails.
+    final sourceReturnId = resolveSignatureReturn(source[3]);
     final sourceReturn = _typeDescriptors[sourceReturnId];
+    // A type-parameter descriptor carries `dynamic` as its nominal type, but
+    // a bound signature parameter is not permissive like dynamic.
+    final sourceIsParameter =
+        sourceReturn.length == 6 &&
+        sourceReturn[2] == RuntimeTypeDescriptorTag.typeParameter;
     if (targetReturn[0] != _voidTypeId &&
-        sourceReturn[0] != _dynamicTypeId &&
-        sourceReturn[0] != _voidTypeId &&
+        (sourceReturn[0] != _dynamicTypeId || sourceIsParameter) &&
         !_isTypedDescriptorSubtypeInEnvironment(
           source[3],
           target[3],
           actualOwnerType,
           callableTypeArguments,
+          signatureParameterRenames: renames,
         )) {
       return false;
     }
     for (var i = 0; i < targetPositional; i++) {
       if (!_isTypedFunctionParameterSubtypeInClassEnvironment(
-        target[7 + i],
-        source[7 + i],
+        target[targetOffset + i],
+        source[sourceOffset + i],
         actualOwnerType,
         callableTypeArguments,
+        renames,
       )) {
         return false;
       }
@@ -1056,7 +1209,7 @@ extension TypedRuntimeInterop on Runtime {
 
     Map<Object?, (bool, int)> namedParameters(List<int> descriptor) {
       final positional = descriptor[5], namedCount = descriptor[6];
-      final offset = 7 + positional;
+      final offset = 9 + descriptor[7] + positional;
       return {
         for (var i = 0; i < namedCount; i++)
           typedConstant(descriptor[offset + i * 3]): (
@@ -1077,6 +1230,7 @@ extension TypedRuntimeInterop on Runtime {
             sourceParameter.$2,
             actualOwnerType,
             callableTypeArguments,
+            renames,
           )) {
         return false;
       }
@@ -1094,7 +1248,23 @@ extension TypedRuntimeInterop on Runtime {
     int target,
     int? actualOwnerType, [
     List<int> callableTypeArguments = const [],
+    Map<int, int>? signatureParameterRenames,
   ]) {
+    bool isSignatureBoundParameter(int type) =>
+        signatureParameterRenames != null &&
+        _typeDescriptors[type].length == 6 &&
+        _typeDescriptors[type][2] == RuntimeTypeDescriptorTag.typeParameter &&
+        _typeDescriptors[type][3] < 0;
+    if (isSignatureBoundParameter(source) ||
+        isSignatureBoundParameter(target)) {
+      return _isTypedDescriptorSubtypeInEnvironment(
+        source,
+        target,
+        actualOwnerType,
+        callableTypeArguments,
+        signatureParameterRenames: signatureParameterRenames,
+      );
+    }
     final resolvedSource =
         _resolveTypeParameter(source, actualOwnerType, callableTypeArguments) ??
         source;
@@ -1113,6 +1283,7 @@ extension TypedRuntimeInterop on Runtime {
       resolvedTarget,
       actualOwnerType,
       callableTypeArguments,
+      signatureParameterRenames: signatureParameterRenames,
     );
   }
 

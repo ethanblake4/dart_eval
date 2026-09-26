@@ -23,7 +23,7 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
       Assign(ctx.svar('this'), anonymousThis.ssa),
       anonymousThis.type,
       rep: anonymousThis.rep,
-    );
+    )..binding = anonymousThis.binding;
   }
   if (anonymousReceiver != null) {
     return Variable.ssa(
@@ -31,7 +31,7 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
       Assign(ctx.svar('this'), anonymousReceiver.ssa),
       anonymousReceiver.type,
       rep: anonymousReceiver.rep,
-    );
+    )..binding = anonymousReceiver.binding;
   }
   // Extensions may use `this` for the receiver without a class context.
   if (ctx.lookupLocal('#this') == null) {
@@ -44,7 +44,10 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
   final operation = ctx.currentExtension == null
       ? LoadThis(ctx.svar('this'), receiver.ssa)
       : Assign(ctx.svar('this'), receiver.ssa);
-  return Variable.ssa(ctx, operation, receiver.type, rep: receiver.rep);
+  return Variable.ssa(ctx, operation, receiver.type, rep: receiver.rep)
+    // Keep the binding so this-member promotions (`this._f`) resolve their
+    // recorded facts through `#this`.
+    ..binding = receiver.binding;
 }
 
 Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
@@ -69,11 +72,10 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
   }
 
   final $this = ctx.lookupLocal('#this')!;
-  final v = Variable.ssa(
+  return Variable.ssa(
     ctx,
     LoadSuper(ctx.svar('super'), $this.ssa),
     type,
     facts: ValueFacts(possibleClasses: [type]),
   );
-  return v;
 }

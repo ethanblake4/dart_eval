@@ -119,6 +119,13 @@ Variable compileSetOrMapLiteral(
           ? (firstSpreadElement, firstSpread)
           : null,
     );
+    // A Never-typed element (a throw, or a call declared Never) ends the
+    // literal's evaluation — the whole expression never produces a value.
+    if ([...keys, ...values].any(
+      (t) => t.isSpec(CoreTypes.never) && !t.nullable,
+    )) {
+      return Variable.never(ctx);
+    }
     keyTypes.addAll(keys);
     valueTypes.addAll(values);
   }
@@ -240,6 +247,10 @@ CollectionElement _leafOf(CollectionElement element) => switch (element) {
     }
     keys.add(key.type);
     values.add(value.type);
+    if (key.type.isSpec(CoreTypes.never) ||
+        value.type.isSpec(CoreTypes.never)) {
+      return (keys, values);
+    }
     ctx.pushOp(MapSet(target, key.ssa, value.ssa));
   } else if (!isMap && element is Expression) {
     var value = compileExpression(element, ctx, explicitKey);
@@ -253,6 +264,9 @@ CollectionElement _leafOf(CollectionElement element) => switch (element) {
             source: element,
           );
     keys.add(value.type);
+    if (value.type.isSpec(CoreTypes.never)) {
+      return (keys, values);
+    }
     ctx.pushOp(SetAdd(target, value.ssa));
   } else {
     throw CompileError(

@@ -1800,23 +1800,25 @@ TypeRef instantiateConstructorType(
   CompilerContext ctx,
   CallShape shape,
 ) {
-  final positional = List<Variable?>.filled(shape.positional.length, null);
-  final named = <String, Variable>{};
-  for (final index in shape.sourceOrder) {
-    if (index >= 0) {
-      positional[index] = compileExpression(
-        (shape.positional[index] as ExpressionArg).expression,
-        ctx,
-      );
-    } else {
-      final (name, source) = shape.named[-1 - index];
-      named[name] = compileExpression(
-        (source as ExpressionArg).expression,
-        ctx,
-      );
+  return ctx.withDeferredWriteCaptures(() {
+    final positional = List<Variable?>.filled(shape.positional.length, null);
+    final named = <String, Variable>{};
+    for (final index in shape.sourceOrder) {
+      if (index >= 0) {
+        positional[index] = compileExpression(
+          (shape.positional[index] as ExpressionArg).expression,
+          ctx,
+        );
+      } else {
+        final (name, source) = shape.named[-1 - index];
+        named[name] = compileExpression(
+          (source as ExpressionArg).expression,
+          ctx,
+        );
+      }
     }
-  }
-  return (positional.cast<Variable>(), named);
+    return (positional.cast<Variable>(), named);
+  });
 }
 
 /// Compiles `E(receiver)` — explicit extension application. The resolver

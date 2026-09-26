@@ -155,13 +155,25 @@ List<FormalParameter> resolveFPLDefaults(
       null,
     );
   } else if (param is FieldFormalParameter) {
+    if (parameterHost == null) {
+      throw CompileError(
+        'Field formal parameters can only be used in a constructor',
+        param,
+      );
+    }
     return (
-      resolveFieldFormalType(ctx, decLibrary, param, parameterHost!),
+      resolveFieldFormalType(ctx, decLibrary, param, parameterHost),
       null,
     );
   } else if (param is SuperFormalParameter) {
+    if (parameterHost == null) {
+      throw CompileError(
+        'Super formal parameters can only be used in a constructor',
+        param,
+      );
+    }
     return (
-      resolveSuperFormalType(ctx, decLibrary, param, parameterHost!),
+      resolveSuperFormalType(ctx, decLibrary, param, parameterHost),
       null,
     );
   } else {

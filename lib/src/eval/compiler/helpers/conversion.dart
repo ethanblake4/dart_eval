@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/ir/numeric.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import '../values/abi.dart';
 import '../invocation/accessors.dart';
+import 'tearoff.dart';
 
 /// Converts a field/variable initializer value for a slot of type [target].
 /// Rejects statically-invalid initializers and emits the `int → double`
@@ -29,7 +30,8 @@ Variable convertInitializer(
   final conversion = value.type.assignmentConversionTo(ctx, target);
   switch (conversion) {
     case AssignmentConversion.invalid:
-      return _implicitCallTearOff(ctx, value, target, source) ??
+      return _instantiateGenericFunction(ctx, value, target) ??
+          _implicitCallTearOff(ctx, value, target, source) ??
           (throw CompileError(
             description ?? 'Cannot assign ${value.type} to $target',
             source,
@@ -55,6 +57,36 @@ Variable convertInitializer(
               source: source,
             );
   }
+}
+
+/// Instantiation-to-context: a generic function value flowing into a
+/// non-generic function slot unifies its parameters against the target
+/// signature — `f<T>` assigned to `void Function(num)` becomes `f<num>`.
+Variable? _instantiateGenericFunction(
+  CompilerContext ctx,
+  Variable value,
+  TypeRef target,
+) {
+  final type = value.type;
+  if (type is! FunctionTypeRef ||
+      type.nullable ||
+      type.signature.typeParameters.isEmpty) {
+    return null;
+  }
+  final effectiveTarget = target.isTypeParameter
+      ? ((target as TypeParameterTypeRef).parameter.bound ??
+            CoreTypes.dynamic.ref(ctx))
+      : target;
+  if (effectiveTarget is! FunctionTypeRef ||
+      effectiveTarget.signature.typeParameters.isNotEmpty) {
+    return null;
+  }
+  final instantiated = instantiateRuntimeCallable(
+    ctx,
+    value,
+    boundContext: effectiveTarget,
+  );
+  return identical(instantiated, value) ? null : instantiated;
 }
 
 /// The implicit `.call` tear-off: assigning a value of a class that declares
@@ -108,7 +140,8 @@ Variable convertForAssignment(
   // int expressions — never to an int-typed variable (which is a CE in Dart).
   if (conversion == AssignmentConversion.invalid ||
       (conversion == AssignmentConversion.intToDouble && !value.isConstInt)) {
-    return _implicitCallTearOff(ctx, value, target, source) ??
+    return _instantiateGenericFunction(ctx, value, target) ??
+        _implicitCallTearOff(ctx, value, target, source) ??
         (throw CompileError(
           description ?? 'Cannot assign ${value.type} to $target',
           source,

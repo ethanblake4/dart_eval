@@ -26,6 +26,25 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
     return BuiltinValue(boolval: !not).push(ctx);
   }
 
+  /// `x is Never` can never hold — no runtime value has type Never — so
+  /// both directions fold statically. That makes a guarded branch
+  /// unreachable.
+  if (slot.isSpec(CoreTypes.never)) {
+    return BuiltinValue(boolval: not).push(ctx);
+  }
+
+  /// Leaf-`Null` disjointness the analyzer folds statically: `x is Null`
+  /// with a provably non-nullable `x`, and `x is T` where `x` is statically
+  /// `Null` but `Null` isn't a `T`, are both statically `false` — flow
+  /// analysis then treats that edge of a branch as unreachable.
+  final definitelyFalse = slot.isSpec(CoreTypes.nullType)
+      ? !V.type.nullable && !V.type.isSpec(CoreTypes.dynamic)
+      : V.type.isSpec(CoreTypes.nullType) &&
+          !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, slot);
+  if (definitelyFalse) {
+    return BuiltinValue(boolval: not).push(ctx);
+  }
+
   V = V.boxIfNeeded(ctx);
 
   /// Otherwise do a runtime test

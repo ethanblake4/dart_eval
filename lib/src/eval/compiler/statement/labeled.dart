@@ -50,7 +50,7 @@ StatementInfo compileLabeledStatement(
   if (!result.willAlwaysReturn &&
       !result.willAlwaysThrow &&
       !result.willAlwaysBreak &&
-      !ctx.blockEndsControlFlow) {
+      !ctx.flowTerminated) {
     ctx.resolveBranchStateDiscontinuity(initialState);
     ctx.pushOp(Jump(exit.label!));
     final tail = ctx.flushBlock();

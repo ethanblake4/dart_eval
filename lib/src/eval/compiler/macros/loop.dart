@@ -4,6 +4,7 @@ import '../helpers/assigned_locals.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/expression/condition.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/macro.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
@@ -47,12 +48,18 @@ StatementInfo macroLoop(
 
   if (!alwaysLoopOnce) {
     if (conditionExpression != null) {
+      // Record the condition's promotions into an inference save state,
+      // then restore them into the live state for the loop body — the
+      // back edge merges any narrower types the body computed.
+      ctx.enterTypeInferenceContext();
       ctx.builder = compileCondition(
         conditionExpression,
         ctx,
         bodyBlock,
         exit,
-      ).block(0);
+      ).$1
+          .block(0);
+      ctx.inferTypes();
     } else if (condition != null) {
       final value = convertForAssignment(
         ctx,
@@ -88,7 +95,7 @@ StatementInfo macroLoop(
   if (!result.willAlwaysReturn &&
       !result.willAlwaysThrow &&
       !result.willAlwaysBreak &&
-      !ctx.blockEndsControlFlow) {
+      !ctx.flowTerminated) {
     ctx.resolveBranchStateDiscontinuity(initialState);
     bodyExitState = ctx.saveState();
     ctx.pushOp(Jump(continueTarget.label!));
@@ -97,12 +104,20 @@ StatementInfo macroLoop(
   } else if (ctx.blockCode.isNotEmpty) {
     ctx.flushBlock();
   }
+  // The body's promoted state joined the back edge already; the exit edge
+  // computes its own from the pre-condition state.
+  if (conditionExpression != null && !alwaysLoopOnce) ctx.uninferTypes();
 
   // A continue edge can reach the update/condition even if the body never
   // falls through. Emit these blocks independently of the body's exit flags.
   if (updateBlock?.id != null) {
     ctx.restoreState(initialState);
     ctx.mergeBranchState([?bodyExitState, ...edgeStates]);
+    // The update runs only on the condition's true edge —
+    // `for (; x is int; f(x))` sees `x` promoted.
+    if (conditionExpression != null) {
+      applyConditionPromotions(ctx, conditionExpression, true);
+    }
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [updateBlock!], parent);
     update!.call(ctx);
     ctx.resolveBranchStateDiscontinuity(initialState);
@@ -110,12 +125,17 @@ StatementInfo macroLoop(
     final tail = ctx.flushBlock();
     ctx.builder.link(tail, header);
   }
+  ContextSaveState? conditionExitState;
   if (alwaysLoopOnce && header.id != null) {
     ctx.restoreState(initialState);
     ctx.mergeBranchState([?bodyExitState, ...edgeStates]);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [header], parent);
     if (conditionExpression != null) {
+      ctx.enterTypeInferenceContext();
       compileCondition(conditionExpression, ctx, bodyBlock, exit);
+      ctx.typeInferenceSaveStates.removeLast();
+      applyConditionPromotions(ctx, conditionExpression, false);
+      conditionExitState = ctx.saveState();
     } else if (condition != null) {
       final value = convertForAssignment(
         ctx,
@@ -137,7 +157,17 @@ StatementInfo macroLoop(
   ctx.builder.float(exit);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
   ctx.restoreState(initialState);
-  ctx.mergeBranchState([?bodyExitState, ...edgeStates]);
+  // `while (cond) {...}` reaches the exit with cond false, so its
+  // false-edge promotions apply to post-loop code. (For `do {} while`,
+  // they were already applied onto the merged back-edge state above.)
+  if (conditionExpression != null && !alwaysLoopOnce) {
+    applyConditionPromotions(ctx, conditionExpression, false);
+  }
+  ctx.mergeBranchState([
+    ?conditionExitState,
+    ?bodyExitState,
+    ...edgeStates,
+  ]);
   after?.call(ctx);
   ctx.endScope();
   return alwaysLoopOnce

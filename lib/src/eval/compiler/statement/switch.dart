@@ -82,7 +82,13 @@ StatementInfo compileSwitchStatement(
   final fallthroughState = ctx.saveState();
   ctx.restoreState(initialState);
   ctx.mergeBranchState([fallthroughState, ...breakStates]);
-  return result.copyWith(willAlwaysBreak: false);
+  // A `break` (explicit or implicit) exits through the switch's own end
+  // block, so the statement completes whenever a break edge exists — even
+  // when every case body terminated early and the case join was dead.
+  return result.copyWith(
+    willAlwaysBreak: false,
+    willAlwaysThrow: result.willAlwaysThrow && breakStates.isEmpty,
+  );
 }
 
 StatementInfo _compileSwitchCases(
@@ -262,7 +268,7 @@ StatementInfo _executeSwitchBlock(
       !willAlwaysReturn &&
       !willAlwaysThrow &&
       !willAlwaysBreak &&
-      !ctx.blockEndsControlFlow) {
+      !ctx.flowTerminated) {
     final label = findJumpLabel(
       ctx,
       null,

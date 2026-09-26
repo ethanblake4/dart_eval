@@ -130,21 +130,24 @@ class Program {
             yield descriptor[i + 1];
           }
         case RuntimeTypeDescriptorTag.function:
-          if (descriptor.length < 7) {
+          if (descriptor.length < 8) {
             throw const FormatException('Invalid function type descriptor');
           }
           final required = descriptor[4], positional = descriptor[5];
-          final named = descriptor[6];
+          final named = descriptor[6], typeParameters = descriptor[7];
+          final offset = 9 + typeParameters;
           if (required < 0 ||
               required > positional ||
               named < 0 ||
-              descriptor.length != 7 + positional + named * 3) {
+              typeParameters < 0 ||
+              descriptor.length != offset + positional + named * 3) {
             throw const FormatException('Invalid function type descriptor');
           }
           yield descriptor[3];
-          yield* descriptor.skip(7).take(positional);
+          yield* descriptor.skip(9).take(typeParameters);
+          yield* descriptor.skip(offset).take(positional);
           String? previousName;
-          for (var i = 7 + positional; i < descriptor.length; i += 3) {
+          for (var i = offset + positional; i < descriptor.length; i += 3) {
             if (descriptor[i] < 0 ||
                 descriptor[i] >= constantPool.length ||
                 (descriptor[i + 1] != 0 && descriptor[i + 1] != 1)) {
@@ -161,10 +164,7 @@ class Program {
             yield descriptor[i + 2];
           }
         case RuntimeTypeDescriptorTag.typeParameter:
-          if (descriptor.length != 6 ||
-              descriptor[4] < 0 ||
-              descriptor[3] <
-                  RuntimeTypeDescriptorTag.callableTypeParameterOwner) {
+          if (descriptor.length != 6 || descriptor[4] < 0) {
             throw const FormatException('Invalid type parameter descriptor');
           }
           if (descriptor[3] >= 0) yield descriptor[3];

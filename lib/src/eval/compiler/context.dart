@@ -18,6 +18,14 @@ import 'member/member_name.dart';
 
 abstract class AbstractScopeContext {
   List<Map<String, LocalBinding>> get locals;
+
+  /// Whether the current emission sequence ended in a terminator — unlike
+  /// [blockEndsControlFlow] it stays set once [pushOp] has split off the
+  /// dead tail into a detached block, so branch endpoints (`x ? a : throw`)
+  /// still see that the arm ended without fallthrough. Restored by
+  /// [restoreState] and cleared by [mergeBranchState].
+  bool get flowTerminated;
+  set flowTerminated(bool value);
 }
 
 /// A concrete mixin member compiled into one application layer. Its offset
@@ -105,6 +113,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   }
 
   void restoreState(ContextSaveState initial) {
+    flowTerminated = initial.flowTerminated;
     locals = [
       for (final scope in initial.locals)
         {for (final entry in scope.entries) entry.key: entry.value.restore()},
@@ -113,17 +122,23 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 
   /// Widens local type proofs at a control-flow join. For each local that was
   /// reassigned on any of the [incoming] edges, keeps only the allocation
-  /// info every edge agrees on. The current
+  /// info every edge agrees on, and widens the flow type to the least upper
+  /// bound of the edges' types (`i1` is `int?` after `case null: i1 = null`
+  /// merges with a promoted `int` edge). The current
   /// state's SSA bindings are authoritative — the incoming states only
   /// contribute their type proofs.
   void mergeBranchState(Iterable<ContextSaveState> incoming) {
+    flowTerminated = false;
     for (var i = 0; i < locals.length; i++) {
       final frame = locals[i];
       for (final key in frame.keys.toList()) {
         final binding = frame[key]!;
         final value = binding.current;
         var facts = value.facts;
+        var type = value.type;
+        var epoch = value.writeEpoch;
         var changed = false;
+        var typeChanged = false;
         for (final state in incoming) {
           final other = i < state.locals.length
               ? state.locals[i][key]?.current
@@ -131,9 +146,23 @@ mixin ScopeContext on Object implements AbstractScopeContext {
           if (other == null || identical(other, value)) continue;
           changed = true;
           facts = facts.join(other.facts);
+          // An edge that reassigned the local carries a higher epoch —
+          // the join takes the max so records stamped on earlier values
+          // stay invalidated.
+          if (other.writeEpoch > epoch) epoch = other.writeEpoch;
+          if (other.type != type) {
+            type = TypeRef.commonBaseType(
+              this as CompilerContext,
+              {type, other.type},
+            );
+            typeChanged = true;
+          }
         }
-        if (changed) {
-          binding.rebind(value.withFacts(facts));
+        if (changed || epoch != value.writeEpoch) {
+          binding.rebind(
+            (typeChanged ? value.withType(type) : value).withFacts(facts)
+              ..writeEpoch = epoch,
+          );
         }
       }
     }
@@ -177,7 +206,14 @@ mixin ScopeContext on Object implements AbstractScopeContext {
 class CompilerContext with ScopeContext {
   CompilerContext({this.version});
 
-  late BasicBlockBuilder builder;
+  /// The builder for the block currently receiving code. Reassigning it
+  /// starts a fresh emission sequence, so it also clears [flowTerminated].
+  BasicBlockBuilder get builder => _builder;
+  set builder(BasicBlockBuilder value) {
+    _builder = value;
+    _flowTerminated = false;
+  }
+  late BasicBlockBuilder _builder;
   var blockCode = <Operation>[];
   final Map<int, ControlFlowGraph> functionGraphs = {};
   final Map<int, ControlFlowGraph> ssaFunctionGraphs = {};
@@ -217,8 +253,13 @@ class CompilerContext with ScopeContext {
       op is CompleteJump ||
       op is Jump;
 
-  bool get blockEndsControlFlow =>
-      blockCode.isNotEmpty && isTerminatorOp(blockCode.last);
+  bool get blockEndsControlFlow => blockCode.any(isTerminatorOp);
+
+  @override
+  bool get flowTerminated => _flowTerminated || blockEndsControlFlow;
+  @override
+  set flowTerminated(bool value) => _flowTerminated = value;
+  bool _flowTerminated = false;
 
 
   int beginFunction(String name) {
@@ -248,7 +289,9 @@ class CompilerContext with ScopeContext {
     final block = commitBlock(name);
     // A tail already ending in a terminator must not gain a fallthrough
     // edge to the new block; it is parked and the block starts detached.
-    builder = builder.thenUnlessTerminated(block, isTerminatorOp);
+    // Bypass the setter: a flush continues the same sequence, so a
+    // terminator flag set by [pushOp] must survive it.
+    _builder = _builder.thenUnlessTerminated(block, isTerminatorOp);
     return block;
   }
 
@@ -493,9 +536,146 @@ class CompilerContext with ScopeContext {
   /// Extensions visible at call sites in each library (the library's own
   /// plus those of its transitive imports).
   Map<int, List<EvalExtension>> visibleExtensions = {};
+
+  /// Private member names that block field promotion in a library: a
+  /// `final _f` is only promotable when no class-like declaration in the
+  /// same library has a non-final field, concrete getter, or method with
+  /// that basename. Cached per library.
+  final Map<int, Set<String>> _promotionBlockers = {};
+  Set<String> promotionBlockers(int library) =>
+      _promotionBlockers[library] ??= _computePromotionBlockers(library);
+
+  Set<String> _computePromotionBlockers(int library) {
+    final blockers = <String>{};
+    for (final entry
+        in topLevelDeclarationsMap[library]?.values ??
+            const <DeclarationOrBridge>[]) {
+      final members = switch (entry.declaration) {
+        ClassDeclaration d => d.body.members,
+        MixinDeclaration d => d.body.members,
+        EnumDeclaration d => d.body.members,
+        _ => const <ClassMember>[],
+      };
+      for (final member in members) {
+        final name = switch (member) {
+          // A non-final instance field blocks (`late final` fields still
+          // promote — their single-assignment semantics keep one value).
+          FieldDeclaration m when
+            m.staticKeyword == null && !m.fields.isFinal =>
+            m.fields.variables.first.name.lexeme,
+          // A concrete getter or method supplies a real getter — it
+          // blocks. Setters, abstract members (empty body), and statics
+          // don't.
+          MethodDeclaration m when
+            !m.isStatic &&
+                !m.isSetter &&
+                (m.body is! EmptyFunctionBody ||
+                    m.externalKeyword != null) =>
+            m.name.lexeme,
+          _ => null,
+        };
+        if (name != null && name.startsWith('_')) blockers.add(name);
+      }
+    }
+
+    // A concrete class declaring `noSuchMethod` materializes a forwarding
+    // getter for every interface member it doesn't implement — those
+    // getters are assumed unstable and block promotion library-wide.
+    String refKey(NamedType t) {
+      final prefix = t.importPrefix;
+      return prefix == null
+          ? t.name.lexeme
+          : '${prefix.name.lexeme}.${t.name.lexeme}';
+    }
+
+    final concrete = <String>{};
+    final required = <String>{};
+    final seen = <String>{};
+    void walk(NamedType? superT, List<NamedType> mixins, List<NamedType> impls,
+        bool interfaceOnly) {
+      void visit(NamedType? t, bool interface) {
+        if (t == null) return;
+        final ref = visibleTypes[library]?[refKey(t)];
+        if (ref == null || !seen.add('${ref.file}/${ref.name}')) return;
+        instanceDeclarationsMap[ref.file]?[ref.name]?.forEach((key, member) {
+          final base = key.split(RegExp(r'[*@]')).first;
+          if (!base.startsWith('_')) return;
+          final isConcrete = switch (member) {
+            MethodDeclaration m =>
+              m.body is! EmptyFunctionBody || m.externalKeyword != null,
+            _ => true,
+          };
+          (interface || !isConcrete ? required : concrete).add(base);
+        });
+        final decl = topLevelDeclarationsMap[ref.file]?[ref.name]?.declaration;
+        final (sup, mix, impl, _) = classLikeClauses(decl);
+        visit(sup, interface);
+        for (final m in mix) {
+          visit(m, interface);
+        }
+        for (final i in impl) {
+          visit(i, true);
+        }
+      }
+
+      visit(superT, interfaceOnly);
+      for (final m in mixins) {
+        visit(m, interfaceOnly);
+      }
+      for (final i in impls) {
+        visit(i, true);
+      }
+    }
+
+    for (final entry
+        in topLevelDeclarationsMap[library]?.values ??
+            const <DeclarationOrBridge>[]) {
+      final dec = entry.declaration;
+      if (dec is! ClassDeclaration || dec.abstractKeyword != null) continue;
+      final declaresNsm = dec.body.members.any(
+        (m) =>
+            m is MethodDeclaration &&
+            !m.isStatic &&
+            m.name.lexeme == 'noSuchMethod',
+      );
+      if (!declaresNsm) continue;
+      concrete.clear();
+      required.clear();
+      seen.clear();
+      instanceDeclarationsMap[library]?[declarationName(dec)]?.forEach(
+        (key, member) {
+          final base = key.split(RegExp(r'[*@]')).first;
+          if (base.startsWith('_')) concrete.add(base);
+        },
+      );
+      final (sup, mix, impl, _) = classLikeClauses(dec);
+      walk(sup, mix, impl, false);
+      for (final name in required) {
+        if (!concrete.contains(name)) blockers.add(name);
+      }
+    }
+    return blockers;
+  }
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   late final TypeDeclRegistry types = TypeDeclRegistry(this);
   late final TypeSystem typeSystem = TypeSystem(this);
+
+  /// Whether [node]'s compilation unit runs at language version >=
+  /// `major.minor` — files pinned below via a `// @dart=` comment keep the
+  /// older semantics.
+  bool languageVersionAtLeast(AstNode node, int major, int minor) {
+    final token = node
+        .thisOrAncestorOfType<CompilationUnit>()
+        ?.languageVersionToken;
+    return token == null ||
+        token.major > major ||
+        (token.major == major && token.minor >= minor);
+  }
+
+  /// Whether the `inference-update-3` typing rules (the greatest-closure
+  /// result rule for `?:`/`??`/`??=`, and `K?` as the `??`-operand context)
+  /// apply to [node]: the feature shipped with Dart 3.4.
+  bool inferenceUpdate3(AstNode node) => languageVersionAtLeast(node, 3, 4);
   late final MemberLookup memberLookup = MemberLookup(this);
   late final RuntimeTypes runtimeTypes = RuntimeTypes(this);
   final Map<int, TypeRef> bridgeTypeRefCache = {};
@@ -508,6 +688,42 @@ class CompilerContext with ScopeContext {
   /// loop/switch label pushed (see `compileLabeledStatement`). Consumed via
   /// [takePendingLabelNames].
   final Set<String> pendingLabelNames = {};
+
+  /// Names whose write-capture effects are deferred until the current
+  /// invocation completes: a closure passed as an argument can be invoked
+  /// by the callee, so its writes take effect after the call — but
+  /// promotions elsewhere in the argument list still see the
+  /// pre-invocation state. Null outside an argument list.
+  Set<String>? deferredWriteCaptures;
+
+  /// Applies a captured write to the local [name]: marks the binding
+  /// write-captured immediately, or defers it to the enclosing
+  /// invocation's completion while [deferredWriteCaptures] is active.
+  void applyWriteCapture(String name) {
+    final pending = deferredWriteCaptures;
+    if (pending != null) {
+      pending.add(name);
+      return;
+    }
+    lookupBinding(name)?.markWriteCaptured();
+  }
+
+  /// Runs [body] with write captures deferred, applying the collected
+  /// captures once it returns — the argument-list boundary at which a
+  /// closure argument's writes become visible.
+  T withDeferredWriteCaptures<T>(T Function() body) {
+    final outer = deferredWriteCaptures;
+    deferredWriteCaptures = {};
+    try {
+      return body();
+    } finally {
+      final deferred = deferredWriteCaptures!;
+      deferredWriteCaptures = outer;
+      for (final name in deferred) {
+        lookupBinding(name)?.markWriteCaptured();
+      }
+    }
+  }
 
   /// Drains [pendingLabelNames] into a fresh set, for a loop/switch attaching
   /// its enclosing `label:` names to the [CompilerLabel] it pushes.
@@ -554,10 +770,11 @@ class CompilerContext with ScopeContext {
       // terminator nor adds a successor edge out of it.
       flushBlock();
       final orphan = BasicBlock<Operation>([], label: label('dead'));
-      builder.float(orphan);
-      builder = BasicBlockBuilder(activeGraph, [orphan], builder);
+      _builder.float(orphan);
+      _builder = BasicBlockBuilder(activeGraph, [orphan], _builder);
     }
     blockCode.add(op);
+    if (isTerminatorOp(op)) _flowTerminated = true;
   }
 
   List<Operation> commit() {
@@ -590,7 +807,9 @@ class CompilerContext with ScopeContext {
 
   /// For every local in [savedLocals] whose type differs from the current
   /// binding, write back a copy carrying the saved type (keeping the current
-  /// boxing state).
+  /// boxing state). Member promotions ride along — the saved value's
+  /// `promotedMembers` replace the live ones, so [uninferTypes] restores
+  /// the pre-inference member state exactly.
   void _restoreSavedTypes(List<Map<String, SavedLocalBinding>> savedLocals) {
     final myLocals = [...locals];
     for (var i = 0; i < math.min(savedLocals.length, myLocals.length); i++) {
@@ -599,12 +818,31 @@ class CompilerContext with ScopeContext {
 
       savedLocalsMap.forEach((key, value) {
         final binding = myLocalsMap[key];
-        if (binding != null && binding.current.type != value.current.type) {
-          binding.rebind(binding.current.copyWith(type: value.current.type));
+        if (binding == null) return;
+        final saved = value.current;
+        var current = binding.current;
+        if (current.type != saved.type) {
+          binding.rebind(current = current.copyWith(type: saved.type));
+        }
+        final savedMembers = saved.facts.promotedMembers;
+        if (!_sameMemberMap(current.facts.promotedMembers, savedMembers)) {
+          binding.rebind(
+            current.withFacts(
+              current.facts.copyWith(
+                promotedMembers: savedMembers ?? const {},
+              ),
+            ),
+          );
         }
       });
     }
   }
+}
+
+bool _sameMemberMap(Map<String, TypeRef>? a, Map<String, TypeRef>? b) {
+  if (a == null || a.isEmpty) return b == null || b.isEmpty;
+  if (b == null || a.length != b.length) return false;
+  return a.entries.every((e) => b[e.key] == e.value);
 }
 
 /// A frozen flow-state view over stable source-level bindings. Restoring a
@@ -625,6 +863,14 @@ final class SavedLocalBinding {
     current = current.copyWith(type: type);
   }
 
+  /// Records a member promotion (`c._f is int`) on the saved value — the
+  /// facts live on the receiver's variable so they restore with it.
+  void promoteMember(String member, TypeRef type) {
+    current = current.withFacts(
+      current.facts.withPromotedMember(member, type),
+    );
+  }
+
   LocalBinding restore() {
     binding.storage = storage;
     binding.initialized = initialized;
@@ -634,7 +880,8 @@ final class SavedLocalBinding {
 }
 
 class ContextSaveState {
-  ContextSaveState.of(AbstractScopeContext context) {
+  ContextSaveState.of(AbstractScopeContext context)
+    : flowTerminated = context.flowTerminated {
     locals = [
       for (final scope in context.locals)
         {
@@ -645,6 +892,9 @@ class ContextSaveState {
   }
 
   late final List<Map<String, SavedLocalBinding>> locals;
+
+  /// Whether the code sequence had terminated when the state was saved.
+  final bool flowTerminated;
 }
 
 /// State to restore after compiling a function inside another function.

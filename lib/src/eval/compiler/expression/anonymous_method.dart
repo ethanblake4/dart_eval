@@ -135,7 +135,7 @@ Variable _runBody(
     if (!info.willAlwaysBreak &&
         !info.willAlwaysReturn &&
         !info.willAlwaysThrow &&
-        !ctx.blockEndsControlFlow) {
+        !ctx.flowTerminated) {
       ctx.resolveBranchStateDiscontinuity(initialState);
       ctx.pushOp(Jump(exit.label!));
       final tail = ctx.flushBlock();

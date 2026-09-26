@@ -4,6 +4,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
@@ -25,7 +26,9 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // Special case: if casting null to a nullable type, allow it
   if (V.type.isSpec(CoreTypes.nullType) && slot.nullable) {
     final result = V.withType(slot);
-    result.binding?.rebind(result);
+    if (result.binding?.writeCaptured != true) {
+      result.binding?.rebind(result);
+    }
     return result;
   }
 
@@ -34,9 +37,29 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // type — casting to a wider or unrelated type (dynamic, Object) leaves
   // the variable's type unchanged.
   final promotes = isPromotionSubtype(ctx, slot, V.type);
+  // A cast whose operand can never be `slot` throws unconditionally. Only
+  // the leaf-`Null` cases are provable: a statically-`Null` operand against
+  // a type `Null` isn't assignable to, or `as Null` on a provably
+  // non-nullable operand. The assert still runs (it produces the TypeError);
+  // the code after it is compiled but unreachable.
+  final guaranteedThrow =
+      V.type.isSpec(CoreTypes.nullType)
+      ? !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, slot)
+      : slot.isSpec(CoreTypes.nullType) &&
+              !V.type.nullable &&
+              !V.type.isSpec(CoreTypes.dynamic) ||
+          // No value has type `Never` — `x as Never` always throws.
+          slot.isSpec(CoreTypes.never);
   Variable update(Variable v, TypeRef type) {
     final result = v.withType(type);
-    if (promotes) result.binding?.rebind(result);
+    if (promotes) {
+      result.binding?.typesOfInterest.add(type);
+      // A write-captured local can be clobbered by a closure at any
+      // time — `x as T` can't promote it.
+      if (result.binding?.writeCaptured != true) {
+        result.binding?.rebind(result);
+      }
+    }
     return result;
   }
   final typeId = ctx.runtimeTypes.idOf(slot);
@@ -64,6 +87,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
     );
   } else {
     ctx.pushOp(AssertType(V.ssa, typeId));
+    if (guaranteedThrow) markNeverTerminates(ctx);
   }
   V = update(V, slot);
 

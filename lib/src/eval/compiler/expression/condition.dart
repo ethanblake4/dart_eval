@@ -14,7 +14,13 @@ import 'expression.dart';
 import '../helpers/assigned_locals.dart';
 
 /// Compile a condition to its destinations without constructing a boolean join.
-BasicBlockBuilder compileCondition(
+///
+/// The returned record carries the [BasicBlockBuilder] for the `whenTrue` /
+/// `whenFalse` entries plus each edge's static reachability — `false` means
+/// the condition provably never routes there (a constant or a statically
+/// folded type test), so a branch over it must not join that edge's flow
+/// state even though the dead arm still compiles.
+(BasicBlockBuilder, bool, bool) compileCondition(
   Expression expression,
   CompilerContext ctx,
   BasicBlock<Operation> whenTrue,
@@ -24,19 +30,26 @@ BasicBlockBuilder compileCondition(
   final initialState = ctx.saveState();
   recordConditionPromotions(ctx, expression, true);
 
-  void emit(
+  (bool, bool) emit(
     Expression expression,
     BasicBlock<Operation> yes,
     BasicBlock<Operation> no,
-    List<(Expression, bool)> promotions,
-  ) {
+    List<(Expression, bool)> promotions, {
+    bool reachable = true,
+  }) {
     if (expression is ParenthesizedExpression) {
-      emit(expression.expression, yes, no, promotions);
-      return;
+      return emit(expression.expression, yes, no, promotions,
+          reachable: reachable);
     }
     if (expression is PrefixExpression && expression.operator.lexeme == '!') {
-      emit(expression.operand, no, yes, promotions);
-      return;
+      final (yesReachable, noReachable) = emit(
+        expression.operand,
+        no,
+        yes,
+        promotions,
+        reachable: reachable,
+      );
+      return (noReachable, yesReachable);
     }
     if (expression is BinaryExpression &&
         (expression.operator.lexeme == '&&' ||
@@ -45,17 +58,20 @@ BasicBlockBuilder compileCondition(
         [],
         label: ctx.label('condition_rhs'),
       );
-      if (expression.operator.lexeme == '&&') {
-        emit(expression.leftOperand, right, no, promotions);
-      } else {
-        emit(expression.leftOperand, yes, right, promotions);
-      }
+      final isAnd = expression.operator.lexeme == '&&';
+      final (ly, ln) = isAnd
+          ? emit(expression.leftOperand, right, no, promotions,
+              reachable: reachable)
+          : emit(expression.leftOperand, yes, right, promotions,
+              reachable: reachable);
       ctx.builder = BasicBlockBuilder(ctx.activeGraph, [right], parent);
-      emit(expression.rightOperand, yes, no, [
+      final (ry, rn) = emit(expression.rightOperand, yes, no, [
         ...promotions,
-        (expression.leftOperand, expression.operator.lexeme == '&&'),
-      ]);
-      return;
+        (expression.leftOperand, isAnd),
+      ], reachable: reachable && (isAnd ? ly : ln));
+      // `a && b` reaches yes only through the rhs; `no` sees either short-
+      // circuit. `a || b` reaches no only through the rhs; yes sees either.
+      return isAnd ? (ry, ln || rn) : (ly || ry, rn);
     }
     // Later operands can overwrite the value an earlier type test proved.
     for (var i = 0; i < promotions.length; i++) {
@@ -98,10 +114,27 @@ BasicBlockBuilder compileCondition(
     ctx.builder.link(tail, no);
     ctx.restoreState(initialState);
     ctx.mergeBranchState([leafState]);
+    // A statically-folded leaf still links both edges (the builder requires
+    // them); the reachability flags tell the join to drop the dead arm's
+    // flow state.
+    final staticOutcome = compiledValue.facts.constBool;
+    return (
+      reachable && staticOutcome != false,
+      reachable && staticOutcome != true,
+    );
   }
 
-  emit(expression, whenTrue, whenFalse, const []);
-  return BasicBlockBuilder(ctx.activeGraph, [whenTrue, whenFalse], parent);
+  final (yesReachable, noReachable) = emit(
+    expression,
+    whenTrue,
+    whenFalse,
+    const [],
+  );
+  return (
+    BasicBlockBuilder(ctx.activeGraph, [whenTrue, whenFalse], parent),
+    yesReachable,
+    noReachable,
+  );
 }
 
 /// Conditions must have a static type of `bool` or `dynamic`. A runtime

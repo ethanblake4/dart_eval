@@ -339,7 +339,8 @@ class Runtime {
       nominal,
       null,
       const [],
-      <int, int>{},
+      <(int, Set<int>), int>{},
+      const {},
     );
   }
 
@@ -561,9 +562,13 @@ class Runtime {
         source[4],
         source[5],
         source[6],
-        for (final type in source.skip(7).take(source[5]))
+        source[7],
+        source[8],
+        for (final type in source.skip(9).take(source[7]))
           importRuntimeType(origin, type),
-        for (var i = 7 + source[5]; i < source.length; i += 3) ...[
+        for (final type in source.skip(9 + source[7]).take(source[5]))
+          importRuntimeType(origin, type),
+        for (var i = 9 + source[7] + source[5]; i < source.length; i += 3) ...[
           _importRuntimeTypeName(origin, source[i]),
           source[i + 1],
           importRuntimeType(origin, source[i + 2]),
@@ -573,7 +578,7 @@ class Runtime {
         nominal,
         source[1],
         source[2],
-        source[3] == RuntimeTypeDescriptorTag.callableTypeParameterOwner
+        source[3] < 0
             ? source[3]
             : _importNominalType(origin, source[3]),
         source[4],
@@ -664,12 +669,17 @@ class Runtime {
         ];
         return '(${[...positional, ...named].join(', ')})$suffix';
       case RuntimeTypeDescriptorTag.function:
+        final offset = 9 + descriptor[7];
         final positional = [
-          for (final type in descriptor.skip(7).take(descriptor[5]))
+          for (final type in descriptor.skip(offset).take(descriptor[5]))
             runtimeTypeToString(type),
         ];
         final named = [
-          for (var i = 7 + descriptor[5]; i < descriptor.length; i += 3)
+          for (
+            var i = offset + descriptor[5];
+            i < descriptor.length;
+            i += 3
+          )
             '${descriptor[i + 1] == 0 ? '' : 'required '}'
                 '${_constantPool[descriptor[i]]}: '
                 '${runtimeTypeToString(descriptor[i + 2])}',
@@ -702,7 +712,8 @@ class Runtime {
       RuntimeTypeDescriptorTag.function =>
         'f?${descriptor[1]}:${descriptor[4]}:${descriptor[5]}:${descriptor[6]}:'
             '${_runtimeTypeSemanticKey(descriptor[3])}:'
-            '${[for (final type in descriptor.skip(7).take(descriptor[5])) _runtimeTypeSemanticKey(type), for (var i = 7 + descriptor[5]; i < descriptor.length; i += 3) '${_constantPool[descriptor[i]]}:${descriptor[i + 1]}:${_runtimeTypeSemanticKey(descriptor[i + 2])}'].join(',')}',
+            '${descriptor[7]}:${descriptor[8]}:${[for (final type in descriptor.skip(9).take(descriptor[7])) _runtimeTypeSemanticKey(type)].join(',')}:'
+            '${[for (final type in descriptor.skip(9 + descriptor[7]).take(descriptor[5])) _runtimeTypeSemanticKey(type), for (var i = 9 + descriptor[7] + descriptor[5]; i < descriptor.length; i += 3) '${_constantPool[descriptor[i]]}:${descriptor[i + 1]}:${_runtimeTypeSemanticKey(descriptor[i + 2])}'].join(',')}',
       RuntimeTypeDescriptorTag.typeParameter =>
         'p?${descriptor[1]}:'
             '${descriptor[3] < 0 ? descriptor[3] : _typeIdentities[descriptor[3]]}:'

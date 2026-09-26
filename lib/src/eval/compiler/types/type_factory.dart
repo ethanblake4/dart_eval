@@ -611,11 +611,15 @@ final class TypeFactory {
         returnType: annotation.returnType,
         typeParameterList: annotation.typeParameters,
         parameterList: annotation.parameters,
+        // Key on the `Function` token: a nested type (`R Function<A>(P)
+        // Function()`) shares its leading offset with its return type, so
+        // `annotation.offset` collides and the inner signature's owner would
+        // reuse the outer's parameters.
         owner: TypeParameterOwner(
           TypeParameterOwnerKind.functionTypeAnnotation,
           library,
           '',
-          annotation.offset,
+          annotation.functionKeyword.offset,
         ),
         typeParameters: typeParameters,
       ),
@@ -710,9 +714,7 @@ final class TypeFactory {
     Map<String, TypeRef> typeParameters = const {},
   }) {
     final annotation = param.type!;
-    final suffix = param is RegularFormalParameter
-        ? param.functionTypedSuffix
-        : null;
+    final suffix = param.functionTypedSuffix;
     if (suffix == null) {
       return fromAnnotation(
         library,

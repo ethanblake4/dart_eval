@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 
 import '../errors.dart';
 import '../type.dart';
@@ -42,6 +43,9 @@ void compileVariableDeclarationList(
 
     if (init != null) {
       var res = compileExpression(init, ctx, type);
+      // The initializer's own type — conversion may widen it to the declared
+      // type, but promotion uses the value's type.
+      final initType = res.type;
       if (type != null) {
         res = convertForAssignment(
           ctx,
@@ -77,6 +81,50 @@ void compileVariableDeclarationList(
             isFinal: l.isFinal || l.isConst,
           )
           .captureBinding(ctx, li);
+      // Initialization promotes like an assignment: only a *nullable*
+      // declared type promotes, to `NonNull(declared)` — `int? x = 0` leaves
+      // `x` promoted to `int`, `num? w = 0.5` to `num`, and `Object x = 0`
+      // stays `Object`. `late` and captured locals never promote.
+      final binding = ctx.lookupBinding(li.name.lexeme);
+      if (binding != null &&
+          type != null &&
+          type.nullable &&
+          l.lateKeyword == null &&
+          !binding.writeCaptured &&
+          !initType.isSpec(CoreTypes.dynamic) &&
+          initType.isAssignableTo(ctx, type.withNullable(false))) {
+        binding.rebind(
+          binding.current.withType(type.withNullable(false)),
+        );
+      }
+      // `b = cond` records the condition's promotions on `b` — `if (b)`
+      // then applies them (promotion through bool locals). Before
+      // dart-lang/language#1785 (Dart 2.14) the record required a
+      // `bool`/`dynamic` annotation; since then any declaration records
+      // when the initializer is bool-typed — even `Object b = cond` —
+      // so `b is bool && b` can promote. `late` initializers defer
+      // evaluation and never record.
+      final recordsBool = initType.isSpec(CoreTypes.bool) &&
+          (ctx.languageVersionAtLeast(li, 2, 14) ||
+              (type != null &&
+                  (type.isSpec(CoreTypes.bool) ||
+                      type.isSpec(CoreTypes.dynamic))));
+      if (binding != null &&
+          l.lateKeyword == null &&
+          !binding.writeCaptured &&
+          recordsBool) {
+        final (whenTrue, whenFalse) = conditionPromotions(ctx, init);
+        if (whenTrue.isNotEmpty || whenFalse.isNotEmpty) {
+          binding.rebind(
+            binding.current.withFacts(
+              binding.current.facts.copyWith(
+                truePromotions: whenTrue,
+                falsePromotions: whenFalse,
+              ),
+            ),
+          );
+        }
+      }
     } else {
       if (isWildcard) continue;
       ctx

@@ -275,20 +275,23 @@ final class ArgumentBinder {
     final matched = _matchArguments(site.shape, site.shape.positional.length, {
       for (final (name, _) in site.shape.named) name,
     }, errorSource: site.source);
-    final values = _evaluateArguments(
-      matched,
-      site.shape.positional.length,
-      (argument) => bindArgument(
-        argument.source,
-        argument.positional == null
-            ? declaredSignature?.named[argument.named]?.type
-            : declaredSignature?.positional[argument.positional!],
+    final values = ctx.withDeferredWriteCaptures(
+      () => _evaluateArguments(
+        matched,
+        site.shape.positional.length,
+        (argument) => bindArgument(
+          argument.source,
+          argument.positional == null
+              ? declaredSignature?.named[argument.named]?.type
+              : declaredSignature?.positional[argument.positional!],
+        ),
       ),
     );
     final positionalArgs = values.positional.cast<Variable>();
     final namedArgs = values.named;
 
     final inferredSubstitutions = <TypeParameterDef, TypeRef>{};
+    var allTypeArgumentsDefaulted = false;
     if (declaredSignature != null && site.shape.typeArguments == null) {
       inferredSubstitutions.addAll(_solveArguments(inferredArguments));
       if (site.context != null &&
@@ -308,6 +311,9 @@ final class ArgumentBinder {
           }
         }
       }
+      // Track whether any parameter was solved by inference before the
+      // bound-defaulting pass fills the rest.
+      final allDefaulted = inferredSubstitutions.isEmpty;
       for (final parameter in declaredSignature.typeParameters) {
         inferredSubstitutions.putIfAbsent(
           parameter,
@@ -316,20 +322,31 @@ final class ArgumentBinder {
               .lowerTypeParameters(ctx),
         );
       }
+      // A type argument that only defaulted to the static signature's bound
+      // may violate the callee's own bound (`const void Function<T extends
+      // num>() f = t1` where `t1<T extends int>`): with no inference
+      // evidence, omitting the args lets the callee instantiate to its own
+      // bounds, as the VM does.
+      allTypeArgumentsDefaulted =
+          allDefaulted && declaredSignature.typeParameters.isNotEmpty;
     }
     final resolvedSubstitutions = site.shape.typeArguments == null
         ? Substitution.of(inferredSubstitutions)
         : substitutions;
-    final runtimeTypeArguments = [
-      for (final type
-          in site.shape.typeArguments == null && declaredSignature != null
-              ? [
-                  for (final parameter in declaredSignature.typeParameters)
-                    inferredSubstitutions[parameter]!,
-                ]
-              : suppliedTypeArguments)
-        ctx.runtimeTypes.idOf(type),
-    ];
+    final runtimeTypeArguments = allTypeArgumentsDefaulted
+        ? const <int>[]
+        : [
+            for (final type
+                in site.shape.typeArguments == null &&
+                        declaredSignature != null
+                    ? [
+                        for (final parameter
+                            in declaredSignature.typeParameters)
+                          inferredSubstitutions[parameter]!,
+                      ]
+                    : suppliedTypeArguments)
+              ctx.runtimeTypes.idOf(type),
+          ];
 
     final dispatch = target is ClosureCall ? target.known : null;
     final argTypes = [for (final a in positionalArgs) a.type];
@@ -518,10 +535,16 @@ final class ArgumentBinder {
       // parameters stay meaningful through the frame's type environment,
       // where the runtime check resolves them against the actual owner.
       final coercionType = paramType.requiresTypeEnvironment
-          ? paramType.lowerTypeParameters(
-              ctx,
-              only: signature.typeParameters.toSet(),
-            )
+          ? paramType
+              .lowerTypeParameters(
+                ctx,
+                only: {...signature.typeParameters},
+                kinds: const {TypeParameterOwnerKind.typeAlias},
+              )
+              // A lowered bound can re-introduce a parameter the call
+              // resolved (`S extends T` under `A<num>` lowers S to T, still
+              // bound to num) — substitute it again.
+              .substituteTypeParameters(argumentSubstitution)
           : paramType;
       // The placeholder-rich shape is the better context type everywhere:
       // its remaining type parameters act as inference variables (`[1]`
@@ -584,11 +607,16 @@ final class ArgumentBinder {
       }
     }
 
-    final values = _evaluateArguments(matched, positional.length, (argument) {
-      final index = argument.positional;
-      final spec = index == null ? named[argument.named]! : positional[index];
-      return compileMatched(spec, argument.source);
-    });
+    // Closures in the argument list are analyzed like their bodies run
+    // when the callee does: their captured writes take effect once the
+    // invocation completes, not while later arguments compile.
+    final values = ctx.withDeferredWriteCaptures(
+      () => _evaluateArguments(matched, positional.length, (argument) {
+        final index = argument.positional;
+        final spec = index == null ? named[argument.named]! : positional[index];
+        return compileMatched(spec, argument.source);
+      }),
+    );
     final result = _finishArguments(
       signature,
       values,
@@ -712,14 +740,16 @@ final class ArgumentBinder {
       ).copyIntoFreshSlot(ctx, 'bridge_argument');
     }
 
-    final values = _evaluateArguments(matched, positional.length, (argument) {
-      final index = argument.positional;
-      return compileMatchedBridge(
-        index == null ? namedParamByName[argument.named]! : positional[index],
-        argument.source,
-        named: index == null,
-      );
-    });
+    final values = ctx.withDeferredWriteCaptures(
+      () => _evaluateArguments(matched, positional.length, (argument) {
+        final index = argument.positional;
+        return compileMatchedBridge(
+          index == null ? namedParamByName[argument.named]! : positional[index],
+          argument.source,
+          named: index == null,
+        );
+      }),
+    );
     Variable? padding;
     return _finishArguments(
       signature,
@@ -845,12 +875,17 @@ final class ArgumentBinder {
       final substitutedBound = bound.substituteTypeParameters(
         Substitution.of({...resolved, parameter: argument}),
       );
+
+      // Bounds are checked with assignability: a `dynamic` bound parameter
+      // accepts any argument type, but `dynamic` is still rejected on the
+      // covariant side (the `Exactly<dynamic>` <: `Exactly<int>` case).
       if (!argument.isSpec(CoreTypes.dynamic) &&
           !substitutedBound.isSpec(CoreTypes.dynamic) &&
-          !argument.isAssignableTo(
-            ctx,
+          !ctx.typeSystem.isAssignable(
+            argument,
             substitutedBound,
             forceAllowDynamic: false,
+            allowDynamicParameterDowncast: true,
           )) {
         throw CompileError(
           'Type argument $argument does not satisfy the bound $bound of $name',
@@ -1345,3 +1380,4 @@ TypeRef? memberCallResultType(
     namedArgTypes: namedArgTypes,
   );
 }
+

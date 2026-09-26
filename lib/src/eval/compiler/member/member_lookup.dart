@@ -784,6 +784,165 @@ final class MemberLookup {
     }
     return null;
   }
+
+  /// The runtime signature a torn-off member reports: parameters covariant
+  /// anywhere in [declaringType]'s override closure — marked `covariant`, or
+  /// whose declared type has a *covariant* occurrence of a class type
+  /// parameter — erase to `Object?`, matching how the VM reports a torn-off
+  /// member's type. A type parameter nested in a function type's parameter
+  /// position is contravariant and does not mark the parameter.
+  /// [parameters] are the member's formals in declaration order (positional
+  /// then named); [parameterTypes] aligns with them when available.
+  TypeRef tearOffRuntimeSignature(
+    TypeRef? declaringType,
+    String memberName,
+    MemberKind kind,
+    TypeRef signature,
+    List<FormalParameter> parameters,
+    List<TypeRef>? parameterTypes,
+  ) {
+    if (signature is! FunctionTypeRef) return signature;
+    final function = signature.signature;
+    final positional = <int>{};
+    final named = <String>{};
+    _markCovariantParameters(parameters, parameterTypes, positional, named);
+    if (declaringType != null) {
+      try {
+        _collectCovariantParameters(
+          declaringType,
+          memberName,
+          kind,
+          positional,
+          named,
+          {},
+        );
+      } on CompileError {
+        // Unresolvable supertypes (e.g. bridges) contribute no covariance.
+      }
+    }
+    if (positional.isEmpty && named.isEmpty) return signature;
+    final object = CoreTypes.object.ref(ctx).withNullable(true);
+    var index = 0;
+    return FunctionTypeRef(
+      FunctionSignature(
+        typeParameters: function.typeParameters,
+        positional: [
+          for (final type in function.positional)
+            positional.contains(index++) ? object : type,
+        ],
+        requiredPositional: function.requiredPositional,
+        named: {
+          for (final entry in function.named.entries)
+            entry.key: named.contains(entry.key)
+                ? (type: object, required: entry.value.required)
+                : entry.value,
+        },
+        returnType: function.returnType,
+      ),
+      decl: signature.decl,
+      nullable: signature.nullable,
+    );
+  }
+
+  /// Marks [parameters]' covariant entries — positional indexes in
+  /// [positional], names in [named]. [types] are the resolved parameter types
+  /// aligned with [parameters] (positional then named) when available.
+  void _markCovariantParameters(
+    List<FormalParameter> parameters,
+    List<TypeRef>? types,
+    Set<int> positional,
+    Set<String> named,
+  ) {
+    var index = 0;
+    for (final parameter in parameters) {
+      var covariant = parameter.covariantKeyword != null;
+      if (!covariant &&
+          types != null &&
+          index < types.length &&
+          _hasClassTypeParameter(types[index])) {
+        covariant = true;
+      }
+      if (covariant) {
+        if (parameter.isNamed) {
+          named.add(parameter.name!.lexeme);
+        } else {
+          positional.add(index);
+        }
+      }
+      index++;
+    }
+  }
+
+  /// Unions [memberName]'s covariant parameters across [type]'s override
+  /// closure: each supertype declaration's own marks plus its supertypes'.
+  void _collectCovariantParameters(
+    TypeRef type,
+    String memberName,
+    MemberKind kind,
+    Set<int> positional,
+    Set<String> named,
+    Set<String> visited,
+  ) {
+    if (!visited.add('${type.file}:${type.name}')) return;
+    final key = MemberName(memberName, kind).key;
+    final decl = ctx.instanceDeclarationsMap[type.file]?[type.name]?[key];
+    if (decl is MethodDeclaration) {
+      final id =
+          ctx.instanceDeclarationPositions[type.file]?[type.name]?[kind]
+              ?[memberName];
+      _markCovariantParameters(
+        decl.parameters?.parameters ?? const <FormalParameter>[],
+        id == null ? null : ctx.functionParameterTypes[id],
+        positional,
+        named,
+      );
+    }
+    for (final supertype in ctx.typeSystem.directSupertypes(type)) {
+      try {
+        _collectCovariantParameters(
+          supertype,
+          memberName,
+          kind,
+          positional,
+          named,
+          visited,
+        );
+      } on CompileError {
+        // Skip unresolvable supertypes.
+      }
+    }
+  }
+
+  /// Whether [type] has a covariant occurrence of a class type parameter —
+  /// a parameter declared with such a type is implicitly covariant. Function
+  /// parameter positions flip polarity: `void Function(T)` uses `T`
+  /// contravariantly, so it does not mark the parameter covariant.
+  bool _hasClassTypeParameter(TypeRef type, [bool covariant = true]) {
+    if (type.isClassTypeParameter) return covariant;
+    if (interfaceArgumentsOf(type).any(
+      (argument) => _hasClassTypeParameter(argument, covariant),
+    )) {
+      return true;
+    }
+    if (type is RecordTypeRef &&
+        (type.positional.any(
+              (element) => _hasClassTypeParameter(element, covariant),
+            ) ||
+            type.named.values.any(
+              (element) => _hasClassTypeParameter(element, covariant),
+            ))) {
+      return true;
+    }
+    if (type is! FunctionTypeRef) return false;
+    final function = type.signature;
+    if ([
+      ...function.positional,
+      for (final parameter in function.named.values) parameter.type,
+    ].any((element) => _hasClassTypeParameter(element, !covariant))) {
+      return true;
+    }
+    return _hasClassTypeParameter(function.returnType, covariant);
+  }
 }
 
 class _SuperSeeker extends RecursiveAstVisitor<void> {

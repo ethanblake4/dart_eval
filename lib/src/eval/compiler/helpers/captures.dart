@@ -13,6 +13,12 @@ CaptureAnalysis capturesFor(AstNode node) {
 /// creation never controls whether a shared cell exists.
 class CaptureAnalysis extends RecursiveAstVisitor<void> {
   final captured = <AstNode>{};
+
+  /// Names written inside each closure, keyed by the closure node — a
+  /// write takes flow-analysis effect at the point the closure is
+  /// created (or, for a closure that is an invocation argument, after
+  /// the invocation completes).
+  final writes = <FunctionExpression, Set<String>>{};
   final free = <FunctionExpression, Set<String>>{};
   final unresolved = <FunctionExpression, Set<String>>{};
   final _scopes = <Map<String, (AstNode, AstNode)>>[];
@@ -32,7 +38,7 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
     }
   }
 
-  void _use(String name) {
+  void _use(String name, {bool setter = false}) {
     (AstNode, AstNode)? binding;
     for (final scope in _scopes.reversed) {
       binding = scope[name];
@@ -57,6 +63,9 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
     for (final function in _functions.skip(owner + 1)) {
       if (function is FunctionExpression) {
         free.putIfAbsent(function, () => {}).add(name);
+        if (setter) {
+          writes.putIfAbsent(function, () => {}).add(name);
+        }
       }
     }
   }
@@ -143,6 +152,7 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
     if (node.inDeclarationContext()) return;
+    final setter = node.inSetterContext();
     final parent = node.parent;
     if (parent is PropertyAccess && identical(parent.propertyName, node) ||
         parent is PrefixedIdentifier && identical(parent.identifier, node) ||
@@ -152,6 +162,6 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
         parent is Label) {
       return;
     }
-    _use(node.name);
+    _use(node.name, setter: setter);
   }
 }

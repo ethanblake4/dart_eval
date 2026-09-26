@@ -178,57 +178,60 @@ class TypedBackend {
     }
     final classAllocations = <objects_ir.CreateClass>[];
     final reachableGlobals = <int>{};
-    for (var next = 0; next < reachable.length; next++) {
-      final functionId = reachable[next];
-      final graph = context.ssaFunctionGraphs[functionId]!;
-      // Hidden default thunks are referenced by closure descriptors and
-      // exports rather than call ops.
-      for (final param
-          in context.functionParameters[functionId] ??
-              const <FormalParameter>[]) {
-        final thunk = context.defaultThunkCache[param.defaultClause?.value];
-        if (thunk != null && seen.add(thunk)) {
-          reachable.add(thunk);
+    var scanned = 0;
+    void extendReachable() {
+      for (; scanned < reachable.length; scanned++) {
+        final functionId = reachable[scanned];
+        final graph = context.ssaFunctionGraphs[functionId]!;
+        // Hidden default thunks are referenced by closure descriptors and
+        // exports rather than call ops.
+        for (final param
+            in context.functionParameters[functionId] ??
+                const <FormalParameter>[]) {
+          final thunk = context.defaultThunkCache[param.defaultClause?.value];
+          if (thunk != null && seen.add(thunk)) {
+            reachable.add(thunk);
+          }
         }
-      }
-      for (final block in graph.graph.vertices) {
-        for (final op in graph[block]!.code) {
-          if (op is flow.Call || op is closures.CreateClosure) {
-            final callee = _resolveFunction(switch (op) {
-              flow.Call(:final target) => target,
-              closures.CreateClosure(:final target) => target,
-              _ => throw StateError('Unreachable callable'),
-            });
-            if (seen.add(callee)) reachable.add(callee);
-            if (op is closures.CreateClosure) {
-              for (final thunk in op.defaultThunks) {
-                if (thunk >= 0 && seen.add(thunk)) {
-                  reachable.add(thunk);
+        for (final block in graph.graph.vertices) {
+          for (final op in graph[block]!.code) {
+            if (op is flow.Call || op is closures.CreateClosure) {
+              final callee = _resolveFunction(switch (op) {
+                flow.Call(:final target) => target,
+                closures.CreateClosure(:final target) => target,
+                _ => throw StateError('Unreachable callable'),
+              });
+              if (seen.add(callee)) reachable.add(callee);
+              if (op is closures.CreateClosure) {
+                for (final thunk in op.defaultThunks) {
+                  if (thunk >= 0 && seen.add(thunk)) {
+                    reachable.add(thunk);
+                  }
                 }
               }
-            }
-          } else if (op is globals.LoadGlobal || op is globals.SetGlobal) {
-            final index = switch (op) {
-              globals.LoadGlobal(:final index) => index,
-              globals.SetGlobal(:final index) => index,
-              _ => throw StateError('Unreachable global operation'),
-            };
-            final initializer = context.runtimeGlobalInitializerMap[index];
-            reachableGlobals.add(index);
-            if (initializer != null && seen.add(initializer)) {
-              reachable.add(initializer);
-            }
-          } else if (op is objects_ir.CreateClass) {
-            final key = (op.library, op.name);
-            if (_classIndices.containsKey(key)) continue;
-            _classIndices[key] = classAllocations.length;
-            classAllocations.add(op);
-            final members =
-                context.instanceDeclarationPositions[op.library]![op.name]!;
-            for (final group in members.values) {
-              for (final target in group.values) {
-                if (target >= 0 && seen.add(target)) {
-                  reachable.add(target);
+            } else if (op is globals.LoadGlobal || op is globals.SetGlobal) {
+              final index = switch (op) {
+                globals.LoadGlobal(:final index) => index,
+                globals.SetGlobal(:final index) => index,
+                _ => throw StateError('Unreachable global operation'),
+              };
+              final initializer = context.runtimeGlobalInitializerMap[index];
+              reachableGlobals.add(index);
+              if (initializer != null && seen.add(initializer)) {
+                reachable.add(initializer);
+              }
+            } else if (op is objects_ir.CreateClass) {
+              final key = (op.library, op.name);
+              if (_classIndices.containsKey(key)) continue;
+              _classIndices[key] = classAllocations.length;
+              classAllocations.add(op);
+              final members =
+                  context.instanceDeclarationPositions[op.library]![op.name]!;
+              for (final group in members.values) {
+                for (final target in group.values) {
+                  if (target >= 0 && seen.add(target)) {
+                    reachable.add(target);
+                  }
                 }
               }
             }
@@ -236,6 +239,36 @@ class TypedBackend {
         }
       }
     }
+
+    extendReachable();
+    // Member descriptors resolve parameter defaults eagerly; minting a
+    // default thunk can introduce new functions (and their callees) after
+    // the first pass, so resolve them here and resume the walk.
+    for (final allocation in classAllocations) {
+      final memberGroups =
+          context.instanceDeclarationPositions[allocation.library]![allocation
+              .name]!;
+      for (final group in memberGroups.values) {
+        for (final id in group.values) {
+          if (id < 0) continue;
+          for (final param
+              in context.functionParameters[id] ?? const <FormalParameter>[]) {
+            final (_, thunk) = compileParameterDefault(
+              context,
+              allocation.library,
+              param,
+              bound: param.type == null
+                  ? null
+                  : _tryAnnotationType(context, allocation.library, param.type!),
+            );
+            if (thunk >= 0 && seen.add(thunk)) {
+              reachable.add(thunk);
+            }
+          }
+        }
+      }
+    }
+    extendReachable();
     final indices = {
       for (var i = 0; i < reachable.length; i++) reachable[i]: i,
     };
@@ -275,6 +308,8 @@ class TypedBackend {
           for (final entry in memberGroups[kind]!.entries)
             entry.value: (entry.key, kind),
       };
+      final declaringType =
+          context.visibleTypes[allocation.library]?[allocation.name];
       for (final id in memberIds) {
         if (id < 0 || boundReceiverIds.contains(indices[id])) {
           continue;
@@ -337,11 +372,15 @@ class TypedBackend {
               ...List<Object?>.filled(syntheticPositionalCount, null),
             ],
             namedDefaults: [for (final d in namedDefaults) d.$1],
-            defaultThunks: [
-              for (final d in positionalDefaults) d.$2,
-              ...List<int>.filled(syntheticPositionalCount, -1),
-              for (final d in namedDefaults) d.$2,
-            ],
+            defaultThunks: () {
+              final thunks = [
+                for (final d in positionalDefaults)
+                  d.$2 < 0 ? -1 : indices[d.$2]!,
+                ...List<int>.filled(syntheticPositionalCount, -1),
+                for (final d in namedDefaults) d.$2 < 0 ? -1 : indices[d.$2]!,
+              ];
+              return thunks.every((t) => t < 0) ? const <int>[] : thunks;
+            }(),
             parameterTypeIds: [
               for (final type in parameterTypes)
                 type.isSpec(CoreTypes.dynamic) ||
@@ -365,15 +404,16 @@ class TypedBackend {
                 context.runtimeTypes.idOf(bound),
             ],
             runtimeTypeId: context.runtimeTypes.idOf(switch (memberKinds[id]) {
-              (final name, final kind) => _tearOffSignature(
-                allocation,
-                name,
-                kind,
-                context.functionRuntimeTypes[id] ??
-                    CoreTypes.function.ref(context),
-                parameters,
-                parameterTypes,
-              ),
+              (final name, final kind) => context.memberLookup
+                  .tearOffRuntimeSignature(
+                    declaringType,
+                    name,
+                    kind,
+                    context.functionRuntimeTypes[id] ??
+                        CoreTypes.function.ref(context),
+                    parameters,
+                    parameterTypes,
+                  ),
               _ =>
                 context.functionRuntimeTypes[id] ??
                     CoreTypes.function.ref(context),
@@ -775,155 +815,6 @@ class TypedBackend {
     // Keep bit-distinct constants such as -0.0 separate.
     doubles.add(value);
     return doubles.length - 1;
-  }
-
-  /// The reified signature of a bound member tear-off: parameters covariant in
-  /// the member's override closure — marked `covariant`, or declared with a
-  /// type mentioning a class type parameter — reify as `Object?`, matching the
-  /// VM (`C<int>().m` where `void m(T t)` is `(Object?) => void`).
-  TypeRef _tearOffSignature(
-    objects_ir.CreateClass allocation,
-    String memberName,
-    MemberKind kind,
-    TypeRef signature,
-    List<FormalParameter> parameters,
-    List<TypeRef> parameterTypes,
-  ) {
-    if (signature is! FunctionTypeRef) return signature;
-    final function = signature.signature;
-    final positional = <int>{};
-    final named = <String>{};
-    _markCovariantParameters(parameters, parameterTypes, positional, named);
-    final declaringType =
-        context.visibleTypes[allocation.library]?[allocation.name];
-    if (declaringType != null) {
-      try {
-        _collectCovariantParameters(
-          declaringType,
-          memberName,
-          kind,
-          positional,
-          named,
-          {},
-        );
-      } on CompileError {
-        // Unresolvable supertypes (e.g. bridges) contribute no covariance.
-      }
-    }
-    if (positional.isEmpty && named.isEmpty) return signature;
-    final object = CoreTypes.object.ref(context).withNullable(true);
-    var index = 0;
-    return FunctionTypeRef(
-      FunctionSignature(
-        typeParameters: function.typeParameters,
-        positional: [
-          for (final type in function.positional)
-            positional.contains(index++) ? object : type,
-        ],
-        requiredPositional: function.requiredPositional,
-        named: {
-          for (final entry in function.named.entries)
-            entry.key: named.contains(entry.key)
-                ? (type: object, required: entry.value.required)
-                : entry.value,
-        },
-        returnType: function.returnType,
-      ),
-      decl: signature.decl,
-      nullable: signature.nullable,
-    );
-  }
-
-  /// Marks [parameters]' covariant entries — positional indexes in
-  /// [positional], names in [named]. [types] are the resolved parameter types
-  /// aligned with [parameters] (positional then named) when available.
-  void _markCovariantParameters(
-    List<FormalParameter> parameters,
-    List<TypeRef>? types,
-    Set<int> positional,
-    Set<String> named,
-  ) {
-    var index = 0;
-    for (final parameter in parameters) {
-      var covariant = parameter.covariantKeyword != null;
-      if (!covariant &&
-          types != null &&
-          index < types.length &&
-          _hasClassTypeParameter(types[index])) {
-        covariant = true;
-      }
-      if (covariant) {
-        if (parameter.isNamed) {
-          named.add(parameter.name!.lexeme);
-        } else {
-          positional.add(index);
-        }
-      }
-      index++;
-    }
-  }
-
-  /// Unions [memberName]'s covariant parameters across [type]'s override
-  /// closure: each supertype declaration's own marks plus its supertypes'.
-  void _collectCovariantParameters(
-    TypeRef type,
-    String memberName,
-    MemberKind kind,
-    Set<int> positional,
-    Set<String> named,
-    Set<String> visited,
-  ) {
-    if (!visited.add('${type.file}:${type.name}')) return;
-    final key = MemberName(memberName, kind).key;
-    final decl = context.instanceDeclarationsMap[type.file]?[type.name]?[key];
-    if (decl is MethodDeclaration) {
-      final id =
-          context.instanceDeclarationPositions[type.file]?[type
-              .name]?[kind]?[memberName];
-      _markCovariantParameters(
-        decl.parameters?.parameters ?? const <FormalParameter>[],
-        id == null ? null : context.functionParameterTypes[id],
-        positional,
-        named,
-      );
-    }
-    for (final supertype in context.typeSystem.directSupertypes(type)) {
-      try {
-        _collectCovariantParameters(
-          supertype,
-          memberName,
-          kind,
-          positional,
-          named,
-          visited,
-        );
-      } on CompileError {
-        // Skip unresolvable supertypes.
-      }
-    }
-  }
-
-  /// Whether [type] mentions a class type parameter — a parameter declared
-  /// with such a type is implicitly covariant.
-  bool _hasClassTypeParameter(TypeRef type) {
-    if (type.isClassTypeParameter) return true;
-    if (interfaceArgumentsOf(type).any(_hasClassTypeParameter)) {
-      return true;
-    }
-    if (type is RecordTypeRef &&
-        (type.positional.any(_hasClassTypeParameter) ||
-            type.named.values.any(_hasClassTypeParameter))) {
-      return true;
-    }
-    if (type is! FunctionTypeRef) return false;
-    final function = type.signature;
-    if ([
-      ...function.positional,
-      for (final parameter in function.named.values) parameter.type,
-    ].any(_hasClassTypeParameter)) {
-      return true;
-    }
-    return _hasClassTypeParameter(function.returnType);
   }
 }
 

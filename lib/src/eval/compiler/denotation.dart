@@ -1,6 +1,7 @@
 import 'helpers/global.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
+import 'helpers/return.dart';
 import 'helpers/tearoff.dart';
 import 'member/call_signature.dart';
 import 'member/member.dart';
@@ -429,6 +430,20 @@ final class InstanceMemberDenotation extends Denotation {
   final String name;
   final ResolvedMember? declared;
 
+  /// The field promotion recorded on [object]'s binding for [name]
+  /// (`c._f is int` narrows the slot on `c`), or null. `super._f`
+  /// promotions live under a `super:`-namespaced key on the `#this`
+  /// binding — `super` itself carries no binding (its SSA is a distinct
+  /// view, not `#this`'s storage).
+  TypeRef? _promotedFieldType(
+    CompilerContext ctx,
+    Variable object, [
+    bool viaSuper = false,
+  ]) => (viaSuper ? ctx.lookupBinding('#this') : object.binding)
+      ?.current
+      .facts
+      .promotedMembers?[viaSuper ? 'super:$name' : name];
+
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) =>
       _memberType(ctx, forSet: false, source: source) ??
@@ -476,6 +491,15 @@ final class InstanceMemberDenotation extends Denotation {
           return method!.signature.toFunctionType(ctx);
         }
       }
+    }
+    // A recorded field promotion reports the narrowed type.
+    if (!forSet) {
+      final promoted = _promotedFieldType(
+        ctx,
+        object,
+        receiver is SuperReceiver,
+      );
+      if (promoted != null) return promoted;
     }
     var fieldType = ctx.memberLookup.fieldType(
       object.type,
@@ -555,7 +579,7 @@ final class InstanceMemberDenotation extends Denotation {
       }
     }
 
-    return GetTarget.read(
+    final value = GetTarget.read(
       ctx,
       $this,
       name,
@@ -563,6 +587,8 @@ final class InstanceMemberDenotation extends Denotation {
       boundContext: boundContext,
       typeArguments: typeArguments,
     );
+    final promoted = _promotedFieldType(ctx, $this);
+    return promoted == null ? value : value.withType(promoted);
   }
 
   @override
@@ -573,7 +599,7 @@ final class InstanceMemberDenotation extends Denotation {
     List<TypeRef>? typeArguments,
   }) {
     if (receiver case SuperReceiver(:final self)) {
-      return GetTarget.readSuper(
+      final value = GetTarget.readSuper(
         ctx,
         self,
         name,
@@ -581,6 +607,8 @@ final class InstanceMemberDenotation extends Denotation {
         boundContext: boundContext,
         typeArguments: typeArguments,
       );
+      final promoted = _promotedFieldType(ctx, self, true);
+      return promoted == null ? value : value.withType(promoted);
     }
     if (declared != null) {
       return _readDeclared(ctx, source, boundContext, typeArguments);
@@ -594,7 +622,7 @@ final class InstanceMemberDenotation extends Denotation {
     if (object == null) {
       throw CompileError('Cannot access instance member $name', source);
     }
-    return GetTarget.read(
+    final value = GetTarget.read(
       ctx,
       object,
       name,
@@ -602,6 +630,8 @@ final class InstanceMemberDenotation extends Denotation {
       boundContext: boundContext,
       typeArguments: typeArguments,
     );
+    final promoted = _promotedFieldType(ctx, object);
+    return promoted == null ? value : value.withType(promoted);
   }
 
   @override
@@ -1352,6 +1382,11 @@ Denotation resolveMemberAccess(
     case SuperReceiver():
       return InstanceMemberDenotation(receiver, name);
     case ValueReceiver(:final value):
+      // A member access on a `Never` receiver never completes — the code
+      // after it is unreachable (still compiled, never run).
+      if (value.type.isSpec(CoreTypes.never)) {
+        markNeverTerminates(ctx);
+      }
       return InstanceMemberDenotation(ValueReceiver(value), name);
     case ExtensionNamespaceReceiver(:final ext):
       for (final field in ext.members.whereType<FieldDeclaration>()) {

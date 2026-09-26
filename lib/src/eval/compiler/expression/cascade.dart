@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/shared/types.dart';
 
 /// Whether a cascade section's operator is `?..` (null-aware). Only the first
 /// section of a cascade may carry it — `a?..b..c` short-circuits them all.
@@ -53,6 +54,8 @@ Variable compileCascadeExpression(
     macroBranch(
       ctx,
       null,
+      elseEdgeUnreachable: () =>
+          !target.type.nullable && !target.type.isSpec(CoreTypes.dynamic),
       condition: (ctx) => compileNonNullCondition(ctx, target),
       thenBranch: (ctx, _) {
         compileSections();

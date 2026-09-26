@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/assigned_locals.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
@@ -56,8 +57,25 @@ StatementInfo compileTryStatement(
     }
   }
   final initialState = ctx.saveState();
-  void restoreBindings({bool leaving = false}) {
-    ctx.restoreState(leaving ? outerState : initialState);
+  // A local the try body may have reassigned: on the exceptional edge into
+  // `catch`/`finally` its slot may hold the written value, so handler entry
+  // demotes it to its declared type with facts cleared.
+  final tryAssigned = assignedLocalNames([s.body]);
+
+  void restoreBindings({ContextSaveState? flowInto, bool leaving = false}) {
+    ctx.restoreState(leaving ? outerState : (flowInto ?? initialState));
+    if (!leaving) {
+      for (final name in tryAssigned) {
+        final binding = ctx.lookupBinding(name);
+        if (binding == null) continue;
+        final value = binding.current.withType(binding.declaredType);
+        // The epoch bump invalidates condition records another local holds
+        // on this one (`b` recorded `x` non-null; `x` reassigned in the try
+        // body can't be relied on once an exception may have left midway).
+        binding.rebind(value.withFacts(value.facts.cleared()));
+        binding.current.writeEpoch = value.writeEpoch + 1;
+      }
+    }
     for (var frame = 0; frame < ctx.locals.length; frame++) {
       for (final entry in ctx.locals[frame].entries.toList()) {
         final binding = entry.value;
@@ -106,8 +124,10 @@ StatementInfo compileTryStatement(
   }
 
   final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
+  final bodyExitState = completes(bodyInfo) ? ctx.saveState() : null;
   finishProtected(bodyInfo);
   var catchInfo = StatementInfo(willAlwaysThrow: true);
+  ContextSaveState? catchExitState;
   if (catchBlock != null) {
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [catchBlock], parent);
     restoreBindings();
@@ -127,14 +147,19 @@ StatementInfo compileTryStatement(
     );
     ctx.caughtExceptionTargets.removeLast();
     ctx.endScope();
+    catchExitState = completes(catchInfo) ? ctx.saveState() : null;
     finishProtected(catchInfo);
   }
   StatementInfo? finalInfo;
+  ContextSaveState? finallyEntryState;
+  ContextSaveState? finallyExitState;
   if (finallyBlock != null) {
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [finallyBlock], parent);
     restoreBindings();
+    finallyEntryState = ctx.saveState();
     finalInfo = compileBlock(s.finallyBlock!, expectedReturnType, ctx);
     if (completes(finalInfo)) {
+      finallyExitState = ctx.saveState();
       final normalCompletion =
           completes(bodyInfo) || catchBlock != null && completes(catchInfo);
       ctx.pushOp(ResumeCompletion(terminal: !normalCompletion));
@@ -149,6 +174,45 @@ StatementInfo compileTryStatement(
   ctx.builder.float(endBlock);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [endBlock], parent);
   restoreBindings(leaving: true);
+  // The flow state reaching `endBlock` is the join of the normal-completion
+  // edges — the try body and each completing catch. An exceptional edge
+  // rethrows out of `finally`; it never arrives here.
+  final normalExits = [?bodyExitState, ?catchExitState];
+  for (var frame = 0; frame < ctx.locals.length; frame++) {
+    for (final entry in ctx.locals[frame].entries) {
+      final binding = entry.value;
+      var sawEdge = false;
+      var type = binding.current.type;
+      var facts = binding.current.facts;
+      var epoch = binding.current.writeEpoch;
+      for (final state in normalExits) {
+        final other = state.locals[frame][entry.key]?.current;
+        if (other == null) continue;
+        type = sawEdge && other.type != type
+            ? TypeRef.commonBaseType(ctx, {type, other.type})
+            : other.type;
+        facts = sawEdge ? facts.join(other.facts) : other.facts;
+        if (!sawEdge || other.writeEpoch > epoch) epoch = other.writeEpoch;
+        sawEdge = true;
+      }
+      // Writes inside `finally` apply on top: they show up as an epoch bump
+      // relative to the state the finally block started from.
+      if (sawEdge) {
+        final value = binding.current.copyWith(type: type, facts: facts)
+          ..writeEpoch = epoch;
+        binding.rebind(value);
+      }
+      final finallyExit =
+          finallyExitState?.locals[frame][entry.key]?.current;
+      final finallyEntry =
+          finallyEntryState?.locals[frame][entry.key]?.current;
+      if (finallyExit != null &&
+          finallyEntry != null &&
+          finallyExit.writeEpoch > finallyEntry.writeEpoch) {
+        binding.rebind(finallyExit.copyWith());
+      }
+    }
+  }
   if (finalInfo != null && !completes(finalInfo)) return finalInfo;
   return catchBlock == null ? bodyInfo : bodyInfo | catchInfo;
 }

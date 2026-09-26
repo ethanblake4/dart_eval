@@ -85,10 +85,21 @@ Variable compileSwitchExpression(
 
   compileCases(e.cases, 0);
 
-  final resultType = resultTypes.isEmpty
+  var resultType = resultTypes.isEmpty
       ? CoreTypes.dynamic.ref(ctx)
       : resultTypes.length == 1
       ? resultTypes.first
       : TypeRef.commonBaseType(ctx, resultTypes.toSet());
+  // Same greatest-closure rule as `?:`: when the arms' join doesn't fit the
+  // context's greatest closure S but every arm does, the type is S.
+  if (bound != null && ctx.inferenceUpdate3(e)) {
+    final s = ctx.typeSystem.greatestClosure(bound);
+    if (!resultType.isAssignableTo(ctx, s, forceAllowDynamic: false) &&
+        resultTypes.every(
+          (type) => type.isAssignableTo(ctx, s, forceAllowDynamic: false),
+        )) {
+      resultType = s;
+    }
+  }
   return Variable.of(ctx, resultSsa, resultType, rep: ValueRep.boxed);
 }

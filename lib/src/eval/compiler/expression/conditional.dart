@@ -53,9 +53,26 @@ Variable compileConditionalExpression(
   final joined = TypeRef.commonBaseType(ctx, types);
   // The nominal common ancestor can be non-nullable even when an arm is
   // nullable. Its null path must survive the join.
-  final type = joined.withNullable(
+  var type = joined.withNullable(
     joined.nullable || arms.any((arm) => arm.value.type.nullable),
   );
+  // Conditional typing rule: when the arms' join `T` doesn't fit the
+  // greatest closure `S` of the context but both arms do, the expression's
+  // type is `S` — `b ? C1<int>() : C2<double>()` under `B1<_>` is
+  // `B1<Object?>`, not `A`.
+  if (boundType != null && ctx.inferenceUpdate3(e)) {
+    final s = ctx.typeSystem.greatestClosure(boundType);
+    if (!type.isAssignableTo(ctx, s, forceAllowDynamic: false) &&
+        arms.every(
+          (arm) => arm.value.type.isAssignableTo(
+            ctx,
+            s,
+            forceAllowDynamic: false,
+          ),
+        )) {
+      type = s;
+    }
+  }
   final rep = Abi.storageSlot(type);
   // Both arms have now been typed. Replace their result conversions in place
   // so scalar joins stay in scalar registers without changing local bindings

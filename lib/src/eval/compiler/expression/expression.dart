@@ -41,7 +41,7 @@ Variable compileExpression(
   if (e is Literal) {
     return parseLiteral(e, ctx, bound);
   } else if (e is AssignmentExpression) {
-    return compileAssignmentExpression(e, ctx);
+    return compileAssignmentExpression(e, ctx, bound);
   } else if (e is Identifier) {
     return compileIdentifier(e, ctx, bound);
   } else if (e is MethodInvocation) {

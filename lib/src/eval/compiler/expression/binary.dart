@@ -2,6 +2,7 @@ import 'package:control_flow_graph/control_flow_graph.dart' show Assign;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
@@ -80,10 +81,16 @@ Variable compileBinaryExpression(
   var L = compileExpression(
     e.leftOperand,
     ctx,
-    // `&&`/`||` operands have `bool` as their context type on both sides.
+    // `&&`/`||` operands have `bool` as their context type on both sides,
+    // and `e1 ?? e2` infers `e1` under `K?` — the nullable closure of the
+    // expression's context (`context<num>(x ?? 2)` gives `x` context `num?`).
     switch (e.operator.type) {
       TokenType.AMPERSAND_AMPERSAND ||
       TokenType.BAR_BAR => CoreTypes.bool.ref(ctx),
+      TokenType.QUESTION_QUESTION =>
+        boundType == null || boundType.isSpec(CoreTypes.voidType)
+            ? boundType
+            : boundType.withNullable(true),
       _ => boundType,
     },
   );
@@ -117,6 +124,16 @@ Variable compileBinaryExpression(
       (L.type.isSpec(CoreTypes.nullType) ||
           R.type.isSpec(CoreTypes.nullType))) {
     final value = L.type.isSpec(CoreTypes.nullType) ? R : L;
+    // `null` equality never calls a user-defined `==`: a statically-`Null`
+    // operand makes it trivially true, and a provably non-nullable one
+    // (non-`dynamic`) trivially false — flow analysis then treats the other
+    // branch edge as unreachable.
+    if (value.type.isSpec(CoreTypes.nullType)) {
+      return BuiltinValue(boolval: method == '==').push(ctx);
+    }
+    if (!value.type.nullable && !value.type.isSpec(CoreTypes.dynamic)) {
+      return BuiltinValue(boolval: method == '!=').push(ctx);
+    }
     final test = compileNullCondition(ctx, value);
     return method == '=='
         ? test
@@ -188,6 +205,20 @@ Variable _compileShortCircuit(
   macroBranch(
     ctx,
     null,
+    // `x ?? e` with a statically non-nullable `x` never evaluates `e`; the
+    // RHS edge still compiles (dead code is analyzed) but contributes
+    // nothing to the flow join.
+    thenEdgeUnreachable: () =>
+        operator == '??' &&
+        !L.type.nullable &&
+        !L.type.isSpec(CoreTypes.dynamic) &&
+        // `Null` isn't `nullable` but a Null LHS is always null — the
+        // RHS is the live arm, not the dead one.
+        !L.type.isSpec(CoreTypes.nullType),
+    // `Null ?? e` always evaluates `e` — the surviving-LHS edge never
+    // routes to the join.
+    elseEdgeUnreachable: () =>
+        operator == '??' && L.type.isSpec(CoreTypes.nullType),
     condition: (ctx) {
       if (operator == '??') {
         return Variable.ssa(
@@ -209,10 +240,16 @@ Variable _compileShortCircuit(
       if (operator == '&&' || operator == '||') {
         applyConditionPromotions(ctx, left, operator == '&&');
       }
-      // `x ?? .y` gives the RHS the join context (outer bound, else the
-      // non-nullable LHS type); `x && .y`/`||` give it `bool`.
+      // `x ?? .y` gives the RHS the join context: the outer bound when it
+      // is informative, else the non-nullable LHS type (a `dynamic` context
+      // defers to the LHS — dart-lang/language#3650). `x && .y`/`||` give
+      // it `bool`.
       final rightBound = operator == '??'
-          ? boundType ?? L.type.withNullable(false)
+          ? (boundType != null &&
+                    !boundType.isSpec(CoreTypes.dynamic) &&
+                    !boundType.isSpec(CoreTypes.voidType)
+                ? boundType
+                : L.type.withNullable(false))
           : CoreTypes.bool.ref(ctx);
       var R = compileExpression(right, ctx, rightBound);
       rightType = R.type;
@@ -252,11 +289,25 @@ Variable _compileShortCircuit(
   final lhsType = L.type.isSpec(CoreTypes.nullType)
       ? null
       : L.type.withNullable(false);
-  final outType = operator == '??'
+  var outType = operator == '??'
       ? lhsType == null
             ? rightType
             : TypeRef.commonBaseType(ctx, {lhsType, rightType})
       : CoreTypes.bool.ref(ctx);
+  // `??` shares the conditional's S-rule: when the join doesn't fit the
+  // context's greatest closure but both contributing types do, the
+  // expression's type is that closure.
+  if (operator == '??' &&
+      boundType != null &&
+      ctx.inferenceUpdate3(left)) {
+    final s = ctx.typeSystem.greatestClosure(boundType);
+    if (!outType.isAssignableTo(ctx, s, forceAllowDynamic: false) &&
+        (lhsType == null ||
+            lhsType.isAssignableTo(ctx, s, forceAllowDynamic: false)) &&
+        rightType.isAssignableTo(ctx, s, forceAllowDynamic: false)) {
+      outType = s;
+    }
+  }
 
   return outVar.copyWith(type: outType);
 }

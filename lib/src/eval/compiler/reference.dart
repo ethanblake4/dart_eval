@@ -97,6 +97,10 @@ class IdentifierReference implements Reference {
     return resolveIdentifier(ctx, name, forSet: forSet, source: source);
   }
 
+  /// The expression the member is read from — null for a local/global
+  /// name. Assignment helpers use this to tell `x = v` from `c._f = v`.
+  Receiver? get receiver => _receiver;
+
   @override
   TypeRef resolveType(
     CompilerContext ctx, {
@@ -234,8 +238,9 @@ class IndexedReference implements Reference {
       CoreTypes.map.ref(ctx),
       forceAllowDynamic: false,
     )) {
+      // `Map.[]` is `V?`: a missing key yields null.
       return interfaceArgumentsOf(_variable.type).length >= 2
-          ? interfaceArgumentsOf(_variable.type)[1]
+          ? interfaceArgumentsOf(_variable.type)[1].withNullable(true)
           : CoreTypes.dynamic.ref(ctx);
     }
     // A write's contextual type must not execute the indexed getter. For a
@@ -337,7 +342,7 @@ class IndexedReference implements Reference {
 
       final mapType = interfaceArgumentsOf(_variable.type).length < 2
           ? CoreTypes.dynamic.ref(ctx)
-          : interfaceArgumentsOf(_variable.type)[1];
+          : interfaceArgumentsOf(_variable.type)[1].withNullable(true);
 
       final mapResult = Variable.ssa(
         ctx,

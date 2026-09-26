@@ -45,6 +45,17 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
         memberLibraries,
         classLikeClauses(d).$1,
       );
+      _checkInterfaceConformance(
+        ctx,
+        d,
+        d.implementsClause?.interfaces,
+        fields,
+        methods,
+        mixinFields,
+        mixinMethods,
+        memberLibraries,
+        classLikeClauses(d).$1,
+      );
       ctx.enclosingLibrary = ctx.library;
       if (constructors.isEmpty) {
         ctx.currentClass = d;
@@ -113,6 +124,17 @@ void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
       _checkAbstractMixinMemberConformance(
         ctx,
         d,
+        const [],
+        const [],
+        mixinFields,
+        mixinMethods,
+        memberLibraries,
+        d.superclass,
+      );
+      _checkInterfaceConformance(
+        ctx,
+        d,
+        d.implementsClause?.interfaces,
         const [],
         const [],
         mixinFields,
@@ -408,7 +430,12 @@ void _checkAbstractMixinMemberConformance(
     if (decl.body is EmptyFunctionBody) {
       final impl = _effectiveConcreteMember(
         ctx,
-        decl,
+        decl.name.lexeme,
+        decl.isGetter
+            ? MemberKind.getter
+            : decl.isSetter
+            ? MemberKind.setter
+            : MemberKind.method,
         ownFields,
         ownMethods,
         mixinFields,
@@ -448,7 +475,16 @@ void _checkAbstractMixinMemberConformance(
     } else if (superRef != null) {
       // A folded concrete member overrides any same-signature member on the
       // superclass chain and must conform to it (INVALID_OVERRIDE).
-      final interface = _superMemberOf(ctx, decl, superRef);
+      final interface = _superMemberOf(
+        ctx,
+        decl.name.lexeme,
+        decl.isGetter
+            ? MemberKind.getter
+            : decl.isSetter
+            ? MemberKind.setter
+            : MemberKind.method,
+        superRef,
+      );
       final badOverride =
           interface != null &&
           !_memberConformsTo(
@@ -480,21 +516,209 @@ void _checkAbstractMixinMemberConformance(
   }
 }
 
+/// Interface members a non-abstract [host] must satisfy: its own abstract
+/// members and every member promised by its `implements` types (transitively
+/// through those types' supertypes). Each missing member or non-conforming
+/// implementation is INVALID_IMPLEMENTATION_OVERRIDE. A superclass chain that
+/// reaches a bridged or external declaration is uninspectable — its members
+/// are skipped rather than guessed at.
+void _checkInterfaceConformance(
+  CompilerContext ctx,
+  Declaration host,
+  List<NamedType>? implementsClause,
+  List<FieldDeclaration> ownFields,
+  List<MethodDeclaration> ownMethods,
+  List<FieldDeclaration> mixinFields,
+  List<MethodDeclaration> mixinMethods,
+  Map<ClassMember, int> memberLibraries,
+  NamedType? superclassClause,
+) {
+  final hostIsAbstract = switch (host) {
+    ClassDeclaration d => d.abstractKeyword != null,
+    ClassTypeAlias d => d.abstractKeyword != null,
+    _ => false,
+  };
+  if (hostIsAbstract) return;
+  // A noSuchMethod declared on the host satisfies any interface member.
+  if (ownMethods.any((m) => m.name.lexeme == 'noSuchMethod')) return;
+  final requirements = <(ClassMember, int, MemberKind)>[
+    for (final m in ownMethods)
+      if (m.body is EmptyFunctionBody && m.externalKeyword == null)
+        (
+          m,
+          memberLibraries[m] ?? ctx.library,
+          m.isGetter
+              ? MemberKind.getter
+              : m.isSetter
+              ? MemberKind.setter
+              : MemberKind.method,
+        ),
+    for (final clause in implementsClause ?? const <NamedType>[])
+      ..._interfaceMembers(ctx, clause),
+  ];
+  if (requirements.isEmpty) return;
+  TypeRef? superRef;
+  if (superclassClause != null) {
+    try {
+      superRef = clauseNamedType(ctx, ctx.library, superclassClause);
+    } on CompileError {
+      superRef = null;
+    }
+  }
+  superRef ??= ctx.visibleTypes[ctx.library]?['Object'];
+  // An uninspectable (bridged/external) superclass may provide members this
+  // compilation can't see — only a source-declared chain's misses count.
+  final superInspectable =
+      superRef != null &&
+      ctx.topLevelDeclarationsMap[superRef.file]?[superRef.name]
+              ?.declaration !=
+          null;
+  // `extends Object` (implicit or not) leaves no place for a member to hide.
+  final chainEndsAtObject =
+      superRef == null || (superRef.isDartCore && superRef.name == 'Object');
+  final hostName = declarationName(host);
+  for (final (member, declLib, kind) in requirements) {
+    final names = member is MethodDeclaration
+        ? [member.name.lexeme]
+        : [
+            for (final v in (member as FieldDeclaration).fields.variables)
+              v.name.lexeme,
+          ];
+    for (final name in names) {
+      for (final view in kind == MemberKind.method
+          ? const [MemberKind.method]
+          : const [MemberKind.getter, MemberKind.setter]) {
+        if (member is FieldDeclaration && view == MemberKind.setter) {
+          if (member.fields.isFinal || member.fields.isConst) continue;
+        }
+        if (member is MethodDeclaration) {
+          final expected = view == MemberKind.getter
+              ? member.isGetter
+              : view == MemberKind.setter
+              ? member.isSetter
+              : true;
+          if (!expected) continue;
+        }
+        var impl = _effectiveConcreteMember(
+          ctx,
+          name,
+          view,
+          ownFields,
+          ownMethods,
+          mixinFields,
+          mixinMethods,
+          memberLibraries,
+          superRef,
+        );
+        // A method requirement is also satisfied by a field or getter
+        // returning a callable.
+        if (impl == null && view == MemberKind.method) {
+          impl = _effectiveConcreteMember(
+            ctx,
+            name,
+            MemberKind.getter,
+            ownFields,
+            ownMethods,
+            mixinFields,
+            mixinMethods,
+            memberLibraries,
+            superRef,
+          );
+          if (impl != null) continue;
+        }
+        if (impl == null) {
+          if (!superInspectable && !chainEndsAtObject) continue;
+          throw CompileError(
+            'Missing concrete implementation of $name',
+            member,
+            declLib,
+            ctx,
+          );
+        }
+        if (!_memberConformsTo(
+          ctx,
+          impl,
+          DeclarationOrBridge(declLib, declaration: member),
+          setter: view == MemberKind.setter,
+          getter: view == MemberKind.getter,
+        )) {
+          throw CompileError(
+            "The implementation of '$name' in the non-abstract "
+            "class '$hostName' does not conform to its interface",
+            member,
+            declLib,
+            ctx,
+          );
+        }
+      }
+    }
+  }
+}
+
+/// The source-declared members each `implements` type in [clause] promises,
+/// followed transitively by its own supertypes' — bridged/external types
+/// contribute nothing (their members aren't enumerable here).
+Iterable<(ClassMember, int, MemberKind)> _interfaceMembers(
+  CompilerContext ctx,
+  NamedType clause, [
+  Set<String>? visited,
+]) sync* {
+  visited ??= {};
+  TypeRef? ref;
+  try {
+    ref = clauseNamedType(ctx, ctx.library, clause);
+  } on CompileError {
+    return;
+  }
+  if (ref == null) return;
+  yield* _interfaceMembersOf(ctx, ref, visited);
+}
+
+Iterable<(ClassMember, int, MemberKind)> _interfaceMembersOf(
+  CompilerContext ctx,
+  TypeRef ref,
+  Set<String> visited,
+) sync* {
+  final decl = nominalDeclOf(ref);
+  if (decl == null || !visited.add('${ref.file}:${ref.name}')) return;
+  final ast = ctx.topLevelDeclarationsMap[ref.file]?[ref.name]?.declaration;
+  final members = switch (ast) {
+    ClassDeclaration d => d.body.members,
+    MixinDeclaration d => d.body.members,
+    EnumDeclaration d => d.body.members,
+    _ => const <ClassMember>[],
+  };
+  for (final m in members) {
+    if (m is MethodDeclaration && !m.isStatic) {
+      yield (
+        m,
+        ref.file,
+        m.isGetter
+            ? MemberKind.getter
+            : m.isSetter
+            ? MemberKind.setter
+            : MemberKind.method,
+      );
+    } else if (m is FieldDeclaration && !m.isStatic) {
+      yield (m, ref.file, MemberKind.getter);
+    }
+  }
+  for (final s in decl.supertypes.all) {
+    yield* _interfaceMembersOf(ctx, s, visited);
+  }
+}
+
 /// The superclass-chain member matching [decl]'s name and kind, or null when
 /// the chain is uninspectable (bridged/external) or declares no such member.
 DeclarationOrBridge? _superMemberOf(
   CompilerContext ctx,
-  MethodDeclaration decl,
+  String name,
+  MemberKind kind,
   TypeRef superRef,
 ) {
-  final kind = decl.isGetter
-      ? MemberKind.getter
-      : decl.isSetter
-      ? MemberKind.setter
-      : MemberKind.method;
   final resolved = ctx.memberLookup.tryInterfaceMember(
     superRef,
-    MemberName(decl.name.lexeme, kind),
+    MemberName(name, kind),
   );
   if (resolved == null) return null;
   final member = resolved.member;
@@ -513,12 +737,13 @@ DeclarationOrBridge? _superMemberOf(
   );
 }
 
-/// The most-derived concrete member matching [decl]'s name and kind: own
+/// The most-derived concrete member matching [name]/[kind]: own
 /// members first, then the last concrete same-key mixin member, then the
 /// superclass chain.
 DeclarationOrBridge? _effectiveConcreteMember(
   CompilerContext ctx,
-  MethodDeclaration decl,
+  String name,
+  MemberKind kind,
   List<FieldDeclaration> ownFields,
   List<MethodDeclaration> ownMethods,
   List<FieldDeclaration> mixinFields,
@@ -527,16 +752,16 @@ DeclarationOrBridge? _effectiveConcreteMember(
   TypeRef? superRef,
 ) {
   bool sameMember(ClassMember m) {
-    final name = m is MethodDeclaration
+    final mName = m is MethodDeclaration
         ? m.name.lexeme
         : m is FieldDeclaration && m.fields.variables.isNotEmpty
         ? m.fields.variables.first.name.lexeme
         : null;
-    if (name != decl.name.lexeme) return false;
-    if (m is FieldDeclaration) return decl.isGetter || decl.isSetter;
+    if (mName != name) return false;
+    if (m is FieldDeclaration) return kind != MemberKind.method;
     return m is MethodDeclaration &&
-        m.isGetter == decl.isGetter &&
-        m.isSetter == decl.isSetter;
+        m.isGetter == (kind == MemberKind.getter) &&
+        m.isSetter == (kind == MemberKind.setter);
   }
 
   DeclarationOrBridge source(ClassMember m) =>
@@ -557,7 +782,7 @@ DeclarationOrBridge? _effectiveConcreteMember(
     if (sameMember(m)) return source(m);
   }
   if (superRef != null) {
-    return _superMemberOf(ctx, decl, superRef);
+    return _superMemberOf(ctx, name, kind, superRef);
   }
   return null;
 }

@@ -76,12 +76,23 @@ final class LocalBinding {
   /// one write, which flips this to true.
   bool initialized;
 
+  /// Types this binding has been promoted to by `is`/`as` — the flow
+  /// analysis "types of interest". An assignment to the local promotes it to
+  /// the stored type only when that type is a subtype of a type of interest
+  /// (`x as num; x = 0` promotes `x` to `int`; `x = ''` does not promote it
+  /// to `String`).
+  final Set<TypeRef> typesOfInterest = {};
+
   /// The capture cell SSA, when the binding is cell-captured.
   SSA? get captureCell => switch (storage) {
     CaptureCellStorage s => s.cell,
     ExceptionSlotStorage s => s.cell,
     _ => null,
   };
+
+  /// Whether a nested closure writes to this binding — such writes can
+  /// happen at any time, so flow promotions on the local are unsound.
+  bool writeCaptured = false;
 
   /// Replaces the binding's current value — assignment, reconciliation at
   /// flow joins, and in-place box/unbox updates. Storage is unchanged:
@@ -95,6 +106,7 @@ final class LocalBinding {
   void clearValueFacts() {
     final value = current;
     rebind(value.withFacts(value.facts.cleared()));
+    _current.writeEpoch = value.writeEpoch + 1;
   }
 
   /// Writes a new value through this binding's storage and replaces the
@@ -121,31 +133,52 @@ final class LocalBinding {
         : value.unboxIfNeeded(ctx, false);
     if (isFinal) initialized = true;
 
+    // Assignment promotion: a store into a *nullable* local whose value is a
+    // subtype of the non-nullable declared type promotes to
+    // `NonNull(declared)` (`int? x; x = 0` promotes to `int`; `num? w = 0.5`
+    // promotes to `num`, not `double`). Storing into a non-nullable declared
+    // type never promotes (`Object y = ''` stays `Object`). A `dynamic`/`Null`
+    // store instead demotes to the declared type; failing both, retain the
+    // most specific promotion the new value still conforms to (`x as B;
+    // x = C()` keeps `B`, and `x = D()` demotes to the declared type).
+    TypeRef? retained;
+    for (final type in typesOfInterest) {
+      if (!stored.type.isAssignableTo(ctx, type, forceAllowDynamic: false)) {
+        continue;
+      }
+      if (retained == null ||
+          type.isAssignableTo(ctx, retained, forceAllowDynamic: false)) {
+        retained = type;
+      }
+    }
+    final localType =
+        declaredType.isSpec(CoreTypes.dynamic) ||
+            stored.type.isSpec(CoreTypes.dynamic)
+        ? declaredType
+        : declaredType.nullable &&
+              stored.type.isAssignableTo(ctx, declaredType.withNullable(false))
+        ? declaredType.withNullable(false)
+        : retained ?? declaredType;
+
     // A binding whose cell is preserved in an exception slot still writes
     // through the cell. The trampoline restores the cell itself.
     if (storage case ExceptionSlotStorage(:final cell?)) {
       ctx.pushOp(WriteCaptureCell(cell, stored.ssa, local.representation));
-      clearValueFacts();
+      _applyCellWrite(localType);
       return stored;
     }
     if (storage case ExceptionSlotStorage(:final slot)) {
       ctx.pushOp(StoreExceptionSlot(slot, stored.ssa));
-      clearValueFacts();
+      _applyCellWrite(localType);
       return stored;
     }
     if (captureCell case final cell?) {
       ctx.pushOp(WriteCaptureCell(cell, stored.ssa, local.representation));
-      clearValueFacts();
+      _applyCellWrite(localType);
       return stored;
     }
 
     ctx.pushOp(Assign(local.ssa, stored.ssa));
-    // Keep a promotion only if the new value still conforms to it.
-    final localType = declaredType.isSpec(CoreTypes.dynamic)
-        ? declaredType
-        : stored.type.isAssignableTo(ctx, local.type)
-        ? local.type
-        : declaredType;
     // Build the bound value from what was stored so callable metadata is
     // replaced too, including when the new value has no known call target.
     rebind(
@@ -156,7 +189,19 @@ final class LocalBinding {
         facts: stored.facts.forBinding(),
       ),
     );
+    _current.writeEpoch = local.writeEpoch + 1;
     return stored;
+  }
+
+  /// Flow update for writes that go through a cell or exception slot: the
+  /// facts are cleared (any reader can observe an unknown value), and the
+  /// flow type follows the assignment rules — except a write-captured
+  /// local can be clobbered by a closure at any time, so it always falls
+  /// back to its declared type.
+  void _applyCellWrite(TypeRef localType) {
+    final value = _current.withType(writeCaptured ? declaredType : localType);
+    rebind(value.withFacts(value.facts.cleared()));
+    _current.writeEpoch = value.writeEpoch + 1;
   }
 
   /// The binding's value as a read: capture-cell / exception-slot loads
@@ -189,11 +234,23 @@ final class LocalBinding {
   /// any closure invocation can rewrite the cell. A `final`/`const` cell is
   /// written exactly once, before it escapes, so its facts stay valid.
   void captureBinding(CompilerContext ctx, AstNode declaration) {
-    if (!capturesFor(declaration).captured.contains(declaration)) return;
+    final analysis = capturesFor(declaration);
+    if (!analysis.captured.contains(declaration)) return;
     final cell = ctx.svar('cell');
     ctx.pushOp(NewCaptureCell(cell, _current.ssa, _current.representation));
     storage = CaptureCellStorage(cell);
     if (!(isFinal && initialized)) clearValueFacts();
+  }
+
+  /// Marks the binding as written through a captured cell: any in-flight
+  /// promotion is dropped back to the declared type, and the epoch bump
+  /// invalidates condition records other locals hold on this one.
+  void markWriteCaptured() {
+    if (writeCaptured) return;
+    writeCaptured = true;
+    final value = _current.withType(declaredType);
+    rebind(value.withFacts(value.facts.cleared()));
+    _current.writeEpoch = value.writeEpoch + 1;
   }
 
   /// Re-initializes the capture cell from its current value — used at loop

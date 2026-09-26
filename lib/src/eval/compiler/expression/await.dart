@@ -1,10 +1,8 @@
 import 'package:dart_eval/src/eval/ir/async.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../values/value_rep.dart';
 
@@ -25,15 +23,12 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
   final type = subject.type;
 
   final completer = ctx.lookupLocal('#completer')!;
-  final isFuture = type
-      .withNullable(false)
-      .isAssignableTo(ctx, CoreTypes.future.ref(ctx));
-  final resultType = isFuture ? ctx.typeSystem.flatten(type) : type;
+  final resultType = ctx.typeSystem.flatten(type);
 
   return Variable.ssa(
     ctx,
     Await(ctx.svar('await_result'), completer.ssa, subject.ssa),
-    resultType.withNullable(resultType.nullable || isFuture && type.nullable),
+    resultType,
     rep: ValueRep.boxed,
   );
 }

@@ -50,11 +50,6 @@ final class RuntimeTypes {
   /// key, distinct from [idOf] which also covers structural types.
   int? declarationIndex(TypeDecl decl) => indexMap[decl];
 
-  /// Every runtime type index a value of [type] may report `is`/`as`
-  /// success for: its own id plus every declared supertype's, walked with
-  /// substitutions applied at each hop.
-  Set<int> supertypeIds(TypeRef type) => _ctx.typeSystem.supertypeIds(type);
-
   /// The runtime descriptor list for [type]: `[parentId, isNullable,
   /// tag?, ...]` in the order the runtime decoder expects.
   List<int> descriptorOf(TypeRef type) {
@@ -63,7 +58,7 @@ final class RuntimeTypes {
       final owner = parameter.owner;
       final ownerType = owner.isClassLike
           ? idOf(_ctx.visibleTypes[owner.library]![owner.name]!)
-          : RuntimeTypeDescriptorTag.callableTypeParameterOwner;
+          : -(4 + _callableOwnerIdOf(owner));
       // An extension member's callable type parameters are the extension's
       // own parameters followed by the method's — a method-owned parameter's
       // environment index sits past the extension's `on` bindings.
@@ -77,18 +72,7 @@ final class RuntimeTypes {
         RuntimeTypeDescriptorTag.typeParameter,
         ownerType,
         index,
-        // F-bounds can be cyclic (`T extends Foo<T>`, or mutually cyclic
-        // `S extends Built<S, B>`) and descriptors can't be — self-erase,
-        // lower any chained parameter references to their bounds, then
-        // erase survivors to dynamic.
-        idOf(
-          (parameter.bound ?? CoreTypes.dynamic.ref(_ctx))
-              .substituteTypeParameters(
-                Substitution.of({parameter: CoreTypes.dynamic.ref(_ctx)}),
-              )
-              .lowerTypeParameters(_ctx)
-              .eraseTypeParameters(_ctx),
-        ),
+        idOf(_boundDescriptorType(parameter)),
       ];
     }
     if (type is RecordTypeRef) {
@@ -106,7 +90,7 @@ final class RuntimeTypes {
       ];
     }
     final signature = type is FunctionTypeRef ? type.signature : null;
-    if (signature != null && signature.typeParameters.isEmpty) {
+    if (signature != null) {
       final named = signature.named.entries.toList()
         ..sort((a, b) => a.key.compareTo(b.key));
       return [
@@ -117,6 +101,12 @@ final class RuntimeTypes {
         signature.requiredPositional,
         signature.positional.length,
         named.length,
+        signature.typeParameters.length,
+        signature.typeParameters.isEmpty
+            ? 0
+            : -(4 + _callableOwnerIdOf(signature.typeParameters.first.owner)),
+        for (final parameter in signature.typeParameters)
+          idOf(_boundDescriptorType(parameter)),
         for (final parameter in signature.positional) idOf(parameter),
         for (final entry in named) ...[
           _ctx.constantPool.addOrGet(entry.key),
@@ -125,18 +115,33 @@ final class RuntimeTypes {
         ],
       ];
     }
-    if (type is FunctionTypeRef) {
-      // Generic function types collapse to `Function` at runtime — the old
-      // nominal lookup hit the `Function` declaration because equality was
-      // class-blind; subclass-aware equality needs the same fallthrough.
-      return [idOf(CoreTypes.function.ref(_ctx)), type.nullable ? 1 : 0];
-    }
     return [
       (type is InterfaceTypeRef ? indexMap[type.decl] : null) ?? idOf(type),
       type.nullable ? 1 : 0,
       for (final argument in interfaceArgumentsOf(type)) idOf(argument),
     ];
   }
+
+  final _callableOwnerIds = <TypeParameterOwner, int>{};
+
+  /// A stable negative id identifying a callable's type-parameter space in
+  /// descriptors (`-(4 + seq)`). Signature-bound references compare by owner
+  /// identity rather than a flat index, so nested signatures do not alias an
+  /// enclosing callable's parameters.
+  int _callableOwnerIdOf(TypeParameterOwner owner) =>
+      _callableOwnerIds.putIfAbsent(owner, () => _callableOwnerIds.length);
+
+  /// The descriptor-ready form of [parameter]'s bound. F-bounds can be
+  /// cyclic (`T extends Foo<T>`, or mutually cyclic `S extends Built<S, B>`)
+  /// and descriptors can't be — self-erase, lower any chained parameter
+  /// references to their bounds, then erase survivors to dynamic.
+  TypeRef _boundDescriptorType(TypeParameterDef parameter) =>
+      (parameter.bound ?? CoreTypes.dynamic.ref(_ctx))
+          .substituteTypeParameters(
+            Substitution.of({parameter: CoreTypes.dynamic.ref(_ctx)}),
+          )
+          .lowerTypeParameters(_ctx)
+          .eraseTypeParameters(_ctx);
 
   /// The number of extension `on` bindings a method-owned [owner]'s callable
   /// environment places before its own type arguments — 0 when the method

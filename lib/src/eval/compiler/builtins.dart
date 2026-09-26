@@ -76,7 +76,12 @@ class BuiltinValue {
         LoadBool(target, boolval!),
         type,
         rep: ValueRep.bool,
-        facts: ValueFacts(exact: type, possibleClasses: [type], isConst: true),
+        facts: ValueFacts(
+          exact: type,
+          possibleClasses: [type],
+          isConst: true,
+          constBool: boolval,
+        ),
       );
     } else if (type == BuiltinValueType.nullType) {
       final type = CoreTypes.nullType.ref(ctx);

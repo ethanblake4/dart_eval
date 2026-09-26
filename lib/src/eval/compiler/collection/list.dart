@@ -17,6 +17,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import '../values/value_rep.dart';
 import '../variable/value_facts.dart';
@@ -78,7 +79,16 @@ Variable compileListLiteral(
   ctx.beginScope();
   final resultTypes = <TypeRef>[];
   for (final e in elements) {
-    resultTypes.addAll(compileListElement(e, list, ctx, _boxListElements));
+    final elementTypes = compileListElement(e, list, ctx, _boxListElements);
+    // A Never-typed element (a throw, or a call declared Never) ends the
+    // literal's evaluation — the whole expression never produces a value.
+    if (elementTypes.any(
+      (t) => t.isSpec(CoreTypes.never) && !t.nullable,
+    )) {
+      ctx.endScope();
+      return Variable.never(ctx);
+    }
+    resultTypes.addAll(elementTypes);
   }
   ctx.endScope();
 
@@ -160,6 +170,9 @@ List<TypeRef> compileListElement(
       description:
           'Cannot use expression of type ${result.type} in list of type $listType',
     );
+    if (result.type.isSpec(CoreTypes.never) && !result.type.nullable) {
+      return [result.type];
+    }
     ctx.pushOp(ListAppend(list.ssa, result.ssa));
     return [result.type];
   } else if (e is IfElement) {

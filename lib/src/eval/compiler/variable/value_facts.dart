@@ -15,6 +15,10 @@ final class ValueFacts {
     this.callableSignature,
     this.isConst = false,
     this.isConstInt = false,
+    this.constBool,
+    this.promotedMembers,
+    this.truePromotions,
+    this.falsePromotions,
   });
 
   static const none = ValueFacts();
@@ -44,12 +48,38 @@ final class ValueFacts {
   /// expression — enables the `int → double` literal coercion.
   final bool isConstInt;
 
+  /// The compile-time-known value of a constant `bool` — set on `true`/`false`
+  /// literals and on expressions the compiler statically folds to a bool
+  /// (`x is T` on provably disjoint types). Lets condition emission mark the
+  /// never-taken edge unreachable so its writes don't join the flow state.
+  final bool? constBool;
+
+  /// Promoted types of promotable members *of this object* — `c._f` where
+  /// `_f` is a private final field. Keyed by member name; the value is the
+  /// promoted type the member read currently reports. Absent = none.
+  final Map<String, TypeRef>? promotedMembers;
+
+  /// For a bool-typed value that recorded a condition expression
+  /// (`bool b = x != null`): the local promotions that hold when the value
+  /// is true / false — the "promotion through boolean variables" rule.
+  /// Keys are local binding names (`x`, `x._f`); each entry pairs the
+  /// promoted type with the receiver binding's write epoch, so writing
+  /// `x` invalidates the record (`b` no longer promotes `x`).
+  final Map<String, (TypeRef, int)>? truePromotions;
+
+  /// See [truePromotions].
+  final Map<String, (TypeRef, int)>? falsePromotions;
+
   /// Copies scalar markers and possible classes. Nullable denotation facts
   /// stay unchanged; replace the whole object when a value is overwritten.
   ValueFacts copyWith({
     List<TypeRef>? possibleClasses,
     bool? isConst,
     bool? isConstInt,
+    bool? constBool,
+    Map<String, TypeRef>? promotedMembers,
+    Map<String, (TypeRef, int)>? truePromotions,
+    Map<String, (TypeRef, int)>? falsePromotions,
   }) => ValueFacts(
     exact: exact,
     possibleClasses: possibleClasses ?? this.possibleClasses,
@@ -57,11 +87,17 @@ final class ValueFacts {
     callableSignature: callableSignature,
     isConst: isConst ?? this.isConst,
     isConstInt: isConstInt ?? this.isConstInt,
+    constBool: constBool ?? this.constBool,
+    promotedMembers: promotedMembers ?? this.promotedMembers,
+    truePromotions: truePromotions ?? this.truePromotions,
+    falsePromotions: falsePromotions ?? this.falsePromotions,
   );
 
   /// Facts for a merged value: [exact] survives only when both inputs
   /// agree, [possibleClasses] unions only when both are known, and the
-  /// const markers require both.
+  /// const markers require both. Member promotions and recorded conditions
+  /// survive only when both edges agree on the same entry — a conservative
+  /// join; differing promotions fall back to the member's declared type.
   ValueFacts join(ValueFacts other) => ValueFacts(
     exact: other.exact == exact ? exact : null,
     possibleClasses: possibleClasses.isEmpty || other.possibleClasses.isEmpty
@@ -73,13 +109,41 @@ final class ValueFacts {
         : null,
     isConst: isConst && other.isConst,
     isConstInt: isConstInt && other.isConstInt,
+    constBool: constBool == other.constBool ? constBool : null,
+    promotedMembers: _joinMaps(promotedMembers, other.promotedMembers),
+    truePromotions: _joinMaps(truePromotions, other.truePromotions),
+    falsePromotions: _joinMaps(falsePromotions, other.falsePromotions),
+  );
+
+  static Map<String, V>? _joinMaps<V>(Map<String, V>? a, Map<String, V>? b) {
+    if (a == null || b == null) return null;
+    final result = <String, V>{};
+    for (final entry in a.entries) {
+      if (b[entry.key] == entry.value) result[entry.key] = entry.value;
+    }
+    return result.isEmpty ? null : result;
+  }
+
+  /// This value's facts with member [name] promoted to [type].
+  ValueFacts withPromotedMember(String name, TypeRef type) => copyWith(
+    promotedMembers: {...?promotedMembers, name: type},
   );
 
   /// No facts survive an unknown value change, including callable signatures.
   ValueFacts cleared() => const ValueFacts();
 
-  /// Facts for the form a value takes once bound to a local: the const-int
-  /// literal marker never survives binding (only literal expressions
-  /// coerce `int → double`), everything else does.
-  ValueFacts forBinding() => isConstInt ? copyWith(isConstInt: false) : this;
+  /// Facts for the form a value takes once bound to a local: the const
+  /// literal markers (`isConstInt`, `constBool`) never survive binding (only
+  /// literal expressions coerce `int → double` or carry a known bool value),
+  /// member promotions do not transfer across objects (`c2 = c` must not
+  /// carry `c`'s field facts onto `c2`), and recorded conditions attach to
+  /// the local they were assigned into — `b2 = b` does not make `b2` a
+  /// condition carrier.
+  ValueFacts forBinding() => ValueFacts(
+    exact: exact,
+    possibleClasses: possibleClasses,
+    denotedType: denotedType,
+    callableSignature: callableSignature,
+    isConst: isConst,
+  );
 }

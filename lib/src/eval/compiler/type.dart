@@ -255,7 +255,8 @@ sealed class TypeRef {
   TypeRef lowerTypeParameters(
     CompilerContext ctx, {
     Set<TypeParameterDef>? only,
-  }) => ctx.typeSystem.lowerTypeParameters(this, only: only);
+    Set<TypeParameterOwnerKind> kinds = const {},
+  }) => ctx.typeSystem.lowerTypeParameters(this, only: only, kinds: kinds);
 
   /// Replaces every remaining type-parameter reference inside this type with
   /// `dynamic` — the fallback for bounds that cannot be represented (cyclic

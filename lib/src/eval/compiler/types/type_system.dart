@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 
 import '../context.dart';
@@ -216,10 +218,10 @@ final class TypeSystem {
   /// [maxEmittedArgDepth] bounds instantiated-supertype emission — a
   /// self-nesting interface (`F<T> implements Future<F<F<T>>>`) generates
   /// deeper instantiations at every hop and the closure would never
-  /// terminate. The bound is relative to [type]'s own depth: instantiated
-  /// supertypes are legitimately deeper than any written type (bound
-  /// instantiation adds nesting at each hierarchy hop), but they can only
-  /// outgrow the root by a bounded amount. Supertypes beyond the bound
+  /// terminate. The bound is absolute, not relative to [type]'s depth: a
+  /// deep instantiated argument is itself registered and expanded, so a
+  /// root-relative bound would let each new root re-base the limit — the
+  /// classic divergent-future explosion. Supertypes beyond the bound
   /// contribute only their nominal index.
   Set<int> supertypeIds(TypeRef type, {int? maxEmittedArgDepth}) {
     final selfId = _ctx.runtimeTypes.idOf(type);
@@ -230,8 +232,7 @@ final class TypeSystem {
     };
     final seen = {type};
     final worklist = directSupertypes(type);
-    final maxSuperDepth =
-        maxEmittedArgDepth == null ? null : maxEmittedArgDepth + typeArgumentDepth(type);
+    final maxSuperDepth = maxEmittedArgDepth;
     while (worklist.isNotEmpty) {
       final supertype = worklist.removeLast();
       if (!seen.add(supertype)) continue;
@@ -261,13 +262,24 @@ final class TypeSystem {
   /// those parameters meaning — an unconstrained `T` is not a usable type
   /// for the caller. When [only] is given, parameters outside the set are
   /// kept: they belong to the caller's own scope and stay meaningful.
-  TypeRef lowerTypeParameters(TypeRef type, {Set<TypeParameterDef>? only}) {
+  TypeRef lowerTypeParameters(
+    TypeRef type, {
+    Set<TypeParameterDef>? only,
+
+    /// Parameter owner kinds that lower even when absent from [only] —
+    /// alias-owned parameters embedded in a formal are inference variables
+    /// at the call boundary, independent of how the call seeded its
+    /// generic map.
+    Set<TypeParameterOwnerKind> kinds = const {},
+  }) {
     final bindings = <TypeParameterDef, TypeRef>{};
     void collect(TypeRef t) {
       if (t.isTypeParameter) {
         final parameter = (t as TypeParameterTypeRef).parameter;
         if (bindings.containsKey(parameter) ||
-            (only != null && !only.contains(parameter))) {
+            (only != null &&
+                !only.contains(parameter) &&
+                !kinds.contains(parameter.owner.kind))) {
           return;
         }
         final bound = parameter.bound ?? CoreTypes.dynamic.ref(_ctx);
@@ -409,24 +421,27 @@ final class TypeSystem {
 
   /// The `flatten` function from the async spec: the value type `T` such
   /// that `await`/`async` treat a `FutureOr<T>`/`Future<T>`-shaped value as
-  /// `T`. Resolves one step through the implemented `Future` superinterface
-  /// (`futureValueType`), then peels syntactic `Future`/`FutureOr`
-  /// wrappers. The superinterface step cannot recurse — divergent futures
+  /// `T`. A `FutureOr<S>` surface peels once to `S`; a `Future<S>` (or a
+  /// class implementing it) peels recursively. The superinterface step
+  /// itself cannot recurse — divergent futures
   /// (`D implements Future<D<D<T>>>`) would otherwise expand forever.
   TypeRef flatten(TypeRef type) {
     var t = type;
     var nullable = type.nullable;
-    final futureDecl = _ctx.types.bySpec(CoreTypes.future);
-    final instantiation = asInstanceOf(t, futureDecl);
     if (t.name == 'FutureOr' && interfaceArgumentsOf(t).isNotEmpty) {
-      t = interfaceArgumentsOf(t).first;
-    } else if (instantiation != null) {
+      // `FutureOr<S>` unwraps once — `flatten(FutureOr<S>)` is `S`, not
+      // `flatten(S)` — so `FutureOr<Future<int>>` awaits to `Future<int>`.
+      return interfaceArgumentsOf(t).first
+          .withNullable(interfaceArgumentsOf(t).first.nullable || nullable);
+    }
+    final instantiation = asInstanceOf(t, _ctx.types.bySpec(CoreTypes.future));
+    if (instantiation != null) {
       nullable = nullable || t.nullable;
       t = interfaceArgumentsOf(instantiation).isEmpty
           ? CoreTypes.dynamic.ref(_ctx)
           : interfaceArgumentsOf(instantiation).first;
     }
-    while (t.isSpec(CoreTypes.future) || t.name == 'FutureOr') {
+    while (t.isSpec(CoreTypes.future)) {
       if (interfaceArgumentsOf(t).isEmpty) break;
       nullable = nullable || t.nullable;
       t = interfaceArgumentsOf(t).first;
@@ -464,102 +479,206 @@ final class TypeSystem {
     return null;
   }
 
+  /// The greatest closure of a context type: every inference hole —
+  /// represented as an unfilled type parameter — becomes `Object?`.
+  /// `Iterable<_>` closes to `Iterable<Object?>`, the upper bound the
+  /// conditional/`??=` rules test the joined type against.
+  TypeRef greatestClosure(TypeRef type) => switch (type) {
+    TypeParameterTypeRef() => CoreTypes.object.ref(_ctx).withNullable(true),
+    InterfaceTypeRef(:final arguments) => arguments.isEmpty
+        ? type
+        : type.copyWith(
+            arguments: [for (final arg in arguments) greatestClosure(arg)],
+          ),
+    RecordTypeRef(:final positional, :final named) => RecordTypeRef(
+        [for (final field in positional) greatestClosure(field)],
+        {
+          for (final entry in named.entries)
+            entry.key: greatestClosure(entry.value),
+        },
+        nullable: type.nullable,
+      ),
+    FunctionTypeRef(:final signature) => type.copyWith(
+        signature: FunctionSignature(
+          typeParameters: signature.typeParameters,
+          positional: [
+            for (final field in signature.positional) greatestClosure(field),
+          ],
+          requiredPositional: signature.requiredPositional,
+          named: {
+            for (final entry in signature.named.entries)
+              entry.key: (
+                type: greatestClosure(entry.value.type),
+                required: entry.value.required,
+              ),
+          },
+          returnType: greatestClosure(signature.returnType),
+        ),
+      ),
+  };
+
   /// Given a set of [types], find their closest common ancestor type —
   /// every type's declaration-shaped chain (extends above interfaces above
   /// mixins, in declaration order) contributing to a layer-frequency pick,
   /// with assignability breaking the shallowest layer's ties.
   TypeRef leastUpperBound(Set<TypeRef> types) {
     assert(types.isNotEmpty);
-    var makeNullable = types.remove(CoreTypes.nullType.ref(_ctx));
+    // Nullability joins upward too — `int` and `int?` meet at `int?`.
+    final makeNullable =
+        types.remove(CoreTypes.nullType.ref(_ctx)) ||
+        types.any((type) => type.nullable);
     if (types.isEmpty) {
       return CoreTypes.nullType.ref(_ctx);
     }
     if (types.length == 1) {
       return makeNullable ? types.first.withNullable(true) : types.first;
     }
-    final chains = types.map(_typeChain).toList();
-
-    // Cross-level type deduplication
-    for (final chain in chains) {
-      final typeSet = <TypeRef>{};
-      for (final typeList in chain) {
-        for (final type in [...typeList]) {
-          if (!typeSet.contains(type)) {
-            typeSet.add(type);
-          } else {
-            typeList.remove(type);
-          }
-        }
-      }
+    // Mirroring the analyzer's `InterfaceLeastUpperBoundHelper`: subtype
+    // either way, a shared declaration merges arguments point-wise, and
+    // otherwise the winner is the deepest *exactly-instantiated* common
+    // supertype — `Iterable<int>`/`Iterable<double>` meet at
+    // `Iterable<num>`, while `int`/`String` skip `Comparable<num>`/
+    // `Comparable<String>` (different instantiations) and meet at `Object`.
+    var result = types.first.withNullable(false);
+    for (final other in types.skip(1)) {
+      final next = _pairwiseUpperBound(result, other.withNullable(false));
+      result = next;
     }
-
-    // Count common supertypes by declaration (A.4): `List<int>` and
-    // `List<String>` must meet at `List`. Decl-less types (records, type
-    // parameters) key themselves — the legacy nominal identity.
-    final refCount = <Object, int>{};
-    final layer = <Object, int>{};
-    final firstSeen = <Object, TypeRef>{};
-    var i = 0;
-
-    var passes = 0;
-    t:
-    while (true) {
-      for (final chain in chains) {
-        if (i > chain.length - 1) {
-          passes++;
-          if (passes > chains.length - 1) {
-            break t;
-          }
-          continue;
-        }
-        final types0 = chain[i];
-        for (final type in types0) {
-          final key = nominalDeclOf(type) ?? type;
-          if (refCount[key] == null) {
-            refCount[key] = 1;
-            layer[key] = i;
-            firstSeen[key] = type;
-          } else {
-            refCount[key] = refCount[key]! + 1;
-            layer[key] = layer[key]! + i;
-          }
-        }
-      }
-      passes = 0;
-      i++;
-    }
-
-    refCount.removeWhere((key, value) => value < types.length);
-
-    final sorted = refCount.keys.toList()
-      ..sort((k1, k2) => layer[k1]! - layer[k2]!);
-    if (sorted.isEmpty) {
-      return CoreTypes.dynamic.ref(_ctx).withNullable(makeNullable);
-    }
-    // Among the shallowest common supertypes, pick the one that is a subtype
-    // of all the others (e.g. `num` over `Object`). When several are
-    // incomparable (a class `implements B1, B2` with both shared), pick the
-    // last inserted — `_typeChain` walks interfaces in reverse, so the last
-    // candidate is the first-declared interface.
-    final minLayer = layer[sorted[0]]!;
-    final candidates = sorted
-        .where((t) => layer[t] == minLayer)
-        .toList(growable: false);
-    final best = candidates.firstWhere(
-      (c) => candidates.every(
-        (o) =>
-            c == o ||
-            isAssignable(
-              firstSeen[c]!,
-              firstSeen[o]!,
-              forceAllowDynamic: false,
-            ),
-      ),
-      orElse: () => candidates.last,
-    );
-    final bestType = firstSeen[best]!;
-    return bestType.withNullable(bestType.nullable || makeNullable);
+    return result.withNullable(result.nullable || makeNullable);
   }
+
+  /// The pairwise LUB step behind [leastUpperBound]: subtype wins, a shared
+  /// generic declaration merges its arguments covariantly (Dart classes are
+  /// covariant unless declared `in`/`inout`, which dart_eval does not model),
+  /// and incomparable types intersect their superinterface *instantiations*
+  /// — the set element keeps its type arguments, so `Comparable<num>` and
+  /// `Comparable<String>` never meet — then takes the unique deepest.
+  TypeRef _pairwiseUpperBound(TypeRef a, TypeRef b) {
+    if (a.isAssignableTo(_ctx, b, forceAllowDynamic: false)) return b;
+    if (b.isAssignableTo(_ctx, a, forceAllowDynamic: false)) return a;
+    if (a is TypeParameterTypeRef) {
+      return _pairwiseUpperBound(
+        a.parameter.bound?.withNullable(false) ?? CoreTypes.dynamic.ref(_ctx),
+        b,
+      );
+    }
+    if (b is TypeParameterTypeRef) {
+      return _pairwiseUpperBound(
+        a,
+        b.parameter.bound?.withNullable(false) ?? CoreTypes.dynamic.ref(_ctx),
+      );
+    }
+    // Identically-shaped signatures meet pointwise: the return type joins
+    // upward while parameters meet at their greatest lower bound, matching
+    // the analyzer's function-type rule — `C1<int> Function()` and
+    // `C2<int> Function()` meet at `A Function()`.
+    if (a is FunctionTypeRef && b is FunctionTypeRef) {
+      final sa = a.signature;
+      final sb = b.signature;
+      if (sa.positional.length == sb.positional.length &&
+          sa.requiredPositional == sb.requiredPositional &&
+          sa.named.length == sb.named.length &&
+          sa.named.keys.every(sb.named.containsKey) &&
+          sa.typeParameters.length == sb.typeParameters.length) {
+        return a.copyWith(
+          signature: FunctionSignature(
+            typeParameters: sa.typeParameters,
+            positional: [
+              for (var i = 0; i < sa.positional.length; i++)
+                _greatestLowerBound(sa.positional[i], sb.positional[i]),
+            ],
+            requiredPositional: sa.requiredPositional,
+            named: {
+              for (final entry in sa.named.entries)
+                entry.key: (
+                  type: _greatestLowerBound(
+                    entry.value.type,
+                    sb.named[entry.key]!.type,
+                  ),
+                  required: entry.value.required,
+                ),
+            },
+            returnType: _pairwiseUpperBound(
+              sa.returnType,
+              sb.returnType,
+            ),
+          ),
+        );
+      }
+    }
+    if (a is InterfaceTypeRef && b is InterfaceTypeRef) {
+      final declA = nominalDeclOf(a);
+      final declB = nominalDeclOf(b);
+      if (declA != null && identical(declA, declB)) {
+        final argsA = interfaceArgumentsOf(a);
+        final argsB = interfaceArgumentsOf(b);
+        if (argsA.isNotEmpty && argsA.length == argsB.length) {
+          return a.copyWith(
+            arguments: [
+              for (var i = 0; i < argsA.length; i++)
+                _pairwiseUpperBound(argsA[i], argsB[i]),
+            ],
+          );
+        }
+      }
+    }
+    final common =
+        _superinterfaceSet(a)
+          ..add(a)
+          ..retainAll(_superinterfaceSet(b)..add(b));
+    if (common.isEmpty) {
+      return CoreTypes.dynamic.ref(_ctx);
+    }
+    // Deepest unique inheritance path to Object wins; a tied depth level is
+    // skipped wholesale, so `C1<int>`/`C2<double>` land on `A` rather than
+    // one of the two `B<num>` instantiations.
+    final depths = {for (final type in common) type: _inheritanceDepth(type)};
+    for (var depth = depths.values.fold(0, math.max); depth >= 0; depth--) {
+      final atDepth = [
+        for (final entry in depths.entries)
+          if (entry.value == depth) entry.key,
+      ];
+      if (atDepth.length == 1) return atDepth.first;
+    }
+    return CoreTypes.dynamic.ref(_ctx);
+  }
+
+  /// The subtype-either-way greatest lower bound used for function
+  /// parameters; unrelated types fall to `Never`.
+  TypeRef _greatestLowerBound(TypeRef a, TypeRef b) {
+    if (a.isAssignableTo(_ctx, b, forceAllowDynamic: false)) return a;
+    if (b.isAssignableTo(_ctx, a, forceAllowDynamic: false)) return b;
+    return CoreTypes.never.ref(_ctx);
+  }
+
+  /// All of [type]'s superinterfaces as *instantiated* types (self
+  /// included), mirroring `computeSuperinterfaceSet`: the intersection of
+  /// two of these sets only matches equal instantiations.
+  Set<TypeRef> _superinterfaceSet(TypeRef type) => {
+    for (final layer in _typeChain(type)) ...layer,
+  };
+
+  /// The longest inheritance path from [type] to `Object` (analyzer's
+  /// `computeLongestInheritancePathToObject`), counting superclass,
+  /// interface, and mixin edges. Decl-less types (records, parameters)
+  /// bottom out at 0.
+  int _inheritanceDepth(TypeRef type) {
+    final visiting = <Object>{};
+    int depth(TypeRef t) {
+      final key = nominalDeclOf(t) ?? t;
+      if (!visiting.add(key)) return 0;
+      var best = 0;
+      for (final supertype in directSupertypes(t)) {
+        final d = depth(supertype) + 1;
+        if (d > best) best = d;
+      }
+      visiting.remove(key);
+      return best;
+    }
+
+    return depth(type);
+  }
+
 
   /// The declaration-shaped chain for [type]: `[this]`, then layers of
   /// supertypes — the superclass's own chain forms the deepest layers while
@@ -626,6 +745,11 @@ final class TypeSystem {
     TypeRef to, {
     List<TypeRef>? overrideGenerics,
     bool forceAllowDynamic = true,
+    // Dart's *assignment* relation additionally permits implicit downcasts
+    // out of `dynamic` inside function-type components — `void Function(int)`
+    // is assignable to `void Function(dynamic)` though not a subtype. The
+    // `is` fold and other strict callers leave this off.
+    bool allowDynamicParameterDowncast = false,
   }) {
     if (to.isSpec(CoreTypes.dynamic) ||
         to.isSpec(CoreTypes.voidType) ||
@@ -697,6 +821,21 @@ final class TypeSystem {
       );
     }
 
+    if (from is FunctionTypeRef && to is FunctionTypeRef) {
+      return _isFunctionTypeAssignable(
+        from,
+        to,
+        forceAllowDynamic: forceAllowDynamic,
+        allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+      );
+    }
+
+    // The unparameterized `Function` type shares its declaration with every
+    // signature — `Function <: int Function()` must not succeed here.
+    if (to is FunctionTypeRef && from.isSpec(CoreTypes.function)) {
+      return false;
+    }
+
     if (sameDeclaration(from, to) &&
         (!from.nullable || to.nullable || from.isSpec(CoreTypes.nullType))) {
       if (interfaceArgumentsOf(to).isNotEmpty &&
@@ -751,6 +890,127 @@ final class TypeSystem {
     return false;
   }
 
+  /// Structural function-type subtype check, mirroring the runtime's
+  /// `isTypedValueType` comparison of signature descriptors. Parameters are
+  /// contravariant; a generic target's parameters are renamed onto the
+  /// source's so bound references compare as the same variable.
+  bool _isFunctionTypeAssignable(
+    FunctionTypeRef source,
+    FunctionTypeRef target, {
+    required bool forceAllowDynamic,
+    required bool allowDynamicParameterDowncast,
+  }) {
+    final sourceSignature = source.signature;
+    final targetSignature = target.signature;
+    if (sourceSignature.requiredPositional >
+            targetSignature.requiredPositional ||
+        sourceSignature.positional.length <
+            targetSignature.positional.length) {
+      return false;
+    }
+    if (sourceSignature.typeParameters.length !=
+        targetSignature.typeParameters.length) {
+      return false;
+    }
+    final substitutions = Substitution.of({
+      for (var i = 0; i < targetSignature.typeParameters.length; i++)
+        targetSignature.typeParameters[i]: TypeParameterTypeRef(
+          sourceSignature.typeParameters[i],
+        ),
+    });
+    TypeRef renamedTarget(TypeRef type) =>
+        type.substituteTypeParameters(substitutions);
+
+    // A type parameter that survives renaming belongs to an enclosing
+    // generic context (the callee's `T` in `int Function(T)`), not to the
+    // signature — it is a constraint-inference variable, so the component
+    // compare can't disprove it. Accept it, matching the previous
+    // declaration-level leniency.
+    bool hasForeignParameter(TypeRef type) {
+      if (type is TypeParameterTypeRef) {
+        return !sourceSignature.typeParameters.contains(type.parameter);
+      }
+      if (type is FunctionTypeRef) {
+        final signature = type.signature;
+        return signature.positional.any(hasForeignParameter) ||
+            signature.named.values.any((p) => hasForeignParameter(p.type)) ||
+            hasForeignParameter(signature.returnType);
+      }
+      if (type is RecordTypeRef) {
+        return type.positional.any(hasForeignParameter) ||
+            type.named.values.any(hasForeignParameter);
+      }
+      return interfaceArgumentsOf(type).any(hasForeignParameter);
+    }
+
+    // Generic function subtyping ignores the declared bounds (they only
+    // constrain instantiation, not assignability) — `t1<T extends int>` is
+    // a `void Function<T extends num>()`.
+    // A `void` target accepts any return; `dynamic` satisfies any target.
+    // A `void` source return is not permissive (`void() <: int()` fails).
+    final targetReturn = renamedTarget(targetSignature.returnType);
+    final dynamicReturnDowncast =
+        allowDynamicParameterDowncast &&
+        sourceSignature.returnType.isSpec(CoreTypes.dynamic);
+    if (!targetReturn.isSpec(CoreTypes.voidType) &&
+        !sourceSignature.returnType.isSpec(CoreTypes.dynamic) &&
+        !dynamicReturnDowncast &&
+        !hasForeignParameter(targetReturn) &&
+        !isAssignable(
+          sourceSignature.returnType,
+          targetReturn,
+          forceAllowDynamic: forceAllowDynamic,
+          allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+        )) {
+      return false;
+    }
+    // Contravariant: the target's parameter must be assignable to the
+    // source's. A `dynamic` target parameter accepts only a dynamic (or
+    // `Object?`) source — matching the runtime's permissive check.
+    bool parameterAssignable(TypeRef targetType, TypeRef sourceType) {
+      if (targetType.isSpec(CoreTypes.dynamic)) {
+        // Assignment additionally permits the implicit `dynamic` downcast.
+        return allowDynamicParameterDowncast ||
+            sourceType.isSpec(CoreTypes.dynamic) ||
+            (sourceType.isSpec(CoreTypes.object) && sourceType.nullable);
+      }
+      if (hasForeignParameter(targetType)) return true;
+      return isAssignable(
+        targetType,
+        sourceType,
+        forceAllowDynamic: forceAllowDynamic,
+        allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+      );
+    }
+
+    for (var i = 0; i < targetSignature.positional.length; i++) {
+      if (!parameterAssignable(
+        renamedTarget(targetSignature.positional[i]),
+        sourceSignature.positional[i],
+      )) {
+        return false;
+      }
+    }
+    for (final entry in targetSignature.named.entries) {
+      final sourceParameter = sourceSignature.named[entry.key];
+      if (sourceParameter == null ||
+          (!entry.value.required && sourceParameter.required) ||
+          !parameterAssignable(
+            renamedTarget(entry.value.type),
+            sourceParameter.type,
+          )) {
+        return false;
+      }
+    }
+    for (final entry in sourceSignature.named.entries) {
+      if (entry.value.required &&
+          !(targetSignature.named[entry.key]?.required ?? false)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// Classifies Dart assignment compatibility of a [from] value into a
   /// [to] slot without conflating `dynamic` with a subtype proof.
   AssignmentConversion assignmentConversion(TypeRef from, TypeRef to) {
@@ -765,13 +1025,23 @@ final class TypeSystem {
     }
     if (from.nullable &&
         !to.nullable &&
-        isAssignable(from.withNullable(false), to, forceAllowDynamic: false)) {
+        isAssignable(
+          from.withNullable(false),
+          to,
+          forceAllowDynamic: false,
+          allowDynamicParameterDowncast: true,
+        )) {
       return AssignmentConversion.runtimeCheck;
     }
     if (from.isSpec(CoreTypes.int) && to.isSpec(CoreTypes.double)) {
       return AssignmentConversion.intToDouble;
     }
-    return isAssignable(from, to, forceAllowDynamic: false)
+    return isAssignable(
+          from,
+          to,
+          forceAllowDynamic: false,
+          allowDynamicParameterDowncast: true,
+        )
         ? AssignmentConversion.none
         : AssignmentConversion.invalid;
   }
