@@ -143,7 +143,6 @@ expect_fail:
   - path: 'control_flow_collections/for_inference_test.dart'
   - path: 'control_flow_collections/for_runtime_error_test.dart'
   - path: 'control_flow_collections/for_test.dart'
-  - path: 'control_flow_collections/for_variable_test.dart'
   - path: 'control_flow_collections/if_inference_test.dart'
   - path: 'control_flow_collections/if_test.dart'
   - path: 'control_flow_collections/map_set_ambiguity_test.dart'

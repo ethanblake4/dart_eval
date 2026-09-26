@@ -25,6 +25,38 @@ void main() {
       });
     }
 
+    check('collection loops renew captures before their updates', r'''
+      int main() {
+        final list = [for (var i = 0; i < 3; i++) () => i];
+        final map = {for (var i = 0; i < 3; i++) i: () => i};
+        final set = {for (var i = 0; i < 3; i++) () => i};
+        var total = 0;
+        for (var i = 0; i < 3; i++) {
+          total = total * 10 + list[i]() + map[i]!();
+        }
+        for (final callback in set) total = total * 10 + callback();
+        return total;
+      }
+    ''', 24012);
+    check(
+      'collection condition and update closures retain their iteration',
+      r'''
+      int main() {
+        final callbacks = <Function>[];
+        int capture(Function callback) {
+          callbacks.add(callback);
+          return callback();
+        }
+        final values = [for (var i = 0; capture(() => i++) < 2;) i];
+        var total = callbacks[0]() * 10 + callbacks[1]();
+        callbacks.clear();
+        final updates = [for (var i = 0; i < 2; capture(() => i++)) i];
+        return total * 100 + callbacks[0]() * 10 + callbacks[1]() +
+            values.length + updates.length;
+      }
+    ''',
+      1216,
+    );
     check('escaped siblings share mutation', r''' 
       List<Function> factory() {
         var n = 0;

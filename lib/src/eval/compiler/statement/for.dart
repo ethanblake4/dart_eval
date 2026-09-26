@@ -54,8 +54,23 @@ StatementInfo compileForStatement(
     );
   }
 
-  parts as ForParts;
+  return compileForLoop(
+    ctx,
+    parts as ForParts,
+    expectedReturnType,
+    body: (ctx, ert) => compileStatement(s.body, ert, ctx),
+    assignedNamesScan: [s],
+  );
+}
 
+/// Shares loop-variable capture renewal between statements and collections.
+StatementInfo compileForLoop(
+  CompilerContext ctx,
+  ForParts parts,
+  TypeRef? expectedReturnType, {
+  required StatementInfo Function(CompilerContext, TypeRef?) body,
+  required Iterable<AstNode> assignedNamesScan,
+}) {
   return macroLoop(
     ctx,
     expectedReturnType,
@@ -69,8 +84,8 @@ StatementInfo compileForStatement(
       }
     },
     conditionExpression: parts.condition,
-    body: (ctx, ert) => compileStatement(s.body, ert, ctx),
-    assignedNamesScan: [s],
+    body: body,
+    assignedNamesScan: assignedNamesScan,
     update: (ctx) {
       if (parts is ForPartsWithDeclarations) {
         for (final variable in parts.variables.variables) {

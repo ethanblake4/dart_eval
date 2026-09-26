@@ -2,10 +2,8 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
 import 'package:dart_eval/src/eval/compiler/statement/for.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
-import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
@@ -67,31 +65,19 @@ List<TypeRef> compileForElement(
         potentialReturnTypes.addAll(compileBody(e.body));
         return StatementInfo();
       },
+      assignedNamesScan: [e],
     );
     return potentialReturnTypes;
   } else if (parts is ForParts) {
-    macroLoop(
+    compileForLoop(
       ctx,
+      parts,
       null,
-      initialization: (ctx) {
-        if (parts is ForPartsWithDeclarations) {
-          compileVariableDeclarationList(parts.variables, ctx);
-        } else if (parts is ForPartsWithExpression) {
-          if (parts.initialization != null) {
-            compileExpressionAndDiscardResult(parts.initialization!, ctx);
-          }
-        }
-      },
-      conditionExpression: parts.condition,
       body: (ctx, ert) {
         potentialReturnTypes.addAll(compileBody(e.body));
         return StatementInfo();
       },
-      update: (ctx) {
-        for (final u in parts.updaters) {
-          compileExpressionAndDiscardResult(u, ctx);
-        }
-      },
+      assignedNamesScan: [e],
     );
   }
 
