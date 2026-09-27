@@ -100,3 +100,39 @@ tests plus eight legacy function-alias regression cases: 56 pass, 17 retain
 their known failures, and none time out. All eight regression cases pass.
 There are no unexpected outcomes against the updated statuses. Results are in
 `.dart_tool/loop10-step2-verified-alias-and-regressions.jsonl`.
+
+## Step 3: lazy SSA def-use graph materialization
+
+A fresh CPU profile of the 64-stage compile_pipeline workload found backend
+graph work dominating compilation: buildSSA accounted for 280 samples and graph
+vertex lookup for 206, out of 896 samples under _compileSources. The SSA edge
+graph duplicated existing definition/use maps and was rebuilt during renaming
+and every metadata refresh, even though internal consumers only maintained it.
+
+control_flow_graph now constructs that graph on first access. SSA renaming and
+refresh retain the indexed maps; dead-code removal invalidates the cached edge
+view. The standalone SSAComputationData graph getter remains available and lazy.
+The cache's lifetime is documented, and five focused tests cover edges, rewrite
+refresh, clone refresh, and DCE before/after graph access. No runtime or bytecode
+changes are involved.
+
+Two AOT comparisons of compile_pipeline (31 samples, 64 stages, CPU affinity 4,
+reversed run order) measured 36.708 -> 25.737 ms and 32.767 -> 25.186 ms:
+29.9% and 23.1% lower compilation medians. Both produced 2,818 code bytes and
+checksum 6,054. Baseline binaries were built at dart_eval 9c90056 with sibling
+control_flow_graph b901e65 before editing. Logs use `.dart_tool/loop10-pipeline-*`.
+
+Validation: 104 control_flow_graph tests pass, and dart_eval's default suite
+passes 1,730 with 62 skipped. Analyzer is clean for the changed graph files.
+The full 22-driver AOT sweep matches all 21 execution checksums. The standard
+compile driver improves from 17.465 to 14.199 ms (-18.7%), retaining 1,225 code
+bytes. Logs are in `.dart_tool/loop10-lazy-ssa-sweep/`.
+
+51-sample reversed-order repeats resolve initial execution outliers: typed
+dispatch medians are unchanged, call cases range from +0.1% to +1.5%, and global
+cases from -5.7% to +0.1%. The synthetic object-reference interpreter in the
+dispatch benchmark remains 6.5–7.9% slower; this is the benchmark's separate
+comparison loop, not dart_eval's interpreter. Async callback repeat is +2.1%;
+other async cases range from -36.8% to unchanged. All repeat checksums match.
+
+Performance implementation checkpoint: control_flow_graph `5ce204c` on main.
