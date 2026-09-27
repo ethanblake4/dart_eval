@@ -320,31 +320,32 @@ final class TypeFactory {
       declLibrary,
       alias.name.lexeme,
     );
+    final declaredParameters = <String, TypeRef>{};
+    final aliasParameters = declareTypeParameters(
+      _ctx,
+      aliasOwner,
+      typeParameters,
+      declaredParameters,
+      (bound) => fromAnnotation(
+        declLibrary,
+        bound,
+        typeParameters: declaredParameters,
+      ),
+    );
+    final defaults = !rawParams && argRefs == null
+        ? _ctx.typeSystem.instantiateToBounds(aliasParameters)
+        : const <TypeParameterDef, TypeRef>{};
     final bindings = <String, TypeRef>{};
     for (var i = 0; i < typeParameters.length; i++) {
       final param = typeParameters[i];
       final arg = argRefs == null || i >= argRefs.length ? null : argRefs[i];
-      final bound = param.bound;
       if (arg != null) {
         bindings[param.name.lexeme] = arg;
       } else if (rawParams) {
-        bindings[param.name.lexeme] = TypeParameterTypeRef(
-          _ctx.typeParameterDefs.key(aliasOwner, i, param.name.lexeme),
-          file: declLibrary,
-        );
-      } else if (bound == null) {
-        bindings[param.name.lexeme] = CoreTypes.dynamic.ref(_ctx);
+        bindings[param.name.lexeme] = declaredParameters[param.name.lexeme]!;
       } else {
-        // A recursive bound (`X extends A<X>`) sees the parameter itself.
-        bindings[param.name.lexeme] = TypeParameterTypeRef(
-          _ctx.typeParameterDefs.key(aliasOwner, i, param.name.lexeme),
-          file: declLibrary,
-        );
-        bindings[param.name.lexeme] = fromAnnotation(
-          declLibrary,
-          bound,
-          typeParameters: bindings,
-        );
+        bindings[param.name.lexeme] =
+            defaults[aliasParameters[i]] ?? CoreTypes.dynamic.ref(_ctx);
       }
     }
 
@@ -547,15 +548,16 @@ final class TypeFactory {
     final ownParams =
         typeParameterList?.typeParameters ?? const <TypeParameter>[];
     final allTypeParams = <String, TypeRef>{...typeParameters};
-    final ownDefs = declareTypeParameters(
-      _ctx,
-      owner,
-      ownParams,
-      allTypeParams,
-      (bound) {
-        return fromAnnotation(library, bound, typeParameters: allTypeParams);
-      },
-    );
+    final ownDefs = ownParams.isEmpty
+        ? const <TypeParameterDef>[]
+        : declareTypeParameters(
+            _ctx,
+            owner,
+            ownParams,
+            allTypeParams,
+            (bound) =>
+                fromAnnotation(library, bound, typeParameters: allTypeParams),
+          );
 
     TypeRef resolve(TypeAnnotation? type) => type == null
         ? CoreTypes.dynamic.ref(_ctx)
@@ -652,7 +654,12 @@ final class TypeFactory {
           parameterList: parameters,
           owner:
               ownTypeParameterOwner ??
-              TypeParameterOwner(TypeParameterOwnerKind.function, library, ''),
+              TypeParameterOwner(
+                TypeParameterOwnerKind.function,
+                library,
+                '',
+                typeParameters.offset,
+              ),
           typeParameters: memberTypeParameters,
         ),
         decl: _ctx.types.bySpec(CoreTypes.function),

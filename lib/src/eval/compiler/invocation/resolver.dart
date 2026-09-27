@@ -1471,6 +1471,7 @@ final class CallResolver {
               );
             }
             if (bindings.isNotEmpty) {
+              _constrainAliasArguments(ctx, bindings);
               resolved = resolved.substituteTypeParameters(
                 Substitution.of(bindings),
               );
@@ -1682,6 +1683,7 @@ final class CallResolver {
             ctx.typeSystem.unify(aliasArgs[i], inferredCtorArgs[i], bindings);
           }
           if (bindings.isNotEmpty) {
+            _constrainAliasArguments(ctx, bindings);
             aliasType = aliasType.substituteTypeParameters(
               Substitution.of(bindings),
             );
@@ -1727,6 +1729,43 @@ final class CallResolver {
       vectorOverride: callArgs,
     );
     return callTarget.emit(ctx, boundCall);
+  }
+}
+
+/// Contextual alias arguments must also satisfy their declared upper bounds.
+/// For `T<X extends int> = C<List<X>>`, a `C<Iterable<num>>` context permits
+/// `X = int`; it cannot widen the alias parameter to `num`.
+void _constrainAliasArguments(
+  CompilerContext ctx,
+  Map<TypeParameterDef, TypeRef> arguments,
+) {
+  // A bound may name a later parameter; propagate refinements back through
+  // that dependency chain, with at most one pass per parameter.
+  for (var pass = 0; pass < arguments.length; pass++) {
+    var changed = false;
+    for (final parameter in arguments.keys) {
+      final bound = parameter.bound;
+      if (bound == null) continue;
+      final resolvedBound = ctx.typeSystem.lowerTypeParameters(
+        bound.substituteTypeParameters(Substitution.of(arguments)),
+        only: const {},
+        kinds: const {TypeParameterOwnerKind.typeAlias},
+      );
+      final inferred = arguments[parameter]!;
+      if (inferred.isAssignableTo(
+        ctx,
+        resolvedBound,
+        forceAllowDynamic: false,
+      )) {
+        continue;
+      }
+      arguments[parameter] =
+          resolvedBound.isAssignableTo(ctx, inferred, forceAllowDynamic: false)
+          ? resolvedBound
+          : CoreTypes.never.ref(ctx);
+      changed = true;
+    }
+    if (!changed) break;
   }
 }
 

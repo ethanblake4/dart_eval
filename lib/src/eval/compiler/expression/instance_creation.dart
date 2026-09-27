@@ -25,7 +25,8 @@ Variable compileInstanceCreation(
     type,
     e.constructorName.name?.name,
   );
-  final $resolved = IdentifierReference(null, typeName).getValue(ctx);
+  final typeReference = IdentifierReference(null, typeName);
+  final $resolved = typeReference.getValue(ctx);
   final receiver = receiverOf(ctx, $resolved);
 
   if (receiver is! TypeLiteralReceiver) {
@@ -36,33 +37,32 @@ Variable compileInstanceCreation(
   var instantiatedType = staticType.withNullable(type.question != null);
   // A typedef instantiation (`P1()` where `P1 = B2<int>`) constructs the
   // aliased type directly — typedefs register no constructors of their own.
-  final aliasDecl = ctx
-      .topLevelDeclarationsMap[staticType.file]![staticType.name]
-      ?.declaration;
+  final aliasDecl = switch (typeReference.denotation(ctx)) {
+    TypeLiteralDenotation(:final declaration) => declaration,
+    _ => null,
+  };
+  final isTypeAlias = aliasDecl is TypeAlias && aliasDecl is! ClassTypeAlias;
   if (aliasDecl is TypeAlias && aliasDecl is! ClassTypeAlias) {
-    instantiatedType = staticType =
-        (ctx.typeFactory.resolveTypeAlias(
-                  staticType.file,
-                  aliasDecl,
-                  nullable: type.question != null,
-                  typeArgs: type.typeArguments?.arguments,
-                )
-                as InterfaceTypeRef)
-            .copyWith(
-              arguments: [
-                if (type.typeArguments == null)
-                  ...interfaceArgumentsOf(staticType),
-              ],
-            );
+    final expanded =
+        ctx.typeFactory.resolveTypeAlias(
+              ctx.library,
+              aliasDecl,
+              nullable: type.question != null,
+              typeArgs: type.typeArguments?.arguments,
+            )
+            as InterfaceTypeRef;
+    instantiatedType = staticType = type.typeArguments == null
+        ? expanded.copyWith(arguments: interfaceArgumentsOf(staticType))
+        : expanded;
   }
-  if (type.typeArguments != null) {
+  if (type.typeArguments != null && !isTypeAlias) {
     instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
       arguments: [
         for (final arg in type.typeArguments!.arguments)
           TypeRef.fromAnnotation(ctx, ctx.library, arg),
       ],
     );
-  } else if (bound != null) {
+  } else if (type.typeArguments == null && bound != null) {
     // Downward inference: `Optional.absent()` under `Optional<int>` produces
     // `Optional<int>`.
     final boundChain = bound;

@@ -59,3 +59,44 @@ persist in 51-sample reversed-order repeats: -0.4% and -0.7%, respectively,
 with matching checksums. All repeated closure cases fall between -0.9% and
 -0.2%; callback cases range from -11.8% to +1.7%. No persistent regression was
 observed in these measurements.
+
+## Step 2: generic declaration identity and bounded alias inference
+
+Captured local generic functions previously shared the default placeholder
+owner for an entire library. A later declaration could reuse an earlier
+function's parameter count and bounds. Default declaration owners now include
+the type-parameter list's source position. A focused fresh/serialized regression
+uses two captured functions with different parameter lists and bounds.
+
+Constructor aliases also discarded their own declared bounds during contextual
+inference. For `T<X extends int> = C<List<X>>`, a `C<Iterable<num>>` context
+incorrectly instantiated X as num. Alias parameters now share resolved bound
+definitions; inferred arguments intersect with those bounds before expansion.
+Dependent bounds propagate across parameters, including forward references
+and parameters omitted from the alias body. Bare aliases resolve default
+arguments through their bound dependencies; references within a cycle close to
+dynamic, or Never in a contravariant function parameter. Self, mutual, and
+contravariant defaults were checked against native Dart. Instantiated legacy
+function aliases retain no signature-owned generic parameters.
+
+Focused tests cover generative, factory, and redirecting-factory aliases and
+forward-dependent bounds, each with fresh and serialized runtimes. These are
+compiler changes only: no added bytecode checks, adapters, or runtime changes.
+The three SDK `infer_aliased_*_11_test.dart` cases now pass and their expected
+failures are removed. The generic/function_bounds test now compiles and reaches
+a separate runtime failure: omitted type arguments do not reject a super-bounded
+instantiation. That remaining failure stays tracked.
+
+Explicit constructor syntax now also preserves the alias expansion:
+`T<int>` for `T<X> = C<List<X>>` constructs `C<List<int>>`, including named
+factories. Previously the raw syntax arguments overwrote the expanded ones.
+
+The default suite passes 1,730 tests with 62 skipped; all nine focused tests
+pass after the final variance correction. Analyzer is clean for the changed
+compiler files and focused tests.
+
+A fresh post-correction AOT runner verifies all 65 runnable nonfunction alias
+tests plus eight legacy function-alias regression cases: 56 pass, 17 retain
+their known failures, and none time out. All eight regression cases pass.
+There are no unexpected outcomes against the updated statuses. Results are in
+`.dart_tool/loop10-step2-verified-alias-and-regressions.jsonl`.

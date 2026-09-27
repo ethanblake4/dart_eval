@@ -326,6 +326,93 @@ final class TypeSystem {
     return lowered;
   }
 
+  /// Default arguments expand acyclic bounds and erase references within a
+  /// bound cycle: `X extends Comparable<X>` defaults to `Comparable<dynamic>`.
+  Map<TypeParameterDef, TypeRef> instantiateToBounds(
+    List<TypeParameterDef> parameters,
+  ) {
+    if (parameters.isEmpty) return const {};
+    final dependencies = {
+      for (final parameter in parameters)
+        parameter: [
+          if (parameter.bound != null)
+            for (final candidate in parameters)
+              if (_mentionsAnyParameter(parameter.bound!, {candidate}))
+                candidate,
+        ],
+    };
+    bool reaches(
+      TypeParameterDef from,
+      TypeParameterDef target,
+      Set<TypeParameterDef> visited,
+    ) {
+      if (from == target) return true;
+      if (!visited.add(from)) return false;
+      return dependencies[from]!.any((next) => reaches(next, target, visited));
+    }
+
+    final defaults = <TypeParameterDef, TypeRef>{};
+    TypeRef resolve(TypeParameterDef parameter) => defaults.putIfAbsent(
+      parameter,
+      () {
+        final upper = <TypeParameterDef, TypeRef>{};
+        final lower = <TypeParameterDef, TypeRef>{};
+        for (final dependency in dependencies[parameter]!) {
+          if (reaches(dependency, parameter, {})) {
+            upper[dependency] = CoreTypes.dynamic.ref(_ctx);
+            lower[dependency] = CoreTypes.never.ref(_ctx);
+          } else {
+            upper[dependency] = lower[dependency] = resolve(dependency);
+          }
+        }
+        return _closeBound(
+          parameter.bound ?? CoreTypes.dynamic.ref(_ctx),
+          Substitution.of(upper),
+          Substitution.of(lower),
+        );
+      },
+    );
+    for (final parameter in parameters) {
+      resolve(parameter);
+    }
+    return defaults;
+  }
+
+  /// Recursive-bound holes use the opposite extremum in function parameters.
+  TypeRef _closeBound(TypeRef type, Substitution upper, Substitution lower) {
+    if (upper.isEmpty) return type;
+    TypeRef close(TypeRef type) => _closeBound(type, upper, lower);
+    return switch (type) {
+      TypeParameterTypeRef() => type.substituteTypeParameters(upper),
+      InterfaceTypeRef(:final arguments) => arguments.isEmpty
+          ? type
+          : type.copyWith(arguments: arguments.map(close).toList()),
+      RecordTypeRef(:final positional, :final named) => RecordTypeRef(
+        positional.map(close).toList(),
+        {for (final field in named.entries) field.key: close(field.value)},
+        nullable: type.nullable,
+      ),
+      FunctionTypeRef(:final signature) => type.copyWith(
+        signature: FunctionSignature(
+          typeParameters: signature.typeParameters,
+          positional: [
+            for (final parameter in signature.positional)
+              _closeBound(parameter, lower, upper),
+          ],
+          requiredPositional: signature.requiredPositional,
+          named: {
+            for (final entry in signature.named.entries)
+              entry.key: (
+                type: _closeBound(entry.value.type, lower, upper),
+                required: entry.value.required,
+              ),
+          },
+          returnType: close(signature.returnType),
+        ),
+      ),
+    };
+  }
+
   /// Whether [type] mentions any parameter in [parameters].
   bool _mentionsAnyParameter(TypeRef type, Set<TypeParameterDef> parameters) {
     var found = false;
