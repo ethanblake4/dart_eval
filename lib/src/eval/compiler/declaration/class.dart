@@ -932,7 +932,9 @@ bool _memberConformsTo(
     if (!implSig.named.containsKey(p.key)) return false;
   }
 
-  final covariant = ctx.memberLookup.explicitCovariantParameters(
+  // Most overrides are already contravariant; only walk the hierarchy when
+  // a narrowed parameter needs an explicit covariance annotation.
+  late final covariant = ctx.memberLookup.explicitCovariantParameters(
     hostType,
     MemberName(name, setter ? MemberKind.setter : MemberKind.method),
   );
@@ -940,16 +942,19 @@ bool _memberConformsTo(
   // unrelated parameter types are still incompatible.
   bool accepts(
     (TypeRef?, bool) ifaceParam,
-    (TypeRef?, bool)? implParam,
-    bool isCovariant,
-  ) {
+    (TypeRef?, bool)? implParam, {
+    int? position,
+    String? parameterName,
+  }) {
     if (implParam == null) return false;
     final declType = ifaceParam.$1;
     final implType = implParam.$1;
     if (declType == null || implType == null) return true;
     if (declType.isTypeParameter || implType.isTypeParameter) return true;
     return declType.isAssignableTo(ctx, implType, forceAllowDynamic: true) ||
-        isCovariant &&
+        (position != null
+                ? covariant.positional.contains(position)
+                : covariant.named.contains(parameterName)) &&
             implType.isAssignableTo(ctx, declType, forceAllowDynamic: true);
   }
 
@@ -957,17 +962,13 @@ bool _memberConformsTo(
     if (!accepts(
       ifaceSig.positional[i],
       i < implSig.positional.length ? implSig.positional[i] : null,
-      covariant.positional.contains(i),
+      position: i,
     )) {
       return false;
     }
   }
   for (final p in ifaceSig.named.entries) {
-    if (!accepts(
-      p.value,
-      implSig.named[p.key],
-      covariant.named.contains(p.key),
-    )) {
+    if (!accepts(p.value, implSig.named[p.key], parameterName: p.key)) {
       return false;
     }
   }

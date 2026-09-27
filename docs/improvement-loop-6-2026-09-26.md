@@ -73,3 +73,25 @@ tracked, so synchronous mains cannot hide failures in registered async work.
 Four focused harness regressions pass. The default suite passed 1,692 tests
 with 62 skips while the scalar-capture experiment was present; that experiment
 was subsequently discarded after neutral benchmark results.
+
+## Step 3: capture experiment and compiler hierarchy lookup
+
+Added `benchmark/scalar_callbacks.dart` for pricing callbacks that retain final
+integer configuration. An experiment boxed immutable scalar snapshots instead
+of allocating typed capture cells. It passed focused and full tests, but a quiet
+21-sample AOT repeat measured 119.807 ms baseline versus 119.466 ms candidate.
+That neutral result did not justify extra boxing, so the experiment was reverted.
+The benchmark remains available for future representation work.
+
+Override conformance now lazily collects inherited covariance annotations only
+when normal parameter compatibility fails. This avoids hierarchy traversal and
+set allocation for ordinary overrides without changing generated guest code.
+The existing mixed-feature compiler benchmark produced 1,225 bytes for both
+versions. Pinned AOT runs measured 26.266 vs 18.035 ms (51 samples, candidate
+first) and 25.873 vs 18.134 ms (101 samples, baseline first). Timing ranges were
+wide on this host, so the roughly 30% median difference is not a general speedup
+claim. The change removes work independently of those timings.
+
+Validation: all 37 inheritance tests pass, including explicit positional and
+named covariance and unrelated-type rejection; changed-file analysis is clean.
+No runtime changes were made.
