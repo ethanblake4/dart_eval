@@ -63,3 +63,31 @@ Baseline is edeaaa7 with control_flow_graph a0c339a. Final executable is
 `.dart_tool/loop12-step1-final-sweep/`, `loop12-final-repeat-*`, and
 `loop12-reverse-*`. Generic checked calls can also avoid repeated environment
 snapshots across parameter checks in a later performance pass.
+
+## Step 2: contextual types for indexed operations
+
+Thirteen alias-usage SDK failures shared one cause: an empty `{}` used as a
+`Map<Set<T>, Set<T>>` assignment key was compiled without the setter's key
+context, creating a map instead of a set. Index compilation now obtains the
+instantiated operator parameter type before compiling the key. Simple writes
+use `[]=`, while reads and compound writes use `[]`, matching native Dart.
+Null-aware operations keep key evaluation inside the existing null guard.
+
+The same signature lookup supplies assignment-value context for bridged and
+inherited operators, replacing source-only annotation resolution. Generic
+extension operators retain their extension bindings. This is a compiler-only
+change with no added runtime checks or interpreter changes.
+
+Six regressions exercise fresh and serialized programs: alias map keys and
+values, inherited generic operators, extension cascades and increments,
+null-aware side effects, null-coalescing assignments, and different getter and
+setter key contexts. All pass. Targeted compiler analysis is clean.
+
+The 151-test SDK survey improves from 114 to 127 passes, with three compile
+errors and 21 runtime errors remaining, no regressions or timeouts. Removed
+all 13 newly passing expected-failure entries. Survey results are in
+`.dart_tool/loop12-step2-sdk.jsonl`.
+
+The full suite passes: 1,767 tests, 62 skipped. The SDK core runner still records
+34 expected runtime failures and 26 expected compile failures; the improvement
+loop remains active. Full log: `.dart_tool/loop12-step2-full-tests.log`.

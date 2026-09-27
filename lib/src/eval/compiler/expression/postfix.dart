@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import '../invocation/resolver.dart';
+import 'index.dart';
 
 Variable compilePostfixExpression(
   PostfixExpression e,
@@ -60,7 +61,7 @@ Variable compilePostfixExpression(
       (t) => _postfixOnReference(
         e,
         ctx,
-        IndexedReference(t, compileExpression(operand.index, ctx)),
+        compileIndexReference(operand, ctx, t),
       ),
       source: e,
     );

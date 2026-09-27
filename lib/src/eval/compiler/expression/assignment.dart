@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import '../invocation/resolver.dart';
+import 'index.dart';
 
 Variable compileAssignmentExpression(
   AssignmentExpression e,
@@ -33,7 +34,7 @@ Variable compileAssignmentExpression(
       (t) => _assignWithReference(
         e,
         ctx,
-        IndexedReference(t, compileExpression(lhs.index, ctx)),
+        compileIndexReference(lhs, ctx, t),
         bound,
       ),
       source: e,

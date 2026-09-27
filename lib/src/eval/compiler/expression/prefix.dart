@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../errors.dart';
 import 'expression.dart';
 import '../invocation/resolver.dart';
+import 'index.dart';
 
 const _opMap = {
   TokenType.MINUS: '-',
@@ -46,7 +47,7 @@ Variable compilePrefixExpression(
         (t) => _handleDoubleOperands(
           e,
           ctx,
-          IndexedReference(t, compileExpression(operand.index, ctx)),
+          compileIndexReference(operand, ctx, t),
         ),
         source: e,
       );

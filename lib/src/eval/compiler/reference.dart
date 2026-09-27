@@ -1,6 +1,5 @@
 import 'helpers/global.dart';
 import 'helpers/conversion.dart';
-import 'member/member.dart';
 import 'member/member_name.dart';
 import 'backend/representation.dart' show MachineRepresentation;
 import 'package:analyzer/dart/ast/ast.dart';
@@ -224,6 +223,9 @@ class IndexedReference implements Reference {
     bool forSet = false,
     AstNode? source,
   }) {
+    if (forSet) {
+      return setterValueType(ctx, source) ?? CoreTypes.dynamic.ref(ctx);
+    }
     if (_variable.type.isAssignableTo(
       ctx,
       CoreTypes.list.ref(ctx),
@@ -243,48 +245,38 @@ class IndexedReference implements Reference {
           ? interfaceArgumentsOf(_variable.type)[1].withNullable(true)
           : CoreTypes.dynamic.ref(ctx);
     }
-    // A write's contextual type must not execute the indexed getter. For a
-    // custom `[]=` the write type is the operator's value parameter —
-    // callers use it as the RHS's context type (e.g. `a?[i] ??= e`).
-    if (forSet) {
-      return setterValueType(ctx, source) ?? CoreTypes.dynamic.ref(ctx);
-    }
     return getValue(ctx).type;
   }
 
   /// The declared value-parameter type of the receiver's `[]=` operator, or
   /// null when it cannot be resolved (dynamic receivers, missing member).
-  TypeRef? setterValueType(CompilerContext ctx, [AstNode? source]) {
+  TypeRef? setterValueType(CompilerContext ctx, [AstNode? source]) =>
+      operatorParameterType(ctx, _variable.type, '[]=', 1, source: source);
+
+  /// Context for an index or assigned value, including inherited and bridged
+  /// operators viewed through the receiver's type arguments.
+  static TypeRef? operatorParameterType(
+    CompilerContext ctx,
+    TypeRef receiver,
+    String operator,
+    int index, {
+    AstNode? source,
+  }) {
     try {
-      final resolved = ctx.memberLookup.interfaceMember(
-        _variable.type,
-        MemberName.method('[]='),
-        source: source,
-      );
-      final member = resolved.member;
-      final decl = member is SourceMember ? member.node : null;
-      if (decl is MethodDeclaration) {
-        final param = decl.parameters?.parameters.elementAtOrNull(1);
-        if (param?.type == null) return null;
-        // Bind the declaring class's type parameters through the receiver's
-        // supertype chain so a `WriteType` annotation resolves concretely.
-        return ctx.typeFactory.formalParameterAnnotationType(
-          resolved.viewedAs.file,
-          param!,
-          typeParameters: resolved.ownerTypeArguments,
-        );
-      }
+      return ctx.memberLookup
+          .interfaceMember(receiver, MemberName.method(operator), source: source)
+          .signature.positional.elementAtOrNull(index)?.type;
     } on CompileError {
-      // An extension `[]=` may apply instead.
+      // An extension operator may apply instead.
     }
-    final found = resolveExtensionMember(ctx, _variable.type, '[]=');
+    final found = resolveExtensionMember(ctx, receiver, operator);
     if (found == null) return null;
     final (ext, member, bindings) = found;
-    final param = member.parameters?.parameters.elementAtOrNull(1);
-    if (param?.type == null) return null;
+    final parameter = member.parameters?.parameters.elementAtOrNull(index);
+    if (parameter == null) return null;
     return ctx.typeFactory.formalParameterAnnotationType(
       ext.library,
-      param!,
+      parameter,
       typeParameters: extBindingsMap(ext, bindings),
     );
   }

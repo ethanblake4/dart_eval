@@ -20,8 +20,26 @@ Reference compileIndexExpressionAsReference(
           ctx,
           containsLeadingShorthand(e.realTarget) ? bound : null,
         );
-  final index = compileExpression(e.index, ctx);
-  return IndexedReference(value, index);
+  return compileIndexReference(e, ctx, value);
+}
+
+/// Compile the index once, after resolving its operator's parameter context.
+IndexedReference compileIndexReference(
+  IndexExpression expression,
+  CompilerContext ctx,
+  Variable receiver,
+) {
+  final context = IndexedReference.operatorParameterType(
+    ctx,
+    receiver.type,
+    expression.inGetterContext() ? '[]' : '[]=',
+    0,
+    source: expression,
+  );
+  return IndexedReference(
+    receiver,
+    compileExpression(expression.index, ctx, context),
+  );
 }
 
 Variable compileIndexExpression(
@@ -43,8 +61,7 @@ Variable compileIndexExpression(
     return emitNullGuard(
       ctx,
       target,
-      (t) =>
-          IndexedReference(t, compileExpression(e.index, ctx)).getValue(ctx, e),
+      (t) => compileIndexReference(e, ctx, t).getValue(ctx, e),
       source: e,
     );
   }
