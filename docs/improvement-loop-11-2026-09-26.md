@@ -86,3 +86,33 @@ The benchmark's separate synthetic object-reference dispatch loop remains up to
 repeat. Logs are in `.dart_tool/loop11-step2-verified-sweep/` and
 `.dart_tool/loop11-step2-repeat-*`. Baseline is bb55aac; final candidate is
 `.dart_tool/loop11-step2-final-sweep.exe`. Analyzer is clean for changed files.
+
+## Step 3: sparse compiler graphs
+
+The compile-pipeline profile still spent 189 of 810 compiler samples building
+SSA. Graph construction was a substantial part of that cost. The graph library's
+positive-integer strategy uses an indexed list for every adjacency map, allocating
+through the largest neighbor ID even when a block has only one successor.
+
+control_flow_graph a0c339a switches CFG, DJ, and dominator-tree storage to ordinary
+insertion-ordered maps. SSA renaming also reuses cached dominators and transfers
+the version map to the last dominated child, copying only for siblings. Phi
+insertion skips merge-set computation when there are no global variables.
+
+Two 51-sample AOT pipeline comparisons measured 25.561 -> 20.799 ms and
+25.555 -> 20.864 ms (about 19% faster). A 101-sample reverse-order repeat measured
+30.134 -> 20.076 ms. All produced 2,818 code bytes and checksum 6,054. The full
+22-driver AOT sweep matched all 21 execution checksums; its mixed-feature compiler
+benchmark measured 13.960 -> 11.539 ms (17.3% faster), retaining 1,225 code bytes.
+
+51-sample repeats resolved execution outliers in calls, closures, and external
+calls (largest remaining increase 3.2%). Async measurements were noisy at 250
+iterations; repeating with 2,500 iterations left every case unchanged or faster.
+Artifacts: `.dart_tool/loop11-step3-sweep/`, `loop11-step3-repeat-*`, and
+`loop11-step3-pipeline-*`. Baseline executables use dart_eval a18eb05 and
+control_flow_graph 291b1f4. No runtime changes were needed.
+
+All 104 control_flow_graph tests pass, and analysis of the four changed source
+files is clean. The complete dart_eval suite passes 1,749 tests with 62 skipped.
+Its SDK core harness still records 35 runtime failures and 26 compile errors
+covered by expected-failure entries; this checkpoint does not complete the goal.
