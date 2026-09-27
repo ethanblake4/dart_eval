@@ -41,6 +41,19 @@ void expectDefinedReads(ControlFlowGraph graph) {
 }
 
 void main() {
+  test('initialized final object captures need no mutable cell', () {
+    final compiler = compileGraph('''
+      Function main() {
+        final values = <int>[1];
+        return () => values.length;
+      }
+    ''');
+    final code = compiler.functionGraphs.values.expand(operations);
+    expect(code.whereType<NewCaptureCell>(), isEmpty);
+    expect(code.whereType<ReadCaptureCell>(), isEmpty);
+    expect(code.whereType<LoadCapture>(), hasLength(1));
+  });
+
   test('function parameters and return values have explicit definitions', () {
     final graph = namedGraph(
       compileGraph('int main(int value) => value + 1;'),

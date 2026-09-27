@@ -41,6 +41,54 @@ void main() {
       }
     ''', 63);
 
+    check('final object captures share mutation across nested closures', r'''
+      Function make() {
+        final values = <int>[1];
+        final append = () { values.add(values.length + 1); };
+        return () {
+          append();
+          return () => values.length;
+        };
+      }
+      int main() {
+        final next = make();
+        final read = next();
+        next();
+        return read();
+      }
+    ''', 3);
+
+    check('uninitialized final captures see assignment after creation', r'''
+      int main() {
+        final List<int> values;
+        final read = () => values.length;
+        values = [1, 2, 3];
+        return read();
+      }
+    ''', 3);
+
+    check('promoted final scalar captures survive prior arithmetic', r'''
+      Function make(Object value) {
+        final Object captured = value;
+        if (captured is int) {
+          final incremented = captured + 1;
+          return () => captured + incremented;
+        }
+        return () => 0;
+      }
+      int main() => make(3)();
+    ''', 7);
+
+    check('nullable string captures survive unboxed member reads', r'''
+      Function make(String? value) {
+        final captured = value;
+        if (captured == null) return () => '';
+        final length = captured.length;
+        return () => captured.substring(0, length);
+      }
+      String main() => make('hello')();
+    ''', 'hello');
+
     check('collection loops renew captures before their updates', r'''
       int main() {
         final list = [for (var i = 0; i < 3; i++) () => i];

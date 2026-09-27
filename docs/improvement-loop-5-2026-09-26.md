@@ -55,3 +55,35 @@ the binder. No runtime or generated standard-library code changed.
 The default suite passes 1,679 tests with 62 skips, including the pending
 capture optimization. SDK core now has 426 actual passes, 33 runtime failures,
 and 29 compile errors under its existing status list.
+
+## Step 3: capture initialized final objects directly
+
+Closure environments already support object values as well as shared cells.
+An initialized final object binding cannot be reassigned, so allocating a
+mutable cell for it wastes an allocation and a read on each access. Such
+bindings now use the existing direct-capture path. Scalars keep typed cells;
+uninitialized finals keep cells so closures observe later initialization.
+
+The configured-callback benchmark creates escaping processors with per-batch
+configuration and mutable output, then processes 32 records per batch. It
+exercises object identity and repeated field access through captured objects.
+AOT executables were pinned to CPU affinity mask 4 and run with 15 samples.
+
+| Workload | Baseline median | Candidate median |
+| --- | ---: | ---: |
+| Configured callbacks, 20,000 batches, first pair | 181.292 ms | 165.973 ms |
+| Configured callbacks, reverse-order repeat | 195.060 ms | 166.009 ms |
+| Event bus, 60,000 events | 108.288 ms | 106.626 ms |
+| Final rebuilt configured callbacks | 208.939 ms | 162.360 ms |
+| Final rebuilt event bus | 72.626 ms | 71.711 ms |
+
+The first two callback pairs improve by 8.5% and 14.9%; event-bus results are
+roughly unchanged. Timing has substantial system noise, especially in the
+final callback pair, so the larger final median difference is not a reliable
+speedup estimate. Every baseline/candidate checksum matches: `7522092512`
+for configured callbacks and `907679289586` for the event bus.
+
+The default suite passes with this change. Additional tests cover nested
+captures sharing object mutation, deferred initialization of finals, promoted
+scalar and nullable string captures, serialization, and absence of mutable
+capture-cell operations for an initialized final list. No runtime changes.

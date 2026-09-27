@@ -229,13 +229,19 @@ final class LocalBinding {
     facts: _current.facts,
   );
 
-  /// Moves the binding's storage behind a capture cell when [declaration]
-  /// is captured by a nested closure — allocation proofs are dropped since
-  /// any closure invocation can rewrite the cell. A `final`/`const` cell is
-  /// written exactly once, before it escapes, so its facts stay valid.
+  /// Allocates shared storage for captured bindings that need it. Initialized
+  /// final objects are captured by value; scalars use typed cells. Mutable
+  /// cells lose allocation proofs because a closure can replace their value.
   void captureBinding(CompilerContext ctx, AstNode declaration) {
     final analysis = capturesFor(declaration);
     if (!analysis.captured.contains(declaration)) return;
+    // An initialized final object can live directly in the environment.
+    // Scalars still use typed cells: LoadCapture reads the object bank.
+    if (isFinal &&
+        initialized &&
+        _current.representation == MachineRepresentation.object) {
+      return;
+    }
     final cell = ctx.svar('cell');
     ctx.pushOp(NewCaptureCell(cell, _current.ssa, _current.representation));
     storage = CaptureCellStorage(cell);
