@@ -716,12 +716,41 @@ final class FunctionTypeRef extends TypeRef {
   @override
   TypeRef substituteTypeParameters(Substitution substitutions) {
     if (substitutions.isEmpty) return this;
-    // The signature's own type parameters are not substituted; refs to
-    // them simply miss the outer substitution map.
     final s = signature;
+    // This signature binds its own parameters; an outer substitution cannot
+    // replace them. Changed bounds require a fresh binder shared by all refs.
+    if (s.typeParameters.any(substitutions.bindings.containsKey)) {
+      substitutions = Substitution.of({
+        for (final entry in substitutions.bindings.entries)
+          if (!s.typeParameters.contains(entry.key)) entry.key: entry.value,
+      });
+      if (substitutions.isEmpty) return this;
+    }
+    var parameters = s.typeParameters;
+    if (parameters.any(
+      (parameter) =>
+          parameter.bound?.substituteTypeParameters(substitutions) !=
+          parameter.bound,
+    )) {
+      final owner = TypeParameterOwner.fresh(parameters.first.owner);
+      parameters = [
+        for (final parameter in parameters)
+          TypeParameterDef(owner, parameter.index, parameter.name),
+      ];
+      substitutions = substitutions.extend(
+        Substitution.of({
+          for (var i = 0; i < parameters.length; i++)
+            s.typeParameters[i]: TypeParameterTypeRef(parameters[i]),
+        }),
+      );
+      for (var i = 0; i < parameters.length; i++) {
+        parameters[i].bound = s.typeParameters[i].bound
+            ?.substituteTypeParameters(substitutions);
+      }
+    }
     return copyWith(
       signature: FunctionSignature(
-        typeParameters: s.typeParameters,
+        typeParameters: parameters,
         positional: [
           for (final type in s.positional)
             type.substituteTypeParameters(substitutions),

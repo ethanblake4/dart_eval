@@ -329,9 +329,13 @@ final class TypeSystem {
   /// Default arguments expand acyclic bounds and erase references within a
   /// bound cycle: `X extends Comparable<X>` defaults to `Comparable<dynamic>`.
   Map<TypeParameterDef, TypeRef> instantiateToBounds(
-    List<TypeParameterDef> parameters,
-  ) {
+    List<TypeParameterDef> parameters, {
+    TypeRef? aliasType,
+  }) {
     if (parameters.isEmpty) return const {};
+    final variances = aliasType == null
+        ? const <TypeParameterDef, int>{}
+        : _parameterVariances(aliasType);
     final dependencies = {
       for (final parameter in parameters)
         parameter: [
@@ -359,8 +363,11 @@ final class TypeSystem {
         final lower = <TypeParameterDef, TypeRef>{};
         for (final dependency in dependencies[parameter]!) {
           if (reaches(dependency, parameter, {})) {
-            upper[dependency] = CoreTypes.dynamic.ref(_ctx);
-            lower[dependency] = CoreTypes.never.ref(_ctx);
+            final variance = variances[parameter] ?? 1;
+            upper[dependency] =
+                (variance == 2 ? CoreTypes.never : CoreTypes.dynamic).ref(_ctx);
+            lower[dependency] =
+                (variance == 1 ? CoreTypes.never : CoreTypes.dynamic).ref(_ctx);
           } else {
             upper[dependency] = lower[dependency] = resolve(dependency);
           }
@@ -378,15 +385,52 @@ final class TypeSystem {
     return defaults;
   }
 
+  /// Positive and negative occurrences are bits 1 and 2; their union is
+  /// invariant. A generic function's bounds are always invariant.
+  Map<TypeParameterDef, int> _parameterVariances(TypeRef type) {
+    final occurrences = <TypeParameterDef, int>{};
+    void visit(TypeRef type, int variance) {
+      switch (type) {
+        case TypeParameterTypeRef(:final parameter):
+          occurrences[parameter] = (occurrences[parameter] ?? 0) | variance;
+        case InterfaceTypeRef(:final arguments):
+          for (final argument in arguments) {
+            visit(argument, variance);
+          }
+        case RecordTypeRef(:final positional, :final named):
+          for (final field in [...positional, ...named.values]) {
+            visit(field, variance);
+          }
+        case FunctionTypeRef(:final signature):
+          for (final parameter in signature.typeParameters) {
+            final bound = parameter.bound;
+            if (bound != null) visit(bound, 3);
+          }
+          final opposite = variance == 3 ? 3 : 3 - variance;
+          for (final parameter in signature.positional) {
+            visit(parameter, opposite);
+          }
+          for (final parameter in signature.named.values) {
+            visit(parameter.type, opposite);
+          }
+          visit(signature.returnType, variance);
+      }
+    }
+
+    visit(type, 1);
+    return occurrences;
+  }
+
   /// Recursive-bound holes use the opposite extremum in function parameters.
   TypeRef _closeBound(TypeRef type, Substitution upper, Substitution lower) {
     if (upper.isEmpty) return type;
     TypeRef close(TypeRef type) => _closeBound(type, upper, lower);
     return switch (type) {
       TypeParameterTypeRef() => type.substituteTypeParameters(upper),
-      InterfaceTypeRef(:final arguments) => arguments.isEmpty
-          ? type
-          : type.copyWith(arguments: arguments.map(close).toList()),
+      InterfaceTypeRef(:final arguments) =>
+        arguments.isEmpty
+            ? type
+            : type.copyWith(arguments: arguments.map(close).toList()),
       RecordTypeRef(:final positional, :final named) => RecordTypeRef(
         positional.map(close).toList(),
         {for (final field in named.entries) field.key: close(field.value)},

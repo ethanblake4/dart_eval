@@ -41,3 +41,48 @@ call. That test and all seven language regressions pass after the correction.
 Analyzer is clean for changed source and tests; generated interpreter output is
 verified by the runtime suite. Expected-failure SDK statuses remain unchanged.
 
+
+## Step 2: generic signature identity, substitution, and display
+
+Generic function aliases previously interned their inner parameters using only
+the annotation's source position. Resolving `G<num>` could fix the inner bound
+for later `G<int>` or `G<double>` references. Annotation binders now specialize
+by their outer type environment; declaration/body owners remain canonical.
+Substituting an outer argument also substitutes generic bounds, cloning and
+renaming the inner binder when its bounds change instead of mutating shared
+parameter definitions.
+
+Raw aliases now choose recursive default holes using the alias parameter's
+variance. Covariant and contravariant occurrences use opposite extrema; invariant
+occurrences use dynamic in both directions. This preserves generic assignments
+through both ordinary and nested function aliases.
+
+Runtime signature bounds retain their symbolic references for subtype checks and
+display. Type-parameter fallback descriptors still break cycles, including the
+previously failing mutually recursive class-bound case. Generic type strings show
+bound variables, dependent bounds, and nested scopes. Local function signatures
+also retain explicit return annotations instead of replacing them with a narrower
+body-inferred type. No interpreter dispatch or stdlib binding changes are needed.
+
+The complete SDK generic/function_bounds_test now passes and its expected-failure
+entry is removed. The neighboring generic/f_bounded_quantification3_test and both
+super_bounded_types_and_variance tests also pass. A fresh AOT survey of 151
+runnable generic, generic-method, and alias tests passes 113, with 38 known
+failures and no timeouts or unexpected outcomes. Results are in
+`.dart_tool/loop11-step2-verified-sdk.jsonl`.
+
+The full project suite passes 1,746 tests with 62 skipped. Three additional raw
+alias variance/bound-substitution regressions pass separately, in both fresh and
+serialized runtimes. Focused tests also cover alias resolution order, dependent
+and nested generic type display, explicit return types, and mutual class bounds.
+
+
+The final 22-driver AOT sweep matches all 21 execution checksums. Compilation
+measured 15.251 -> 14.415 ms with 1,225 code bytes unchanged. 51-sample repeats
+resolve the positive execution outliers: virtual calls range +1.2% to +2.4%,
+callbacks -1.7% to +3.7%, and the actual typed dispatch cases -0.1% to +0.2%.
+The benchmark's separate synthetic object-reference dispatch loop remains up to
+12.4% slower; it is not dart_eval's interpreter. Async callback is +0.7% on
+repeat. Logs are in `.dart_tool/loop11-step2-verified-sweep/` and
+`.dart_tool/loop11-step2-repeat-*`. Baseline is bb55aac; final candidate is
+`.dart_tool/loop11-step2-final-sweep.exe`. Analyzer is clean for changed files.

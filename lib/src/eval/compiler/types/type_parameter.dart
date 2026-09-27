@@ -24,7 +24,19 @@ enum TypeParameterOwnerKind {
 /// Identifies which declaration's parameter space a [TypeParameterDef]
 /// belongs to, without name-resolution or string parsing.
 final class TypeParameterOwner {
-  const TypeParameterOwner(this.kind, this.library, this.name, [this.position]);
+  const TypeParameterOwner(this.kind, this.library, this.name, [this.position])
+    : _identity = null;
+
+  /// A substituted generic signature owns fresh bound variables. Structural
+  /// function equality still compares these variables by alpha-renaming.
+  TypeParameterOwner.fresh(TypeParameterOwner source)
+    : kind = source.kind,
+      library = source.library,
+      name = source.name,
+      position = source.position,
+      _identity = Object();
+
+  final Object? _identity;
 
   /// The default owner for parameters declared inside a function body that
   /// has no richer owner — scopes keyed by the enclosing function id.
@@ -32,7 +44,8 @@ final class TypeParameterOwner {
     : kind = TypeParameterOwnerKind.scope,
       library = -1,
       name = '',
-      position = functionId;
+      position = functionId,
+      _identity = null;
 
   final TypeParameterOwnerKind kind;
 
@@ -76,10 +89,11 @@ final class TypeParameterOwner {
           kind == other.kind &&
           library == other.library &&
           name == other.name &&
-          position == other.position;
+          position == other.position &&
+          identical(_identity, other._identity);
 
   @override
-  int get hashCode => Object.hash(kind, library, name, position);
+  int get hashCode => Object.hash(kind, library, name, position, _identity);
 }
 
 /// One declared type parameter: its owner, its position in the owner's

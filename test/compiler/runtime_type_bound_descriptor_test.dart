@@ -70,14 +70,16 @@ void main() {
     );
   });
 
-  test('recursive callable bounds still erase to finite descriptors', () {
+  test('recursive signatures retain the binder with a finite fallback', () {
     final ctx = _context();
     final list = ctx.types.bySpec(CoreTypes.list);
     final s = _methodParameter(0, 'S');
     s.bound = list.instantiate([TypeParameterTypeRef(s)]);
 
     final bound = _boundInDescriptor(ctx, s) as InterfaceTypeRef;
-    expect(bound.arguments.single.isSpec(CoreTypes.dynamic), isTrue);
-    expect(ctx.runtimeTypes.descriptorOf(bound), isNotEmpty);
+    expect(bound.arguments.single, TypeParameterTypeRef(s));
+    final parameter = ctx.runtimeTypes.descriptorOf(TypeParameterTypeRef(s));
+    final fallback = ctx.runtimeTypes.list[parameter[5]] as InterfaceTypeRef;
+    expect(fallback.arguments.single.isSpec(CoreTypes.dynamic), isTrue);
   });
 }

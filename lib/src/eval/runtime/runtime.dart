@@ -647,47 +647,68 @@ class Runtime {
   int runtimeTypeHash(int id) => _runtimeTypeSemanticKey(id).hashCode;
 
   /// Dart-style display name for a runtime type descriptor (e.g. `List<int>`).
-  String runtimeTypeToString(int id) {
+  String runtimeTypeToString(int id) => _runtimeTypeToString(id, const {});
+
+  String _runtimeTypeToString(int id, Map<int, List<String>> binders) {
+    String format(int type) => _runtimeTypeToString(type, binders);
     final descriptor = _typeDescriptors[id];
     final suffix = descriptor[1] == 0 ? '' : '?';
     if (descriptor.length < 3 || descriptor[2] >= 0) {
       final nominal = _typeIdentities[descriptor[0]];
       final name = nominal?.name ?? '#${descriptor[0]}';
-      final args = descriptor.skip(2).map(runtimeTypeToString).join(', ');
+      final args = descriptor.skip(2).map(format).join(', ');
       return args.isEmpty ? '$name$suffix' : '$name<$args>$suffix';
     }
     switch (descriptor[2]) {
       case RuntimeTypeDescriptorTag.record:
         final positional = [
           for (final type in descriptor.skip(5).take(descriptor[3]))
-            runtimeTypeToString(type),
+            format(type),
         ];
         final named = [
           for (var i = 5 + descriptor[3]; i < descriptor.length; i += 2)
             '${_constantPool[descriptor[i]]}: '
-                '${runtimeTypeToString(descriptor[i + 1])}',
+                '${format(descriptor[i + 1])}',
         ];
         return '(${[...positional, ...named].join(', ')})$suffix';
       case RuntimeTypeDescriptorTag.function:
+        final count = descriptor[7];
+        final base = binders.values.fold<int>(
+          0,
+          (size, names) => size + names.length,
+        );
+        final names = [for (var i = 0; i < count; i++) 'T${base + i}'];
+        if (count > 0) binders = {...binders, descriptor[8]: names};
+        final generics = [
+          for (var i = 0; i < count; i++)
+            _typeDescriptors[descriptor[9 + i]][0] == _dynamicTypeId &&
+                    _typeDescriptors[descriptor[9 + i]].length == 2
+                ? names[i]
+                : '${names[i]} extends ${format(descriptor[9 + i])}',
+        ];
         final offset = 9 + descriptor[7];
         final positional = [
           for (final type in descriptor.skip(offset).take(descriptor[5]))
-            runtimeTypeToString(type),
+            format(type),
         ];
         final named = [
-          for (
-            var i = offset + descriptor[5];
-            i < descriptor.length;
-            i += 3
-          )
+          for (var i = offset + descriptor[5]; i < descriptor.length; i += 3)
             '${descriptor[i + 1] == 0 ? '' : 'required '}'
                 '${_constantPool[descriptor[i]]}: '
-                '${runtimeTypeToString(descriptor[i + 2])}',
+                '${format(descriptor[i + 2])}',
         ];
-        return '${runtimeTypeToString(descriptor[3])} '
+        if (count > 0) {
+          return '<${generics.join(', ')}>(${[...positional, ...named].join(', ')})'
+              ' => ${format(descriptor[3])}$suffix';
+        }
+        return '${format(descriptor[3])} '
             'Function(${[...positional, ...named].join(', ')})$suffix';
       case RuntimeTypeDescriptorTag.typeParameter:
-        return '${runtimeTypeToString(descriptor[5])}$suffix';
+        final names = binders[descriptor[3]];
+        if (names != null && descriptor[4] < names.length) {
+          return '${names[descriptor[4]]}$suffix';
+        }
+        return '${format(descriptor[5])}$suffix';
       default:
         throw StateError(
           'Unknown runtime type descriptor tag ${descriptor[2]}',

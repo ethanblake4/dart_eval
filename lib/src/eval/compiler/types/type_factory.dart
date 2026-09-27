@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -14,6 +16,47 @@ final class TypeFactory {
   TypeFactory(this._ctx);
 
   final CompilerContext _ctx;
+
+  // A source binder can be resolved under different alias/class arguments.
+  // Its immutable bounds belong to that environment, not just its AST offset.
+  final _signatureOwners =
+      HashMap<(TypeParameterOwner, Map<String, TypeRef>), TypeParameterOwner>(
+        equals: (left, right) =>
+            left.$1 == right.$1 &&
+            const MapEquality<String, TypeRef>().equals(left.$2, right.$2),
+        hashCode: (key) => Object.hash(
+          key.$1,
+          const MapEquality<String, TypeRef>().hash(key.$2),
+        ),
+      );
+
+  TypeParameterOwner _signatureOwner(
+    TypeParameterOwner owner,
+    List<TypeParameter> parameters,
+    Map<String, TypeRef> environment,
+  ) {
+    if (environment.isEmpty ||
+        (owner.kind != TypeParameterOwnerKind.functionTypeAnnotation &&
+            owner.kind != TypeParameterOwnerKind.functionTypedParameter)) {
+      return owner;
+    }
+    final names = {for (final parameter in parameters) parameter.name.lexeme};
+    final outer = {
+      for (final entry in environment.entries)
+        if (!names.contains(entry.key)) entry.key: entry.value,
+    };
+    if (outer.isEmpty) return owner;
+    return _signatureOwners.putIfAbsent(
+      (owner, outer),
+      () => TypeParameterOwner(
+        owner.kind,
+        owner.library,
+        owner.name,
+        // Source positions are nonnegative; synthetic binders use a separate range.
+        -(_signatureOwners.length + 1),
+      ),
+    );
+  }
 
   /// Stable per-[BridgeFunctionDef] identity for type-parameter owner keys.
   /// `def.hashCode` is an identity hash that can collide across different
@@ -332,20 +375,17 @@ final class TypeFactory {
         typeParameters: declaredParameters,
       ),
     );
-    final defaults = !rawParams && argRefs == null
-        ? _ctx.typeSystem.instantiateToBounds(aliasParameters)
-        : const <TypeParameterDef, TypeRef>{};
+    final instantiate = !rawParams && argRefs == null;
     final bindings = <String, TypeRef>{};
     for (var i = 0; i < typeParameters.length; i++) {
       final param = typeParameters[i];
       final arg = argRefs == null || i >= argRefs.length ? null : argRefs[i];
       if (arg != null) {
         bindings[param.name.lexeme] = arg;
-      } else if (rawParams) {
+      } else if (rawParams || instantiate) {
         bindings[param.name.lexeme] = declaredParameters[param.name.lexeme]!;
       } else {
-        bindings[param.name.lexeme] =
-            defaults[aliasParameters[i]] ?? CoreTypes.dynamic.ref(_ctx);
+        bindings[param.name.lexeme] = CoreTypes.dynamic.ref(_ctx);
       }
     }
 
@@ -382,7 +422,17 @@ final class TypeFactory {
     } else {
       target = CoreTypes.function.ref(_ctx);
     }
-    return target.withNullable(nullable || target.nullable);
+    final instantiated = instantiate
+        ? target.substituteTypeParameters(
+            Substitution.of(
+              _ctx.typeSystem.instantiateToBounds(
+                aliasParameters,
+                aliasType: target,
+              ),
+            ),
+          )
+        : target;
+    return instantiated.withNullable(nullable || instantiated.nullable);
   }
 
   /// Resolves a type argument in a `with`/`extends` application: a bare name
@@ -552,7 +602,7 @@ final class TypeFactory {
         ? const <TypeParameterDef>[]
         : declareTypeParameters(
             _ctx,
-            owner,
+            _signatureOwner(owner, ownParams, typeParameters),
             ownParams,
             allTypeParams,
             (bound) =>

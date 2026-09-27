@@ -105,8 +105,10 @@ final class RuntimeTypes {
         signature.typeParameters.isEmpty
             ? 0
             : -(4 + _callableOwnerIdOf(signature.typeParameters.first.owner)),
+        // A signature binds its own parameters. Keep dependent/F-bounds
+        // symbolic for alpha-equivalent subtype checks and type display.
         for (final parameter in signature.typeParameters)
-          idOf(_boundDescriptorType(parameter)),
+          idOf(parameter.bound ?? CoreTypes.dynamic.ref(_ctx)),
         for (final parameter in signature.positional) idOf(parameter),
         for (final entry in named) ...[
           _ctx.constantPool.addOrGet(entry.key),
@@ -138,18 +140,77 @@ final class RuntimeTypes {
   /// The descriptor-ready form of [parameter]'s bound. F-bounds can be
   /// cyclic (`T extends Foo<T>`, or mutually cyclic `S extends Built<S, B>`)
   /// and descriptors can't be. Preserve class parameters, which resolve
-  /// through the receiver's type environment; lower callable parameters and
-  /// erase any survivors of a recursive bound.
-  TypeRef _boundDescriptorType(TypeParameterDef parameter) =>
-      (parameter.bound ?? CoreTypes.dynamic.ref(_ctx))
-          .substituteTypeParameters(
-            Substitution.of({parameter: CoreTypes.dynamic.ref(_ctx)}),
-          )
-          .lowerTypeParameters(_ctx, only: const {}, kinds: _callableOwnerKinds)
-          .eraseTypeParameters(
-            _ctx,
-            preserveKinds: const {TypeParameterOwnerKind.classLike},
+  /// through the receiver's type environment, unless their bounds lead back
+  /// to this parameter. Lower callable parameters and erase the survivors.
+  TypeRef _boundDescriptorType(TypeParameterDef parameter) {
+    final bound = (parameter.bound ?? CoreTypes.dynamic.ref(_ctx))
+        .substituteTypeParameters(
+          Substitution.of({parameter: CoreTypes.dynamic.ref(_ctx)}),
+        )
+        .lowerTypeParameters(_ctx, only: const {}, kinds: _callableOwnerKinds)
+        .eraseTypeParameters(
+          _ctx,
+          preserveKinds: const {TypeParameterOwnerKind.classLike},
+        );
+    final cyclic = <TypeParameterDef>{};
+    for (final candidate in _typeParametersIn(bound)) {
+      if (candidate.owner.isClassLike &&
+          _boundDependsOn(candidate, parameter, {})) {
+        cyclic.add(candidate);
+      }
+    }
+    return cyclic.isEmpty
+        ? bound
+        : bound.substituteTypeParameters(
+            Substitution.of({
+              for (final candidate in cyclic)
+                candidate: CoreTypes.dynamic.ref(_ctx),
+            }),
           );
+  }
+
+  bool _boundDependsOn(
+    TypeParameterDef source,
+    TypeParameterDef target,
+    Set<TypeParameterDef> visited,
+  ) {
+    if (source == target) return true;
+    if (!visited.add(source) || source.bound == null) return false;
+    return _typeParametersIn(
+      source.bound!,
+    ).any((next) => _boundDependsOn(next, target, visited));
+  }
+
+  Iterable<TypeParameterDef> _typeParametersIn(TypeRef type) sync* {
+    switch (type) {
+      case TypeParameterTypeRef(:final parameter):
+        yield parameter;
+      case InterfaceTypeRef(:final arguments):
+        for (final argument in arguments) {
+          yield* _typeParametersIn(argument);
+        }
+      case RecordTypeRef(:final positional, :final named):
+        for (final field in positional) {
+          yield* _typeParametersIn(field);
+        }
+        for (final field in named.values) {
+          yield* _typeParametersIn(field);
+        }
+      case FunctionTypeRef(:final signature):
+        for (final parameter in signature.typeParameters) {
+          if (parameter.bound != null) {
+            yield* _typeParametersIn(parameter.bound!);
+          }
+        }
+        yield* _typeParametersIn(signature.returnType);
+        for (final parameter in signature.positional) {
+          yield* _typeParametersIn(parameter);
+        }
+        for (final parameter in signature.named.values) {
+          yield* _typeParametersIn(parameter.type);
+        }
+    }
+  }
 
   /// The number of extension `on` bindings a method-owned [owner]'s callable
   /// environment places before its own type arguments — 0 when the method

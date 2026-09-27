@@ -80,6 +80,7 @@ Variable compileFunctionExpression(
   }
   late final int fnOffset;
   TypeRef? inferredClosureReturnType;
+  TypeRef? declaredClosureReturnType;
   final typeParameters =
       e.typeParameters?.typeParameters ?? const <TypeParameter>[];
   try {
@@ -166,7 +167,7 @@ Variable compileFunctionExpression(
         final b = e.body;
         // Local function declarations carry their return annotation on the
         // parent; ordinary closure literals use the contextual signature.
-        final declaredReturnType = switch (e.parent) {
+        declaredClosureReturnType = switch (e.parent) {
           FunctionDeclaration(:final returnType?) => TypeRef.fromAnnotation(
             ctx,
             ctx.library,
@@ -176,7 +177,7 @@ Variable compileFunctionExpression(
         };
         final boundReturnType =
             (bound is FunctionTypeRef ? bound.signature.returnType : null) ??
-            declaredReturnType;
+            declaredClosureReturnType;
         if (b.isGenerator && b.isAsynchronous) {
           throw CompileError(
             'async* generators are not supported',
@@ -381,23 +382,27 @@ Variable compileFunctionExpression(
             // closure's own type-parameter scope, which is popped before
             // this point — reuse the types the parameter list compiled to
             // (positional, then name-sorted named).
-            positional:
-                ctx.functionParameterTypes[fnOffset]!.take(positional.length).toList(),
+            positional: ctx.functionParameterTypes[fnOffset]!
+                .take(positional.length)
+                .toList(),
             requiredPositional: requiredPositionalArgCount,
             named: {
               for (var i = 0; i < sortedNamedArgs.length; i++)
                 sortedNamedArgs[i].name!.lexeme: (
-                  type: ctx.functionParameterTypes[fnOffset]![positional.length + i],
+                  type: ctx
+                      .functionParameterTypes[fnOffset]![positional.length + i],
                   required: sortedNamedArgs[i].isRequired,
                 ),
             },
             returnType:
-                inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
+                declaredClosureReturnType ??
+                inferredClosureReturnType ??
+                CoreTypes.dynamic.ref(ctx),
           ),
           decl: ctx.types.bySpec(CoreTypes.function),
         )
       : bound.withNullable(false);
-  if (inferredClosureReturnType != null) {
+  if (declaredClosureReturnType == null && inferredClosureReturnType != null) {
     // Replace a placeholder return — `dynamic`, or a type parameter (a
     // bridge `S Function(E)` gives the closure a param-typed return) —
     // with the inferred type.
@@ -447,7 +452,7 @@ Variable compileFunctionExpression(
     closureType,
     facts: ValueFacts(
       callableSignature: CallSignature.returnOnly(
-        inferredClosureReturnType ?? CoreTypes.dynamic.ref(ctx),
+        closureType.signature.returnType,
       ),
     ),
   );
