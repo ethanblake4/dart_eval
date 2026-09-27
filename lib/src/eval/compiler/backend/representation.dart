@@ -46,6 +46,7 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       exceptions.LoadExceptionSlot(:final slot) => slot.representation,
       StringOperation(:final operator) => switch (operator) {
         StringOperator.length ||
+        StringOperator.indexOf ||
         StringOperator.codeUnitAt => MachineRepresentation.integer,
         StringOperator.equal ||
         StringOperator.notEqual ||
@@ -53,6 +54,7 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
         StringOperator.isNotEmpty ||
         StringOperator.startsWith => MachineRepresentation.boolean,
         StringOperator.concatenate ||
+        StringOperator.substringFrom ||
         StringOperator.indexAt => MachineRepresentation.string,
       },
       StringSubstring() => MachineRepresentation.string,
@@ -189,7 +191,8 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
             operator == StringOperator.concatenate ||
                     operator == StringOperator.equal ||
                     operator == StringOperator.notEqual ||
-                    operator == StringOperator.startsWith
+                    operator == StringOperator.startsWith ||
+                    operator == StringOperator.indexOf
                 ? MachineRepresentation.string
                 : integer,
           );

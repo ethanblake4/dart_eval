@@ -1708,6 +1708,22 @@ String familyOf(String name) {
     inputs: [6],
     extended: true,
   );
+  add(
+    'aStringIndexOfRS',
+    'a = (r as String).indexOf(s as String);',
+    inputs: [6, 7],
+    output: 0,
+    mayThrow: true,
+    extended: true,
+  );
+  add(
+    'rStringSubRA',
+    'r = (r as String).substring(a);',
+    inputs: [6, 0],
+    output: 6,
+    mayThrow: true,
+    extended: true,
+  );
   // AOT allocation follows the numeric case order. Keep simple register-only
   // operations ahead of handlers with decoding, calls and exceptional edges.
   final originalOrder = {for (var i = 0; i < ops.length; i++) ops[i]: i};

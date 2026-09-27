@@ -91,3 +91,47 @@ all 13 newly passing expected-failure entries. Survey results are in
 The full suite passes: 1,767 tests, 62 skipped. The SDK core runner still records
 34 expected runtime failures and 26 expected compile failures; the improvement
 loop remains active. Full log: `.dart_tool/loop12-step2-full-tests.log`.
+
+## Step 3: native string search and slicing
+
+The string-field workload parses name/value patches with `indexOf(String)` and
+one-argument `substring(int)`. Both calls still used bridge dispatch. They now
+select native string operations when operand types are statically known.
+Pattern-typed searches and explicit optional arguments retain their existing
+paths. The two extended instructions are generated from
+`tool/generate_typed_machine.dart`; the bytecode codec version is 129.
+
+The intrinsic receiver conversion uses the non-null view inside a null guard,
+without recovering the nullable type from its original local binding. Five
+fresh/serialized regressions cover UTF-16 indices, empty/missing searches,
+catchable range errors, optional arguments, Pattern parameters, custom
+receivers, and null-aware side effects. A prior StringBuffer allocation test
+now expects one string wrapper instead of two because suffix slicing stays
+unboxed.
+
+An environment-sharing experiment improved the new generic reducer benchmark
+by 3.8%, but longer AOT repeats exposed 11-12% regressions in host callbacks with
+arguments. That runtime change was reverted. The benchmark remains for future
+work on captured generic bounds and checked calls. The initial string-field
+comparison improved 127.273 -> 94.173 ms (26.0%).
+
+Baseline is 5e8e2dc with control_flow_graph a0c339a. Baseline AOT executables are
+`.dart_tool/loop12-step3-baseline.exe` and `loop12-reducer-baseline.exe`;
+targeted comparison logs are `loop12-*-31.log`.
+
+The final string-only candidate passes the full suite: 1,772 tests, 62 skipped.
+SDK core outcomes remain 428 passes, 34 expected runtime failures and 26
+expected compile failures. Targeted analysis and generated-code checks pass.
+Log: `.dart_tool/loop12-step3-verified-tests.log`.
+
+The final 22-driver AOT sweep matches all 21 execution checksums. String fields
+improve 126.830 -> 94.307 ms (25.6%). The 51-sample compilation repeat improves
+11.359 -> 11.072 ms, retaining 1,225 code bytes. At 100,000 callback iterations,
+51-sample changes range from -0.9% to +1.9%, resolving the much larger outliers
+in short callback samples. Global-object repeats range from +1.1% to +5.5%;
+completed/native-future awaits retain roughly +2-5% in longer runs. These small
+costs remain recorded rather than claiming every workload improved.
+
+Final executable: `.dart_tool/loop12-step3-string-only.exe`. Full sweep:
+`.dart_tool/loop12-step3-verified-sweep/`. Longer and reversed comparisons:
+`loop12-step3-verified-repeat-*` and `loop12-step3-verified-reverse-*`.

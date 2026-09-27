@@ -5,6 +5,8 @@ enum StringOperator {
   length,
   concatenate,
   codeUnitAt,
+  indexOf,
+  substringFrom,
   indexAt,
   equal,
   notEqual,

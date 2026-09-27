@@ -1814,6 +1814,8 @@ class _LoweringSession {
                   StringOperator.length => 'aStringLengthR',
                   StringOperator.concatenate => 'rStringConcatS',
                   StringOperator.codeUnitAt => 'aStringCodeUnitR',
+                  StringOperator.indexOf => 'aStringIndexOfRS',
+                  StringOperator.substringFrom => 'rStringSubRA',
                   StringOperator.indexAt => 'rStringIndexA',
                   StringOperator.equal => 'eStringEqRS',
                   StringOperator.notEqual => 'eStringNeRS',

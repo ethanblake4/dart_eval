@@ -143,27 +143,40 @@ final class Intrinsics {
           CoreTypes.string.ref(ctx),
           forceAllowDynamic: false,
         ) &&
-        ((method == '+' &&
+        (((method == '+' || method == 'indexOf') &&
                 args.single.type.isAssignableTo(
                   ctx,
                   CoreTypes.string.ref(ctx),
                   forceAllowDynamic: false,
                 )) ||
-            ((method == 'codeUnitAt' || method == '[]') &&
+            ((method == 'codeUnitAt' ||
+                    method == '[]' ||
+                    method == 'substring') &&
                 args.single.type.isAssignableTo(
                   ctx,
                   CoreTypes.int.ref(ctx),
                   forceAllowDynamic: false,
                 )))) {
-      final receiverUnboxed = receiver.unboxIfNeeded(ctx, false);
+      // A null guard can narrow a receiver without rebinding its local. Use
+      // that non-null view, rather than restoring the binding's nullable type.
+      final receiverUnboxed = receiver.toRep(
+        ctx,
+        ValueRep.string,
+        into: receiver.rep == ValueRep.string ? null : ctx.svar('string'),
+      );
       final argument = args.single.ssa == receiver.ssa
           ? receiverUnboxed
           : args.single.unboxIfNeeded(ctx, false);
       final operator = switch (method) {
         '+' => StringOperator.concatenate,
         'codeUnitAt' => StringOperator.codeUnitAt,
+        'indexOf' => StringOperator.indexOf,
+        'substring' => StringOperator.substringFrom,
         _ => StringOperator.indexAt,
       };
+      final integerResult =
+          operator == StringOperator.codeUnitAt ||
+          operator == StringOperator.indexOf;
       return (
         target: receiverUnboxed,
         result: Variable.ssa(
@@ -174,13 +187,8 @@ final class Intrinsics {
             receiverUnboxed.ssa,
             argument.ssa,
           ),
-          (operator == StringOperator.codeUnitAt
-                  ? CoreTypes.int
-                  : CoreTypes.string)
-              .ref(ctx),
-          rep: operator == StringOperator.codeUnitAt
-              ? ValueRep.int
-              : ValueRep.string,
+          (integerResult ? CoreTypes.int : CoreTypes.string).ref(ctx),
+          rep: integerResult ? ValueRep.int : ValueRep.string,
         ),
         args: [argument],
         namedArgs: const {},

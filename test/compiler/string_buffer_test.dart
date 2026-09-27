@@ -34,13 +34,13 @@ void main() {
           'abc!bcboxednull42',
         );
       }
-      // The Object assignment and the bridged one-argument substring call need
-      // wrappers. Native StringBuffer writes do not.
+      // Only the Object assignment needs a wrapper; substring and native
+      // StringBuffer writes keep their strings unboxed.
       expect(
         program.typedProgram.instructions.where(
           (entry) => entry.$2.name == 'rBoxString',
         ),
-        hasLength(2),
+        hasLength(1),
       );
     },
   );

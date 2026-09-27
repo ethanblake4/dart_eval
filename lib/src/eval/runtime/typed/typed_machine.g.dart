@@ -1760,6 +1760,12 @@ abstract final class TypedMachine {
     case 412:
        e = TypedInterop.equals(runtime, s, c);
        break;
+    case 416:
+       a = (r as String).indexOf(s as String);
+       break;
+    case 417:
+       r = (r as String).substring(a);
+       break;
     default: throw StateError('Invalid extended typed opcode');
     }
     st.pc = pc;
