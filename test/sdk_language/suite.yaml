@@ -356,7 +356,6 @@ expect_fail:
   - path: 'nnbd/resolution/null_assertion_null_type_test.dart'
   - path: 'nnbd/static_errors/nullable_supertype_test.dart'
   - path: 'nnbd/static_errors/super_equals_allows_null_test.dart'
-  - path: 'nnbd/subtyping/function_type_bounds_strong_test.dart'
   - path: 'nnbd/syntax/class_member_declarations_test.dart'
   - path: 'nnbd/syntax/late_modifier_bug_39658_test.dart'
   - path: 'nnbd/syntax/late_modifier_edge_cases_test.dart'
