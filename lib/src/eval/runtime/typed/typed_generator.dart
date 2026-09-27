@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'typed_frame.dart';
+import 'typed_interop.dart';
 import 'typed_program.dart';
 
 typedef TypedSyncResume =
@@ -11,6 +12,8 @@ typedef TypedSyncResume =
       TypedFrame frame,
       int pc,
       Runtime? runtime,
+      Object? error,
+      StackTrace? trace,
     );
 
 /// A suspended function invocation. Each iterator starts from its own spills.
@@ -78,6 +81,7 @@ final class TypedSyncIterator implements Iterator<Object?> {
   bool _running = false;
   bool _closed = false;
   bool _yielded = false;
+  Iterator<Object?>? _delegate;
 
   @override
   Object? current;
@@ -88,6 +92,13 @@ final class TypedSyncIterator implements Iterator<Object?> {
     _yielded = true;
   }
 
+  void delegate(Object? iterator, int resumePc) {
+    _delegate = iterator is $Iterator
+        ? iterator.$value
+        : _GuestIterator(iterator, iterable.runtime);
+    pc = resumePc;
+  }
+
   @override
   bool moveNext() {
     if (_running) throw StateError('Iterator is already running');
@@ -96,9 +107,40 @@ final class TypedSyncIterator implements Iterator<Object?> {
     _yielded = false;
     current = null;
     try {
-      iterable.resume(iterable.program, frame, pc, iterable.runtime);
-      _closed = !_yielded;
-      return _yielded;
+      while (true) {
+        Object? error;
+        StackTrace? trace;
+        final delegated = _delegate;
+        if (delegated != null) {
+          try {
+            if (delegated.moveNext()) {
+              final value = delegated.current;
+              current =
+                  delegated is TypedSyncIterator || delegated is _GuestIterator
+                  ? value
+                  : iterable.runtime?.wrapAlways(value, recursive: true) ??
+                        TypedInterop.boxExternal(value);
+              return true;
+            }
+          } catch (caught, stack) {
+            error = caught;
+            trace = stack;
+          }
+          _delegate = null;
+        }
+        iterable.resume(
+          iterable.program,
+          frame,
+          pc,
+          iterable.runtime,
+          error,
+          trace,
+        );
+        if (_yielded) return true;
+        if (_delegate != null) continue;
+        _closed = true;
+        return false;
+      }
     } catch (_) {
       _closed = true;
       rethrow;
@@ -106,4 +148,19 @@ final class TypedSyncIterator implements Iterator<Object?> {
       _running = false;
     }
   }
+}
+
+/// Guest-defined iterators retain ordinary virtual dispatch.
+final class _GuestIterator implements Iterator<Object?> {
+  _GuestIterator(this.receiver, this.runtime);
+  final Object? receiver;
+  final Runtime? runtime;
+
+  @override
+  Object? get current => TypedInterop.getProperty(runtime, receiver, 'current');
+
+  @override
+  bool moveNext() => TypedInterop.toBool(
+    TypedInterop.invoke(runtime, receiver, 'moveNext', 0, null, null),
+  );
 }

@@ -9,8 +9,6 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/generators.dart';
 import '../invocation/accessors.dart';
-import '../invocation/resolver.dart';
-import '../macros/loop.dart';
 
 StatementInfo compileYield(
   CompilerContext ctx,
@@ -77,21 +75,8 @@ StatementInfo compileYield(
     final iterator = GetTarget.read(ctx, boxed, 'iterator').copyWith(
       type: CoreTypes.iterator.ref(ctx).copyWith(arguments: [elementType]),
     );
-    return macroLoop(
-      ctx,
-      expectedReturnType,
-      condition: (ctx) =>
-          CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result,
-      body: (ctx, _) {
-        final current = GetTarget.read(
-          ctx,
-          iterator,
-          'current',
-        ).boxIfNeeded(ctx);
-        ctx.pushOp(YieldSync(current.ssa));
-        return StatementInfo();
-      },
-    );
+    ctx.pushOp(YieldSync(iterator.ssa, delegate: true));
+    return StatementInfo();
   }
   ctx.pushOp(YieldSync(boxed.ssa));
   return StatementInfo();

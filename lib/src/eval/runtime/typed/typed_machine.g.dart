@@ -74,7 +74,15 @@ abstract final class TypedMachine {
     _drive(program, TypedEntry.result(value), root, pc, runtime);
   }
 
-  static void _resumeSync(TypedProgram program, TypedFrame frame, int pc, Runtime? runtime) {
+  static void _resumeSync(TypedProgram program, TypedFrame frame, int pc, Runtime? runtime,
+      Object? error, StackTrace? trace) {
+    if (error != null) {
+      final transfer = TypedExceptions.handle(frame.activeFrame, error, trace!, runtime);
+      if (transfer == null) Error.throwWithStackTrace(error, trace);
+      if (transfer.frame == null) return;
+      _drive(program, TypedEntry.result(transfer.result), transfer.frame!, transfer.pc, runtime);
+      return;
+    }
     _drive(program, const TypedEntry.empty(), frame, pc, runtime);
   }
 
@@ -1065,6 +1073,9 @@ abstract final class TypedMachine {
              continue dispatch;
             case 414:
              frame.syncIterator!.suspend(r, pc);
+          return null;
+            case 415:
+             frame.syncIterator!.delegate(r, pc);
           return null;
             default:
               cold.op = code[pc - 1];

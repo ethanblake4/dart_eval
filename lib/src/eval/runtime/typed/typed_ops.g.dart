@@ -414,6 +414,7 @@ abstract final class TypedOp {
   static const eEqSC = 412;
   static const rBeginSyncGenerator = 413;
   static const rYieldSync = 414;
+  static const rYieldSyncStar = 415;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false, 'True'),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false, 'False'),
@@ -830,5 +831,6 @@ abstract final class TypedOp {
     TypedInstruction('eEqSC', [7, 8], [4], TypedImmediate.none, true, false, false, 'Eq'),
     TypedInstruction('rBeginSyncGenerator', [], [6], TypedImmediate.typeId, false, false, false, 'BeginSyncGenerator'),
     TypedInstruction('rYieldSync', [6], [], TypedImmediate.none, false, false, false, 'YieldSync'),
+    TypedInstruction('rYieldSyncStar', [6], [], TypedImmediate.none, false, false, false, 'YieldSyncStar'),
   ];
 }

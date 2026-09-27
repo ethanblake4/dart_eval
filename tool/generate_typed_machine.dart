@@ -1681,6 +1681,13 @@ String familyOf(String name) {
     inputs: [6],
     extended: true,
   );
+  add(
+    'rYieldSyncStar',
+    '''frame.syncIterator!.delegate(r, pc);
+          return null;''',
+    inputs: [6],
+    extended: true,
+  );
   // AOT allocation follows the numeric case order. Keep simple register-only
   // operations ahead of handlers with decoding, calls and exceptional edges.
   final originalOrder = {for (var i = 0; i < ops.length; i++) ops[i]: i};
@@ -1854,7 +1861,15 @@ abstract final class TypedMachine {
     _drive(program, TypedEntry.result(value), root, pc, runtime);
   }
 
-  static void _resumeSync(TypedProgram program, TypedFrame frame, int pc, Runtime? runtime) {
+  static void _resumeSync(TypedProgram program, TypedFrame frame, int pc, Runtime? runtime,
+      Object? error, StackTrace? trace) {
+    if (error != null) {
+      final transfer = TypedExceptions.handle(frame.activeFrame, error, trace!, runtime);
+      if (transfer == null) Error.throwWithStackTrace(error, trace);
+      if (transfer.frame == null) return;
+      _drive(program, TypedEntry.result(transfer.result), transfer.frame!, transfer.pc, runtime);
+      return;
+    }
     _drive(program, const TypedEntry.empty(), frame, pc, runtime);
   }
 

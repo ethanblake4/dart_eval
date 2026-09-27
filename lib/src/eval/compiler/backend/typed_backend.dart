@@ -1262,7 +1262,7 @@ class _LoweringSession {
         if (op is generators.YieldSync) {
           lowered.add(
             TypedOperation(
-              b._named(['rYieldSync']),
+              b._named([op.delegate ? 'rYieldSyncStar' : 'rYieldSync']),
               null,
               [value(op.value)],
               clobbers: {0, 1, 2, 3, 4, 6, 7, 8},

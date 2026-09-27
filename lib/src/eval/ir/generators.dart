@@ -17,13 +17,14 @@ final class BeginSyncGenerator extends Operation {
 
 /// Suspends an iterator until its next moveNext call.
 final class YieldSync extends Operation {
-  YieldSync(this.value);
+  YieldSync(this.value, {this.delegate = false});
   final SSA value;
+  final bool delegate;
 
   @override
   Set<SSA> get readsFrom => {value};
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
-      YieldSync(readsFrom?.single ?? value);
+      YieldSync(readsFrom?.single ?? value, delegate: delegate);
 }

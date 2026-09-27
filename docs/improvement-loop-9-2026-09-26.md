@@ -58,3 +58,31 @@ Focused fresh/serialized tests cover lazy delegation, closure inference, empty
 iterables, and iterator failure reaching the delegating catch/finally.
 All 1,217 compiler/language/interop/runtime/stdlib/security tests pass, and
 changed-file analysis is clean. This step changes only compiler lowering.
+
+## Step 3: forward delegated values without reentering the parent VM
+
+The new `benchmark/generator_tree.dart` walks binary trees lazily through nested
+yield* calls, modeling a tree visitor or directory walker. The initial lowering
+reentered every delegating parent for every value, calling moveNext/current and
+suspending again through bytecode. Direct forwarding removes that repeated work.
+
+A new cold instruction suspends the generator with its delegate iterator. The
+generator helper forwards values until exhaustion, then resumes the parent.
+Exceptions from moveNext/current reenter the parent's active exception handlers.
+Guest-defined iterators retain virtual dispatch; native iterators retain value
+wrapping. Existing instruction numbers remain stable and ordinary calls/returns
+do not inspect delegation state.
+
+A 31-sample AOT comparison measured 29.764 ms before and 7.959 ms after for 100
+trees (73.3% less time), with equal checksums. All 14 passing SDK generator
+tests remain passing in a fresh AOT runner. Additional fresh/serialized tests
+verify guest iterator errors, nullable native values, and nested delegation.
+
+The default suite passes 1,710 tests with 62 skips; the two additional iterator
+regressions pass separately. Analysis, generation checks, and independent review
+pass. The full 22-driver AOT sweep matches all 21 execution checksums; compiler
+output size is unchanged. Initial call/callback outliers shrink in 51-sample
+reverse-order repeats: polymorphic calls 17.767 vs 17.966 ms (+1.1%), callback
+default adapter 2.082 vs 2.166 ms (+4.0%), and interval overlap 7.689 vs 7.766 ms
+(+1.0%). Logs: `.dart_tool/generator-delegation-sweep` and
+`.dart_tool/delegation-repeat-*`.
