@@ -1034,7 +1034,13 @@ extension TypedRuntimeInterop on Runtime {
     final source = _typeDescriptors[actual];
     final target = _typeDescriptors[expected];
     final sourceNominal = source[0], targetNominal = target[0];
-    if (targetNominal == lookupType(CoreTypes.dynamic)) return true;
+    // Object? is a top type even for dynamic and abstract signature bounds,
+    // which do not necessarily have an Object entry in their supertype table.
+    if (targetNominal == _dynamicTypeId ||
+        (targetNominal == _objectTypeId &&
+            (target[1] == 1 || nullableExpected))) {
+      return true;
+    }
     // Never is a subtype of every type.
     if (sourceNominal == _typedTypeId(CoreTypes.never)) return true;
     // Null <: T only when T is nullable or a top type (dynamic handled above).
