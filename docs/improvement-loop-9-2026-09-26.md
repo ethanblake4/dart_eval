@@ -86,3 +86,12 @@ reverse-order repeats: polymorphic calls 17.767 vs 17.966 ms (+1.1%), callback
 default adapter 2.082 vs 2.166 ms (+4.0%), and interval overlap 7.689 vs 7.766 ms
 (+1.0%). Logs: `.dart_tool/generator-delegation-sweep` and
 `.dart_tool/delegation-repeat-*`.
+
+## Step 4: simplify generator lowering
+
+Removed the unused synthetic local binding at generator entry; the effectful
+entry operation can be emitted directly. Shared the iterable element-type
+lookup used by contextual typing and closure inference, removing duplicated
+lookup logic and nested conditionals. No runtime code changed in this pass.
+All eleven focused generator tests pass in fresh/serialized modes, and analysis
+is clean.

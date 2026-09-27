@@ -1,12 +1,9 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/generators.dart';
-import '../values/value_rep.dart';
 
-/// Marks a synchronous generator's entry. The result slot is metadata for
-/// the iterable's type; execution resumes after this operation.
+/// Emits the initial suspension before parameter capture cells are allocated.
 BeginSyncGenerator setupSyncGenerator(
   CompilerContext ctx, {
   TypeRef? returnType,
@@ -20,9 +17,6 @@ BeginSyncGenerator setupSyncGenerator(
     ctx.svar('#syncGenerator'),
     runtimeTypeId: ctx.runtimeTypes.idOf(runtimeType),
   );
-  ctx.setLocal(
-    '#syncGenerator',
-    Variable.ssa(ctx, begin, runtimeType, rep: ValueRep.boxed),
-  );
+  ctx.pushOp(begin);
   return begin;
 }

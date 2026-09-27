@@ -28,18 +28,7 @@ StatementInfo compileYield(
     );
   }
 
-  final iterable = expectedReturnType == null
-      ? null
-      : ctx.typeSystem.asInstanceOf(
-          expectedReturnType,
-          ctx.types.bySpec(CoreTypes.iterable),
-        );
-  final arguments = iterable == null
-      ? const <TypeRef>[]
-      : interfaceArgumentsOf(iterable);
-  final elementType = arguments.isEmpty
-      ? CoreTypes.dynamic.ref(ctx)
-      : arguments.first;
+  final elementType = _iterableElementType(ctx, expectedReturnType);
   final delegated = statement.star != null;
   final expectedType = delegated
       ? CoreTypes.iterable.ref(ctx).copyWith(arguments: [elementType])
@@ -49,19 +38,8 @@ StatementInfo compileYield(
 
   if (node.parent is FunctionExpression &&
       ctx.asyncClosureReturnTypes.isNotEmpty) {
-    final yieldedIterable = delegated
-        ? ctx.typeSystem.asInstanceOf(
-            value.type,
-            ctx.types.bySpec(CoreTypes.iterable),
-          )
-        : null;
     ctx.asyncClosureReturnTypes.last.add(
-      delegated
-          ? (yieldedIterable == null ||
-                    interfaceArgumentsOf(yieldedIterable).isEmpty
-                ? CoreTypes.dynamic.ref(ctx)
-                : interfaceArgumentsOf(yieldedIterable).first)
-          : value.type,
+      delegated ? _iterableElementType(ctx, value.type) : value.type,
     );
   }
   final boxed = convertForAssignment(
@@ -80,4 +58,14 @@ StatementInfo compileYield(
   }
   ctx.pushOp(YieldSync(boxed.ssa));
   return StatementInfo();
+}
+
+TypeRef _iterableElementType(CompilerContext ctx, TypeRef? type) {
+  final iterable = type == null
+      ? null
+      : ctx.typeSystem.asInstanceOf(type, ctx.types.bySpec(CoreTypes.iterable));
+  final arguments = iterable == null
+      ? const <TypeRef>[]
+      : interfaceArgumentsOf(iterable);
+  return arguments.isEmpty ? CoreTypes.dynamic.ref(ctx) : arguments.first;
 }
