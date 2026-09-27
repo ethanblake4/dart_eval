@@ -14,7 +14,7 @@ final class Substitution {
   /// into a shared map happens on a plain `Map<TypeParameterDef, TypeRef>`
   /// (e.g. `TypeSystem.unify`), then crosses the boundary here.
   factory Substitution.of(Map<TypeParameterDef, TypeRef> bindings) =>
-      Substitution._(Map.unmodifiable(bindings));
+      bindings.isEmpty ? empty : Substitution._(Map.unmodifiable(bindings));
 
   /// The declaration's parameters mapped to [type]'s arguments. Missing
   /// arguments use the bound, or `dynamic` when unbounded — the rule

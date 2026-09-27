@@ -438,7 +438,7 @@ final class InterfaceTypeRef extends TypeRef {
 
   @override
   TypeRef substituteTypeParameters(Substitution substitutions) {
-    if (arguments.isEmpty) return this;
+    if (substitutions.isEmpty || arguments.isEmpty) return this;
     return copyWith(
       arguments: [
         for (final argument in arguments)
@@ -600,17 +600,20 @@ final class RecordTypeRef extends TypeRef {
       : RecordTypeRef(positional, named, nullable: nullable);
 
   @override
-  TypeRef substituteTypeParameters(Substitution substitutions) => RecordTypeRef(
-    [
-      for (final type in positional)
-        type.substituteTypeParameters(substitutions),
-    ],
-    {
-      for (final entry in named.entries)
-        entry.key: entry.value.substituteTypeParameters(substitutions),
-    },
-    nullable: nullable,
-  );
+  TypeRef substituteTypeParameters(Substitution substitutions) {
+    if (substitutions.isEmpty) return this;
+    return RecordTypeRef(
+      [
+        for (final type in positional)
+          type.substituteTypeParameters(substitutions),
+      ],
+      {
+        for (final entry in named.entries)
+          entry.key: entry.value.substituteTypeParameters(substitutions),
+      },
+      nullable: nullable,
+    );
+  }
 
   /// The canonical `@record` name: positionals in order, then named
   /// fields sorted — the single identity every record producer shares.
@@ -712,6 +715,7 @@ final class FunctionTypeRef extends TypeRef {
 
   @override
   TypeRef substituteTypeParameters(Substitution substitutions) {
+    if (substitutions.isEmpty) return this;
     // The signature's own type parameters are not substituted; refs to
     // them simply miss the outer substitution map.
     final s = signature;

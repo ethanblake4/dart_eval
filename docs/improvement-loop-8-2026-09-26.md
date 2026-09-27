@@ -34,3 +34,20 @@ Validation: 1,208 broader tests, 17 focused tests, and the full default suite
 (1,701 passed, 62 skipped) pass. Rebuilt and reran all 61 function-subtype/bound
 SDK tests: all passed, no timeouts. Changed-file analysis is clean. No runtime
 changes, wrappers, boxing, or adapter paths were introduced.
+
+## Step 3: empty substitution fast path
+
+Function, record, and parameterized nominal types were rebuilt even when their
+substitution contained no bindings. Empty substitution now returns the original
+immutable type, and `Substitution.of` reuses its existing empty instance.
+
+Added `benchmark/compile_pipeline.dart`: a typed middleware/ETL-style registry
+of 64 list-processing callbacks. It validates serialized execution before timing
+compilation. Both AOT variants emit 2,818 bytes and return checksum 6,054.
+31-sample pinned runs measured 34.219 vs 35.383 ms, then 33.752 vs 33.069 ms with
+order reversed. The mixed-feature compiler benchmark similarly showed no
+repeatable difference (17.206 vs 16.768 ms; reverse 16.908 vs 17.053 ms).
+This removes allocations, but the measurements do not establish an overall
+compile-time speedup. No runtime changes.
+
+Validation: 809 compiler/language tests pass and changed-file analysis is clean.
