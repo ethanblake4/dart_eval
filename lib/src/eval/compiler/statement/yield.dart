@@ -8,15 +8,15 @@ import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/generators.dart';
+import '../invocation/accessors.dart';
+import '../invocation/resolver.dart';
+import '../macros/loop.dart';
 
 StatementInfo compileYield(
   CompilerContext ctx,
   YieldStatement statement,
   TypeRef? expectedReturnType,
 ) {
-  if (statement.star != null) {
-    throw CompileError('yield* is not supported', statement, ctx.library, ctx);
-  }
   AstNode? node = statement.parent;
   while (node != null && node is! FunctionBody) {
     node = node.parent;
@@ -42,20 +42,57 @@ StatementInfo compileYield(
   final elementType = arguments.isEmpty
       ? CoreTypes.dynamic.ref(ctx)
       : arguments.first;
-  final value = compileExpression(statement.expression, ctx, elementType);
+  final delegated = statement.star != null;
+  final expectedType = delegated
+      ? CoreTypes.iterable.ref(ctx).copyWith(arguments: [elementType])
+      : elementType;
+  final value = compileExpression(statement.expression, ctx, expectedType);
   if (value.type.isSpec(CoreTypes.never)) return markNeverTerminates(ctx);
 
   if (node.parent is FunctionExpression &&
       ctx.asyncClosureReturnTypes.isNotEmpty) {
-    ctx.asyncClosureReturnTypes.last.add(value.type);
+    final yieldedIterable = delegated
+        ? ctx.typeSystem.asInstanceOf(
+            value.type,
+            ctx.types.bySpec(CoreTypes.iterable),
+          )
+        : null;
+    ctx.asyncClosureReturnTypes.last.add(
+      delegated
+          ? (yieldedIterable == null ||
+                    interfaceArgumentsOf(yieldedIterable).isEmpty
+                ? CoreTypes.dynamic.ref(ctx)
+                : interfaceArgumentsOf(yieldedIterable).first)
+          : value.type,
+    );
   }
   final boxed = convertForAssignment(
     ctx,
     value,
-    elementType,
+    expectedType,
     source: statement.expression,
-    description: 'Cannot yield ${value.type} (expected: $elementType)',
+    description: 'Cannot yield ${value.type} (expected: $expectedType)',
   ).boxIfNeeded(ctx);
+  if (delegated) {
+    final iterator = GetTarget.read(ctx, boxed, 'iterator').copyWith(
+      type: CoreTypes.iterator.ref(ctx).copyWith(arguments: [elementType]),
+    );
+    return macroLoop(
+      ctx,
+      expectedReturnType,
+      condition: (ctx) =>
+          CallResolver(ctx).invokeOperator(iterator, 'moveNext', []).result,
+      body: (ctx, _) {
+        final current = GetTarget.read(
+          ctx,
+          iterator,
+          'current',
+        ).boxIfNeeded(ctx);
+        ctx.pushOp(YieldSync(current.ssa));
+        return StatementInfo();
+      },
+    );
+  }
   ctx.pushOp(YieldSync(boxed.ssa));
   return StatementInfo();
 }

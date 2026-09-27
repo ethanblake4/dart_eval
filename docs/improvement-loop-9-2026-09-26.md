@@ -40,3 +40,21 @@ callback case was 2.059 vs 1.907 ms (-7.4%). The compiler repeat was 16.928 vs
 17.363 ms (+2.6%). This is a feature checkpoint, with no performance gain
 claimed. Logs are in `.dart_tool/goal-generator-sweep` and
 `.dart_tool/goal-generator-repeat-*`.
+
+## Step 2: synchronous yield* delegation
+
+`yield*` now uses the existing iterator protocol and loop lowering. The iterable
+expression is evaluated once, then each `moveNext`/`current` pair supplies the
+next suspended yield. This preserves lazy evaluation, iterator exceptions, and
+the enclosing generator's catch/finally handlers without adding runtime
+instructions. Closure inference collects the delegated iterable's element type,
+and contextual typing supplies `Iterable<T>` to delegated expressions.
+
+A fresh AOT survey passes 14 of the same 20 selected SDK tests, up from nine.
+All five yield* blockers pass: move-past-end, nested subtype, regression 62319,
+nested exceptions, and yieldstar. Their expected-failure entries are removed.
+The six remaining tests need Iterable superclass/mixin support or async*.
+Focused fresh/serialized tests cover lazy delegation, closure inference, empty
+iterables, and iterator failure reaching the delegating catch/finally.
+All 1,217 compiler/language/interop/runtime/stdlib/security tests pass, and
+changed-file analysis is clean. This step changes only compiler lowering.
