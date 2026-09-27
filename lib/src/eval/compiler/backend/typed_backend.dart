@@ -440,7 +440,9 @@ class TypedBackend {
     }
     final bytes = BytesBuilder();
     final functions = <TypedFunction>[];
-    for (final function in compiled) {
+    for (var index = 0; index < compiled.length; index++) {
+      final function = compiled[index];
+      final functionId = reachable[index];
       final base = bytes.length;
       final code = function.code;
       final data = ByteData.sublistView(code);
@@ -469,6 +471,12 @@ class TypedBackend {
           boolSpillCount: function.spills[2],
           objectSpillCount: function.spills[3],
           argumentKinds: function.argumentKinds,
+          typeParameterOwners: [
+            for (final parameter
+                in context.functionTypeParameters[functionId] ??
+                    const <TypeParameterDef>[])
+              context.runtimeTypes.ownerIdOf(parameter.owner),
+          ],
           resultKind: function.resultKind,
           objectOutgoingCount: function.outgoing,
         ),

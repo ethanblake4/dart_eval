@@ -3,6 +3,7 @@ import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'typed_closure_descriptor.dart';
 import 'typed_frame.dart';
+import 'typed_type_environment.dart';
 import 'typed_function.dart';
 import 'typed_interop.dart';
 import 'typed_instance.dart';
@@ -23,9 +24,10 @@ final class TypedClosure extends EvalFunction {
     this.captures,
     this.runtime,
     this.definingTypeEnvironmentReceiver,
-    List<int> definingTypeArguments,
-  ) : definingTypeArguments = List.unmodifiable(definingTypeArguments),
-      function = program.functions[descriptor.functionId];
+    List<int> definingTypeArguments, [
+    this.definingTypeEnvironment,
+  ]) : definingTypeArguments = List.unmodifiable(definingTypeArguments),
+       function = program.functions[descriptor.functionId];
 
   final TypedProgram program;
   final TypedClosureDescriptor descriptor;
@@ -34,13 +36,26 @@ final class TypedClosure extends EvalFunction {
   final Runtime? runtime;
   final Object? definingTypeEnvironmentReceiver;
   final List<int> definingTypeArguments;
+  final TypedTypeEnvironment? definingTypeEnvironment;
   int? _resolvedRuntimeTypeId;
   List<int>? _resolvedDefaultTypeArguments;
   Runtime? _defaultTypeRuntime;
 
-  /// Exact calls resolve omitted defaults before entering the callee frame.
-  List<int> get entryTypeArguments =>
-      _resolvedDefaultTypeArguments ?? definingTypeArguments;
+  /// Exact calls have already resolved and checked omitted defaults.
+  @pragma('vm:prefer-inline')
+  List<int> entryTypeArguments(List<int> arguments) => arguments.isEmpty
+      ? _resolvedDefaultTypeArguments ?? arguments
+      : arguments;
+
+  @pragma('vm:prefer-inline')
+  TypedTypeEnvironment? typeEnvironmentForCall(List<int> arguments) =>
+      arguments.isEmpty || function.typeParameterOwners.isEmpty
+      ? definingTypeEnvironment
+      : TypedTypeEnvironment(
+          function.typeParameterOwners,
+          arguments,
+          definingTypeEnvironment,
+        );
 
   // Bound methods with a boxed ABI can use the closure entry path by supplying
   // their receiver in place of its hidden environment argument.
@@ -162,8 +177,9 @@ final class TypedClosure extends EvalFunction {
     List<Object?> outgoing,
     Runtime? runtime,
     Object? definingTypeEnvironmentReceiver,
-    List<int> definingTypeArguments,
-  ) {
+    List<int> definingTypeArguments, [
+    TypedTypeEnvironment? definingTypeEnvironment,
+  ]) {
     final descriptor = program.closures[index];
     final captures = descriptor.captureCount == 0
         ? const <Object?>[]
@@ -182,6 +198,7 @@ final class TypedClosure extends EvalFunction {
       runtime,
       definingTypeEnvironmentReceiver,
       definingTypeArguments,
+      definingTypeEnvironment,
     );
   }
 
@@ -258,17 +275,24 @@ final class TypedClosure extends EvalFunction {
   /// Returns null when no parameter actually requires a runtime type check.
   int? _checkedOwnerType(Runtime? runtime) {
     if (runtime == null) return null;
-    for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
-      if (descriptor.parameterTypeIds[i] >= 0) {
-        final typeReceiver = descriptor.boundReceiver
-            ? captures.single
-            : definingTypeEnvironmentReceiver;
-        return typeReceiver is TypedInstance
-            ? typeReceiver.dispatchRoot.$getRuntimeType(runtime)
-            : null;
+    for (var index = 0; index < descriptor.parameterTypeIds.length; index++) {
+      if (descriptor.parameterTypeIds[index] >= 0) {
+        return _typeEnvironmentOwnerType(runtime);
       }
     }
     return null;
+  }
+
+  @pragma('vm:prefer-inline')
+  int? _typeEnvironmentOwnerType(Runtime runtime) {
+    final receiver = descriptor.boundReceiver
+        ? captures.single
+        : definingTypeEnvironmentReceiver;
+    return switch (receiver) {
+      TypedInstance() => receiver.dispatchRoot.$getRuntimeType(runtime),
+      int() => receiver,
+      _ => null,
+    };
   }
 
   bool acceptsTypeArguments(List<int> typeArguments) =>
@@ -294,31 +318,21 @@ final class TypedClosure extends EvalFunction {
     return _resolvedDefaultTypeArguments!;
   }
 
-  List<int> _resolveDefaultTypeArguments(Runtime runtime) {
-    final typeReceiver = descriptor.boundReceiver
-        ? captures.single
-        : definingTypeEnvironmentReceiver;
-    return runtime.resolveTypedCallTypeArguments(
-      descriptor.defaultTypeArguments,
-      actualOwnerType: typeReceiver is TypedInstance
-          ? typeReceiver.dispatchRoot.$getRuntimeType(runtime)
-          : null,
-      callableTypeArguments: definingTypeArguments,
-    );
-  }
+  List<int> _resolveDefaultTypeArguments(Runtime runtime) =>
+      runtime.resolveTypedCallTypeArguments(
+        descriptor.defaultTypeArguments,
+        actualOwnerType: _typeEnvironmentOwnerType(runtime),
+        callableTypeArguments: definingTypeArguments,
+        typeEnvironment: definingTypeEnvironment,
+      );
 
   void _checkTypeArguments(List<int> typeArguments, Runtime? runtime) {
     if (typeArguments.isEmpty || runtime == null) return;
-    final typeReceiver = descriptor.boundReceiver
-        ? captures.single
-        : definingTypeEnvironmentReceiver;
-    final ownerType = typeReceiver is TypedInstance
-        ? typeReceiver.dispatchRoot.$getRuntimeType(runtime)
-        : null;
     runtime.assertTypedTypeArguments(
       typeArguments,
       descriptor.typeParameterBounds,
-      actualOwnerType: ownerType,
+      actualOwnerType: _typeEnvironmentOwnerType(runtime),
+      typeEnvironment: typeEnvironmentForCall(typeArguments),
     );
   }
 
@@ -337,6 +351,7 @@ final class TypedClosure extends EvalFunction {
         typeId,
         typeArguments.isEmpty ? definingTypeArguments : typeArguments,
         actualOwnerType: ownerType,
+        typeEnvironment: typeEnvironmentForCall(typeArguments),
       )) {
         throw TypeError();
       }
@@ -523,6 +538,7 @@ final class TypedClosure extends EvalFunction {
           typeArguments: effectiveTypeArguments,
           lexicalTypeEnvironmentReceiver: definingTypeEnvironmentReceiver,
           lexicalTypeArguments: definingTypeArguments,
+          lexicalTypeEnvironment: definingTypeEnvironment,
         ),
         context,
       );
@@ -600,6 +616,7 @@ final class TypedClosure extends EvalFunction {
         typeArguments: effectiveTypeArguments,
         lexicalTypeEnvironmentReceiver: definingTypeEnvironmentReceiver,
         lexicalTypeArguments: definingTypeArguments,
+        lexicalTypeEnvironment: definingTypeEnvironment,
       ),
       context,
     );
@@ -648,17 +665,11 @@ final class TypedClosure extends EvalFunction {
   }
 
   int _resolveRuntimeType(Runtime runtime) {
-    final typeReceiver = descriptor.boundReceiver
-        ? captures.single
-        : definingTypeEnvironmentReceiver;
-    final ownerType = typeReceiver is TypedInstance
-        ? typeReceiver.dispatchRoot.$getRuntimeType(runtime)
-        : null;
     return runtime.resolveTypedEnvironmentType(
       descriptor.runtimeTypeId,
-      actualOwnerType: ownerType,
-      // A generic callable owns its callable parameter slots. Resolving them
-      // with an enclosing callable's arguments would conflate two owners.
+      actualOwnerType: _typeEnvironmentOwnerType(runtime),
+      typeEnvironment: definingTypeEnvironment,
+      // Legacy callers without owner metadata retain positional lookup.
       callableTypeArguments: descriptor.typeParameterBounds.isEmpty
           ? definingTypeArguments
           : const [],

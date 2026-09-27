@@ -65,6 +65,7 @@ class TypedFunction {
     this.boolSpillCount = 0,
     this.objectSpillCount = 0,
     this.argumentKinds = const [],
+    this.typeParameterOwners = const [],
     this.objectOutgoingCount = 0,
     this.resultKind = TypedArgumentKind.object,
   });
@@ -72,6 +73,9 @@ class TypedFunction {
   final int entry;
   final int intSpillCount, doubleSpillCount, boolSpillCount, objectSpillCount;
   final List<TypedArgumentKind> argumentKinds;
+
+  /// Descriptor owner IDs parallel to this function's type parameters.
+  final List<int> typeParameterOwners;
 
   /// Null denotes a void result.
   final TypedArgumentKind? resultKind;

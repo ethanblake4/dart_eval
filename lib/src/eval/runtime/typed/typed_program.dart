@@ -472,6 +472,15 @@ class TypedProgram {
           function.argumentOverflowCount > 65536) {
         throw const FormatException('Too many typed function arguments');
       }
+      if (function.typeParameterOwners.length > 65536 ||
+          function.typeParameterOwners.any(
+            (owner) =>
+                owner < -2147483648 ||
+                owner > 2147483647 ||
+                (owner < 0 && owner > -4),
+          )) {
+        throw const FormatException('Invalid typed type parameter owner');
+      }
     }
     _validateClasses();
     _validateExports();
@@ -710,6 +719,7 @@ final class _ProgramFunction extends TypedFunction {
         boolSpillCount: source.boolSpillCount,
         objectSpillCount: source.objectSpillCount,
         argumentKinds: List.unmodifiable(source.argumentKinds),
+        typeParameterOwners: List.unmodifiable(source.typeParameterOwners),
         resultKind: source.resultKind,
         objectOutgoingCount: source.objectOutgoingCount,
       );

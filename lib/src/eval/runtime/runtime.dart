@@ -20,6 +20,7 @@ import 'record.dart';
 import 'typed/typed_collections.dart';
 import 'typed/typed_export_adapter.dart';
 import 'typed/typed_frame.dart';
+import 'typed/typed_type_environment.dart';
 import 'typed/typed_interop.dart';
 import 'typed/typed_global_state.dart';
 
@@ -339,7 +340,7 @@ class Runtime {
       nominal,
       null,
       const [],
-      <(int, Set<int>), int>{},
+      _TypeResolution(null),
       const {},
     );
   }

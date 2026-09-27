@@ -337,6 +337,7 @@ String familyOf(String name) {
             constant,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
             callableTypeArguments: frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
           );''',
     immediate: 'runtimeConstant',
     mayThrow: true,
@@ -479,6 +480,7 @@ String familyOf(String name) {
           runtime,
           frame.effectiveTypeEnvironmentReceiver,
           frame.effectiveTypeArguments,
+          frame.typeEnvironment,
         );''',
     output: 6,
     immediate: 'closureIndex',
@@ -495,12 +497,13 @@ String familyOf(String name) {
   add(
     'callClosure',
     '''final site = program.closureCalls[index];
-          final callTypeArguments = runtime == null
+          final callTypeArguments = site.typeArguments.isEmpty || runtime == null
               ? site.typeArguments
               : runtime.resolveTypedCallTypeArguments(
                   site.typeArguments,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           final closure = TypedClosure.resolve(
             program, r, index, runtime, s, c, callTypeArguments,
@@ -515,10 +518,11 @@ String familyOf(String name) {
               typeEnvironmentReceiver: closure.descriptor.boundReceiver
                   ? closure.captures.single
                   : null,
-              typeArguments: callTypeArguments,
+              typeArguments: closure.entryTypeArguments(callTypeArguments),
               lexicalTypeEnvironmentReceiver:
                   closure.definingTypeEnvironmentReceiver,
-              lexicalTypeArguments: closure.entryTypeArguments,
+              lexicalTypeArguments: closure.definingTypeArguments,
+              lexicalTypeEnvironment: closure.definingTypeEnvironment,
             );
             pc = function.entry;
           } else {
@@ -546,6 +550,7 @@ String familyOf(String name) {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = TypedAsync.begin(frame, runtimeTypeId, runtime);''',
     output: 6,
@@ -631,6 +636,7 @@ String familyOf(String name) {
             r,
             index,
             frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           );''',
     inputs: [6],
@@ -655,6 +661,7 @@ String familyOf(String name) {
             index,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
             callableTypeArguments: frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
           );''',
     inputs: [6],
     output: 6,
@@ -682,6 +689,7 @@ String familyOf(String name) {
                 index,
                 actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                 callableTypeArguments: frame.effectiveTypeArguments,
+                typeEnvironment: frame.typeEnvironment,
               );''',
     output: 0,
     immediate: 'typeId',
@@ -694,6 +702,7 @@ String familyOf(String name) {
               index,
               frame.typeEnvironmentOwnerType(runtime),
               frame.effectiveTypeArguments,
+              typeEnvironment: frame.typeEnvironment,
             ),
             runtime,
           );''',
@@ -709,6 +718,7 @@ String familyOf(String name) {
             r,
             index,
             frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           )) {
             throw TypeError();
@@ -870,6 +880,7 @@ String familyOf(String name) {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = $Map.wrap(
             r as Map<Object?, Object?>,
@@ -889,6 +900,7 @@ String familyOf(String name) {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = $Set.wrap(
             r as Set<Object?>,
@@ -912,6 +924,7 @@ String familyOf(String name) {
                     index,
                     actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                     callableTypeArguments: frame.effectiveTypeArguments,
+                    typeEnvironment: frame.typeEnvironment,
                   ),
                 );''',
       inputs: [register],
@@ -961,6 +974,7 @@ String familyOf(String name) {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = $List.wrap(
             r as List,
@@ -980,6 +994,7 @@ String familyOf(String name) {
                   a,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = TypedInstance(
             program,
@@ -1153,6 +1168,7 @@ String familyOf(String name) {
                     site.typeArguments,
                     actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                     callableTypeArguments: frame.effectiveTypeArguments,
+                    typeEnvironment: frame.typeEnvironment,
                   );
             r = TypedDispatch.invoke(
               program, runtime, r, s, c, index, callTypeArguments,
@@ -1452,6 +1468,7 @@ String familyOf(String name) {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           $rn = \$Map.wrap(
             $rn as Map<Object?, Object?>,
@@ -1472,6 +1489,7 @@ String familyOf(String name) {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           $rn = \$Set.wrap(
             $rn as Set<Object?>,
@@ -1538,6 +1556,7 @@ String familyOf(String name) {
             $rn,
             index,
             frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           );''',
       inputs: [recv],
@@ -1665,7 +1684,8 @@ String familyOf(String name) {
           final returnPc = frame.returnPc;
           final typeId = runtime == null ? index : runtime.resolveTypedEnvironmentType(
             index, actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
-            callableTypeArguments: frame.effectiveTypeArguments);
+            callableTypeArguments: frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment);
           final iterable = TypedSyncIterable.begin(program, frame, pc, typeId, runtime, _resumeSync);
           if (caller == null) return iterable;
           frame = caller; pc = returnPc;
@@ -1845,7 +1865,8 @@ abstract final class TypedMachine {
       ..typeEnvironmentReceiver = arguments.typeEnvironmentReceiver
       ..typeArguments = arguments.typeArguments
       ..lexicalTypeEnvironmentReceiver = arguments.lexicalTypeEnvironmentReceiver
-      ..lexicalTypeArguments = arguments.lexicalTypeArguments;
+      ..lexicalTypeArguments = arguments.lexicalTypeArguments
+      ..lexicalTypeEnvironment = arguments.lexicalTypeEnvironment;
     return _drive(program, arguments, root, entry.entry, runtime);
   }
 

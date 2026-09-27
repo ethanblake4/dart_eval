@@ -379,7 +379,7 @@ extension TypedRuntimeInterop on Runtime {
             template,
             null,
             const [],
-            <(int, Set<int>), int>{},
+            _TypeResolution(null),
             const {},
           );
     bucket.add((List.of(fieldIds), typeId));
@@ -441,8 +441,18 @@ extension TypedRuntimeInterop on Runtime {
     int expected,
     List<int> typeArguments, {
     int? actualOwnerType,
+    TypedTypeEnvironment? typeEnvironment,
   }) {
     if (expected < 0 || expected >= _typeDescriptors.length) return false;
+    if (typeEnvironment != null) {
+      expected = resolveTypedEnvironmentType(
+        expected,
+        actualOwnerType: actualOwnerType,
+        callableTypeArguments: typeArguments,
+        typeEnvironment: typeEnvironment,
+      );
+      typeArguments = const [];
+    }
     final expectedDescriptor = _typeDescriptors[expected];
     if (expectedDescriptor.length == 2 &&
         (expectedDescriptor[0] == _dynamicTypeId ||
@@ -484,12 +494,19 @@ extension TypedRuntimeInterop on Runtime {
     List<int> typeArguments,
     List<int> bounds, {
     int? actualOwnerType,
+    TypedTypeEnvironment? typeEnvironment,
   }) {
     if (typeArguments.length != bounds.length) throw TypeError();
     for (var index = 0; index < typeArguments.length; index++) {
       if (!_isTypedDescriptorSubtypeInEnvironment(
         typeArguments[index],
-        bounds[index],
+        typeEnvironment == null
+            ? bounds[index]
+            : resolveTypedEnvironmentType(
+                bounds[index],
+                actualOwnerType: actualOwnerType,
+                typeEnvironment: typeEnvironment,
+              ),
         actualOwnerType,
         typeArguments,
       )) {
@@ -504,11 +521,12 @@ extension TypedRuntimeInterop on Runtime {
     List<int> typeArguments, {
     int? actualOwnerType,
     List<int> callableTypeArguments = const [],
+    TypedTypeEnvironment? typeEnvironment,
   }) => typeArguments.isEmpty
       ? const <int>[]
       : [
           for (final type in typeArguments)
-            callableTypeArguments.isEmpty
+            callableTypeArguments.isEmpty && typeEnvironment == null
                 ? resolveTypedEnvironmentType(
                     type,
                     actualOwnerType: actualOwnerType,
@@ -517,7 +535,7 @@ extension TypedRuntimeInterop on Runtime {
                     type,
                     actualOwnerType,
                     callableTypeArguments,
-                    <(int, Set<int>), int>{},
+                    _TypeResolution(typeEnvironment),
                   ),
         ];
 
@@ -527,11 +545,12 @@ extension TypedRuntimeInterop on Runtime {
     int type, {
     int? actualOwnerType,
     List<int> callableTypeArguments = const [],
+    TypedTypeEnvironment? typeEnvironment,
   }) {
     // Most allocations have a concrete descriptor. Do not allocate a recursive
     // substitution map, or rebuild its arguments, for these ordinary values.
     if (!_requiresTypeEnvironment(type)) return type;
-    if (callableTypeArguments.isEmpty) {
+    if (callableTypeArguments.isEmpty && typeEnvironment == null) {
       if (_resolvedEnvironmentTypesVersion != _typeTableVersion) {
         _resolvedEnvironmentTypes.clear();
         _resolvedEnvironmentTypesVersion = _typeTableVersion;
@@ -542,7 +561,7 @@ extension TypedRuntimeInterop on Runtime {
           type,
           actualOwnerType,
           const [],
-          <(int, Set<int>), int>{},
+          _TypeResolution(typeEnvironment),
         ),
       );
     }
@@ -550,7 +569,7 @@ extension TypedRuntimeInterop on Runtime {
       type,
       actualOwnerType,
       callableTypeArguments,
-      <(int, Set<int>), int>{},
+      _TypeResolution(typeEnvironment),
     );
   }
 
@@ -597,12 +616,12 @@ extension TypedRuntimeInterop on Runtime {
     int type,
     int? actualOwnerType,
     List<int> callableTypeArguments,
-    Map<(int, Set<int>), int> resolved, [
+    _TypeResolution resolution, [
     Set<int> signatureBoundOwners = const {},
   ]) {
-    final cached = resolved[(type, signatureBoundOwners)];
+    final cached = resolution.types[(type, signatureBoundOwners)];
     if (cached != null) return cached;
-    resolved[(type, signatureBoundOwners)] = type;
+    resolution.types[(type, signatureBoundOwners)] = type;
     final descriptor = _typeDescriptors[type];
     if (signatureBoundOwners.isNotEmpty &&
         descriptor.length == 6 &&
@@ -616,30 +635,38 @@ extension TypedRuntimeInterop on Runtime {
         descriptor[5],
         actualOwnerType,
         callableTypeArguments,
-        resolved,
+        resolution,
         signatureBoundOwners,
       );
       if (bound == descriptor[5]) return type;
-      return resolved[(type, signatureBoundOwners)] = _internResolvedType(
+      return resolution.types[(
+        type,
+        signatureBoundOwners,
+      )] = _internResolvedType(
         [...descriptor.take(5), bound],
         type,
         actualOwnerType,
         callableTypeArguments,
-        resolved,
+        resolution,
         signatureBoundOwners,
       );
     }
     final parameter =
         descriptor.length == 6 &&
             descriptor[2] == RuntimeTypeDescriptorTag.typeParameter
-        ? _resolveTypeParameter(type, actualOwnerType, callableTypeArguments)
+        ? _resolveTypeParameter(
+            type,
+            actualOwnerType,
+            callableTypeArguments,
+            resolution.environment,
+          )
         : null;
     if (parameter != null && parameter != type) {
       var result = _resolveEnvironmentType(
         parameter,
         actualOwnerType,
         callableTypeArguments,
-        resolved,
+        resolution,
         signatureBoundOwners,
       );
       if (descriptor[1] == 1 && _typeDescriptors[result][1] == 0) {
@@ -648,11 +675,11 @@ extension TypedRuntimeInterop on Runtime {
           result,
           actualOwnerType,
           callableTypeArguments,
-          resolved,
+          resolution,
           signatureBoundOwners,
         );
       }
-      return resolved[(type, signatureBoundOwners)] = result;
+      return resolution.types[(type, signatureBoundOwners)] = result;
     }
     if (descriptor.length < 3) return type;
 
@@ -664,7 +691,7 @@ extension TypedRuntimeInterop on Runtime {
             argument,
             actualOwnerType,
             callableTypeArguments,
-            resolved,
+            resolution,
             signatureBoundOwners,
           ),
       ]);
@@ -678,7 +705,7 @@ extension TypedRuntimeInterop on Runtime {
                 field,
                 actualOwnerType,
                 callableTypeArguments,
-                resolved,
+                resolution,
                 signatureBoundOwners,
               ),
             );
@@ -694,7 +721,7 @@ extension TypedRuntimeInterop on Runtime {
                 descriptor[index + 1],
                 actualOwnerType,
                 callableTypeArguments,
-                resolved,
+                resolution,
                 signatureBoundOwners,
               ),
             );
@@ -715,7 +742,7 @@ extension TypedRuntimeInterop on Runtime {
               descriptor[3],
               actualOwnerType,
               callableTypeArguments,
-              resolved,
+              resolution,
               boundOwners,
             ),
             descriptor[4],
@@ -730,22 +757,19 @@ extension TypedRuntimeInterop on Runtime {
                 bound,
                 actualOwnerType,
                 callableTypeArguments,
-                resolved,
+                resolution,
                 boundOwners,
               ),
             );
           }
-          for (
-            final parameter in descriptor
-                .skip(9 + descriptor[7])
-                .take(descriptor[5])
-          ) {
+          for (final parameter
+              in descriptor.skip(9 + descriptor[7]).take(descriptor[5])) {
             translated.add(
               _resolveEnvironmentType(
                 parameter,
                 actualOwnerType,
                 callableTypeArguments,
-                resolved,
+                resolution,
                 boundOwners,
               ),
             );
@@ -761,7 +785,7 @@ extension TypedRuntimeInterop on Runtime {
                 descriptor[index + 2],
                 actualOwnerType,
                 callableTypeArguments,
-                resolved,
+                resolution,
                 boundOwners,
               ),
             );
@@ -774,18 +798,18 @@ extension TypedRuntimeInterop on Runtime {
             descriptor[5],
             actualOwnerType,
             callableTypeArguments,
-            resolved,
+            resolution,
             signatureBoundOwners,
           );
       }
     }
     if (_sameTypeDescriptor(descriptor, translated)) return type;
-    return resolved[(type, signatureBoundOwners)] = _internResolvedType(
+    return resolution.types[(type, signatureBoundOwners)] = _internResolvedType(
       translated,
       type,
       actualOwnerType,
       callableTypeArguments,
-      resolved,
+      resolution,
       signatureBoundOwners,
     );
   }
@@ -795,7 +819,7 @@ extension TypedRuntimeInterop on Runtime {
     int source,
     int? actualOwnerType,
     List<int> callableTypeArguments,
-    Map<(int, Set<int>), int> resolved,
+    _TypeResolution resolution,
     Set<int> signatureBoundOwners,
   ) {
     final existing = _findRuntimeTypeDescriptor(descriptor);
@@ -805,7 +829,7 @@ extension TypedRuntimeInterop on Runtime {
     _typeIdentities.add(null);
     _typeTypes.add({id});
     _typeTableVersion++;
-    resolved[(source, signatureBoundOwners)] = id;
+    resolution.types[(source, signatureBoundOwners)] = id;
     if (source < _typeTypes.length) {
       for (final supertype in _typeTypes[source]) {
         _typeTypes[id].add(
@@ -813,7 +837,7 @@ extension TypedRuntimeInterop on Runtime {
             supertype,
             actualOwnerType,
             callableTypeArguments,
-            resolved,
+            resolution,
           ),
         );
       }
@@ -835,8 +859,17 @@ extension TypedRuntimeInterop on Runtime {
   int resolveTypeParameterInEnvironment(
     int type,
     int? actualOwnerType,
-    List<int> callableTypeArguments,
-  ) {
+    List<int> callableTypeArguments, {
+    TypedTypeEnvironment? typeEnvironment,
+  }) {
+    if (typeEnvironment != null) {
+      return resolveTypedEnvironmentType(
+        type,
+        actualOwnerType: actualOwnerType,
+        callableTypeArguments: callableTypeArguments,
+        typeEnvironment: typeEnvironment,
+      );
+    }
     final descriptor = _typeDescriptors[type];
     if (descriptor.length != 6 ||
         descriptor[2] != RuntimeTypeDescriptorTag.typeParameter) {
@@ -861,6 +894,7 @@ extension TypedRuntimeInterop on Runtime {
     int type,
     int? actualOwnerType, [
     List<int> callableTypeArguments = const [],
+    TypedTypeEnvironment? typeEnvironment,
   ]) {
     final descriptor = _typeDescriptors[type];
     if (descriptor.length != 6 ||
@@ -869,6 +903,11 @@ extension TypedRuntimeInterop on Runtime {
     }
     final ownerNominalType = descriptor[3];
     final parameterIndex = descriptor[4];
+    if (typeEnvironment != null) {
+      final argument = typeEnvironment.lookup(ownerNominalType, parameterIndex);
+      if (argument != null) return argument;
+      if (ownerNominalType < 0) return descriptor[5];
+    }
     if (ownerNominalType < 0) {
       // Any callable owner (function, method, signature binder) resolves
       // positionally against the active callable's type arguments.
@@ -907,6 +946,7 @@ extension TypedRuntimeInterop on Runtime {
       argument,
       actualOwnerType: actualOwnerType,
       callableTypeArguments: callableTypeArguments,
+      typeEnvironment: typeEnvironment,
     );
   }
 
@@ -1394,4 +1434,11 @@ extension TypedRuntimeInterop on Runtime {
       callable: callable as EvalCallable,
     );
   }
+}
+
+/// One recursive substitution shares its memo table and captured owner bindings.
+final class _TypeResolution {
+  _TypeResolution(this.environment);
+  final TypedTypeEnvironment? environment;
+  final types = <(int, Set<int>), int>{};
 }

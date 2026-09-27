@@ -54,7 +54,8 @@ final class TypedSyncIterable extends IterableBase<Object?> {
       ..typeEnvironmentReceiver = template.typeEnvironmentReceiver
       ..typeArguments = template.typeArguments
       ..lexicalTypeEnvironmentReceiver = template.lexicalTypeEnvironmentReceiver
-      ..lexicalTypeArguments = template.lexicalTypeArguments;
+      ..lexicalTypeArguments = template.lexicalTypeArguments
+      ..lexicalTypeEnvironment = template.lexicalTypeEnvironment;
     frame.intSpills.setAll(0, template.intSpills);
     frame.doubleSpills.setAll(0, template.doubleSpills);
     frame.boolSpills.setAll(0, template.boolSpills);

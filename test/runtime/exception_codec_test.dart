@@ -82,7 +82,7 @@ void main() {
 
   test('codec rejects corrupt exception counts and descriptor fields', () {
     final bytes = make().write().buffer.asUint8List();
-    const metadata = 76 + 29;
+    const metadata = 76 + 33;
     for (final (offset, value) in [
       (68, 65537),
       (72, 65537),

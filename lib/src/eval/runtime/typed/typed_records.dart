@@ -1,10 +1,10 @@
 import 'package:dart_eval/src/eval/runtime/record.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'typed_type_environment.dart';
 
 /// Field layouts belong to the program and are shared by all its records.
 abstract final class TypedRecords {
-  static final _layouts =
-      Expando<Map<int, (Map<String, int>, int, bool)>>();
+  static final _layouts = Expando<Map<int, (Map<String, int>, int, bool)>>();
 
   @pragma('vm:never-inline')
   static $Record create(
@@ -13,6 +13,7 @@ abstract final class TypedRecords {
     int index, {
     int? actualOwnerType,
     List<int> callableTypeArguments = const [],
+    TypedTypeEnvironment? typeEnvironment,
   }) {
     final layouts = _layouts[runtime] ??= {};
     var layout = layouts[index];
@@ -37,6 +38,7 @@ abstract final class TypedRecords {
       layout.$2,
       actualOwnerType: actualOwnerType,
       callableTypeArguments: callableTypeArguments,
+      typeEnvironment: typeEnvironment,
     );
     final fieldList = fields as List<Object?>;
     return $Record(

@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 127;
+  static const version = 128;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -22,7 +22,11 @@ abstract final class TypedCodec {
       76 +
           program.functions.fold<int>(
             0,
-            (size, f) => size + 29 + f.argumentKinds.length,
+            (size, f) =>
+                size +
+                33 +
+                f.typeParameterOwners.length * 4 +
+                f.argumentKinds.length,
           ) +
           program.integers.length * 8 +
           program.doubles.length * 8 +
@@ -33,6 +37,11 @@ abstract final class TypedCodec {
     var offset = 0;
     void u32(int value) {
       result.setUint32(offset, value, Endian.little);
+      offset += 4;
+    }
+
+    void i32(int value) {
+      result.setInt32(offset, value, Endian.little);
       offset += 4;
     }
 
@@ -58,6 +67,10 @@ abstract final class TypedCodec {
     for (final function in program.functions) {
       for (final value in function.layout) {
         u32(value);
+      }
+      u32(function.typeParameterOwners.length);
+      for (final owner in function.typeParameterOwners) {
+        i32(owner);
       }
       u32(function.argumentKinds.length);
       result.setUint8(offset++, function.resultKind?.index ?? 255);
@@ -111,7 +124,7 @@ abstract final class TypedCodec {
         objectLength +
         codeLength +
         metadataLength;
-    final minimumLength = 76 + functionCount * 29 + sectionsLength;
+    final minimumLength = 76 + functionCount * 33 + sectionsLength;
     if (functionCount == 0 ||
         functionCount > 65536 ||
         classCount > 65536 ||
@@ -128,10 +141,20 @@ abstract final class TypedCodec {
     }
     final functions = <TypedFunction>[];
     for (var i = 0; i < functionCount; i++) {
-      if (offset + 29 > input.lengthInBytes - sectionsLength) {
+      if (offset + 33 > input.lengthInBytes - sectionsLength) {
         throw const FormatException('Truncated typed function layout');
       }
       final layout = List.generate(6, (_) => u32());
+      final ownerCount = u32();
+      if (ownerCount > 65536 ||
+          ownerCount * 4 > input.lengthInBytes - sectionsLength - offset - 5) {
+        throw const FormatException('Invalid type parameter owner count');
+      }
+      final owners = List.generate(ownerCount, (_) {
+        final owner = input.getInt32(offset, Endian.little);
+        offset += 4;
+        return owner;
+      }, growable: false);
       final kindCount = u32();
       final resultTag = input.getUint8(offset++);
       if (resultTag != 255 && resultTag >= TypedArgumentKind.values.length) {
@@ -158,6 +181,7 @@ abstract final class TypedCodec {
           objectSpillCount: layout[4],
           objectOutgoingCount: layout[5],
           argumentKinds: List.unmodifiable(kinds),
+          typeParameterOwners: owners,
           resultKind: resultTag == 255
               ? null
               : TypedArgumentKind.values[resultTag],

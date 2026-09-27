@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'typed_function.dart';
+import 'typed_type_environment.dart';
 import 'typed_exception_state.dart';
 import 'typed_async.dart';
 import 'typed_generator.dart';
@@ -26,7 +27,8 @@ class TypedEntry {
       typeEnvironmentReceiver = null,
       typeArguments = const [],
       lexicalTypeEnvironmentReceiver = null,
-      lexicalTypeArguments = const [];
+      lexicalTypeArguments = const [],
+      lexicalTypeEnvironment = null;
 
   const TypedEntry.empty()
     : a = 0,
@@ -41,7 +43,8 @@ class TypedEntry {
       typeEnvironmentReceiver = null,
       typeArguments = const [],
       lexicalTypeEnvironmentReceiver = null,
-      lexicalTypeArguments = const [];
+      lexicalTypeArguments = const [],
+      lexicalTypeEnvironment = null;
 
   const TypedEntry.direct({
     this.a = 0,
@@ -57,6 +60,7 @@ class TypedEntry {
     this.typeArguments = const [],
     this.lexicalTypeEnvironmentReceiver,
     this.lexicalTypeArguments = const [],
+    this.lexicalTypeEnvironment,
   });
 
   static TypedEntry prepare(
@@ -155,6 +159,7 @@ class TypedEntry {
     List<int> typeArguments = const [],
     Object? lexicalTypeEnvironmentReceiver,
     List<int> lexicalTypeArguments = const [],
+    TypedTypeEnvironment? lexicalTypeEnvironment,
   }) {
     if (values.length != function.argumentKinds.length) {
       throw ArgumentError(
@@ -216,6 +221,7 @@ class TypedEntry {
       typeArguments: typeArguments,
       lexicalTypeEnvironmentReceiver: lexicalTypeEnvironmentReceiver,
       lexicalTypeArguments: lexicalTypeArguments,
+      lexicalTypeEnvironment: lexicalTypeEnvironment,
     );
   }
 
@@ -228,6 +234,7 @@ class TypedEntry {
   final List<int> typeArguments;
   final Object? lexicalTypeEnvironmentReceiver;
   final List<int> lexicalTypeArguments;
+  final TypedTypeEnvironment? lexicalTypeEnvironment;
 }
 
 /// Each active invocation owns spills and one optional outgoing list. A callee
@@ -274,6 +281,8 @@ class TypedFrame {
     child.typeArguments = typeArguments;
     child.lexicalTypeEnvironmentReceiver = null;
     child.lexicalTypeArguments = const [];
+    child.lexicalTypeEnvironment = null;
+    child._typeEnvironment = null;
     child.pendingTypeEnvironmentReceiver = null;
     child.pendingTypeArguments = const [];
     return child;
@@ -293,6 +302,8 @@ class TypedFrame {
     child.typeArguments = typeArguments;
     child.lexicalTypeEnvironmentReceiver = null;
     child.lexicalTypeArguments = const [];
+    child.lexicalTypeEnvironment = null;
+    child._typeEnvironment = null;
     child.pendingTypeEnvironmentReceiver = null;
     child.pendingTypeArguments = const [];
     return child;
@@ -307,6 +318,7 @@ class TypedFrame {
     List<int> typeArguments = const [],
     Object? lexicalTypeEnvironmentReceiver,
     List<int> lexicalTypeArguments = const [],
+    TypedTypeEnvironment? lexicalTypeEnvironment,
   }) {
     // Keep the cached-frame path in one Dart call, just like ordinary calls.
     final child = _childFor(callee);
@@ -316,6 +328,8 @@ class TypedFrame {
     child.typeArguments = typeArguments;
     child.lexicalTypeEnvironmentReceiver = lexicalTypeEnvironmentReceiver;
     child.lexicalTypeArguments = lexicalTypeArguments;
+    child.lexicalTypeEnvironment = lexicalTypeEnvironment;
+    child._typeEnvironment = null;
     child.pendingTypeEnvironmentReceiver = null;
     child.pendingTypeArguments = const [];
     return child;
@@ -336,6 +350,8 @@ class TypedFrame {
     _ownerTypeId = null;
     lexicalTypeEnvironmentReceiver = null;
     lexicalTypeArguments = const [];
+    lexicalTypeEnvironment = null;
+    _typeEnvironment = null;
     pendingTypeEnvironmentReceiver = null;
     pendingTypeArguments = const [];
     // Cached inactive frames must not retain arbitrary application objects.
@@ -431,6 +447,18 @@ class TypedFrame {
   List<int> typeArguments = const [];
   Object? lexicalTypeEnvironmentReceiver;
   List<int> lexicalTypeArguments = const [];
+  TypedTypeEnvironment? lexicalTypeEnvironment;
+  TypedTypeEnvironment? _typeEnvironment;
+
+  TypedTypeEnvironment? get typeEnvironment {
+    final owners = function.typeParameterOwners;
+    if (owners.isEmpty || typeArguments.isEmpty) return lexicalTypeEnvironment;
+    return _typeEnvironment ??= TypedTypeEnvironment(
+      owners,
+      typeArguments,
+      lexicalTypeEnvironment,
+    );
+  }
 
   Object? get effectiveTypeEnvironmentReceiver =>
       typeEnvironmentReceiver ?? lexicalTypeEnvironmentReceiver;

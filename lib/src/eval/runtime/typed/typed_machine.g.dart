@@ -58,7 +58,8 @@ abstract final class TypedMachine {
       ..typeEnvironmentReceiver = arguments.typeEnvironmentReceiver
       ..typeArguments = arguments.typeArguments
       ..lexicalTypeEnvironmentReceiver = arguments.lexicalTypeEnvironmentReceiver
-      ..lexicalTypeArguments = arguments.lexicalTypeArguments;
+      ..lexicalTypeArguments = arguments.lexicalTypeArguments
+      ..lexicalTypeEnvironment = arguments.lexicalTypeEnvironment;
     return _drive(program, arguments, root, entry.entry, runtime);
   }
 
@@ -600,6 +601,7 @@ abstract final class TypedMachine {
             constant,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
             callableTypeArguments: frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
           );
            continue dispatch;
         case TypedOp.eEqRS:
@@ -645,12 +647,13 @@ abstract final class TypedMachine {
         case TypedOp.callClosure:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
            final site = program.closureCalls[index];
-          final callTypeArguments = runtime == null
+          final callTypeArguments = site.typeArguments.isEmpty || runtime == null
               ? site.typeArguments
               : runtime.resolveTypedCallTypeArguments(
                   site.typeArguments,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           final closure = TypedClosure.resolve(
             program, r, index, runtime, s, c, callTypeArguments,
@@ -665,10 +668,11 @@ abstract final class TypedMachine {
               typeEnvironmentReceiver: closure.descriptor.boundReceiver
                   ? closure.captures.single
                   : null,
-              typeArguments: callTypeArguments,
+              typeArguments: closure.entryTypeArguments(callTypeArguments),
               lexicalTypeEnvironmentReceiver:
                   closure.definingTypeEnvironmentReceiver,
-              lexicalTypeArguments: closure.entryTypeArguments,
+              lexicalTypeArguments: closure.definingTypeArguments,
+              lexicalTypeEnvironment: closure.definingTypeEnvironment,
             );
             pc = function.entry;
           } else {
@@ -695,6 +699,7 @@ abstract final class TypedMachine {
             r,
             index,
             frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           );
            continue dispatch;
@@ -798,6 +803,7 @@ abstract final class TypedMachine {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = $Map.wrap(
             r as Map<Object?, Object?>,
@@ -813,6 +819,7 @@ abstract final class TypedMachine {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = $Set.wrap(
             r as Set<Object?>,
@@ -830,6 +837,7 @@ abstract final class TypedMachine {
                     index,
                     actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                     callableTypeArguments: frame.effectiveTypeArguments,
+                    typeEnvironment: frame.typeEnvironment,
                   ),
                 );
            continue dispatch;
@@ -843,6 +851,7 @@ abstract final class TypedMachine {
                     index,
                     actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                     callableTypeArguments: frame.effectiveTypeArguments,
+                    typeEnvironment: frame.typeEnvironment,
                   ),
                 );
            continue dispatch;
@@ -856,6 +865,7 @@ abstract final class TypedMachine {
                     index,
                     actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                     callableTypeArguments: frame.effectiveTypeArguments,
+                    typeEnvironment: frame.typeEnvironment,
                   ),
                 );
            continue dispatch;
@@ -882,6 +892,7 @@ abstract final class TypedMachine {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = $List.wrap(
             r as List,
@@ -897,6 +908,7 @@ abstract final class TypedMachine {
                   a,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = TypedInstance(
             program,
@@ -983,6 +995,7 @@ abstract final class TypedMachine {
                     site.typeArguments,
                     actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                     callableTypeArguments: frame.effectiveTypeArguments,
+                    typeEnvironment: frame.typeEnvironment,
                   );
             r = TypedDispatch.invoke(
               program, runtime, r, s, c, index, callTypeArguments,
@@ -1065,7 +1078,8 @@ abstract final class TypedMachine {
           final returnPc = frame.returnPc;
           final typeId = runtime == null ? index : runtime.resolveTypedEnvironmentType(
             index, actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
-            callableTypeArguments: frame.effectiveTypeArguments);
+            callableTypeArguments: frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment);
           final iterable = TypedSyncIterable.begin(program, frame, pc, typeId, runtime, _resumeSync);
           if (caller == null) return iterable;
           frame = caller; pc = returnPc;
@@ -1147,6 +1161,7 @@ abstract final class TypedMachine {
           runtime,
           frame.effectiveTypeEnvironmentReceiver,
           frame.effectiveTypeArguments,
+          frame.typeEnvironment,
         );
        break;
     case 262:
@@ -1157,6 +1172,7 @@ abstract final class TypedMachine {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           r = TypedAsync.begin(frame, runtimeTypeId, runtime);
        break;
@@ -1186,6 +1202,7 @@ abstract final class TypedMachine {
             index,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
             callableTypeArguments: frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
           );
        break;
     case 273:
@@ -1199,6 +1216,7 @@ abstract final class TypedMachine {
                 index,
                 actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                 callableTypeArguments: frame.effectiveTypeArguments,
+                typeEnvironment: frame.typeEnvironment,
               );
        break;
     case 275:
@@ -1208,6 +1226,7 @@ abstract final class TypedMachine {
               index,
               frame.typeEnvironmentOwnerType(runtime),
               frame.effectiveTypeArguments,
+              typeEnvironment: frame.typeEnvironment,
             ),
             runtime,
           );
@@ -1219,6 +1238,7 @@ abstract final class TypedMachine {
             r,
             index,
             frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           )) {
             throw TypeError();
@@ -1413,6 +1433,7 @@ abstract final class TypedMachine {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           s = $Map.wrap(
             s as Map<Object?, Object?>,
@@ -1428,6 +1449,7 @@ abstract final class TypedMachine {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           s = $Set.wrap(
             s as Set<Object?>,
@@ -1461,6 +1483,7 @@ abstract final class TypedMachine {
             s,
             index,
             frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           );
        break;
@@ -1599,6 +1622,7 @@ abstract final class TypedMachine {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           c = $Map.wrap(
             c as Map<Object?, Object?>,
@@ -1614,6 +1638,7 @@ abstract final class TypedMachine {
                   index,
                   actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
                   callableTypeArguments: frame.effectiveTypeArguments,
+                  typeEnvironment: frame.typeEnvironment,
                 );
           c = $Set.wrap(
             c as Set<Object?>,
@@ -1647,6 +1672,7 @@ abstract final class TypedMachine {
             c,
             index,
             frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           );
        break;

@@ -49,9 +49,21 @@ void compileConstructorDeclaration(
     throw CompileError('Factory constructors cannot have initializers', d);
   }
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction('$n()');
+  final functionId = ctx.beginFunction('$n()');
+  ctx.topLevelDeclarationPositions[ctx.library]![n] = functionId;
 
   ctx.beginScope();
+
+  if (d.factoryKeyword != null) {
+    ctx.functionTypeParameters[functionId] = [
+      for (final parameter
+          in classLikeClauses(parent).$4?.typeParameters ??
+              const <TypeParameter>[])
+        (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
+                as TypeParameterTypeRef)
+            .parameter,
+    ];
+  }
 
   if (isEnum) {
     ctx.pushOp(Parameter(SSA('arg_0'), 0));

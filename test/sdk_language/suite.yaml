@@ -252,7 +252,6 @@ expect_fail:
   - path: 'function/apply_generic2_test.dart'
   - path: 'function/local3_test.dart'
   - path: 'function/local_function_test.dart'
-  - path: 'function/type2_test.dart'
   - path: 'generic/async_star_test.dart'
   - path: 'generic/closure_test.dart'
   - path: 'generic/f_bounded_quantification4_test.dart'
