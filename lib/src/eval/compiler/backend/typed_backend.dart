@@ -17,6 +17,7 @@ import '../../ir/closures.dart' as closures;
 import '../../ir/globals.dart' as globals;
 import '../../ir/exception.dart' as exceptions;
 import '../../ir/async.dart' as async_ir;
+import '../../ir/generators.dart' as generators;
 import '../../ir/types.dart' as types_ir;
 import '../../runtime/typed/typed_ops.g.dart';
 import '../../runtime/typed/typed_program.dart';
@@ -1246,6 +1247,29 @@ class _LoweringSession {
         );
       }
       for (final op in block.code) {
+        if (op is generators.BeginSyncGenerator) {
+          lowered.add(
+            TypedOperation(
+              b._named(['rBeginSyncGenerator']),
+              value(op.result),
+              [],
+              immediate: op.runtimeTypeId,
+              clobbers: {0, 1, 2, 3, 4, 6, 7, 8},
+            ),
+          );
+          continue;
+        }
+        if (op is generators.YieldSync) {
+          lowered.add(
+            TypedOperation(
+              b._named(['rYieldSync']),
+              null,
+              [value(op.value)],
+              clobbers: {0, 1, 2, 3, 4, 6, 7, 8},
+            ),
+          );
+          continue;
+        }
         if (op is async_ir.Await) {
           lowered.add(
             TypedOperation(

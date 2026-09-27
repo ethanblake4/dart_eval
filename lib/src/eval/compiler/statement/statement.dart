@@ -21,6 +21,7 @@ import 'package:dart_eval/src/eval/compiler/statement/switch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/try.dart';
 import 'package:dart_eval/src/eval/compiler/statement/variable_declaration.dart';
 import 'package:dart_eval/src/eval/compiler/statement/while.dart';
+import 'package:dart_eval/src/eval/compiler/statement/yield.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 import 'block.dart';
@@ -56,6 +57,8 @@ StatementInfo compileStatement(
         expectedReturnType,
         skipClassBoxing: skipClassBoxing,
       );
+    } else if (s is YieldStatement) {
+      return compileYield(ctx, s, expectedReturnType);
     } else if (s is ForStatement) {
       return compileForStatement(s, ctx, expectedReturnType);
     } else if (s is WhileStatement) {

@@ -4,6 +4,7 @@ import '../invocation/deferred.dart';
 import '../type.dart';
 import '../../ir/alu.dart' as alu;
 import '../../ir/async.dart' as async;
+import '../../ir/generators.dart' as generators;
 import '../../ir/bridge.dart' as bridge;
 import '../../ir/closures.dart' as closures;
 import '../../ir/collection.dart' as collection;
@@ -114,6 +115,7 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       exceptions.CaughtException() ||
       exceptions.CaughtStackTrace() ||
       async.BeginAsync() ||
+      generators.BeginSyncGenerator() ||
       async.Await() ||
       functions_ir.LoadFunctionPointer() ||
       collection.NewList() ||
@@ -326,6 +328,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           exceptions.CaughtException() ||
           exceptions.CaughtStackTrace() ||
           async.BeginAsync() ||
+          generators.BeginSyncGenerator() ||
           types.LoadConstantType() ||
           types.LoadTypeParameter():
         output(operation, object);
@@ -334,6 +337,8 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           objects.InternConst():
         inputs(operation, object);
         output(operation, object);
+      case generators.YieldSync():
+        inputs(operation, object);
       case primitives.BoxList() ||
           primitives.BoxMap() ||
           primitives.BoxSet() ||

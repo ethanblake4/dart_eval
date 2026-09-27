@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'typed_function.dart';
 import 'typed_exception_state.dart';
 import 'typed_async.dart';
+import 'typed_generator.dart';
 import 'typed_instance.dart';
 import 'typed_program.dart';
 
@@ -394,6 +395,7 @@ class TypedFrame {
   TypedFunction function;
   TypedExceptionState? exceptions;
   TypedAsyncState? asyncState;
+  TypedSyncIterator? syncIterator;
   TypedFrame? parent;
   TypedFrame? _child;
   int returnPc = -1;

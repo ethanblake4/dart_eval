@@ -2,6 +2,7 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
@@ -68,6 +69,17 @@ StatementInfo compileReturn(
     return StatementInfo(willAlwaysBreak: true);
   }
   final body = e as FunctionBody;
+  if (body.isGenerator && !body.isAsynchronous) {
+    if (value != null) {
+      throw CompileError(
+        'A sync* generator cannot return a value',
+        s,
+        ctx.library,
+        ctx,
+      );
+    }
+    return doReturn(ctx, CoreTypes.voidType.ref(ctx), null);
+  }
   if (body.parent is FunctionExpression &&
       ctx.asyncClosureReturnTypes.isNotEmpty) {
     ctx.asyncClosureReturnTypes.last.add(

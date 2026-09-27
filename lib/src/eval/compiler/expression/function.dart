@@ -12,6 +12,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/async.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/generators.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
@@ -164,6 +165,32 @@ Variable compileFunctionExpression(
           ...boundNamedParams,
         ];
 
+        final b = e.body;
+        // Local function declarations carry their return annotation on the
+        // parent; ordinary closure literals use the contextual signature.
+        final declaredReturnType = switch (e.parent) {
+          FunctionDeclaration(:final returnType?) => TypeRef.fromAnnotation(
+            ctx,
+            ctx.library,
+            returnType,
+          ),
+          _ => null,
+        };
+        final boundReturnType =
+            (bound is FunctionTypeRef ? bound.signature.returnType : null) ??
+            declaredReturnType;
+        if (b.isGenerator && b.isAsynchronous) {
+          throw CompileError(
+            'async* generators are not supported',
+            b,
+            ctx.library,
+            ctx,
+          );
+        }
+        final generator = b.isGenerator
+            ? setupSyncGenerator(ctx, returnType: boundReturnType)
+            : null;
+
         var i = 0;
 
         for (final p in resolvedParams) {
@@ -196,25 +223,6 @@ Variable compileFunctionExpression(
         ctx.functionSignatures[fnOffset] = CallableAbi.closure(
           resolvedParams.length,
         ).machine;
-        final b = e.body;
-
-        // The closure body's context type is the bound function type's return
-        // type — `Color Function() f = () => .red` resolves `.red` under `Color`.
-        // Local function declarations (`Color f() => ...`) carry the return type
-        // on their parent declaration instead.
-        final declaredReturnType = switch (e.parent) {
-          FunctionDeclaration(:final returnType?) => TypeRef.fromAnnotation(
-            ctx,
-            ctx.library,
-            returnType,
-          ),
-          _ => null,
-        };
-        final boundSignature = bound is FunctionTypeRef
-            ? bound.signature
-            : null;
-        final boundReturnType =
-            boundSignature?.returnType ?? declaredReturnType;
 
         // Block-bodied closures collect the static type of each `return` so the
         // closure's return type can be inferred (`asyncClosureReturnTypes` serves
@@ -268,7 +276,7 @@ Variable compileFunctionExpression(
             ctx.pushOp(Return(null));
           }
           // Implicit fall-through contributes `Null` to the inferred return type.
-          if (collectsReturns) {
+          if (collectsReturns && !b.isGenerator) {
             ctx.asyncClosureReturnTypes.last.add(CoreTypes.nullType.ref(ctx));
           }
         }
@@ -278,15 +286,25 @@ Variable compileFunctionExpression(
           final inferred =
               inferredClosureReturnType ??
               (returns.isEmpty
-                  ? CoreTypes.nullType.ref(ctx)
+                  ? (b.isGenerator
+                        ? CoreTypes.dynamic.ref(ctx)
+                        : CoreTypes.nullType.ref(ctx))
                   : returns.every((t) => t == returns.first)
                   ? returns.first
                   : TypeRef.commonBaseType(ctx, returns.toSet()));
-          inferredClosureReturnType = b.isAsynchronous
+          inferredClosureReturnType = b.isGenerator
+              ? boundReturnType ??
+                    CoreTypes.iterable.ref(ctx).copyWith(arguments: [inferred])
+              : b.isAsynchronous
               ? CoreTypes.future
                     .ref(ctx)
                     .copyWith(arguments: [ctx.typeSystem.flatten(inferred)])
               : inferred;
+          if (generator != null && boundReturnType == null) {
+            generator.runtimeTypeId = ctx.runtimeTypes.idOf(
+              inferredClosureReturnType!,
+            );
+          }
         }
 
         ctx.finishMethod();

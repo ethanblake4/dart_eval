@@ -1659,6 +1659,28 @@ String familyOf(String name) {
     );
   }
   ops.add(Instruction('ext', '', inputs: const [], immediate: 'none'));
+  add(
+    'rBeginSyncGenerator',
+    '''final caller = frame.parent;
+          final returnPc = frame.returnPc;
+          final typeId = runtime == null ? index : runtime.resolveTypedEnvironmentType(
+            index, actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+            callableTypeArguments: frame.effectiveTypeArguments);
+          final iterable = TypedSyncIterable.begin(program, frame, pc, typeId, runtime, _resumeSync);
+          if (caller == null) return iterable;
+          frame = caller; pc = returnPc;
+          r = iterable; s = null; c = null;''',
+    output: 6,
+    immediate: 'typeId',
+    extended: true,
+  );
+  add(
+    'rYieldSync',
+    '''frame.syncIterator!.suspend(r, pc);
+          return null;''',
+    inputs: [6],
+    extended: true,
+  );
   // AOT allocation follows the numeric case order. Keep simple register-only
   // operations ahead of handlers with decoding, calls and exceptional edges.
   final originalOrder = {for (var i = 0; i < ops.length; i++) ops[i]: i};
@@ -1770,6 +1792,7 @@ import 'typed_exception_state.dart';
 import 'typed_collections.dart';
 import 'typed_records.dart';
 import 'typed_async.dart';
+import 'typed_generator.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -1829,6 +1852,10 @@ abstract final class TypedMachine {
       return;
     }
     _drive(program, TypedEntry.result(value), root, pc, runtime);
+  }
+
+  static void _resumeSync(TypedProgram program, TypedFrame frame, int pc, Runtime? runtime) {
+    _drive(program, const TypedEntry.empty(), frame, pc, runtime);
   }
 
   @pragma('vm:never-inline')

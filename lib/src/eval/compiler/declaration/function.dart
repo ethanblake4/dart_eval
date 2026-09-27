@@ -5,6 +5,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/async.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/generators.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/fpl.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
@@ -99,6 +100,20 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
         isAsync: b.isAsynchronous,
         returnsVoid: expectedReturnType.isSpec(CoreTypes.voidType),
       );
+      if (b.isGenerator && b.isAsynchronous) {
+        throw CompileError(
+          'async* generators are not supported',
+          b,
+          ctx.library,
+          ctx,
+        );
+      }
+      if (b.isGenerator) {
+        setupSyncGenerator(
+          ctx,
+          returnType: d.returnType == null ? null : expectedReturnType,
+        );
+      }
       var i = 0;
 
       for (final p in resolvedParams) {

@@ -12,6 +12,7 @@ import 'typed_exception_state.dart';
 import 'typed_collections.dart';
 import 'typed_records.dart';
 import 'typed_async.dart';
+import 'typed_generator.dart';
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -71,6 +72,10 @@ abstract final class TypedMachine {
       return;
     }
     _drive(program, TypedEntry.result(value), root, pc, runtime);
+  }
+
+  static void _resumeSync(TypedProgram program, TypedFrame frame, int pc, Runtime? runtime) {
+    _drive(program, const TypedEntry.empty(), frame, pc, runtime);
   }
 
   @pragma('vm:never-inline')
@@ -1046,6 +1051,21 @@ abstract final class TypedMachine {
           frame = frame.leave();
           r = returned; s = null; c = null;
              continue dispatch;
+            case 413:
+             final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+             final caller = frame.parent;
+          final returnPc = frame.returnPc;
+          final typeId = runtime == null ? index : runtime.resolveTypedEnvironmentType(
+            index, actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+            callableTypeArguments: frame.effectiveTypeArguments);
+          final iterable = TypedSyncIterable.begin(program, frame, pc, typeId, runtime, _resumeSync);
+          if (caller == null) return iterable;
+          frame = caller; pc = returnPc;
+          r = iterable; s = null; c = null;
+             continue dispatch;
+            case 414:
+             frame.syncIterator!.suspend(r, pc);
+          return null;
             default:
               cold.op = code[pc - 1];
               cold.pc = pc;
