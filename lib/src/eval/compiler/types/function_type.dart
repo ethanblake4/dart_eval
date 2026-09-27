@@ -61,6 +61,9 @@ final class FunctionSignature {
   static Object? _typeKey(TypeRef? type, Map<TypeParameterDef, int> bindings) =>
       switch (type) {
         null => null,
+        // Nominal leaves cannot refer to a binder. Reuse their existing
+        // identity and cached hash instead of allocating a structural key.
+        InterfaceTypeRef t when t.arguments.isEmpty => t,
         TypeParameterTypeRef t => [
           TypeParameterTypeRef,
           t.nullable,

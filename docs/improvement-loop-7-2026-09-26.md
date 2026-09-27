@@ -50,3 +50,16 @@ Validation: 1,197 broader tests and five new equality/hash regressions pass.
 The mixed-feature compiler benchmark still emits 1,225 bytes; pinned AOT
 51-sample medians were 21.271 ms before and 17.679 ms after, with wide timing
 variance. No apparent compiler regression, and no runtime changes.
+
+## Step 3: reuse nominal leaves in signature keys
+
+Plain nominal types without arguments cannot contain bound signature references.
+The structural key now reuses those TypeRefs and their cached hashes rather than
+allocating a five-element key plus an empty argument list for every occurrence.
+Binder-bearing and structural types still use the scoped representation.
+
+Fresh pinned AOT compiler benchmarks (101 samples, ten warmups) measured
+17.099 vs 16.874 ms, then 16.859 vs 16.839 ms in reverse order. Both emitted
+1,225 bytes. The repeat is effectively neutral: this is an allocation reduction,
+not evidence of a measurable overall compiler speedup. All five identity tests
+pass and changed-file analysis is clean. No runtime changes.
