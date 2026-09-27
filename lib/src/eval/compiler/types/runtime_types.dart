@@ -131,17 +131,25 @@ final class RuntimeTypes {
   int _callableOwnerIdOf(TypeParameterOwner owner) =>
       _callableOwnerIds.putIfAbsent(owner, () => _callableOwnerIds.length);
 
+  static final _callableOwnerKinds = TypeParameterOwnerKind.values
+      .where((kind) => kind != TypeParameterOwnerKind.classLike)
+      .toSet();
+
   /// The descriptor-ready form of [parameter]'s bound. F-bounds can be
   /// cyclic (`T extends Foo<T>`, or mutually cyclic `S extends Built<S, B>`)
-  /// and descriptors can't be — self-erase, lower any chained parameter
-  /// references to their bounds, then erase survivors to dynamic.
+  /// and descriptors can't be. Preserve class parameters, which resolve
+  /// through the receiver's type environment; lower callable parameters and
+  /// erase any survivors of a recursive bound.
   TypeRef _boundDescriptorType(TypeParameterDef parameter) =>
       (parameter.bound ?? CoreTypes.dynamic.ref(_ctx))
           .substituteTypeParameters(
             Substitution.of({parameter: CoreTypes.dynamic.ref(_ctx)}),
           )
-          .lowerTypeParameters(_ctx)
-          .eraseTypeParameters(_ctx);
+          .lowerTypeParameters(_ctx, only: const {}, kinds: _callableOwnerKinds)
+          .eraseTypeParameters(
+            _ctx,
+            preserveKinds: const {TypeParameterOwnerKind.classLike},
+          );
 
   /// The number of extension `on` bindings a method-owned [owner]'s callable
   /// environment places before its own type arguments — 0 when the method

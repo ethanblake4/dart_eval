@@ -610,8 +610,24 @@ extension TypedRuntimeInterop on Runtime {
         signatureBoundOwners.contains(descriptor[3])) {
       // A callable-owned reference in a generic signature's components is
       // bound by an enclosing signature — keep it abstract rather than
-      // substituting an environment argument or bound.
-      return type;
+      // substituting an environment argument or bound. Its bound can still
+      // reference the receiver's class parameters (`S extends T` in C<T>).
+      final bound = _resolveEnvironmentType(
+        descriptor[5],
+        actualOwnerType,
+        callableTypeArguments,
+        resolved,
+        signatureBoundOwners,
+      );
+      if (bound == descriptor[5]) return type;
+      return resolved[(type, signatureBoundOwners)] = _internResolvedType(
+        [...descriptor.take(5), bound],
+        type,
+        actualOwnerType,
+        callableTypeArguments,
+        resolved,
+        signatureBoundOwners,
+      );
     }
     final parameter =
         descriptor.length == 6 &&

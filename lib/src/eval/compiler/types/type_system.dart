@@ -365,11 +365,17 @@ final class TypeSystem {
   /// `dynamic`. Erasure is the fallback after [lowerTypeParameters] for
   /// bounds that cannot be represented — cyclic F-bounds like
   /// `S extends Built<S, B>` never reach a parameter-free form.
-  TypeRef eraseTypeParameters(TypeRef type) {
+  TypeRef eraseTypeParameters(
+    TypeRef type, {
+    Set<TypeParameterOwnerKind> preserveKinds = const {},
+  }) {
     final parameters = <TypeParameterDef>{};
     void collect(TypeRef t) {
       if (t.isTypeParameter) {
-        parameters.add((t as TypeParameterTypeRef).parameter);
+        final parameter = (t as TypeParameterTypeRef).parameter;
+        if (!preserveKinds.contains(parameter.owner.kind)) {
+          parameters.add(parameter);
+        }
         return;
       }
       for (final argument in interfaceArgumentsOf(t)) {

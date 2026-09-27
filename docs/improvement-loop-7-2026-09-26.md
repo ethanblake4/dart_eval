@@ -63,3 +63,37 @@ Fresh pinned AOT compiler benchmarks (101 samples, ten warmups) measured
 1,225 bytes. The repeat is effectively neutral: this is an allocation reduction,
 not evidence of a measurable overall compiler speedup. All five identity tests
 pass and changed-file analysis is clean. No runtime changes.
+
+## Step 4: review and bound-reification regression repair
+
+The full default suite exposed `closure/tearoff_bounds_instantiation_test.dart`:
+old signature interning had hidden the loss of class parameters in method bounds.
+`C<T>.foo<S extends T>` described S's bound as dynamic instead of preserving T.
+
+Descriptor construction now preserves class-owned references, including nested
+`List<T>`, while retaining the existing finite erasure of cyclic callable bounds.
+The existing erasure helper accepts a set of owner kinds to preserve. Runtime
+reification retains a generic signature parameter's owner/index but resolves its
+bound against the receiver environment. No opcode, dispatch-loop, adapter, or
+call-site check was added. Reviewed the structural key and accessor helpers for
+scope, nullability, named-order stability, and duplication; retained their small
+shared helpers.
+
+Validation: the default suite passes 1,699 tests with 62 skips. Three descriptor
+regressions and the runtime test cover direct/nested class bounds, cyclic bounds,
+subtype checks, and fresh/serialized execution. The SDK tear-off test passes.
+Changed-file analysis and generated typed-machine verification are clean.
+
+Before committing the runtime-helper change, ran the complete 22-driver AOT
+sweep against a freshly compiled baseline at `5815a39`, pinned to affinity 4,
+15 samples each, alternating order. All 21 execution checksums matched and both
+compiler outputs remained 1,225 bytes. The sweep completed in 51 seconds;
+artifacts are `.dart_tool/goal-loop7-reification-sweep/`.
+
+31-sample repeats resolved the initial call/virtual-call outliers (each within
+2% of baseline). Local-loop and string-field medians remained about 8% and 6%
+slower respectively, despite those workloads not using bound reification.
+These results are recorded rather than attributed to noise without evidence.
+Most larger sweep workloads were within 3%; this correctness repair does not
+claim an execution speedup. Benchmark logs for repeats are
+`.dart_tool/goal-loop7-repeat-*-{baseline,candidate}.log`.

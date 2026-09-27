@@ -258,11 +258,13 @@ sealed class TypeRef {
     Set<TypeParameterOwnerKind> kinds = const {},
   }) => ctx.typeSystem.lowerTypeParameters(this, only: only, kinds: kinds);
 
-  /// Replaces every remaining type-parameter reference inside this type with
-  /// `dynamic` — the fallback for bounds that cannot be represented (cyclic
-  /// F-bounds never reach a parameter-free form).
-  TypeRef eraseTypeParameters(CompilerContext ctx) =>
-      ctx.typeSystem.eraseTypeParameters(this);
+  /// Replaces remaining type-parameter references with `dynamic` — the
+  /// fallback for cyclic bounds. [preserveKinds] keeps parameters whose
+  /// runtime type environment is still available.
+  TypeRef eraseTypeParameters(
+    CompilerContext ctx, {
+    Set<TypeParameterOwnerKind> preserveKinds = const {},
+  }) => ctx.typeSystem.eraseTypeParameters(this, preserveKinds: preserveKinds);
 
   @override
   String toString() {

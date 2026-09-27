@@ -3,6 +3,35 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('generic tearoff bounds retain the receiver type environment', () {
+    const source = r'''
+      class Container<T> {
+        void method<S extends T>(S value) {}
+        void nested<S extends List<T>>(S value) {}
+      }
+      void integer<S extends int>(S value) {}
+      void integers<S extends List<int>>(S value) {}
+      int main() {
+        dynamic container = Container<int>();
+        dynamic method = container.method;
+        dynamic nested = container.nested;
+        var result = 0;
+        if (method.runtimeType.toString() == integer.runtimeType.toString()) {
+          result += 1;
+        }
+        if (nested.runtimeType.toString() == integers.runtimeType.toString()) {
+          result += 2;
+        }
+        if (method is void Function<S extends int>(S)) result += 4;
+        if (method is void Function<S extends String>(S)) return -1;
+        return result;
+      }
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(7), reason: mode);
+    }
+  });
+
   test('static nominal identity cannot eliminate structural checks', () {
     const source = '''
       int main() {
