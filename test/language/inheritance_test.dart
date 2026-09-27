@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 TypedProgram compile(String source) => Compiler().compileTyped({
@@ -12,6 +13,34 @@ void check(String source, Object? expected) {
 }
 
 void main() {
+  test('noSuchMethod does not excuse an incompatible concrete member', () {
+    expect(
+      () => compile('''
+        abstract class Interface { int method(); }
+        class Invalid implements Interface {
+          String method() => 'wrong';
+          dynamic noSuchMethod(Invocation invocation) => 0;
+        }
+        void main() {}
+      '''),
+      throwsA(isA<CompileError>()),
+    );
+  });
+
+  test('sealed classes may leave abstract members for subclasses', () {
+    check('''
+      sealed class Base {
+        int get value;
+        int method();
+      }
+      class Child extends Base {
+        int get value => 4;
+        int method() => 3;
+      }
+      int main() => Child().value + Child().method();
+    ''', 7);
+  });
+
   test('recursive and forward calls select the most-derived declaration', () {
     check('''
       class Base {

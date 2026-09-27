@@ -216,6 +216,29 @@ void main() {
       ''', 42);
     });
 
+    test('inherited noSuchMethod satisfies missing interface members', () {
+      _expectValue('''
+        abstract class Interface {
+          int method();
+          int get value;
+        }
+        class Mock {
+          dynamic noSuchMethod(Invocation invocation) =>
+              invocation.isMethod ? 40 : 2;
+        }
+        mixin Handler {
+          dynamic noSuchMethod(Invocation invocation) => 10;
+        }
+        class Inherited extends Mock implements Interface {}
+        class Mixed with Handler implements Interface {}
+        int main() {
+          Interface inherited = Inherited();
+          Interface mixed = Mixed();
+          return inherited.method() + inherited.value + mixed.method();
+        }
+      ''', 52);
+    });
+
     test('invalid dynamic call shapes use noSuchMethod', () {
       _expectValue('''
         class A {

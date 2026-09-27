@@ -379,7 +379,11 @@ class SdkSuite {
 
 /// Compiles and runs [test], returning its outcome. A shared [compiler] is
 /// reused across calls so shim sources stay cached in its parse cache.
-TestOutcome runSdkTest(SdkSuite suite, SdkTest test, Compiler compiler) {
+Future<TestOutcome> runSdkTest(
+  SdkSuite suite,
+  SdkTest test,
+  Compiler compiler,
+) async {
   if (test.kind == TestKind.unsupported) return TestOutcome.skipped;
   final List<DartSource> sources;
   try {
@@ -388,6 +392,18 @@ TestOutcome runSdkTest(SdkSuite suite, SdkTest test, Compiler compiler) {
     return TestOutcome.skipped;
   }
 
+  return runSdkTestSources(test, compiler, sources);
+}
+
+/// Compiles [sources] for [test] and waits for its `main` result.
+///
+/// Kept separate from [runSdkTest] so execution outcomes can be tested without
+/// loading the SDK checkout.
+Future<TestOutcome> runSdkTestSources(
+  SdkTest test,
+  Compiler compiler,
+  List<DartSource> sources,
+) async {
   compiler.entrypoints
     ..clear()
     ..add('/${test.relPath}');
@@ -398,7 +414,7 @@ TestOutcome runSdkTest(SdkSuite suite, SdkTest test, Compiler compiler) {
       return TestOutcome.failed;
     }
     final runtime = Runtime(program.write().buffer);
-    runtime.executeLib(test.uri, 'main');
+    await runtime.executeLib(test.uri, 'main');
     return TestOutcome.passed;
   } on CompileError {
     return test.kind == TestKind.negative
@@ -433,12 +449,12 @@ void registerSdkSuite(String label, List<SdkTest> tests, SdkSuite suite) {
         test(sdkTest.relPath, () {}, skip: sdkTest.unsupportedReason);
         continue;
       }
-      test(sdkTest.relPath, () {
+      test(sdkTest.relPath, () async {
         if (++sinceReset >= 300) {
           compiler = Compiler();
           sinceReset = 0;
         }
-        final outcome = runSdkTest(suite, sdkTest, compiler);
+        final outcome = await runSdkTest(suite, sdkTest, compiler);
         results[outcome] = (results[outcome] ?? 0) + 1;
         final expectedFail = suite.config.expectedFailure(sdkTest.relPath);
         if (expectedFail != null) {

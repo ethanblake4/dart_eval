@@ -406,7 +406,7 @@ void _checkAbstractMixinMemberConformance(
   NamedType? superclassClause,
 ) {
   final hostIsAbstract = switch (host) {
-    ClassDeclaration d => d.abstractKeyword != null,
+    ClassDeclaration d => d.abstractKeyword != null || d.sealedKeyword != null,
     ClassTypeAlias d => d.abstractKeyword != null,
     _ => false,
   };
@@ -534,13 +534,11 @@ void _checkInterfaceConformance(
   NamedType? superclassClause,
 ) {
   final hostIsAbstract = switch (host) {
-    ClassDeclaration d => d.abstractKeyword != null,
+    ClassDeclaration d => d.abstractKeyword != null || d.sealedKeyword != null,
     ClassTypeAlias d => d.abstractKeyword != null,
     _ => false,
   };
   if (hostIsAbstract) return;
-  // A noSuchMethod declared on the host satisfies any interface member.
-  if (ownMethods.any((m) => m.name.lexeme == 'noSuchMethod')) return;
   final requirements = <(ClassMember, int, MemberKind)>[
     for (final m in ownMethods)
       if (m.body is EmptyFunctionBody && m.externalKeyword == null)
@@ -557,6 +555,14 @@ void _checkInterfaceConformance(
       ..._interfaceMembers(ctx, clause),
   ];
   if (requirements.isEmpty) return;
+  // A user implementation inherited from a superclass or mixin supplies
+  // forwarding stubs too. Object's default noSuchMethod does not.
+  final hasNoSuchMethod =
+      ctx.memberLookup.implementationOwner(
+        TypeRef.lookupDeclaration(ctx, ctx.library, host),
+        const MemberName('noSuchMethod', MemberKind.method),
+      ) !=
+      null;
   TypeRef? superRef;
   if (superclassClause != null) {
     try {
@@ -570,8 +576,7 @@ void _checkInterfaceConformance(
   // compilation can't see — only a source-declared chain's misses count.
   final superInspectable =
       superRef != null &&
-      ctx.topLevelDeclarationsMap[superRef.file]?[superRef.name]
-              ?.declaration !=
+      ctx.topLevelDeclarationsMap[superRef.file]?[superRef.name]?.declaration !=
           null;
   // `extends Object` (implicit or not) leaves no place for a member to hide.
   final chainEndsAtObject =
@@ -585,9 +590,13 @@ void _checkInterfaceConformance(
               v.name.lexeme,
           ];
     for (final name in names) {
-      for (final view in kind == MemberKind.method
-          ? const [MemberKind.method]
-          : const [MemberKind.getter, MemberKind.setter]) {
+      // A private interface member from another library cannot be named by
+      // this class. Dart supplies a noSuchMethod forwarder for that slot.
+      if (name.startsWith('_') && declLib != ctx.library) continue;
+      for (final view
+          in kind == MemberKind.method
+              ? const [MemberKind.method]
+              : const [MemberKind.getter, MemberKind.setter]) {
         if (member is FieldDeclaration && view == MemberKind.setter) {
           if (member.fields.isFinal || member.fields.isConst) continue;
         }
@@ -627,6 +636,7 @@ void _checkInterfaceConformance(
           if (impl != null) continue;
         }
         if (impl == null) {
+          if (hasNoSuchMethod) continue;
           if (!superInspectable && !chainEndsAtObject) continue;
           throw CompileError(
             'Missing concrete implementation of $name',

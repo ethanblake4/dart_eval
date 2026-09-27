@@ -74,7 +74,7 @@ Future<void> _run(List<String> args) async {
     try {
       final program = compiler.compileSources(sources);
       final runtime = Runtime(program.write().buffer);
-      runtime.executeLib(t.uri, 'main');
+      await runtime.executeLib(t.uri, 'main');
       passed++;
     } catch (e, st) {
       final sig = _signature(e, st);
