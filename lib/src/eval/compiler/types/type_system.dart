@@ -361,6 +361,9 @@ final class TypeSystem {
       () {
         final upper = <TypeParameterDef, TypeRef>{};
         final lower = <TypeParameterDef, TypeRef>{};
+        final boundVariances = parameter.bound == null
+            ? const <TypeParameterDef, int>{}
+            : _parameterVariances(parameter.bound!);
         for (final dependency in dependencies[parameter]!) {
           if (reaches(dependency, parameter, {})) {
             final variance = variances[parameter] ?? 1;
@@ -369,7 +372,10 @@ final class TypeSystem {
             lower[dependency] =
                 (variance == 1 ? CoreTypes.never : CoreTypes.dynamic).ref(_ctx);
           } else {
-            upper[dependency] = lower[dependency] = resolve(dependency);
+            upper[dependency] = resolve(dependency);
+            lower[dependency] = boundVariances[dependency] == 2
+                ? CoreTypes.never.ref(_ctx)
+                : upper[dependency]!;
           }
         }
         return _closeBound(
@@ -921,7 +927,8 @@ final class TypeSystem {
       );
     }
 
-    final generics = overrideGenerics ?? interfaceArgumentsOf(from);
+    final generics = overrideGenerics ?? _effectiveTypeArguments(from);
+    final targetGenerics = _effectiveTypeArguments(to);
 
     // Records are structural: `hasSameDeclarationAs` alone would require
     // identical field types. A record is assignable when both sides have
@@ -975,17 +982,18 @@ final class TypeSystem {
 
     if (sameDeclaration(from, to) &&
         (!from.nullable || to.nullable || from.isSpec(CoreTypes.nullType))) {
-      if (interfaceArgumentsOf(to).isNotEmpty &&
-          generics.isNotEmpty &&
-          generics.length != interfaceArgumentsOf(to).length) {
+      // Older bridges may omit parameter declarations even when their
+      // annotations supply arguments. Compare every argument available;
+      // source classes always have their declared defaults above.
+      if (generics.isNotEmpty &&
+          targetGenerics.isNotEmpty &&
+          generics.length != targetGenerics.length) {
         return false;
       }
-      // A raw generic (`Future` for `Future<C>`) acts like
-      // `Future<dynamic>`: its missing arguments are assignable both ways.
-      for (var i = 0; i < interfaceArgumentsOf(to).length && i < generics.length; i++) {
+      for (var i = 0; i < targetGenerics.length && i < generics.length; i++) {
         if (!isAssignable(
           generics[i],
-          interfaceArgumentsOf(to)[i],
+          targetGenerics[i],
           forceAllowDynamic: false,
         )) {
           return false;
@@ -1001,19 +1009,16 @@ final class TypeSystem {
         ? const <TypeRef>[]
         : nominalDeclOf(from)?.supertypes.all.toList() ?? const <TypeRef>[];
     for (final type in supertypes) {
-      final inheritedGenerics = interfaceArgumentsOf(type).isEmpty
-          ? generics
-          : [
-              for (final argument in interfaceArgumentsOf(type))
-                if (argument is TypeParameterTypeRef &&
-                    argument.parameter.index < generics.length)
-                  generics[argument.parameter.index].withNullable(
-                    argument.nullable ||
-                        generics[argument.parameter.index].nullable,
-                  )
-                else
-                  argument,
-            ];
+      final inheritedGenerics = [
+        for (final argument in _effectiveTypeArguments(type))
+          if (argument is TypeParameterTypeRef &&
+              argument.parameter.index < generics.length)
+            generics[argument.parameter.index].withNullable(
+              argument.nullable || generics[argument.parameter.index].nullable,
+            )
+          else
+            argument,
+      ];
       if (isAssignable(
         type,
         to,
@@ -1026,6 +1031,11 @@ final class TypeSystem {
 
     return false;
   }
+
+  List<TypeRef> _effectiveTypeArguments(TypeRef type) => switch (type) {
+    InterfaceTypeRef(arguments: [], :final decl) => decl.defaultTypeArguments,
+    _ => interfaceArgumentsOf(type),
+  };
 
   /// Structural function-type subtype check, mirroring the runtime's
   /// `isTypedValueType` comparison of signature descriptors. Parameters are

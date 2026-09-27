@@ -411,7 +411,12 @@ class $String implements $Instance {
     BridgeClassType(
       BridgeTypeRef(CoreTypes.string),
       $extends: BridgeTypeRef(CoreTypes.object),
-      $implements: [BridgeTypeRef(CoreTypes.pattern)],
+      $implements: [
+        BridgeTypeRef(CoreTypes.comparable, [
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+        ]),
+        BridgeTypeRef(CoreTypes.pattern),
+      ],
       isAbstract: true,
     ),
     constructors: {

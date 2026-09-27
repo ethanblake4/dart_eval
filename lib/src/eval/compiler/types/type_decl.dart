@@ -83,6 +83,15 @@ sealed class TypeDecl {
   /// nullability — what `spec.ref(ctx)` returns.
   late final InterfaceTypeRef rawType = InterfaceTypeRef(this);
 
+  /// Arguments used when an annotation or construction omits this class's
+  /// type arguments, including dependent and recursive bounds.
+  late final List<TypeRef> defaultTypeArguments = _defaultTypeArguments();
+
+  List<TypeRef> _defaultTypeArguments() {
+    final defaults = ctx.typeSystem.instantiateToBounds(typeParameters);
+    return [for (final parameter in typeParameters) defaults[parameter]!];
+  }
+
   /// A [TypeRef] for this declaration's [index]th type parameter — the
   /// shared key (`class:library:name`, index) clause types and member
   /// annotations resolve against.

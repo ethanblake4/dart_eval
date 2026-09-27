@@ -268,7 +268,14 @@ final class ConstructorCall extends CallTarget {
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    final instantiatedType = this.instantiatedType ?? call.returnType;
+    var instantiatedType = this.instantiatedType ?? call.returnType;
+    if (instantiatedType is InterfaceTypeRef &&
+        instantiatedType.arguments.isEmpty &&
+        instantiatedType.decl.typeParameters.isNotEmpty) {
+      instantiatedType = instantiatedType.copyWith(
+        arguments: instantiatedType.decl.defaultTypeArguments,
+      );
+    }
     var result = ctx.svar('instance');
     if (externalIndex != null) {
       if (classBridge is BridgeClassDef && !classBridge!.wrap) {
