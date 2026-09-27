@@ -600,7 +600,7 @@ void _checkInterfaceConformance(
               ? const [MemberKind.method]
               : const [MemberKind.getter, MemberKind.setter]) {
         if (member is FieldDeclaration && view == MemberKind.setter) {
-          if (member.fields.isFinal || member.fields.isConst) continue;
+          if (!_fieldHasSetter(member, name)) continue;
         }
         if (member is MethodDeclaration) {
           final expected = view == MemberKind.getter
@@ -751,6 +751,14 @@ DeclarationOrBridge? _superMemberOf(
   );
 }
 
+bool _fieldHasSetter(FieldDeclaration declaration, String name) =>
+    declaration.fields.variables.any(
+      (field) =>
+          field.name.lexeme == name &&
+          (!(field.isFinal || field.isConst) ||
+              (declaration.fields.isLate && field.initializer == null)),
+    );
+
 /// The most-derived concrete member matching [name]/[kind]: own
 /// members first, then the last concrete same-key mixin member, then the
 /// superclass chain.
@@ -766,14 +774,17 @@ DeclarationOrBridge? _effectiveConcreteMember(
   TypeRef? superRef,
 ) {
   bool sameMember(ClassMember m) {
-    final mName = m is MethodDeclaration
-        ? m.name.lexeme
-        : m is FieldDeclaration && m.fields.variables.isNotEmpty
-        ? m.fields.variables.first.name.lexeme
-        : null;
-    if (mName != name) return false;
-    if (m is FieldDeclaration) return kind != MemberKind.method;
+    if (m is FieldDeclaration) {
+      return switch (kind) {
+        MemberKind.getter => m.fields.variables.any(
+          (f) => f.name.lexeme == name,
+        ),
+        MemberKind.setter => _fieldHasSetter(m, name),
+        _ => false,
+      };
+    }
     return m is MethodDeclaration &&
+        m.name.lexeme == name &&
         m.isGetter == (kind == MemberKind.getter) &&
         m.isSetter == (kind == MemberKind.setter);
   }
@@ -839,9 +850,7 @@ _MemberSig? _memberSig(
   }
   if (decl is FieldDeclaration) {
     final t = _annotationType(ctx, declLib, decl.fields.type);
-    // A field viewed as a setter takes one value parameter; viewed as a
-    // getter it returns the field type. A final field is getter-only.
-    if (setter && decl.fields.isFinal) return null;
+    // Accessor availability is checked before resolving its signature.
     return (
       positional: setter ? [(t, true)] : const [],
       named: const {},
@@ -893,10 +902,10 @@ bool _memberConformsTo(
   if (!getter && !setter && interface.declaration is MethodDeclaration) {
     if (impl.declaration is! MethodDeclaration) return true;
   }
-  // A final field has no setter and can't satisfy a setter interface.
+  // Only writable fields can satisfy a setter interface.
   if (setter &&
       impl.declaration is FieldDeclaration &&
-      (impl.declaration as FieldDeclaration).fields.isFinal) {
+      !_fieldHasSetter(impl.declaration as FieldDeclaration, name)) {
     return false;
   }
   final implSig = _memberSig(ctx, impl, impl.sourceLib, setter: setter);

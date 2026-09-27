@@ -13,6 +13,47 @@ void check(String source, Object? expected) {
 }
 
 void main() {
+  test('final getters leave interface setters to noSuchMethod', () {
+    check('''
+      abstract class Contract { int get value; set value(int next); }
+      class Handler {
+        int received = 0;
+        dynamic noSuchMethod(Invocation call) {
+          received++;
+        }
+      }
+      class Concrete extends Handler implements Contract {
+        final int value = 4;
+      }
+      int main() {
+        final concrete = Concrete();
+        Contract contract = concrete;
+        contract.value = 7;
+        return concrete.value * 10 + concrete.received;
+      }
+    ''', 41);
+  });
+
+  test('late final and grouped fields satisfy their accessor interfaces', () {
+    check('''
+      abstract class Contract {
+        int get first;
+        int get second;
+        set once(int value);
+      }
+      class Concrete implements Contract {
+        int first = 2, second = 3;
+        late final int once;
+      }
+      int main() {
+        final concrete = Concrete();
+        Contract contract = concrete;
+        contract.once = 4;
+        return contract.first * 100 + contract.second * 10 + concrete.once;
+      }
+    ''', 234);
+  });
+
   test('covariant annotations permit inherited parameter narrowing', () {
     check('''
       abstract class Contract {
