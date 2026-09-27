@@ -12,8 +12,8 @@ bool _isNumericSubtype(
     !type.isSpec(CoreTypes.never) &&
     type.isAssignableTo(ctx, target.ref(ctx), forceAllowDynamic: false);
 
-/// The special static result type of the arithmetic operators on `num`.
-TypeRef? numericArithmeticResultType(
+/// The operand-dependent static result type of `num.remainder`.
+TypeRef? numericRemainderResultType(
   CompilerContext ctx,
   TypeRef receiver,
   TypeRef argument,

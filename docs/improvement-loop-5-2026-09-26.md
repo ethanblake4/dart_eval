@@ -87,3 +87,17 @@ The default suite passes with this change. Additional tests cover nested
 captures sharing object mutation, deferred initialization of finals, promoted
 scalar and nullable string captures, serialization, and absence of mutable
 capture-cell operations for an initialized final list. No runtime changes.
+
+## Step 4: review and cleanup
+
+Reviewed the constructor capture, call typing, void-result, and direct-capture
+changes. Numeric method context selection now checks the method name before
+testing receiver subtyping, avoiding that work for unrelated bridge calls.
+The result helper is named for `remainder`, its actual caller, and the touched
+binder's local-name lint is fixed. Formatting needs no further changes and
+analysis of all changed compiler files is clean.
+
+The focused numeric, void-closure, constructor-entrypoint, and closure suites
+pass after cleanup. The full SDK survey still has hundreds of real failures;
+the next loop starts with inherited `noSuchMethod` conformance and async test
+completion. No control_flow_graph changes were needed in this loop.

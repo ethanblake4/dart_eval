@@ -499,7 +499,7 @@ final class ArgumentBinder {
     // The parameter in the dispatch implementation's own signature —
     // omitted defaults come from the callee that will actually run, while
     // coercion stays on the bound (interface) signature.
-    ParameterSpec _defaultsSpecFor(ParameterSpec spec) {
+    ParameterSpec defaultsSpecFor(ParameterSpec spec) {
       final position = signature.positional.indexOf(spec);
       if (position >= 0) {
         final impl = defaultsSignature!.positional;
@@ -633,7 +633,7 @@ final class ArgumentBinder {
       omitted: (spec) => fillOmitted
           ? compileOmittedArgument(
               ctx,
-              defaultsSignature == null ? spec : _defaultsSpecFor(spec),
+              defaultsSignature == null ? spec : defaultsSpecFor(spec),
               parameterHost,
               spec.type.substituteTypeParameters(argumentSubstitution),
             )

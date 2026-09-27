@@ -664,6 +664,7 @@ final class CallResolver {
             );
       final numericContexts =
           !isStatic &&
+              const {'remainder', 'clamp'}.contains(e.methodName.name) &&
               L.type.isAssignableTo(
                 ctx,
                 CoreTypes.num.ref(ctx),
@@ -825,7 +826,7 @@ final class CallResolver {
     final numericReturn = resolvedMember is BridgeMember && !isStatic
         ? switch (e.methodName.name) {
             'remainder' when argsPair.positional.length == 1 =>
-              numericArithmeticResultType(
+              numericRemainderResultType(
                 ctx,
                 L.type,
                 argsPair.positional.single.type,
