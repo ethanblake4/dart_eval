@@ -51,3 +51,15 @@ This removes allocations, but the measurements do not establish an overall
 compile-time speedup. No runtime changes.
 
 Validation: 809 compiler/language tests pass and changed-file analysis is clean.
+
+## Step 4: simplification and final validation
+
+Removed a redundant dynamic-return condition: the preceding condition already
+excluded every case it could match. Fixed the new benchmark's multi-line `if`
+formatting lint and reviewed the empty-substitution paths for aliasing; TypeRefs
+remain immutable, and nonempty substitutions retain their previous behavior.
+
+Final default suite: 1,701 passed, 62 skipped. Analysis of all changed compiler
+and benchmark files is clean; generated typed-machine verification matches all
+220 instructions. The sibling control_flow_graph checkout is clean and remains
+at `b901e65`. No runtime or stdlib edits were made in this loop.

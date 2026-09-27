@@ -30,8 +30,9 @@ int main() {
 void main(List<String> args) {
   final samples = args.isEmpty ? 15 : int.parse(args[0]);
   final count = args.length < 2 ? 64 : int.parse(args[1]);
-  if (samples < 7 || count < 1)
+  if (samples < 7 || count < 1) {
     throw ArgumentError('At least seven samples and one stage required');
+  }
   final sources = {
     'pipeline': {'main.dart': _pipeline(count)},
   };

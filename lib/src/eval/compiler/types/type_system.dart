@@ -969,12 +969,8 @@ final class TypeSystem {
     // A `void` target accepts any return; `dynamic` satisfies any target.
     // A `void` source return is not permissive (`void() <: int()` fails).
     final targetReturn = renamedTarget(targetSignature.returnType);
-    final dynamicReturnDowncast =
-        allowDynamicParameterDowncast &&
-        sourceSignature.returnType.isSpec(CoreTypes.dynamic);
     if (!targetReturn.isSpec(CoreTypes.voidType) &&
         !sourceSignature.returnType.isSpec(CoreTypes.dynamic) &&
-        !dynamicReturnDowncast &&
         !(forceAllowDynamic && hasForeignParameter(targetReturn)) &&
         !isAssignable(
           sourceSignature.returnType,
