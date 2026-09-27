@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/errors.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/exceptions.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/identical.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/iterable_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
@@ -52,7 +53,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($int.$declaration);
     registry.defineBridgeClass($double.$declaration);
     registry.defineBridgeClass($String.$declaration);
-    registry.defineBridgeClass($Iterable.$declaration);
+    registry.defineBridgeClass($Iterable$bridge.$declaration);
     registry.defineBridgeClass($Iterator.$declaration);
     registry.defineBridgeClass($List.$declaration);
     registry.defineBridgeClass($Map.$declaration);
@@ -91,6 +92,7 @@ class DartCorePlugin implements EvalPlugin {
     $String.configureForRuntime(runtime);
     $List.configureForRuntime(runtime);
     $MapEntry.configureForRuntime(runtime);
+    $Iterable$bridge.configureForRuntime(runtime);
     $Iterable.configureForRuntime(runtime);
     $Duration.configureForRuntime(runtime);
     $Future.configureForRuntime(runtime);

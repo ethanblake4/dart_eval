@@ -69,7 +69,7 @@ String constructorsForRuntime(
   final emitted = element.constructors
       .where(
         (cstr) =>
-            (!element.isAbstract || cstr.isFactory) &&
+            (isBridge || !element.isAbstract || cstr.isFactory) &&
             !cstr.isPrivate &&
             ctx.memberIncluded(cstr.name ?? '', 'constructor'),
       )

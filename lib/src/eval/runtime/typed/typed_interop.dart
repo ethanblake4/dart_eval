@@ -14,6 +14,28 @@ import 'typed_closure.dart';
 /// The compiler emits every scalar box and unbox operation. Host functions must
 /// use an explicit bridge wrapper, such as $Function or $Closure.
 abstract final class TypedInterop {
+  /// Adapts guest iterators returned to an SDK superclass implementation.
+  static Iterator<T> exportIterator<T>(Object? value, Runtime runtime) {
+    if (value is $Iterator) {
+      return _ExportedIterator<T>(value.$value, runtime);
+    }
+    if (value is Iterator<T>) return value;
+    return _GuestHostIterator<T>(value, runtime);
+  }
+
+  /// Export iterable elements lazily at a native SDK boundary.
+  static Iterable<T> exportIterable<T>(Object? value, Runtime runtime) {
+    if (value is TypedInstance) {
+      final Object? bridge = value.bridge;
+      if (bridge is Iterable<T>) return bridge;
+      return _GuestHostIterable<T>(value, runtime);
+    }
+    final iterable = exportExternal(value, runtime: runtime) as Iterable;
+    return iterable.map(
+      (element) => exportExternal(element, runtime: runtime) as T,
+    );
+  }
+
   /// The host-side value of an object-bank slot: `$Value`s unwrap to their
   /// reified form, raw host objects pass through.
   static Object? reify(Object? value) =>
@@ -341,6 +363,50 @@ abstract final class TypedInterop {
   static Runtime _runtime(Runtime? runtime) =>
       runtime ??
       (throw StateError('A Runtime is required to invoke dart_eval objects'));
+}
+
+final class _GuestHostIterable<T> extends Iterable<T> {
+  _GuestHostIterable(this.receiver, this.runtime);
+  final TypedInstance receiver;
+  final Runtime runtime;
+
+  @override
+  Iterator<T> get iterator => TypedInterop.exportIterator<T>(
+    TypedInterop.getProperty(runtime, receiver, 'iterator'),
+    runtime,
+  );
+}
+
+final class _ExportedIterator<T> implements Iterator<T> {
+  _ExportedIterator(this.iterator, this.runtime);
+  final Iterator<Object?> iterator;
+  final Runtime runtime;
+
+  @override
+  bool moveNext() => iterator.moveNext();
+
+  @override
+  T get current =>
+      TypedInterop.exportExternal(iterator.current, runtime: runtime) as T;
+}
+
+final class _GuestHostIterator<T> implements Iterator<T> {
+  _GuestHostIterator(this.receiver, this.runtime);
+  final Object? receiver;
+  final Runtime runtime;
+
+  @override
+  bool moveNext() => TypedInterop.toBool(
+    TypedInterop.invoke(runtime, receiver, 'moveNext', 0, null, null),
+  );
+
+  @override
+  T get current =>
+      TypedInterop.exportExternal(
+            TypedInterop.getProperty(runtime, receiver, 'current'),
+            runtime: runtime,
+          )
+          as T;
 }
 
 /// Explicit adapter for a native Dart function at the public host boundary.

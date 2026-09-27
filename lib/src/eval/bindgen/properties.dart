@@ -21,6 +21,7 @@ String $bridgeGet(BindgenContext ctx, ClassElement element) {
   return '''
   @override
   \$Value? \$bridgeGet(String identifier) {
+    final runtime = \$runtime;
     ${propertyGetters(ctx, element, isBridge: true)}
     return null;
   }
@@ -45,6 +46,7 @@ String propertyGetters(
   };
   final getters = allGetters.values
       .where((accessor) => !accessor.isStatic && !accessor.isPrivate)
+      .where((accessor) => !isBridge || !accessor.isAbstract)
       .where(
         (a) => ctx.memberIncluded(
           a.name!,
@@ -55,6 +57,7 @@ String propertyGetters(
 
   final methods0 = dedupeMethods(methods)
       .where((method) => !method.isPrivate && !method.isStatic)
+      .where((method) => !isBridge || !method.isAbstract)
       .where(
         (m) => ctx.memberIncluded(
           m.name!,
@@ -91,7 +94,7 @@ String propertyGetters(
           return \$Function((runtime, target, r, s, c) {
             ${assertMethodPermissions(e, callable: true)}
             ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList(), callable: true)}
-            ${returnsValue ? 'final result = ' : ''}${callOp.format('super', argumentAccessors(ctx, e.formalParameters, isBridgeMethod: true, callable: true, member: member))};
+            ${returnsValue ? 'final result = ' : ''}${callOp.format('super', argumentAccessors(ctx, e.formalParameters, callable: true, exportValues: true, member: member))};
             return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union)};
           });''';
     }).join('\n')}\n}';

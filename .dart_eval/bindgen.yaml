@@ -119,7 +119,9 @@ libraries:
       Set:
         handMaintained: true
       Iterable:
-        handMaintained: true
+        file: iterable_bridge.dart
+        mode: both
+        handMaintainedWrapper: true
       Type:
         handMaintained: true
         unnamedValueConstructor: true
@@ -168,6 +170,7 @@ libraries:
       StreamController:
         file: stream_controller.dart
   - uri: dart:collection
+    typedefs: [IterableBase, IterableMixin]
     outDir: lib/src/eval/shared/stdlib/collection
     registry:
       file: lib/src/eval/shared/types.dart

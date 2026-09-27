@@ -26,7 +26,7 @@ String $constructors(
       .where(
         (cstr) =>
             !cstr.isPrivate &&
-            (cstr.isFactory || !element.isAbstract) &&
+            (isBridge || cstr.isFactory || !element.isAbstract) &&
             ctx.memberIncluded(cstr.name ?? '', 'constructor'),
       )
       .map((e) => _$constructor(ctx, element, e, isBridge: isBridge))
@@ -40,6 +40,8 @@ String _$constructor(
   ConstructorElement constructor, {
   bool isBridge = false,
 }) {
+  final bridgeFactory = isBridge && constructor.isFactory;
+  isBridge = isBridge && !constructor.isFactory;
   final member = ctx.memberConfig(constructor.name ?? '', 'constructor');
   final name = member?.rename ?? constructor.name ?? '';
   final sdkNamedConstructor =
@@ -58,15 +60,14 @@ String _$constructor(
         'return ${prefix != null ? '$prefix.' : ''}${member!.hook}(runtime, '
         'null, $argsExpr);';
   } else {
+    final invocation =
+        '$fullyQualifiedConstructorId('
+        '${argumentAccessors(ctx, constructor.formalParameters, registers: true, exportValues: bridgeFactory, member: member).join(', ')})';
     body =
         '''
     ${registerArgumentPreamble(constructor.formalParameters)}
     ${assertConfigPermissions(ctx, member, constructor.formalParameters.map((p) => p.name ?? '').toList(), paramCount: constructor.formalParameters.length)}
-    return ${!isBridge ? '\$${element.name}.wrap(' : ''}
-      $fullyQualifiedConstructorId(
-        ${argumentAccessors(ctx, constructor.formalParameters, registers: true, member: member).join(', ')}
-      ${!isBridge ? '),' : ''}
-    );''';
+    ${bridgeFactory ? 'final result = $invocation; return ${wrapVar(ctx, element.thisType, 'result')};' : 'return ${isBridge ? invocation : '\$${element.name}.wrap($invocation)'};'}''';
   }
 
   return '''

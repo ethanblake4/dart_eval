@@ -95,6 +95,7 @@ class BindgenLibraryConfig {
     this.imports = const [],
     this.plugin,
     this.classes = const {},
+    this.typedefs = const [],
     this.functions = const {},
     this.functionsFile,
     this.hooks,
@@ -132,6 +133,9 @@ class BindgenLibraryConfig {
   /// Class allowlist: only classes listed here (with `include != false`) are
   /// processed in config mode.
   final Map<String, BindgenClassConfig> classes;
+
+  /// SDK typedef names copied into an eval-side source for this library.
+  final List<String> typedefs;
 
   /// Fully-resolved defaults (root defaults merged with library overrides).
   BindgenDefaults defaults = const BindgenDefaults();
@@ -172,6 +176,7 @@ class BindgenLibraryConfig {
           ? BindgenRegistryConfig.fromYaml(registryYaml)
           : null,
       classes: classes,
+      typedefs: _strList(yaml['typedefs']),
       functions: _memberMap(yaml['functions']),
       functionsFile: _str(yaml['functionsFile']),
       hooks: _str(yaml['hooks']),
@@ -311,6 +316,7 @@ class BindgenClassConfig {
     required this.name,
     this.include = true,
     this.handMaintained = false,
+    this.handMaintainedWrapper = false,
     this.file,
     this.mode,
     this.isAbstract,
@@ -345,6 +351,9 @@ class BindgenClassConfig {
   /// `*Types` spec entry and `$X.wrap` is assumed to exist (e.g. a
   /// hand-maintained stdlib wrapper such as `$List` or `$String`).
   final bool handMaintained;
+
+  /// Generate the bridge declaration but use an existing custom wrapper.
+  final bool handMaintainedWrapper;
 
   /// Group classes into output files (default `<class>.dart` snake-case).
   final String? file;
@@ -425,6 +434,7 @@ class BindgenClassConfig {
         name: name,
         include: _bool(yaml['include']) ?? true,
         handMaintained: _bool(yaml['handMaintained']) ?? false,
+        handMaintainedWrapper: _bool(yaml['handMaintainedWrapper']) ?? false,
         file: _str(yaml['file']),
         mode: _str(yaml['mode']),
         isAbstract: _bool(yaml['abstract']),

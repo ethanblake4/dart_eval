@@ -39,6 +39,7 @@ final class Devirtualizer {
   CallTarget _refine(VirtualCall target, {required bool lexicalSuper}) {
     final L = target.receiver;
     final exact = L.exactType ?? declaredLeafClass(ctx, L.type);
+    if (!lexicalSuper && hasBridgeSuperclass(ctx, exact ?? L.type)) return target;
     // A nullable receiver may be null — a direct call would skip the
     // runtime's null dispatch (e.g. interpolated toString on null).
     final linkType = switch ((lexicalSuper, exact)) {

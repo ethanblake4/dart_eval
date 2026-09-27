@@ -765,6 +765,8 @@ final class MemberLookup {
     String name,
     MemberKind kind,
   ) {
+    // A bridged allocation returns a native facade, not guest field storage.
+    if (hasBridgeSuperclass(ctx, type)) return null;
     final memberName = MemberName(name, kind);
     final links = [type, ...ctx.typeSystem.superclassChain(type)];
     for (var i = 0; i < links.length; i++) {

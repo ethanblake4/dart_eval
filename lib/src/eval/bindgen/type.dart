@@ -312,7 +312,8 @@ String? wrapType(
       : null;
   if (configuredClass != null &&
       configuredClass.include &&
-      !configuredClass.handMaintained) {
+      !configuredClass.handMaintained &&
+      !configuredClass.handMaintainedWrapper) {
     final targetFile = configuredClass.file ?? '${element.name}.dart';
     if (ctx.outputFile != null && targetFile != ctx.outputFile) {
       ctx.imports.add(targetFile);
@@ -342,7 +343,10 @@ String? wrapType(
       wrapperName = bound.$2.wrapperName;
       unnamedValueConstructor = bound.$2.unnamedValueConstructor;
       final boundUri = bound.$1.library.uri.toString();
-      if (boundUri == ctx.uri && bound.$2.include && !bound.$2.handMaintained) {
+      if (boundUri == ctx.uri &&
+          bound.$2.include &&
+          !bound.$2.handMaintained &&
+          !bound.$2.handMaintainedWrapper) {
         // Generated in this run: import the sibling file directly.
         final targetFile = bound.$2.file ?? '$boundName.dart';
         if (ctx.outputFile != targetFile) {

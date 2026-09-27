@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_map.dart
 import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_set.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/list_queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/queue.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/typedefs.dart';
 
 /// [EvalPlugin] for the `dart:collection` library
 class DartCollectionPlugin implements EvalPlugin {
@@ -14,6 +15,7 @@ class DartCollectionPlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.addSource(sdkTypedefsSource);
     $LinkedHashMap.configureForCompile(registry);
     $ListQueue.configureForCompile(registry);
     $Queue.configureForCompile(registry);

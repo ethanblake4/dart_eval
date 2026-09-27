@@ -1019,15 +1019,16 @@ void _emitConstructorReturn(
   }
 
   final bridgeInst = ctx.svar('bridge_instance');
+  final bridgeType = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
   ctx.pushOp(
     BridgeInstantiate(
       bridgeInst,
-      ctx.bridgeStaticFunctionIndices[extendsDecl
-          .sourceLib]!['${$extends!.name.lexeme}.$constructorName']!,
+      ctx.bridgeStaticFunctionIndices[bridgeType
+          .file]!['${bridgeType.name}.$constructorName']!,
       inst,
       args,
       runtimeTypeId: ctx.runtimeTypes.idOf(
-        TypeRef.fromAnnotation(ctx, ctx.library, $extends),
+        TypeRef.fromAnnotation(ctx, ctx.library, $extends!),
       ),
     ),
   );

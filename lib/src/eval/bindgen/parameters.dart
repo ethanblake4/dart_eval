@@ -88,6 +88,7 @@ String argumentAccessor(
   FormalParameterElement param, {
   Map<String, String> paramMapping = const {},
   bool isBridgeMethod = false,
+  bool exportValues = false,
   String? argumentSource,
   String? primitiveSource,
   BindgenParamConfig? paramConfig,
@@ -138,11 +139,22 @@ String argumentAccessor(
         2 => '${exprs[0]}, ${exprs[1]}, 2',
         _ => '${exprs[0]}, ${exprs[1]}, [${exprs.skip(2).join(', ')}]',
       };
-      paramBuffer.write(
-        '($source! as EvalCallable$q)$call(runtime, null, $callableArgs)',
-      );
+      final invocation =
+          '($source! as EvalCallable$q)$call(runtime, null, $callableArgs)';
       if (type.returnType is! VoidType) {
-        paramBuffer.write('?.\$value');
+        paramBuffer.write(
+          exportValues
+              ? _isDartCoreScalar(type.returnType)
+                    ? '$invocation?.\$value as ${dartTypeErased(type.returnType)}'
+                    : _isDartCoreIterator(type.returnType) ||
+                          type.returnType.isDartCoreIterable
+                    ? _exportValue(ctx, type.returnType, invocation)
+                    : '${_exportValue(ctx, type.returnType, invocation)} '
+                          'as ${dartTypeErased(type.returnType)}'
+              : '$invocation?.\$value',
+        );
+      } else {
+        paramBuffer.write(invocation);
       }
       paramBuffer.write(';\n}');
     } else {
@@ -172,6 +184,20 @@ String argumentAccessor(
           'String',
         }.contains(primitiveName)) {
       paramBuffer.write('($primitiveSource as \$$primitiveName).\$value');
+      return paramBuffer.toString();
+    }
+    if (exportValues &&
+        (type.isDartCoreIterable ||
+            _isDartCoreIterator(type) ||
+            type.isDartCoreObject ||
+            type is DynamicType ||
+            type is TypeParameterType)) {
+      final exported = _exportValue(ctx, type, source);
+      paramBuffer.write(
+        _isDartCoreIterator(type) || type.isDartCoreIterable
+            ? exported
+            : '$exported as ${dartTypeErased(type)}',
+      );
       return paramBuffer.toString();
     }
     final needsCast =
@@ -204,6 +230,7 @@ List<String> argumentAccessors(
   List<FormalParameterElement> params, {
   Map<String, String> paramMapping = const {},
   bool isBridgeMethod = false,
+  bool exportValues = false,
   bool registers = false,
   bool callable = false,
   BindgenMemberConfig? member,
@@ -217,6 +244,7 @@ List<String> argumentAccessors(
           p,
           paramMapping: paramMapping,
           isBridgeMethod: isBridgeMethod,
+          exportValues: exportValues,
           argumentSource: registers
               ? registerArgumentSource(i, params.length, optional: p.isOptional)
               : callable
@@ -235,6 +263,34 @@ List<String> argumentAccessors(
         ),
       )
       .toList();
+}
+
+bool _isDartCoreIterator(DartType type) =>
+    type is InterfaceType &&
+    type.element.name == 'Iterator' &&
+    type.element.library.uri.toString() == 'dart:core';
+
+bool _isDartCoreScalar(DartType type) =>
+    type.element?.library?.uri.toString() == 'dart:core' &&
+    const {
+      'int',
+      'double',
+      'num',
+      'bool',
+      'String',
+    }.contains(type.element?.name);
+
+String _exportValue(BindgenContext ctx, DartType type, String source) {
+  ctx.imports.add(
+    'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+  );
+  if (_isDartCoreIterator(type)) {
+    return 'TypedInterop.exportIterator($source, runtime)';
+  }
+  if (type.isDartCoreIterable) {
+    return 'TypedInterop.exportIterable($source, runtime)';
+  }
+  return 'TypedInterop.exportExternal($source, runtime: runtime)';
 }
 
 /// Converts a collection element produced by [wrapVar] (`if (cond) a else b`)

@@ -2,6 +2,8 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart'
+    show objectGetterNames, objectMethodNames;
 import 'package:dart_eval/src/eval/bindgen/operator.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
@@ -11,7 +13,12 @@ String bindForwardedConstructors(
   bool isBridge = false,
 }) {
   return element.constructors
-      .where((cstr) => !cstr.isPrivate)
+      .where(
+        (cstr) =>
+            !cstr.isPrivate &&
+            !cstr.isFactory &&
+            ctx.memberIncluded(cstr.name ?? '', 'constructor'),
+      )
       .map((e) => _$forwardedConstructor(ctx, element, e, isBridge: isBridge))
       .join('\n');
 }
@@ -31,7 +38,7 @@ String _$forwardedConstructor(
 
   return '''
   /// Forwarded constructor for [${element.name}.$name]
-  $fullyQualifiedConstructorId(${parameterHeader(constructor.formalParameters, forConstructor: true)});
+  $fullyQualifiedConstructorId(${parameterHeader(constructor.formalParameters, forConstructor: true)})${namedConstructor.isEmpty ? '' : ' : super$namedConstructor()'};
 ''';
 }
 
@@ -45,7 +52,11 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
   return dedupeMethods(methods)
       .where((method) => !method.isPrivate && !method.isStatic)
       .where(
-        (m) => !(const ['==', 'toString', 'noSuchMethod'].contains(m.name)),
+        (m) => ctx.memberIncluded(
+          m.name!,
+          'method',
+          isObjectMember: objectMethodNames.contains(m.name),
+        ),
       )
       .map((e) {
         final returnType = e.returnType;
@@ -59,10 +70,12 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
 
         return '''
         @override
-        $returnType ${e.displayName}(${parameterHeader(e.formalParameters)}) =>
-          ${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
+        $returnType ${e.displayName}${e.typeParameters.isEmpty ? '' : '<${e.typeParameters.join(', ')}>'}(${parameterHeader(e.formalParameters, preserveTypes: true)}) {
+          final runtime = \$runtime;
+          ${returnType is VoidType ? '' : 'return '}${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
             ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.name ?? '')).join(', ')}
           ])${needsCast ? 'as ${returnType.element!.name}$q)$q.cast()' : ''};
+        }
         ''';
       })
       .join('\n');
@@ -78,8 +91,27 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
 
   return properties.values
       .where((property) => !property.isPrivate && !property.isStatic)
+      .where(
+        (property) => ctx.memberIncluded(
+          property.name!,
+          'getter',
+          isObjectMember: objectGetterNames.contains(property.name),
+        ),
+      )
       .map((e) {
         final type = e.type;
+        if (type is InterfaceType &&
+            type.element.name == 'Iterator' &&
+            type.element.library.uri.toString() == 'dart:core') {
+          ctx.imports.add(
+            'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+          );
+          return '''
+          @override
+          $type get ${e.displayName} => TypedInterop.exportIterator<${type.typeArguments.single}>(
+            \$getProperty(\$runtime, '${e.displayName}'), \$runtime);
+          ''';
+        }
 
         return '''
         @override
@@ -121,6 +153,7 @@ String dartTypeErased(DartType type) {
 String parameterHeader(
   List<FormalParameterElement> params, {
   bool forConstructor = false,
+  bool preserveTypes = false,
 }) {
   final paramBuffer = StringBuffer();
   var inNonPositional = false;
@@ -136,7 +169,7 @@ String parameterHeader(
       paramBuffer.write('required ');
     }
     switch (param.type) {
-      case FunctionType functionType when !forConstructor:
+      case FunctionType functionType when !forConstructor && !preserveTypes:
         paramBuffer.write(dartTypeErased(functionType.returnType));
         paramBuffer.write(' Function(');
         paramBuffer.write(parameterHeader(functionType.formalParameters));
@@ -146,12 +179,17 @@ String parameterHeader(
         if (forConstructor) {
           paramBuffer.write('super.');
         } else {
-          paramBuffer.write('${dartTypeErased(param.type)} ');
+          paramBuffer.write(
+            '${preserveTypes ? param.type.getDisplayString() : dartTypeErased(param.type)} ',
+          );
         }
     }
     paramBuffer.write(
       param.name == null || param.name!.isEmpty ? 'arg$i' : param.name,
     );
+    if (!forConstructor && param.defaultValueCode != null) {
+      paramBuffer.write(' = ${param.defaultValueCode}');
+    }
     if (i < params.length - 1) {
       paramBuffer.write(', ');
     }

@@ -18,6 +18,7 @@ import 'package:dart_eval/src/eval/bindgen/methods.dart';
 import 'package:dart_eval/src/eval/bindgen/properties.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
+import 'typedefs.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'dart:io' as io;
 
@@ -224,6 +225,12 @@ class Bindgen implements BridgeDeclarationRegistry {
           .join('\n');
       result[entry.key] = '$imports$hooks\n${entry.value}';
     }
+    if (libraryConfig.typedefs.isNotEmpty) {
+      result['typedefs.dart'] = emitTypedefDartSource(
+        uri,
+        sdkTypedefSourceForLibrary(library, libraryConfig.typedefs),
+      );
+    }
     return result;
   }
 
@@ -337,7 +344,9 @@ class Bindgen implements BridgeDeclarationRegistry {
   static String _importLine(String uri, BindgenContext ctx) {
     if (uri.startsWith('package:dart_eval/stdlib/')) {
       final hidden = ctx.libraryConfig?.classes.values
-          .where((c) => c.include && !c.handMaintained)
+          .where(
+            (c) => c.include && !c.handMaintained && !c.handMaintainedWrapper,
+          )
           .map((c) => '\$${c.wrapperName ?? c.name}')
           .toList();
       if (hidden != null && hidden.isNotEmpty) {
@@ -465,7 +474,7 @@ class Bindgen implements BridgeDeclarationRegistry {
       String code =
           '''
 /// dart_eval bridge binding for [${element.name}]
-class $wrapperName\$bridge extends ${element.name} with \$Bridge<${element.name}> {
+class $wrapperName\$bridge${_typeParams(ctx, element)} extends ${element.name}${_typeArgs(element)} with \$Bridge<${element.name}${_typeArgs(element)}> {
 ${bindForwardedConstructors(ctx, element)}
 /// Configure this class for use in a [Runtime]
 ${bindConfigureForRuntime(ctx, element, isBridge: true)}
@@ -486,7 +495,7 @@ ${bindDecoratorMethods(ctx, element)}
 }
 ''';
 
-      if (alsoWrap) {
+      if (alsoWrap && ctx.classConfig?.handMaintainedWrapper != true) {
         // Add a rudimentary wrapper, because you cannot wrap things in a bridge.
         code +=
             '''
