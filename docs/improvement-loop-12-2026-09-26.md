@@ -135,3 +135,17 @@ costs remain recorded rather than claiming every workload improved.
 Final executable: `.dart_tool/loop12-step3-string-only.exe`. Full sweep:
 `.dart_tool/loop12-step3-verified-sweep/`. Longer and reversed comparisons:
 `loop12-step3-verified-repeat-*` and `loop12-step3-verified-reverse-*`.
+
+## Step 4: simplify intrinsic selection and test setup
+
+String intrinsic selection now uses one constant mapping from method name to
+operator and argument type, replacing nested method-name conditions and a
+second operator switch. Indexed-context regressions reuse their existing
+fresh/serialized assertion helper instead of duplicating its loop.
+
+The generic-owner changes were reviewed across compiler metadata, serialization,
+frame entry/capture, async and sync generators, and type resolution. The small
+immutable environment chain and lazy frame cache need no further machinery.
+No runtime changes were made in this cleanup. All 28 focused intrinsic, native
+string, and indexed-context tests pass; targeted analysis is clean. Logs:
+`.dart_tool/loop12-step4-focused.log` and `loop12-step4-analyze.log`.

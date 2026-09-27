@@ -137,26 +137,27 @@ final class Intrinsics {
         );
       }
     }
-    if (args.length == 1 &&
+    final stringOperation = switch (method) {
+      '+' => const (StringOperator.concatenate, CoreTypes.string),
+      'indexOf' => const (StringOperator.indexOf, CoreTypes.string),
+      'codeUnitAt' => const (StringOperator.codeUnitAt, CoreTypes.int),
+      '[]' => const (StringOperator.indexAt, CoreTypes.int),
+      'substring' => const (StringOperator.substringFrom, CoreTypes.int),
+      _ => null,
+    };
+    if (stringOperation != null &&
+        args.length == 1 &&
         type.isAssignableTo(
           ctx,
           CoreTypes.string.ref(ctx),
           forceAllowDynamic: false,
         ) &&
-        (((method == '+' || method == 'indexOf') &&
-                args.single.type.isAssignableTo(
-                  ctx,
-                  CoreTypes.string.ref(ctx),
-                  forceAllowDynamic: false,
-                )) ||
-            ((method == 'codeUnitAt' ||
-                    method == '[]' ||
-                    method == 'substring') &&
-                args.single.type.isAssignableTo(
-                  ctx,
-                  CoreTypes.int.ref(ctx),
-                  forceAllowDynamic: false,
-                )))) {
+        args.single.type.isAssignableTo(
+          ctx,
+          stringOperation.$2.ref(ctx),
+          forceAllowDynamic: false,
+        )) {
+      final operator = stringOperation.$1;
       // A null guard can narrow a receiver without rebinding its local. Use
       // that non-null view, rather than restoring the binding's nullable type.
       final receiverUnboxed = receiver.toRep(
@@ -167,13 +168,6 @@ final class Intrinsics {
       final argument = args.single.ssa == receiver.ssa
           ? receiverUnboxed
           : args.single.unboxIfNeeded(ctx, false);
-      final operator = switch (method) {
-        '+' => StringOperator.concatenate,
-        'codeUnitAt' => StringOperator.codeUnitAt,
-        'indexOf' => StringOperator.indexOf,
-        'substring' => StringOperator.substringFrom,
-        _ => StringOperator.indexAt,
-      };
       final integerResult =
           operator == StringOperator.codeUnitAt ||
           operator == StringOperator.indexOf;

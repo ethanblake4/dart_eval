@@ -20,9 +20,7 @@ void main() {
             values.values.single.single is A;
       }
     ''';
-    for (final (mode, result) in runDynamicFixture(source)) {
-      expect(result, const DynamicFixtureResult.value(true), reason: mode);
-    }
+    _expectTrue(source);
   });
 
   test('custom inherited operators provide index and value contexts', () {
@@ -41,9 +39,7 @@ void main() {
         return store.valid && store[{}];
       }
     ''';
-    for (final (mode, result) in runDynamicFixture(source)) {
-      expect(result, const DynamicFixtureResult.value(true), reason: mode);
-    }
+    _expectTrue(source);
   });
 
   test(
