@@ -68,13 +68,11 @@ Future<void> _run(List<String> args) async {
       skipped++;
       continue;
     }
-    compiler.entrypoints
-      ..clear()
-      ..add('/${t.relPath}');
+    setSdkEntrypoints(compiler, t, sources);
     try {
       final program = compiler.compileSources(sources);
       final runtime = Runtime(program.write().buffer);
-      await runtime.executeLib(t.uri, 'main');
+      await executeSdkMain(runtime, t, sources);
       passed++;
     } catch (e, st) {
       final sig = _signature(e, st);

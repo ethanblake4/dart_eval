@@ -304,16 +304,46 @@ bool get hasUnsoundNullSafety => const <Null>[] is List<Object>;
 bool get hasSoundNullSafety => !hasUnsoundNullSafety;
 ''';
 
-/// `package:expect/async_helper.dart` — the real file manages a zone-based
-/// async test registry dart_eval doesn't need; tests run synchronously here.
+/// `package:expect/async_helper.dart` — keep pending guest work visible to the
+/// SDK runner, including tests whose `main` returns before `asyncTest` does.
 const asyncHelperShim = '''
 import 'dart:async';
 
-void asyncStart() {}
-void asyncEnd() {}
+final List<Object?> _pendingTests = [];
+final List<Object> _asyncErrors = [];
+int _asyncLevel = 0;
+Completer<void>? _manualDone;
 
-void asyncTest(FutureOr<void> Function() computation) {
-  computation();
+void asyncStart([int count = 1]) {
+  if (count <= 0) return;
+  if (_asyncLevel == 0) _manualDone = Completer<void>();
+  _asyncLevel += count;
+}
+
+void asyncEnd() {
+  if (_asyncLevel <= 0) throw StateError('asyncEnd before asyncStart');
+  if (--_asyncLevel == 0) _manualDone!.complete();
+}
+
+void asyncSuccess(Object? _) => asyncEnd();
+
+Future<void> asyncTest(FutureOr<void> Function() computation) {
+  final test = Future<void>.sync(computation);
+  _pendingTests.add(test.then<void>((_) {}, onError: (Object error) {
+    _asyncErrors.add(error);
+  }));
+  return test;
+}
+
+Future<void> drainAsyncTests() async {
+  while (_pendingTests.isNotEmpty || _asyncLevel > 0) {
+    while (_pendingTests.isNotEmpty) {
+      await _pendingTests.removeAt(0);
+    }
+    if (_asyncErrors.isNotEmpty) throw _asyncErrors.first;
+    if (_asyncLevel > 0) await _manualDone!.future;
+  }
+  if (_asyncErrors.isNotEmpty) throw _asyncErrors.first;
 }
 
 void asyncMultiTests(List<void Function()> computations) {
@@ -322,8 +352,7 @@ void asyncMultiTests(List<void Function()> computations) {
   }
 }
 
-FutureOr<void> asyncExpectThrows<T extends Object>(
-    Object? computation) async {
+Future<void> _checkThrows<T extends Object>(Object? computation) async {
   var threw = false;
   try {
     await (computation is Function ? computation() : computation as FutureOr);
@@ -333,17 +362,20 @@ FutureOr<void> asyncExpectThrows<T extends Object>(
   if (!threw) throw 'asyncExpectThrows: did not throw';
 }
 
-FutureOr<void> asyncExpectThrowsWhen<T extends Object>(
-    bool condition, Object? computation) async {
-  if (!condition) {
-    await (computation is Function ? computation() : computation as FutureOr);
-    return;
-  }
-  return asyncExpectThrows<T>(computation);
-}
+Future<void> asyncExpectThrows<T extends Object>(Object? computation) =>
+    asyncTest(() => _checkThrows<T>(computation));
 
-FutureOr<void> asyncExpectThrowsTypeErrorOrNSM(
-    Object? computation) async {
+Future<void> asyncExpectThrowsWhen<T extends Object>(
+    bool condition, Object? computation) => asyncTest(() async {
+  if (condition) {
+    await _checkThrows<T>(computation);
+  } else {
+    await (computation is Function ? computation() : computation as FutureOr);
+  }
+});
+
+Future<void> asyncExpectThrowsTypeErrorOrNSM(Object? computation) =>
+    asyncTest(() async {
   var threw = false;
   try {
     await (computation is Function ? computation() : computation as FutureOr);
@@ -351,7 +383,7 @@ FutureOr<void> asyncExpectThrowsTypeErrorOrNSM(
     if (e is TypeError || e is NoSuchMethodError) threw = true;
   }
   if (!threw) throw 'asyncExpectThrowsTypeErrorOrNSM: did not throw';
-}
+});
 ''';
 
 /// `package:expect/config.dart` — queried by `variations.dart`. dart_eval

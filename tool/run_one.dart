@@ -12,11 +12,11 @@ void main(List<String> args) async {
   stderr.writeln('kind: ${t.kind} ${t.unsupportedReason ?? ''}');
   final sources = suite.collectSources(t);
   final compiler = Compiler();
-  compiler.entrypoints.add('/${t.relPath}');
+  setSdkEntrypoints(compiler, t, sources);
   try {
     final program = compiler.compileSources(sources);
     final runtime = Runtime(program.write().buffer);
-    await runtime.executeLib(t.uri, 'main');
+    await executeSdkMain(runtime, t, sources);
     print('PASSED');
   } catch (e, st) {
     print('ERROR: $e');

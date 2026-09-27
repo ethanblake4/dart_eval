@@ -377,6 +377,34 @@ class SdkSuite {
   }
 }
 
+const _asyncHelperUri = 'package:expect/async_helper.dart';
+
+bool _usesAsyncHelper(List<DartSource> sources) =>
+    sources.any((source) => source.uri.toString() == _asyncHelperUri);
+
+/// Keep the shim's drain function available after compilation.
+void setSdkEntrypoints(
+  Compiler compiler,
+  SdkTest test,
+  List<DartSource> sources,
+) {
+  compiler.entrypoints
+    ..clear()
+    ..add('/${test.relPath}');
+  if (_usesAsyncHelper(sources)) compiler.entrypoints.add(_asyncHelperUri);
+}
+
+Future<void> executeSdkMain(
+  Runtime runtime,
+  SdkTest test,
+  List<DartSource> sources,
+) async {
+  await runtime.executeLib(test.uri, 'main');
+  if (_usesAsyncHelper(sources)) {
+    await runtime.executeLib(_asyncHelperUri, 'drainAsyncTests');
+  }
+}
+
 /// Compiles and runs [test], returning its outcome. A shared [compiler] is
 /// reused across calls so shim sources stay cached in its parse cache.
 Future<TestOutcome> runSdkTest(
@@ -404,9 +432,7 @@ Future<TestOutcome> runSdkTestSources(
   Compiler compiler,
   List<DartSource> sources,
 ) async {
-  compiler.entrypoints
-    ..clear()
-    ..add('/${test.relPath}');
+  setSdkEntrypoints(compiler, test, sources);
   try {
     final program = compiler.compileSources(sources);
     if (test.kind == TestKind.negative) {
@@ -414,7 +440,7 @@ Future<TestOutcome> runSdkTestSources(
       return TestOutcome.failed;
     }
     final runtime = Runtime(program.write().buffer);
-    await runtime.executeLib(test.uri, 'main');
+    await executeSdkMain(runtime, test, sources);
     return TestOutcome.passed;
   } on CompileError {
     return test.kind == TestKind.negative

@@ -64,3 +64,12 @@ Validation: the compiler/language/interop/runtime/stdlib/security run passes
 1,195 tests. The focused inheritance suite passes 37 tests, including inherited
 positional/named covariance and rejection of unrelated parameter types. No
 runtime changes or additional call-site checks were introduced.
+
+### Async helper completion follow-up
+
+The runner now retains and drains the guest async helper after `main` returns.
+`asyncTest`, manual `asyncStart`/`asyncEnd`, and async exception assertions are
+tracked, so synchronous mains cannot hide failures in registered async work.
+Four focused harness regressions pass. The default suite passed 1,692 tests
+with 62 skips while the scalar-capture experiment was present; that experiment
+was subsequently discarded after neutral benchmark results.
