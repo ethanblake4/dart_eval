@@ -243,7 +243,9 @@ Variable compileFunctionExpression(
             inferredClosureReturnType = V.type;
             stInfo = doReturn(
               ctx,
-              CoreTypes.dynamic.ref(ctx),
+              V.type.isSpec(CoreTypes.voidType)
+                  ? CoreTypes.voidType.ref(ctx)
+                  : CoreTypes.dynamic.ref(ctx),
               V,
               isAsync: b.isAsynchronous,
             );

@@ -337,8 +337,7 @@ final class ArgumentBinder {
         ? const <int>[]
         : [
             for (final type
-                in site.shape.typeArguments == null &&
-                        declaredSignature != null
+                in site.shape.typeArguments == null && declaredSignature != null
                     ? [
                         for (final parameter
                             in declaredSignature.typeParameters)
@@ -358,8 +357,10 @@ final class ArgumentBinder {
             resolvedSubstitutions,
           )
         : null;
-    final inferredResult =
-        inferredReturn?.lowerTypeParameters(ctx, only: ownParameters);
+    final inferredResult = inferredReturn?.lowerTypeParameters(
+      ctx,
+      only: ownParameters,
+    );
     final resultType =
         (inferredResult != null && !inferredResult.isSpec(CoreTypes.voidType)
             ? inferredResult
@@ -536,15 +537,15 @@ final class ArgumentBinder {
       // where the runtime check resolves them against the actual owner.
       final coercionType = paramType.requiresTypeEnvironment
           ? paramType
-              .lowerTypeParameters(
-                ctx,
-                only: {...signature.typeParameters},
-                kinds: const {TypeParameterOwnerKind.typeAlias},
-              )
-              // A lowered bound can re-introduce a parameter the call
-              // resolved (`S extends T` under `A<num>` lowers S to T, still
-              // bound to num) — substitute it again.
-              .substituteTypeParameters(argumentSubstitution)
+                .lowerTypeParameters(
+                  ctx,
+                  only: {...signature.typeParameters},
+                  kinds: const {TypeParameterOwnerKind.typeAlias},
+                )
+                // A lowered bound can re-introduce a parameter the call
+                // resolved (`S extends T` under `A<num>` lowers S to T, still
+                // bound to num) — substitute it again.
+                .substituteTypeParameters(argumentSubstitution)
           : paramType;
       // The placeholder-rich shape is the better context type everywhere:
       // its remaining type parameters act as inference variables (`[1]`
@@ -678,6 +679,7 @@ final class ArgumentBinder {
     SuperParams superParams = const (positional: [], named: {}),
     Map<String, TypeRef> typeParameters = const {},
     CallSignature? targetSignature,
+    List<TypeRef?> positionalContexts = const [],
   }) {
     final signature =
         targetSignature ??
@@ -715,9 +717,13 @@ final class ArgumentBinder {
       ParameterSpec param,
       ArgSource argument, {
       required bool named,
+      int? position,
     }) {
       final paramType = param.type;
-      var arg0 = _compileArg(ctx, argument, paramType).boxIfNeeded(ctx);
+      final context = position != null && position < positionalContexts.length
+          ? positionalContexts[position] ?? paramType
+          : paramType;
+      var arg0 = _compileArg(ctx, argument, context).boxIfNeeded(ctx);
       if (named) {
         if (arg0.type.assignmentConversionTo(ctx, paramType) ==
             AssignmentConversion.invalid) {
@@ -747,6 +753,7 @@ final class ArgumentBinder {
           index == null ? namedParamByName[argument.named]! : positional[index],
           argument.source,
           named: index == null,
+          position: index,
         );
       }),
     );
@@ -767,6 +774,7 @@ final class ArgumentBinder {
     CallTarget target,
     ArgumentList? argumentList, {
     SuperParams superParams = const (positional: [], named: {}),
+    List<TypeRef?> positionalContexts = const [],
   }) {
     final function = switch (target) {
       StaticCall(:final bridgeFunction) ||
@@ -788,6 +796,7 @@ final class ArgumentBinder {
       function,
       superParams: superParams,
       targetSignature: target.signature,
+      positionalContexts: positionalContexts,
     );
   }
 
@@ -804,8 +813,9 @@ final class ArgumentBinder {
       // actual type only mentioned the parameter's own placeholder. Skipping
       // it leaves the parameter unconstrained so downward inference from
       // the context type can still bind it.
-      if (entry.value case TypeParameterTypeRef(:final parameter)
-          when parameter == entry.key) {
+      if (entry.value case TypeParameterTypeRef(
+        :final parameter,
+      ) when parameter == entry.key) {
         continue;
       }
       if (parameters.contains(entry.key)) {
@@ -1156,8 +1166,8 @@ final class ArgumentBinder {
     // another parameter (the caller's own) is real and kept.
     for (final parameter in typeParams) {
       final resolved = resolveGenerics[parameter];
-      final ownPlaceholder = resolved is TypeParameterTypeRef &&
-          resolved.parameter == parameter;
+      final ownPlaceholder =
+          resolved is TypeParameterTypeRef && resolved.parameter == parameter;
       if (resolved == null || ownPlaceholder) {
         resolveGenerics[parameter] =
             (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
@@ -1380,4 +1390,3 @@ TypeRef? memberCallResultType(
     namedArgTypes: namedArgTypes,
   );
 }
-

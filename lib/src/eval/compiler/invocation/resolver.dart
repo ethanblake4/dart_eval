@@ -31,6 +31,7 @@ import 'call.dart';
 import 'accessors.dart';
 import 'devirtualizer.dart';
 import 'intrinsics.dart';
+import 'numeric_types.dart';
 import 'targets.dart';
 
 /// Turns a [CallSite] into a [CallTarget] and emits the call. Resolution
@@ -271,6 +272,7 @@ final class CallResolver {
     TypeRef? bound,
     Receiver? receiver,
   }) {
+    if (L.type.isSpec(CoreTypes.never)) return L;
     receiver ??= receiverOf(ctx, L, pin: extensionPinOf(ctx, e.target, L.type));
     CallSite callSite() => CallSite(
       shape: CallShape.fromArgumentList(
@@ -575,7 +577,9 @@ final class CallResolver {
         ctx,
       ).tryEmit(L, e.methodName.name, arguments.positional);
       if (intrinsic != null) {
-        return intrinsic.result.copyWith(type: arguments.returnType);
+        return intrinsic.result.type.isSpec(CoreTypes.voidType)
+            ? intrinsic.result
+            : intrinsic.result.copyWith(type: arguments.returnType);
       }
       return _invokeResolvedOperator(
         L,
@@ -632,7 +636,7 @@ final class CallResolver {
         typeParameters: receiverTypeParameters.cast<String, TypeRef>(),
       );
       final bridgeTargetName = isStatic
-          ? '${staticType!.name}.${e.methodName.name}'
+          ? '${staticType!.name}.${ctorNameOf(e.methodName.name)}'
           : null;
       final externalIndex = bridgeTargetName == null
           ? null
@@ -658,7 +662,27 @@ final class CallResolver {
               member: resolvedMember,
               signature: signature,
             );
-      argsPair = ArgumentBinder(ctx).bindBridgeTarget(target, e.argumentList);
+      final numericContexts =
+          !isStatic &&
+              L.type.isAssignableTo(
+                ctx,
+                CoreTypes.num.ref(ctx),
+                forceAllowDynamic: false,
+              )
+          ? switch (e.methodName.name) {
+              'remainder' => [numericArgumentContext(ctx, L.type, bound)],
+              'clamp' => [
+                numericClampArgumentContext(ctx, L.type, bound),
+                numericClampArgumentContext(ctx, L.type, bound),
+              ],
+              _ => const <TypeRef?>[],
+            }
+          : const <TypeRef?>[];
+      argsPair = ArgumentBinder(ctx).bindBridgeTarget(
+        target,
+        e.argumentList,
+        positionalContexts: numericContexts,
+      );
       // Static calls on generic bridge classes (e.g. `Stream.fromIterable`)
       // infer the class's own type parameters — `T` in `Iterable<T>` — from
       // the argument types, which then resolve `returns:` annotations.
@@ -757,12 +781,12 @@ final class CallResolver {
       } else if (declaration is ConstructorDeclaration && isStatic) {
         target = ConstructorCall(
           staticType: staticType!,
-          name: e.methodName.name,
+          name: ctorNameOf(e.methodName.name),
           offset: DeferredOrOffset.lookupStatic(
             ctx,
             staticType.file,
             staticType.name,
-            e.methodName.name,
+            ctorNameOf(e.methodName.name),
           ),
           constructor: declaration,
           isConst: e.inConstantContext,
@@ -798,7 +822,26 @@ final class CallResolver {
       mReturnType = argsPair.declaredReturn;
     }
 
+    final numericReturn = resolvedMember is BridgeMember && !isStatic
+        ? switch (e.methodName.name) {
+            'remainder' when argsPair.positional.length == 1 =>
+              numericArithmeticResultType(
+                ctx,
+                L.type,
+                argsPair.positional.single.type,
+              ),
+            'clamp' when argsPair.positional.length == 2 =>
+              numericClampResultType(
+                ctx,
+                L.type,
+                argsPair.positional[0].type,
+                argsPair.positional[1].type,
+              ),
+            _ => null,
+          }
+        : null;
     final returnType =
+        numericReturn ??
         mReturnType ??
         memberCallResultType(
           ctx,
@@ -1107,13 +1150,8 @@ final class CallResolver {
           CoreTypes.bool.ref(ctx),
           rep: ValueRep.bool,
         ),
-        thenBranch: (ctx, ert) => _compileNativeForEachPump(
-          ctx,
-          receiver,
-          function,
-          isMap,
-          isSet,
-        ),
+        thenBranch: (ctx, ert) =>
+            _compileNativeForEachPump(ctx, receiver, function, isMap, isSet),
         elseBranch: (ctx, ert) {
           _invokeResolvedOperator(
             receiver,
@@ -1189,11 +1227,7 @@ final class CallResolver {
       },
       condition: (ctx) => Variable.ssa(
         ctx,
-        IntLessThan(
-          ctx.svar('for_each_cond'),
-          index.read(ctx).ssa,
-          length.ssa,
-        ),
+        IntLessThan(ctx.svar('for_each_cond'), index.read(ctx).ssa, length.ssa),
         CoreTypes.bool.ref(ctx),
         rep: ValueRep.bool,
       ),

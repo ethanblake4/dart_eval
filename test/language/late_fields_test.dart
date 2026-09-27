@@ -53,7 +53,7 @@ void main() {
           try { a.initialized = 10; } catch (e) { result += 32; }
           try { b.mutable; } catch (e) { result += 64; }
           b.once = 11;
-          return result + a.mutable + a.initialized + b.once;
+          return result + a.mutable + a.initialized + b.once!;
         }
       ''',
       },

@@ -75,6 +75,27 @@ void main() {
     );
   });
 
+  test('explicit .new calls use the unnamed constructor', () {
+    expect(
+      eval('''
+        class Box {
+          final int value;
+          Box.new(this.value);
+        }
+        class LegacyBox {
+          final int value;
+          LegacyBox(this.value);
+        }
+        int main() {
+          Object.new();
+          Symbol.new('name');
+          return Box.new(7).value + LegacyBox.new(6).value;
+        }
+      '''),
+      13,
+    );
+  });
+
   test('dot shorthand static source method binds through its signature', () {
     expect(
       eval('''
