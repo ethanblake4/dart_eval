@@ -930,8 +930,8 @@ final class TypeSystem {
     // A type parameter that survives renaming belongs to an enclosing
     // generic context (the callee's `T` in `int Function(T)`), not to the
     // signature — it is a constraint-inference variable, so the component
-    // compare can't disprove it. Accept it, matching the previous
-    // declaration-level leniency.
+    // compare can't disprove it during permissive inference. Strict subtype
+    // checks must prove compatibility before folding an `is` expression.
     bool hasForeignParameter(TypeRef type) {
       if (type is TypeParameterTypeRef) {
         return !sourceSignature.typeParameters.contains(type.parameter);
@@ -961,7 +961,7 @@ final class TypeSystem {
     if (!targetReturn.isSpec(CoreTypes.voidType) &&
         !sourceSignature.returnType.isSpec(CoreTypes.dynamic) &&
         !dynamicReturnDowncast &&
-        !hasForeignParameter(targetReturn) &&
+        !(forceAllowDynamic && hasForeignParameter(targetReturn)) &&
         !isAssignable(
           sourceSignature.returnType,
           targetReturn,
@@ -980,7 +980,7 @@ final class TypeSystem {
             sourceType.isSpec(CoreTypes.dynamic) ||
             (sourceType.isSpec(CoreTypes.object) && sourceType.nullable);
       }
-      if (hasForeignParameter(targetType)) return true;
+      if (forceAllowDynamic && hasForeignParameter(targetType)) return true;
       return isAssignable(
         targetType,
         sourceType,

@@ -3,6 +3,28 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('function type arguments compare reified class parameters', () {
+    const source = r'''
+      typedef F<T> = T Function(T);
+      class Compare<X, Y> {
+        bool direct() => <F<X>>[] is List<F<Y>>;
+        bool indirect() {
+          dynamic values = <F<X>>[];
+          return values is List<F<Y>>;
+        }
+      }
+      int main() {
+        final different = Compare<int, String>();
+        final same = Compare<int, int>();
+        if (different.direct() || different.indirect()) return -1;
+        return (same.direct() ? 1 : 0) + (same.indirect() ? 2 : 0);
+      }
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(3), reason: mode);
+    }
+  });
+
   test('generic tearoff bounds retain the receiver type environment', () {
     const source = r'''
       class Container<T> {
