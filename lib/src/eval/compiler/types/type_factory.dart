@@ -48,13 +48,7 @@ final class TypeFactory {
     if (outer.isEmpty) return owner;
     return _signatureOwners.putIfAbsent(
       (owner, outer),
-      () => TypeParameterOwner(
-        owner.kind,
-        owner.library,
-        owner.name,
-        // Source positions are nonnegative; synthetic binders use a separate range.
-        -(_signatureOwners.length + 1),
-      ),
+      () => TypeParameterOwner.fresh(owner),
     );
   }
 

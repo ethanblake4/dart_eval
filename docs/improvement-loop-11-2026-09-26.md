@@ -116,3 +116,19 @@ All 104 control_flow_graph tests pass, and analysis of the four changed source
 files is clean. The complete dart_eval suite passes 1,749 tests with 62 skipped.
 Its SDK core harness still records 35 runtime failures and 26 compile errors
 covered by expected-failure entries; this checkpoint does not complete the goal.
+
+## Step 4: binder identity cleanup and review
+
+Alias signature specialization now uses the existing TypeParameterOwner.fresh
+constructor instead of encoding identity in negative source positions. The
+environment cache still reuses each specialization. This removes a second
+identity scheme while retaining the actual source location. All 21 focused
+generic-bound, alias, display, and runtime-descriptor tests pass; the SDK
+generic/function_bounds_test also passes, and targeted analysis is clean.
+
+Review confirmed a remaining nested-generic closure issue for the next cycle.
+The exact call path can use an inner closure's default arguments as its lexical
+environment, replacing captured outer arguments; slow invocation keeps those
+lists separate. The runtime's positional callable-parameter lookup cannot in
+general distinguish outer and inner owners. A complete fix needs to preserve
+owner identity across closure capture, bound checks, and body type operations.
