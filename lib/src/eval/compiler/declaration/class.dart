@@ -412,6 +412,7 @@ void _checkAbstractMixinMemberConformance(
   };
   if (hostIsAbstract || mixinMethods.isEmpty) return;
   final hostName = declarationName(host);
+  final hostType = TypeRef.lookupDeclaration(ctx, ctx.library, host);
   // A noSuchMethod declared on the host class itself satisfies any abstract
   // interface member (a folded one still has to override Object's).
   if (ownMethods.any((m) => m.name.lexeme == 'noSuchMethod')) return;
@@ -461,6 +462,8 @@ void _checkAbstractMixinMemberConformance(
         ctx,
         impl,
         DeclarationOrBridge(declLib, declaration: decl),
+        hostType: hostType,
+        name: decl.name.lexeme,
         setter: decl.isSetter,
         getter: decl.isGetter,
       )) {
@@ -491,6 +494,8 @@ void _checkAbstractMixinMemberConformance(
             ctx,
             DeclarationOrBridge(declLib, declaration: decl),
             interface,
+            hostType: hostType,
+            name: decl.name.lexeme,
             setter: decl.isSetter,
             getter: decl.isGetter,
           );
@@ -555,11 +560,12 @@ void _checkInterfaceConformance(
       ..._interfaceMembers(ctx, clause),
   ];
   if (requirements.isEmpty) return;
+  final hostType = TypeRef.lookupDeclaration(ctx, ctx.library, host);
   // A user implementation inherited from a superclass or mixin supplies
   // forwarding stubs too. Object's default noSuchMethod does not.
   final hasNoSuchMethod =
       ctx.memberLookup.implementationOwner(
-        TypeRef.lookupDeclaration(ctx, ctx.library, host),
+        hostType,
         const MemberName('noSuchMethod', MemberKind.method),
       ) !=
       null;
@@ -649,6 +655,8 @@ void _checkInterfaceConformance(
           ctx,
           impl,
           DeclarationOrBridge(declLib, declaration: member),
+          hostType: hostType,
+          name: name,
           setter: view == MemberKind.setter,
           getter: view == MemberKind.getter,
         )) {
@@ -879,6 +887,8 @@ bool _memberConformsTo(
   CompilerContext ctx,
   DeclarationOrBridge impl,
   DeclarationOrBridge interface, {
+  required TypeRef hostType,
+  required String name,
   required bool setter,
   required bool getter,
 }) {
@@ -922,27 +932,44 @@ bool _memberConformsTo(
     if (!implSig.named.containsKey(p.key)) return false;
   }
 
-  // Contravariant parameter types: the impl's parameter accepts at least the
-  // values the interface promises.
-  bool accepts((TypeRef?, bool) ifaceParam, (TypeRef?, bool)? implParam) {
+  final covariant = ctx.memberLookup.explicitCovariantParameters(
+    hostType,
+    MemberName(name, setter ? MemberKind.setter : MemberKind.method),
+  );
+  // Explicit covariance permits narrowing along the override chain, but
+  // unrelated parameter types are still incompatible.
+  bool accepts(
+    (TypeRef?, bool) ifaceParam,
+    (TypeRef?, bool)? implParam,
+    bool isCovariant,
+  ) {
     if (implParam == null) return false;
     final declType = ifaceParam.$1;
     final implType = implParam.$1;
     if (declType == null || implType == null) return true;
     if (declType.isTypeParameter || implType.isTypeParameter) return true;
-    return declType.isAssignableTo(ctx, implType, forceAllowDynamic: true);
+    return declType.isAssignableTo(ctx, implType, forceAllowDynamic: true) ||
+        isCovariant &&
+            implType.isAssignableTo(ctx, declType, forceAllowDynamic: true);
   }
 
   for (var i = 0; i < ifaceSig.positional.length; i++) {
     if (!accepts(
       ifaceSig.positional[i],
       i < implSig.positional.length ? implSig.positional[i] : null,
+      covariant.positional.contains(i),
     )) {
       return false;
     }
   }
   for (final p in ifaceSig.named.entries) {
-    if (!accepts(p.value, implSig.named[p.key])) return false;
+    if (!accepts(
+      p.value,
+      implSig.named[p.key],
+      covariant.named.contains(p.key),
+    )) {
+      return false;
+    }
   }
   return true;
 }

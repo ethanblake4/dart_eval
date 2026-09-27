@@ -873,26 +873,48 @@ final class MemberLookup {
     }
   }
 
-  /// Unions [memberName]'s covariant parameters across [type]'s override
-  /// closure: each supertype declaration's own marks plus its supertypes'.
+  /// Explicit `covariant` annotations inherited by [member] on [type].
+  /// Covariance from class type parameters affects runtime checks, but does
+  /// not permit an override to narrow a substituted parameter type.
+  ({Set<int> positional, Set<String> named}) explicitCovariantParameters(
+    TypeRef type,
+    MemberName member,
+  ) {
+    final positional = <int>{};
+    final named = <String>{};
+    _collectCovariantParameters(
+      type,
+      member.name,
+      member.kind,
+      positional,
+      named,
+      {},
+      includeClassTypeParameters: false,
+    );
+    return (positional: positional, named: named);
+  }
+
   void _collectCovariantParameters(
     TypeRef type,
     String memberName,
     MemberKind kind,
     Set<int> positional,
     Set<String> named,
-    Set<String> visited,
-  ) {
+    Set<String> visited, {
+    bool includeClassTypeParameters = true,
+  }) {
     if (!visited.add('${type.file}:${type.name}')) return;
     final key = MemberName(memberName, kind).key;
     final decl = ctx.instanceDeclarationsMap[type.file]?[type.name]?[key];
     if (decl is MethodDeclaration) {
       final id =
-          ctx.instanceDeclarationPositions[type.file]?[type.name]?[kind]
-              ?[memberName];
+          ctx.instanceDeclarationPositions[type.file]?[type
+              .name]?[kind]?[memberName];
       _markCovariantParameters(
         decl.parameters?.parameters ?? const <FormalParameter>[],
-        id == null ? null : ctx.functionParameterTypes[id],
+        id == null || !includeClassTypeParameters
+            ? null
+            : ctx.functionParameterTypes[id],
         positional,
         named,
       );
@@ -906,6 +928,7 @@ final class MemberLookup {
           positional,
           named,
           visited,
+          includeClassTypeParameters: includeClassTypeParameters,
         );
       } on CompileError {
         // Skip unresolvable supertypes.
@@ -919,9 +942,9 @@ final class MemberLookup {
   /// contravariantly, so it does not mark the parameter covariant.
   bool _hasClassTypeParameter(TypeRef type, [bool covariant = true]) {
     if (type.isClassTypeParameter) return covariant;
-    if (interfaceArgumentsOf(type).any(
-      (argument) => _hasClassTypeParameter(argument, covariant),
-    )) {
+    if (interfaceArgumentsOf(
+      type,
+    ).any((argument) => _hasClassTypeParameter(argument, covariant))) {
       return true;
     }
     if (type is RecordTypeRef &&

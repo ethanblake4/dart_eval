@@ -13,6 +13,35 @@ void check(String source, Object? expected) {
 }
 
 void main() {
+  test('covariant annotations permit inherited parameter narrowing', () {
+    check('''
+      abstract class Contract {
+        int method(covariant num value, {covariant num extra = 0});
+      }
+      abstract class Intermediate implements Contract {
+        int method(num value, {num extra = 0});
+      }
+      class Implementation {
+        int method(int value, {int extra = 0}) => value + extra;
+      }
+      class Concrete extends Implementation implements Intermediate {}
+      int main() => Concrete().method(4, extra: 3);
+    ''', 7);
+  });
+
+  test('covariant parameters must still have related types', () {
+    expect(
+      () => compile('''
+        abstract class Contract { void method(covariant int value); }
+        class Invalid implements Contract {
+          void method(String value) {}
+        }
+        void main() {}
+      '''),
+      throwsA(isA<CompileError>()),
+    );
+  });
+
   test('noSuchMethod does not excuse an incompatible concrete member', () {
     expect(
       () => compile('''

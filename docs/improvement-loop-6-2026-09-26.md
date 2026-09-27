@@ -39,3 +39,28 @@ Validation: default suite passes 1,682 tests with 62 skips. The added negative
 conformance regression also passes, and the focused inheritance/async-harness
 run passes 36 tests. Changed-file analysis is clean. No runtime changes or
 extra bytecode checks.
+
+## Step 2: inherited covariant parameter annotations
+
+Interface conformance required contravariance even for parameters marked
+`covariant` in a superclass or superinterface. The member lookup now exposes
+the explicit annotations using its existing hierarchy traversal, and override
+checks accept narrowing for those parameters. Unrelated types remain invalid.
+Covariance induced by a generic class parameter is kept separate: it affects
+runtime checks but does not by itself authorize a narrowed override, verified
+against the host Dart analyzer.
+
+Three previously failing SDK tests now pass:
+
+- `covariant/override_covariant_class_test.dart`
+- `regress/regress31596_covariant_declaration_test.dart`
+- `unsorted/cascaded_forwarding_stubs_test.dart`
+
+The forwarding tear-off tests now get past conformance and reach distinct
+runtime-signature assertions. Three other covariant tests still report missing
+runtime checks. Their failure statuses remain.
+
+Validation: the compiler/language/interop/runtime/stdlib/security run passes
+1,195 tests. The focused inheritance suite passes 37 tests, including inherited
+positional/named covariance and rejection of unrelated parameter types. No
+runtime changes or additional call-site checks were introduced.
