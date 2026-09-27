@@ -136,3 +136,17 @@ comparison loop, not dart_eval's interpreter. Async callback repeat is +2.1%;
 other async cases range from -36.8% to unchanged. All repeat checksums match.
 
 Performance implementation checkpoint: control_flow_graph `5ce204c` on main.
+
+## Step 4: simplification
+
+The binding generator now owns scalar/export casts in one helper instead of
+repeating decisions in nested callback ternaries and ordinary arguments. The
+primitive fast path reuses the same scalar predicate. Regenerating all 47 SDK
+binding files produces no output changes. All 90 focused binding, superclass,
+and core-stdlib tests pass; analyzer is clean.
+
+Empty-block trimming no longer scans operations inside a block already proven
+empty. Its now-unused import is removed. All 104 control_flow_graph tests pass.
+The other new helpers retain separate responsibilities: bound inference operates
+only at compile time, and guest/native iterator adapters have different boundary
+contracts. No additional shared abstraction was needed.

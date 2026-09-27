@@ -141,20 +141,14 @@ String argumentAccessor(
       };
       final invocation =
           '($source! as EvalCallable$q)$call(runtime, null, $callableArgs)';
-      if (type.returnType is! VoidType) {
+      if (type.returnType is VoidType) {
+        paramBuffer.write(invocation);
+      } else {
         paramBuffer.write(
           exportValues
-              ? _isDartCoreScalar(type.returnType)
-                    ? '$invocation?.\$value as ${dartTypeErased(type.returnType)}'
-                    : _isDartCoreIterator(type.returnType) ||
-                          type.returnType.isDartCoreIterable
-                    ? _exportValue(ctx, type.returnType, invocation)
-                    : '${_exportValue(ctx, type.returnType, invocation)} '
-                          'as ${dartTypeErased(type.returnType)}'
+              ? _exportValue(ctx, type.returnType, invocation)
               : '$invocation?.\$value',
         );
-      } else {
-        paramBuffer.write(invocation);
       }
       paramBuffer.write(';\n}');
     } else {
@@ -175,14 +169,7 @@ String argumentAccessor(
     final primitiveName = type.element?.name;
     if (primitiveSource != null &&
         type.nullabilitySuffix == NullabilitySuffix.none &&
-        type.element?.library?.uri.toString() == 'dart:core' &&
-        const {
-          'int',
-          'double',
-          'num',
-          'bool',
-          'String',
-        }.contains(primitiveName)) {
+        _isDartCoreScalar(type)) {
       paramBuffer.write('($primitiveSource as \$$primitiveName).\$value');
       return paramBuffer.toString();
     }
@@ -192,12 +179,7 @@ String argumentAccessor(
             type.isDartCoreObject ||
             type is DynamicType ||
             type is TypeParameterType)) {
-      final exported = _exportValue(ctx, type, source);
-      paramBuffer.write(
-        _isDartCoreIterator(type) || type.isDartCoreIterable
-            ? exported
-            : '$exported as ${dartTypeErased(type)}',
-      );
+      paramBuffer.write(_exportValue(ctx, type, source));
       return paramBuffer.toString();
     }
     final needsCast =
@@ -281,6 +263,9 @@ bool _isDartCoreScalar(DartType type) =>
     }.contains(type.element?.name);
 
 String _exportValue(BindgenContext ctx, DartType type, String source) {
+  if (_isDartCoreScalar(type)) {
+    return '$source?.\$value as ${dartTypeErased(type)}';
+  }
   ctx.imports.add(
     'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
   );
@@ -290,7 +275,8 @@ String _exportValue(BindgenContext ctx, DartType type, String source) {
   if (type.isDartCoreIterable) {
     return 'TypedInterop.exportIterable($source, runtime)';
   }
-  return 'TypedInterop.exportExternal($source, runtime: runtime)';
+  return 'TypedInterop.exportExternal($source, runtime: runtime) '
+      'as ${dartTypeErased(type)}';
 }
 
 /// Converts a collection element produced by [wrapVar] (`if (cond) a else b`)
