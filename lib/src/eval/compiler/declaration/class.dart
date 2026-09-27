@@ -391,6 +391,12 @@ bool _superclassHasUnnamedConstructor(CompilerContext ctx, TypeRef? superRef) {
   return false;
 }
 
+bool _isAbstractClass(Declaration declaration) => switch (declaration) {
+  ClassDeclaration d => d.abstractKeyword != null || d.sealedKeyword != null,
+  ClassTypeAlias d => d.abstractKeyword != null,
+  _ => false,
+};
+
 /// A concrete class applying mixins must satisfy each folded abstract member
 /// with a conforming concrete implementation (from its own members, another
 /// mixin layer, or the superclass chain): the implementation's return type is
@@ -405,12 +411,7 @@ void _checkAbstractMixinMemberConformance(
   Map<ClassMember, int> memberLibraries,
   NamedType? superclassClause,
 ) {
-  final hostIsAbstract = switch (host) {
-    ClassDeclaration d => d.abstractKeyword != null || d.sealedKeyword != null,
-    ClassTypeAlias d => d.abstractKeyword != null,
-    _ => false,
-  };
-  if (hostIsAbstract || mixinMethods.isEmpty) return;
+  if (_isAbstractClass(host) || mixinMethods.isEmpty) return;
   final hostName = declarationName(host);
   final hostType = TypeRef.lookupDeclaration(ctx, ctx.library, host);
   // A noSuchMethod declared on the host class itself satisfies any abstract
@@ -538,12 +539,7 @@ void _checkInterfaceConformance(
   Map<ClassMember, int> memberLibraries,
   NamedType? superclassClause,
 ) {
-  final hostIsAbstract = switch (host) {
-    ClassDeclaration d => d.abstractKeyword != null || d.sealedKeyword != null,
-    ClassTypeAlias d => d.abstractKeyword != null,
-    _ => false,
-  };
-  if (hostIsAbstract) return;
+  if (_isAbstractClass(host)) return;
   final requirements = <(ClassMember, int, MemberKind)>[
     for (final m in ownMethods)
       if (m.body is EmptyFunctionBody && m.externalKeyword == null)

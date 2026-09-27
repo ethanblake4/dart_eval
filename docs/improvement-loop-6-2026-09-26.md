@@ -95,3 +95,12 @@ claim. The change removes work independently of those timings.
 Validation: all 37 inheritance tests pass, including explicit positional and
 named covariance and unrelated-type rejection; changed-file analysis is clean.
 No runtime changes were made.
+
+## Step 4: simplification and generated-code check
+
+Shared the abstract/sealed-class predicate between interface and mixin
+conformance so those paths cannot drift independently. Reviewed the async
+helper changes and capture experiment; the rejected capture changes are absent
+from the final tree. The focused inheritance and SDK async harness suites pass
+41 tests, changed-file analysis is clean, and generated typed-machine output
+matches its generator. No stdlib or runtime files were edited in this loop.
