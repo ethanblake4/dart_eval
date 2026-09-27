@@ -3,6 +3,24 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('nested generic function bounds participate in strict subtyping', () {
+    const source = r'''
+      typedef Small = void Function<T extends int>();
+      typedef Wide = void Function<T extends num>();
+      typedef Renamed = void Function<S extends int>();
+      int main() {
+        if (<Small>[] is List<Wide>) return -1;
+        if (<Wide>[] is List<Small>) return -2;
+        dynamic values = <Small>[];
+        if (values is List<Wide>) return -3;
+        return <Small>[] is List<Renamed> ? 1 : 0;
+      }
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(1), reason: mode);
+    }
+  });
+
   test('function type arguments compare reified class parameters', () {
     const source = r'''
       typedef F<T> = T Function(T);

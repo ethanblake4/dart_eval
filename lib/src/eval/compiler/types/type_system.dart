@@ -949,9 +949,23 @@ final class TypeSystem {
       return interfaceArgumentsOf(type).any(hasForeignParameter);
     }
 
-    // Generic function subtyping ignores the declared bounds (they only
-    // constrain instantiation, not assignability) — `t1<T extends int>` is
-    // a `void Function<T extends num>()`.
+    // Strict generic function subtyping requires equivalent bounds after
+    // alpha-renaming. Otherwise nested function types could make an `is`
+    // expression fold to true despite different permitted instantiations.
+    if (!forceAllowDynamic && sourceSignature.typeParameters.isNotEmpty) {
+      final defaultBound = CoreTypes.object.ref(_ctx).withNullable(true);
+      for (var i = 0; i < sourceSignature.typeParameters.length; i++) {
+        final sourceBound =
+            sourceSignature.typeParameters[i].bound ?? defaultBound;
+        final targetBound = renamedTarget(
+          targetSignature.typeParameters[i].bound ?? defaultBound,
+        );
+        if (!isAssignable(sourceBound, targetBound, forceAllowDynamic: false) ||
+            !isAssignable(targetBound, sourceBound, forceAllowDynamic: false)) {
+          return false;
+        }
+      }
+    }
     // A `void` target accepts any return; `dynamic` satisfies any target.
     // A `void` source return is not permissive (`void() <: int()` fails).
     final targetReturn = renamedTarget(targetSignature.returnType);
