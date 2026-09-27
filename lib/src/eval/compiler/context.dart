@@ -227,7 +227,7 @@ class CompilerContext with ScopeContext {
   final Map<int, String> globalNames = {};
   final Map<int, List<FormalParameter>> functionParameters = {};
   final Map<int, List<TypeRef>> functionParameterTypes = {};
-  final Map<int, List<TypeRef>> functionTypeParameterBounds = {};
+  final Map<int, List<TypeParameterDef>> functionTypeParameters = {};
 
   /// Hidden zero-arg thunk function per non-scalar parameter default
   /// expression, so the same default is compiled once for closures, call

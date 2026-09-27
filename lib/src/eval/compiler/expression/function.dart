@@ -98,13 +98,11 @@ Variable compileFunctionExpression(
       ),
       typeParameters,
       () {
-        ctx.functionTypeParameterBounds[fnOffset] = [
+        ctx.functionTypeParameters[fnOffset] = [
           for (final parameter in typeParameters)
             (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
-                        as TypeParameterTypeRef)
-                    .parameter
-                    .bound ??
-                CoreTypes.dynamic.ref(ctx),
+                    as TypeParameterTypeRef)
+                .parameter,
         ];
 
         ctx.locals = [];

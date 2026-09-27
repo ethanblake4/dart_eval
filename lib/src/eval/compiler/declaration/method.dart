@@ -61,16 +61,14 @@ int compileMethodDeclaration(
       ),
       methodTypeParameters,
       () {
-        ctx.functionTypeParameterBounds[pos] = [
+        ctx.functionTypeParameters[pos] = [
           for (final parameter in [
             ...extensionTypeParameters,
             ...methodTypeParameters,
           ])
             (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
-                        as TypeParameterTypeRef)
-                    .parameter
-                    .bound ??
-                CoreTypes.dynamic.ref(ctx),
+                    as TypeParameterTypeRef)
+                .parameter,
         ];
         ctx.functionRuntimeTypes[pos] = ctx.typeFactory.declaredFunctionType(
           ctx.library,

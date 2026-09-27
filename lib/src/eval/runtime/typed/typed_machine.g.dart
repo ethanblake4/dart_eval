@@ -668,7 +668,7 @@ abstract final class TypedMachine {
               typeArguments: callTypeArguments,
               lexicalTypeEnvironmentReceiver:
                   closure.definingTypeEnvironmentReceiver,
-              lexicalTypeArguments: closure.definingTypeArguments,
+              lexicalTypeArguments: closure.entryTypeArguments,
             );
             pc = function.entry;
           } else {

@@ -518,7 +518,7 @@ String familyOf(String name) {
               typeArguments: callTypeArguments,
               lexicalTypeEnvironmentReceiver:
                   closure.definingTypeEnvironmentReceiver,
-              lexicalTypeArguments: closure.definingTypeArguments,
+              lexicalTypeArguments: closure.entryTypeArguments,
             );
             pc = function.entry;
           } else {

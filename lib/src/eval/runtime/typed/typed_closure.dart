@@ -35,6 +35,12 @@ final class TypedClosure extends EvalFunction {
   final Object? definingTypeEnvironmentReceiver;
   final List<int> definingTypeArguments;
   int? _resolvedRuntimeTypeId;
+  List<int>? _resolvedDefaultTypeArguments;
+  Runtime? _defaultTypeRuntime;
+
+  /// Exact calls resolve omitted defaults before entering the callee frame.
+  List<int> get entryTypeArguments =>
+      _resolvedDefaultTypeArguments ?? definingTypeArguments;
 
   // Bound methods with a boxed ABI can use the closure entry path by supplying
   // their receiver in place of its hidden environment argument.
@@ -200,7 +206,10 @@ final class TypedClosure extends EvalFunction {
     final descriptor = receiver.descriptor;
     if (!descriptor.hasEnvironment && !receiver._canEnterBound) return null;
     final site = program.closureCalls[index];
-    final typeArguments = resolvedTypeArguments ?? site.typeArguments;
+    final typeArguments = receiver.typeArgumentsForCall(
+      resolvedTypeArguments ?? site.typeArguments,
+      runtime,
+    );
     if (site.positionalCount != descriptor.positionalCount ||
         site.namedNames.length != descriptor.namedNames.length ||
         !receiver.acceptsTypeArguments(typeArguments)) {
@@ -231,6 +240,7 @@ final class TypedClosure extends EvalFunction {
     Runtime? runtime, [
     List<int> typeArguments = const [],
   ]) {
+    typeArguments = typeArgumentsForCall(typeArguments, runtime);
     _checkTypeArguments(typeArguments, runtime);
     final ownerType = _checkedOwnerType(runtime);
     for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
@@ -264,6 +274,38 @@ final class TypedClosure extends EvalFunction {
   bool acceptsTypeArguments(List<int> typeArguments) =>
       typeArguments.isEmpty ||
       typeArguments.length == descriptor.typeParameterBounds.length;
+
+  /// Only omitted generic arguments need defaults; ordinary calls reuse their
+  /// argument list without resolving or allocating a type environment.
+  @pragma('vm:prefer-inline')
+  List<int> typeArgumentsForCall(List<int> arguments, Runtime? runtime) {
+    if (descriptor.defaultTypeArguments.isEmpty || arguments.isNotEmpty) {
+      return arguments;
+    }
+    if (runtime == null) {
+      _resolvedDefaultTypeArguments = null;
+      _defaultTypeRuntime = null;
+      return arguments;
+    }
+    if (!identical(_defaultTypeRuntime, runtime)) {
+      _resolvedDefaultTypeArguments = _resolveDefaultTypeArguments(runtime);
+      _defaultTypeRuntime = runtime;
+    }
+    return _resolvedDefaultTypeArguments!;
+  }
+
+  List<int> _resolveDefaultTypeArguments(Runtime runtime) {
+    final typeReceiver = descriptor.boundReceiver
+        ? captures.single
+        : definingTypeEnvironmentReceiver;
+    return runtime.resolveTypedCallTypeArguments(
+      descriptor.defaultTypeArguments,
+      actualOwnerType: typeReceiver is TypedInstance
+          ? typeReceiver.dispatchRoot.$getRuntimeType(runtime)
+          : null,
+      callableTypeArguments: definingTypeArguments,
+    );
+  }
 
   void _checkTypeArguments(List<int> typeArguments, Runtime? runtime) {
     if (typeArguments.isEmpty || runtime == null) return;
@@ -430,26 +472,24 @@ final class TypedClosure extends EvalFunction {
       final values = TypedInterop.argList(count, first, rest);
       throw NoSuchMethodError.withInvocation(
         this,
-        Invocation.method(
-          Symbol('call'),
-          values.sublist(0, positionalCount),
-          {
-            for (var i = 0; i < namedNames.length; i++)
-              Symbol(namedNames[i]): values[positionalCount + i],
-          },
-        ),
+        Invocation.method(Symbol('call'), values.sublist(0, positionalCount), {
+          for (var i = 0; i < namedNames.length; i++)
+            Symbol(namedNames[i]): values[positionalCount + i],
+        }),
       );
     }
     final context = this.runtime ?? runtime;
-    final effectiveTypeArguments =
-        this.runtime != null &&
-            runtime != null &&
-            !identical(this.runtime, runtime)
-        ? [
-            for (final type in typeArguments)
-              this.runtime!.importRuntimeType(runtime, type),
-          ]
-        : typeArguments;
+    final effectiveTypeArguments = typeArgumentsForCall(
+      this.runtime != null &&
+              runtime != null &&
+              !identical(this.runtime, runtime)
+          ? [
+              for (final type in typeArguments)
+                this.runtime!.importRuntimeType(runtime, type),
+            ]
+          : typeArguments,
+      context,
+    );
     _checkTypeArguments(effectiveTypeArguments, context);
     final hiddenCount =
         (descriptor.hasEnvironment ? 1 : 0) +

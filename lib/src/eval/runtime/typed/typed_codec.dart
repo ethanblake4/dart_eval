@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 126;
+  static const version = 127;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -336,6 +336,10 @@ abstract final class TypedCodec {
       for (final bound in descriptor.typeParameterBounds) {
         u32(bound);
       }
+      u32(descriptor.defaultTypeArguments.length);
+      for (final argument in descriptor.defaultTypeArguments) {
+        u32(argument);
+      }
       u32(descriptor.runtimeTypeId + 1);
     }
     for (final call in program.closureCalls) {
@@ -627,6 +631,15 @@ abstract final class TypedCodec {
         (_) => u32(),
         growable: false,
       );
+      final defaultTypeArgumentCount = u32();
+      if (defaultTypeArgumentCount > 65536) {
+        throw const FormatException('Too many closure default type arguments');
+      }
+      final defaultTypeArguments = List.generate(
+        defaultTypeArgumentCount,
+        (_) => u32(),
+        growable: false,
+      );
       final runtimeTypeId = u32() - 1;
       closures.add(
         TypedClosureDescriptor(
@@ -646,6 +659,7 @@ abstract final class TypedCodec {
           parameterTypeParameterIndices: parameterTypeParameterIndices,
           parameterNullable: parameterNullable,
           typeParameterBounds: typeParameterBounds,
+          defaultTypeArguments: defaultTypeArguments,
           runtimeTypeId: runtimeTypeId,
         ),
       );

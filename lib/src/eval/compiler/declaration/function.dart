@@ -73,13 +73,11 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     ),
     typeParameters,
     () {
-      ctx.functionTypeParameterBounds[pos] = [
+      ctx.functionTypeParameters[pos] = [
         for (final parameter in typeParameters)
           (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
-                      as TypeParameterTypeRef)
-                  .parameter
-                  .bound ??
-              CoreTypes.dynamic.ref(ctx),
+                  as TypeParameterTypeRef)
+              .parameter,
       ];
 
       final resolvedParams = resolveFPLDefaults(

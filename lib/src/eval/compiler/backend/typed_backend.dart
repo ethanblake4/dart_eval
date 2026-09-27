@@ -41,6 +41,16 @@ import 'representation.dart';
 import 'primitive_optimization.dart';
 import '../member/member_name.dart';
 
+List<int> _defaultTypeArguments(CompilerContext context, int functionId) {
+  final parameters = context.functionTypeParameters[functionId];
+  if (parameters == null || parameters.isEmpty) return const [];
+  final defaults = context.typeSystem.instantiateToBounds(parameters);
+  return [
+    for (final parameter in parameters)
+      context.runtimeTypes.idOf(defaults[parameter]!),
+  ];
+}
+
 bool _sameList<T>(List<T> left, List<T> right) {
   if (left.length != right.length) return false;
   for (var i = 0; i < left.length; i++) {
@@ -399,11 +409,14 @@ class TypedBackend {
               for (final type in parameterTypes) type.nullable,
             ],
             typeParameterBounds: [
-              for (final bound
-                  in context.functionTypeParameterBounds[id] ??
-                      const <TypeRef>[])
-                context.runtimeTypes.idOf(bound),
+              for (final parameter
+                  in context.functionTypeParameters[id] ??
+                      const <TypeParameterDef>[])
+                context.runtimeTypes.idOf(
+                  parameter.bound ?? CoreTypes.dynamic.ref(context),
+                ),
             ],
+            defaultTypeArguments: _defaultTypeArguments(context, id),
             runtimeTypeId: context.runtimeTypes.idOf(switch (memberKinds[id]) {
               (final name, final kind) => context.memberLookup
                   .tearOffRuntimeSignature(
@@ -1075,11 +1088,17 @@ class _LoweringSession {
             type.nullable,
         ],
         typeParameterBounds: [
-          for (final bound
-              in b.context.functionTypeParameterBounds[sourceFunctionId] ??
-                  const <TypeRef>[])
-            b.context.runtimeTypes.idOf(bound),
+          for (final parameter
+              in b.context.functionTypeParameters[sourceFunctionId] ??
+                  const <TypeParameterDef>[])
+            b.context.runtimeTypes.idOf(
+              parameter.bound ?? CoreTypes.dynamic.ref(b.context),
+            ),
         ],
+        defaultTypeArguments: _defaultTypeArguments(
+          b.context,
+          sourceFunctionId,
+        ),
         runtimeTypeId: op.runtimeTypeId < 0
             ? b.context.runtimeTypes.idOf(CoreTypes.function.ref(b.context))
             : op.runtimeTypeId,
