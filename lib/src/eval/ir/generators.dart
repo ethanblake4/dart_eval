@@ -1,9 +1,14 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 
 /// Saves a lazy generator's initial frame before its body executes.
-final class BeginSyncGenerator extends Operation {
-  BeginSyncGenerator(this.result, {required this.runtimeTypeId});
+final class BeginGenerator extends Operation {
+  BeginGenerator(
+    this.result, {
+    required this.runtimeTypeId,
+    this.asynchronous = false,
+  });
   final SSA result;
+  final bool asynchronous;
   // Closure element types are inferred after compiling their yields.
   int runtimeTypeId;
 
@@ -11,20 +16,31 @@ final class BeginSyncGenerator extends Operation {
   SSA get writesTo => result;
 
   @override
-  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
-      BeginSyncGenerator(writesTo ?? result, runtimeTypeId: runtimeTypeId);
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) => BeginGenerator(
+    writesTo ?? result,
+    runtimeTypeId: runtimeTypeId,
+    asynchronous: asynchronous,
+  );
 }
 
-/// Suspends an iterator until its next moveNext call.
-final class YieldSync extends Operation {
-  YieldSync(this.value, {this.delegate = false});
+/// Suspends a generator at a yield or a delegated sequence.
+final class YieldGenerator extends Operation {
+  YieldGenerator(
+    this.value, {
+    this.delegate = false,
+    this.asynchronous = false,
+  });
   final SSA value;
   final bool delegate;
+  final bool asynchronous;
 
   @override
   Set<SSA> get readsFrom => {value};
 
   @override
-  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
-      YieldSync(readsFrom?.single ?? value, delegate: delegate);
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) => YieldGenerator(
+    readsFrom?.single ?? value,
+    delegate: delegate,
+    asynchronous: asynchronous,
+  );
 }

@@ -129,7 +129,7 @@ abstract final class TypedAsync {
   ) => frame.asyncState = TypedAsyncState(runtimeTypeId, runtime);
 
   @pragma('vm:never-inline')
-  static $Future<Object?> suspend(
+  static $Future<Object?>? suspend(
     TypedProgram program,
     TypedFrame frame,
     int pc,
@@ -137,7 +137,7 @@ abstract final class TypedAsync {
     Runtime? runtime,
     TypedAsyncResume resume,
   ) {
-    final future = frame.asyncState!.future;
+    final future = frame.asyncState?.future;
     frame.detachAsync();
     // A guest class may implement `Future` directly — `Future.value` cannot
     // adopt it, so call its `then` and forward the completion ourselves.

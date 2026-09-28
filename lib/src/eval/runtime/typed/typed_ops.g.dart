@@ -417,6 +417,9 @@ abstract final class TypedOp {
   static const rYieldSyncStar = 415;
   static const aStringIndexOfRS = 416;
   static const rStringSubRA = 417;
+  static const rBeginAsyncGenerator = 418;
+  static const rYieldAsync = 419;
+  static const rYieldAsyncStar = 420;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false, 'True'),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false, 'False'),
@@ -836,5 +839,8 @@ abstract final class TypedOp {
     TypedInstruction('rYieldSyncStar', [6], [], TypedImmediate.none, false, false, false, 'YieldSyncStar'),
     TypedInstruction('aStringIndexOfRS', [6, 7], [0], TypedImmediate.none, true, false, false, 'StringIndexOf'),
     TypedInstruction('rStringSubRA', [6, 0], [6], TypedImmediate.none, true, false, false, 'StringSub'),
+    TypedInstruction('rBeginAsyncGenerator', [], [6], TypedImmediate.typeId, false, false, false, 'BeginAsyncGenerator'),
+    TypedInstruction('rYieldAsync', [6], [], TypedImmediate.none, true, false, false, 'YieldAsync'),
+    TypedInstruction('rYieldAsyncStar', [6], [], TypedImmediate.none, true, false, false, 'YieldAsyncStar'),
   ];
 }

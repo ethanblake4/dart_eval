@@ -14,6 +14,7 @@
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'dart:async';
 
@@ -136,7 +137,7 @@ class $StreamIterator<T> implements $Instance {
 
   /// Wrapper for the [StreamIterator.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $StreamIterator.wrap(StreamIterator((r as $Value?)!.$value));
+    return $StreamIterator.wrap(StreamIterator(TypedInterop.stream(r, runtime)));
   }
 
   final $Instance _superclass;

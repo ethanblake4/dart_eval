@@ -181,16 +181,12 @@ Variable compileFunctionExpression(
         final boundReturnType = contextualReturn?.isTypeParameter == true
             ? declaredClosureReturnType
             : contextualReturn ?? declaredClosureReturnType;
-        if (b.isGenerator && b.isAsynchronous) {
-          throw CompileError(
-            'async* generators are not supported',
-            b,
-            ctx.library,
-            ctx,
-          );
-        }
         final generator = b.isGenerator
-            ? setupSyncGenerator(ctx, returnType: boundReturnType)
+            ? setupGenerator(
+                ctx,
+                returnType: boundReturnType,
+                asynchronous: b.isAsynchronous,
+              )
             : null;
 
         var i = 0;
@@ -230,7 +226,7 @@ Variable compileFunctionExpression(
         // closure's return type can be inferred (`asyncClosureReturnTypes` serves
         // sync closures too despite the name).
         final collectsReturns = b.isAsynchronous || b is BlockFunctionBody;
-        if (b.isAsynchronous) {
+        if (b.isAsynchronous && !b.isGenerator) {
           setupAsyncFunction(ctx, returnType: boundReturnType);
         }
         if (collectsReturns) {
@@ -270,7 +266,7 @@ Variable compileFunctionExpression(
         }
 
         if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
-          if (b.isAsynchronous) {
+          if (b.isAsynchronous && !b.isGenerator) {
             asyncComplete(ctx, null);
             ctx.endScope();
           } else {
@@ -296,7 +292,9 @@ Variable compileFunctionExpression(
                   : TypeRef.commonBaseType(ctx, returns.toSet()));
           inferredClosureReturnType = b.isGenerator
               ? boundReturnType ??
-                    CoreTypes.iterable.ref(ctx).copyWith(arguments: [inferred])
+                    (b.isAsynchronous ? CoreTypes.stream : CoreTypes.iterable)
+                        .ref(ctx)
+                        .copyWith(arguments: [inferred])
               : b.isAsynchronous
               ? CoreTypes.future
                     .ref(ctx)

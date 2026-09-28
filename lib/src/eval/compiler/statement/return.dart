@@ -69,10 +69,10 @@ StatementInfo compileReturn(
     return StatementInfo(willAlwaysBreak: true);
   }
   final body = e as FunctionBody;
-  if (body.isGenerator && !body.isAsynchronous) {
+  if (body.isGenerator) {
     if (value != null) {
       throw CompileError(
-        'A sync* generator cannot return a value',
+        'A generator cannot return a value',
         s,
         ctx.library,
         ctx,

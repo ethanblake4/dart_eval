@@ -117,7 +117,7 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       exceptions.CaughtException() ||
       exceptions.CaughtStackTrace() ||
       async.BeginAsync() ||
-      generators.BeginSyncGenerator() ||
+      generators.BeginGenerator() ||
       async.Await() ||
       functions_ir.LoadFunctionPointer() ||
       collection.NewList() ||
@@ -331,7 +331,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           exceptions.CaughtException() ||
           exceptions.CaughtStackTrace() ||
           async.BeginAsync() ||
-          generators.BeginSyncGenerator() ||
+          generators.BeginGenerator() ||
           types.LoadConstantType() ||
           types.LoadTypeParameter():
         output(operation, object);
@@ -340,7 +340,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           objects.InternConst():
         inputs(operation, object);
         output(operation, object);
-      case generators.YieldSync():
+      case generators.YieldGenerator():
         inputs(operation, object);
       case primitives.BoxList() ||
           primitives.BoxMap() ||

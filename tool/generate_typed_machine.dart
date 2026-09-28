@@ -1144,7 +1144,10 @@ String familyOf(String name) {
     mayThrow: true,
     extended: true,
   );
-  add('returnNull', '''if (frame.parent == null) return null;
+  add('returnNull', '''if (frame.parent == null) {
+            frame.asyncGenerator?.complete();
+            return null;
+          }
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;''', terminates: true);
@@ -1721,6 +1724,38 @@ String familyOf(String name) {
     'r = (r as String).substring(a);',
     inputs: [6, 0],
     output: 6,
+    mayThrow: true,
+    extended: true,
+  );
+  add(
+    'rBeginAsyncGenerator',
+    '''final caller = frame.parent;
+          final returnPc = frame.returnPc;
+          final typeId = runtime == null ? index : runtime.resolveTypedEnvironmentType(
+            index, actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+            callableTypeArguments: frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment);
+          final stream = TypedAsyncGenerator.begin(program, frame, pc, typeId, runtime, _resumeAsync);
+          if (caller == null) return stream;
+          frame = caller; pc = returnPc;
+          r = stream; s = null; c = null;''',
+    output: 6,
+    immediate: 'typeId',
+    extended: true,
+  );
+  add(
+    'rYieldAsync',
+    '''frame.asyncGenerator!.suspend(r, pc);
+          return null;''',
+    inputs: [6],
+    mayThrow: true,
+    extended: true,
+  );
+  add(
+    'rYieldAsyncStar',
+    '''frame.asyncGenerator!.delegate(r, pc);
+          return null;''',
+    inputs: [6],
     mayThrow: true,
     extended: true,
   );

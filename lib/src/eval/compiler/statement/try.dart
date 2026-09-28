@@ -21,10 +21,46 @@ StatementInfo compileTryStatement(
   CompilerContext ctx,
   TypeRef? expectedReturnType,
 ) {
-  final catchBlock = s.catchClauses.isEmpty
+  return _compileTry(
+    ctx,
+    expectedReturnType,
+    bodyNode: s.body,
+    catchClauses: s.catchClauses,
+    compileBody: () => compileBlock(s.body, expectedReturnType, ctx),
+    compileFinally: s.finallyBlock == null
+        ? null
+        : () => compileBlock(s.finallyBlock!, expectedReturnType, ctx),
+  );
+}
+
+/// Shared completion handling for language try statements and await-for cleanup.
+StatementInfo compileTryFinally(
+  CompilerContext ctx,
+  TypeRef? expectedReturnType, {
+  required AstNode bodyNode,
+  required StatementInfo Function() compileBody,
+  required StatementInfo Function() compileFinally,
+}) => _compileTry(
+  ctx,
+  expectedReturnType,
+  bodyNode: bodyNode,
+  catchClauses: const [],
+  compileBody: compileBody,
+  compileFinally: compileFinally,
+);
+
+StatementInfo _compileTry(
+  CompilerContext ctx,
+  TypeRef? expectedReturnType, {
+  required AstNode bodyNode,
+  required List<CatchClause> catchClauses,
+  required StatementInfo Function() compileBody,
+  StatementInfo Function()? compileFinally,
+}) {
+  final catchBlock = catchClauses.isEmpty
       ? null
       : BasicBlock<Operation>([], label: ctx.label('catch'));
-  final finallyBlock = s.finallyBlock == null
+  final finallyBlock = compileFinally == null
       ? null
       : BasicBlock<Operation>([], label: ctx.label('finally'));
   final endBlock = BasicBlock<Operation>([], label: ctx.label('try_end'));
@@ -60,7 +96,7 @@ StatementInfo compileTryStatement(
   // A local the try body may have reassigned: on the exceptional edge into
   // `catch`/`finally` its slot may hold the written value, so handler entry
   // demotes it to its declared type with facts cleared.
-  final tryAssigned = assignedLocalNames([s.body]);
+  final tryAssigned = assignedLocalNames([bodyNode]);
 
   void restoreBindings({ContextSaveState? flowInto, bool leaving = false}) {
     ctx.restoreState(leaving ? outerState : (flowInto ?? initialState));
@@ -123,7 +159,7 @@ StatementInfo compileTryStatement(
     }
   }
 
-  final bodyInfo = compileBlock(s.body, expectedReturnType, ctx);
+  final bodyInfo = compileBody();
   final bodyExitState = completes(bodyInfo) ? ctx.saveState() : null;
   finishProtected(bodyInfo);
   var catchInfo = StatementInfo(willAlwaysThrow: true);
@@ -140,7 +176,7 @@ StatementInfo compileTryStatement(
     ctx.caughtExceptionTargets.add(catchBlock.label!);
     catchInfo = _compileCatchClause(
       ctx,
-      s.catchClauses,
+      catchClauses,
       0,
       exception,
       expectedReturnType,
@@ -157,7 +193,7 @@ StatementInfo compileTryStatement(
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [finallyBlock], parent);
     restoreBindings();
     finallyEntryState = ctx.saveState();
-    finalInfo = compileBlock(s.finallyBlock!, expectedReturnType, ctx);
+    finalInfo = compileFinally!();
     if (completes(finalInfo)) {
       finallyExitState = ctx.saveState();
       final normalCompletion =

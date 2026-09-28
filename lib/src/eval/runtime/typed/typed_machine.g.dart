@@ -970,7 +970,10 @@ abstract final class TypedMachine {
            (r as $StringBuffer).$value.write(TypedInterop.reify(s));
            continue dispatch;
         case TypedOp.returnNull:
-           if (frame.parent == null) return null;
+           if (frame.parent == null) {
+            frame.asyncGenerator?.complete();
+            return null;
+          }
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;
@@ -1090,6 +1093,25 @@ abstract final class TypedMachine {
           return null;
             case 415:
              frame.syncIterator!.delegate(r, pc);
+          return null;
+            case 418:
+             final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+             final caller = frame.parent;
+          final returnPc = frame.returnPc;
+          final typeId = runtime == null ? index : runtime.resolveTypedEnvironmentType(
+            index, actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+            callableTypeArguments: frame.effectiveTypeArguments,
+            typeEnvironment: frame.typeEnvironment);
+          final stream = TypedAsyncGenerator.begin(program, frame, pc, typeId, runtime, _resumeAsync);
+          if (caller == null) return stream;
+          frame = caller; pc = returnPc;
+          r = stream; s = null; c = null;
+             continue dispatch;
+            case 419:
+             frame.asyncGenerator!.suspend(r, pc);
+          return null;
+            case 420:
+             frame.asyncGenerator!.delegate(r, pc);
           return null;
             default:
               cold.op = code[pc - 1];

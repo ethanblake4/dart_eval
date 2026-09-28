@@ -429,6 +429,17 @@ final class TypedClosure extends EvalFunction {
       );
     }
     if (site.namedNames.isNotEmpty) {
+      if (receiver is $Closure &&
+          receiver.positionalParameterCount != null &&
+          typeArguments.isEmpty) {
+        return receiver.callNamed(
+          runtime!,
+          site.positionalCount,
+          first,
+          rest,
+          site.namedNames,
+        );
+      }
       if (receiver is TypedHostFunction) {
         final values = TypedInterop.argList(count, first, rest);
         return receiver.invokeHost(

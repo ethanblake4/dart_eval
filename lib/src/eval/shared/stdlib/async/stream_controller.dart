@@ -662,7 +662,7 @@ class $StreamController<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamController;
-    self.$value.add((r as $Value?)!.$value);
+    self.$value.add((r as $Value?)?.$value);
     return null;
   }
 

@@ -314,10 +314,61 @@ class $Function extends EvalFunction {
 /// Variant of [$Function] for use in a dynamic invocation / closure context,
 /// such as when passing a function as an argument.
 class $Closure extends EvalFunction {
-  const $Closure(this.func, [this.$this]);
+  const $Closure(this.func, [this.$this])
+    : positionalParameterCount = null,
+      namedParameters = const [];
+
+  /// Named bridge calls flatten into the wrapper's declared register order.
+  const $Closure.withNamed(
+    this.func,
+    this.$this, {
+    required this.positionalParameterCount,
+    required this.namedParameters,
+  });
 
   final EvalCallableFunc func;
   final $Instance? $this;
+  final int? positionalParameterCount;
+  final List<String> namedParameters;
+
+  $Value? callNamed(
+    Runtime runtime,
+    int positionalCount,
+    Object? first,
+    Object? rest,
+    List<String> names,
+  ) {
+    final values = TypedInterop.argList(
+      positionalCount + names.length,
+      first,
+      rest,
+    );
+    if (positionalCount != positionalParameterCount ||
+        names.any((name) => !namedParameters.contains(name))) {
+      throw NoSuchMethodError.withInvocation(
+        this,
+        Invocation.method(#call, values.take(positionalCount).toList(), {
+          for (var i = 0; i < names.length; i++)
+            Symbol(names[i]): values[positionalCount + i],
+        }),
+      );
+    }
+    final arguments = <Object?>[
+      ...values.take(positionalCount),
+      for (final name in namedParameters)
+        names.contains(name)
+            ? values[positionalCount + names.indexOf(name)]
+            : null,
+    ];
+    final (r, remaining) = TypedInterop.splitVector(arguments);
+    return TypedInterop.callCallable(
+      runtime,
+      this,
+      arguments.length,
+      r,
+      remaining,
+    );
+  }
 
   /// Bound tear-offs are equal for the same callable and identical
   /// receiver — `o.m == o.m`, and `c.m == c.m` for canonical `const` c.

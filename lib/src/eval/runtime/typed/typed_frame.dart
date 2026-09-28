@@ -412,6 +412,7 @@ class TypedFrame {
   TypedExceptionState? exceptions;
   TypedAsyncState? asyncState;
   TypedSyncIterator? syncIterator;
+  TypedAsyncGenerator? asyncGenerator;
   TypedFrame? parent;
   TypedFrame? _child;
   int returnPc = -1;

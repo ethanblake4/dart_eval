@@ -1,6 +1,7 @@
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/function.dart';
 
 import 'typed_call_site.dart';
 import 'typed_closure.dart';
@@ -182,6 +183,22 @@ abstract final class TypedDispatch {
           return TypedInterop.call(runtime, receiver, count, first, rest);
         }
         if (site.namedNames.isNotEmpty) {
+          final callable = TypedInterop.getProperty(
+            runtime,
+            receiver,
+            site.name,
+          );
+          if (callable is $Closure &&
+              callable.positionalParameterCount != null &&
+              typeArguments.isEmpty) {
+            return callable.callNamed(
+              runtime!,
+              site.positionalCount,
+              first,
+              rest,
+              site.namedNames,
+            );
+          }
           // Bridge definitions lower named parameters into their fixed host
           // ABI order. A super shim must therefore receive the full flattened
           // vector, not the source-level positional prefix.

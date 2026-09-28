@@ -20,6 +20,7 @@ import '../variable/binding.dart';
 import '../macros/branch.dart';
 import '../invocation/accessors.dart';
 import '../invocation/resolver.dart';
+import 'try.dart';
 
 StatementInfo compileForStatement(
   ForStatement s,
@@ -304,84 +305,105 @@ StatementInfo compileAwaitForLoop(
     itType.copyWith(arguments: [elementType]),
     rep: ValueRep.boxed,
   );
+  final iteratorName = ctx.svar('awaitfor_iterator').name;
+  ctx.setLocal(iteratorName, iterator);
   final completer = ctx.lookupLocal('#completer')!;
   late Reference loopVariable;
 
-  return macroLoop(
+  return compileTryFinally(
     ctx,
     expectedReturnType,
-    initialization: (ctx) {
-      if (parts is ForEachPartsWithDeclaration) {
-        final declaredType = parts.loopVariable.type == null
-            ? CoreTypes.dynamic.ref(ctx)
-            : TypeRef.fromAnnotation(
-                ctx,
-                ctx.library,
-                parts.loopVariable.type!,
-              );
-        if (parts.loopVariable.type != null &&
-            !elementType.isAssignableTo(ctx, declaredType)) {
-          throw CompileError(
-            'Cannot assign $elementType to ${parts.loopVariable.type}',
-            parts,
-            ctx.library,
-            ctx,
-          );
+    bodyNode: node,
+    compileBody: () => macroLoop(
+      ctx,
+      expectedReturnType,
+      initialization: (ctx) {
+        if (parts is ForEachPartsWithDeclaration) {
+          final declaredType = parts.loopVariable.type == null
+              ? CoreTypes.dynamic.ref(ctx)
+              : TypeRef.fromAnnotation(
+                  ctx,
+                  ctx.library,
+                  parts.loopVariable.type!,
+                );
+          if (parts.loopVariable.type != null &&
+              !elementType.isAssignableTo(ctx, declaredType)) {
+            throw CompileError(
+              'Cannot assign $elementType to ${parts.loopVariable.type}',
+              parts,
+              ctx.library,
+              ctx,
+            );
+          }
+          final name = parts.loopVariable.name.lexeme;
+          final bindingType = parts.loopVariable.type == null
+              ? elementType
+              : declaredType;
+          ctx
+              .setLocal(
+                name,
+                BuiltinValue()
+                    .push(ctx)
+                    .copyWith(type: elementType, rep: ValueRep.boxed),
+                declaredType: bindingType,
+              )
+              .captureBinding(ctx, parts.loopVariable);
+          loopVariable = IdentifierReference(null, name);
+        } else if (parts is ForEachPartsWithIdentifier) {
+          loopVariable = compileExpressionAsReference(parts.identifier, ctx);
+          final type = loopVariable.resolveType(ctx);
+          if (!elementType.isAssignableTo(ctx, type)) {
+            throw CompileError(
+              'Cannot assign $elementType to $type',
+              parts,
+              ctx.library,
+              ctx,
+            );
+          }
         }
-        final name = parts.loopVariable.name.lexeme;
-        final bindingType = parts.loopVariable.type == null
-            ? elementType
-            : declaredType;
-        ctx
-            .setLocal(
-              name,
-              BuiltinValue()
-                  .push(ctx)
-                  .copyWith(type: elementType, rep: ValueRep.boxed),
-              declaredType: bindingType,
-            )
-            .captureBinding(ctx, parts.loopVariable);
-        loopVariable = IdentifierReference(null, name);
-      } else if (parts is ForEachPartsWithIdentifier) {
-        loopVariable = compileExpressionAsReference(parts.identifier, ctx);
-        final type = loopVariable.resolveType(ctx);
-        if (!elementType.isAssignableTo(ctx, type)) {
-          throw CompileError(
-            'Cannot assign $elementType to $type',
-            parts,
-            ctx.library,
-            ctx,
-          );
+      },
+      condition: (ctx) {
+        final moveNext = CallResolver(
+          ctx,
+        ).invokeOperator(ctx.lookupLocal(iteratorName)!, 'moveNext', []).result;
+        return Variable.ssa(
+          ctx,
+          Await(
+            ctx.svar('awaitfor_next'),
+            completer.ssa,
+            moveNext.boxIfNeeded(ctx).ssa,
+          ),
+          CoreTypes.bool.ref(ctx),
+        );
+      },
+      body: body,
+      assignedNamesScan: [node],
+      update: (ctx) {
+        if (parts is ForEachPartsWithDeclaration) {
+          ctx
+              .lookupBinding(parts.loopVariable.name.lexeme)!
+              .renewCaptureCell(ctx);
         }
-      }
-    },
-    condition: (ctx) {
-      final moveNext = CallResolver(
-        ctx,
-      ).invokeOperator(iterator, 'moveNext', []).result;
-      return Variable.ssa(
-        ctx,
+        loopVariable.setValue(
+          ctx,
+          GetTarget.read(ctx, ctx.lookupLocal(iteratorName)!, 'current'),
+        );
+      },
+      updateBeforeBody: true,
+    ),
+    compileFinally: () {
+      final cancelled = CallResolver(ctx)
+          .invokeOperator(ctx.lookupLocal(iteratorName)!, 'cancel', [])
+          .result
+          .boxIfNeeded(ctx);
+      ctx.pushOp(
         Await(
-          ctx.svar('awaitfor_next'),
-          completer.ssa,
-          moveNext.boxIfNeeded(ctx).ssa,
+          ctx.svar('awaitfor_cancel'),
+          ctx.lookupLocal('#completer')!.ssa,
+          cancelled.ssa,
         ),
-        CoreTypes.bool.ref(ctx),
       );
-    },
-    body: body,
-    assignedNamesScan: [node],
-    update: (ctx) {
-      if (parts is ForEachPartsWithDeclaration) {
-        ctx
-            .lookupBinding(parts.loopVariable.name.lexeme)!
-            .renewCaptureCell(ctx);
-      }
-      loopVariable.setValue(ctx, GetTarget.read(ctx, iterator, 'current'));
-    },
-    updateBeforeBody: true,
-    after: (ctx) {
-      CallResolver(ctx).invokeOperator(iterator, 'cancel', []);
+      return StatementInfo();
     },
   );
 }

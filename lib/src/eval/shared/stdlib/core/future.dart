@@ -47,7 +47,11 @@ class $Future<T> implements Future<T>, $Instance {
   }
 
   static const $declaration = BridgeClassDef(
-    BridgeClassType(BridgeTypeRef(CoreTypes.future), isAbstract: true),
+    BridgeClassType(
+      BridgeTypeRef(CoreTypes.future),
+      isAbstract: true,
+      generics: {'T': BridgeGenericParam()},
+    ),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -86,11 +90,16 @@ class $Future<T> implements Future<T>, $Instance {
       ),
       'value': BridgeConstructorDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
           params: [
             BridgeParameter(
               'value',
               BridgeTypeAnnotation(
+                // FutureOr<T> is a union; constructor inference resolves T.
                 BridgeTypeRef(CoreTypes.dynamic),
                 nullable: true,
               ),
@@ -177,7 +186,11 @@ class $Future<T> implements Future<T>, $Instance {
       ),
       'asStream': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.stream)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stream, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
           params: [],
           namedParams: [],
         ),
@@ -380,10 +393,9 @@ class $Future<T> implements Future<T>, $Instance {
     Object? c,
   ) {
     final action = r as EvalFunction;
-    return $Future.wrap(
-      (target as $Future).$value.whenComplete(() {
-        action.call(runtime, target, null, null, 0);
-      }),
+    FutureOr<Object?> complete() => action.call(runtime, target, null, null, 0);
+    return $Future<Object?>.wrap(
+      (target as $Future).$value.whenComplete(complete),
     );
   }
 

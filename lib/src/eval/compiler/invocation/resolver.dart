@@ -756,6 +756,30 @@ final class CallResolver {
       // Static calls on generic bridge classes (e.g. `Stream.fromIterable`)
       // infer the class's own type parameters — `T` in `Iterable<T>` — from
       // the argument types, which then resolve `returns:` annotations.
+      if (isStatic &&
+          br is BridgeConstructorDef &&
+          ownerType.isSpec(CoreTypes.future) &&
+          e.methodName.name == 'value' &&
+          argsPair.positional.isNotEmpty) {
+        // Future.value accepts FutureOr<T>?, a union the bridge type format
+        // cannot express. Infer T from the value or one Future<T> layer.
+        final valueType = argsPair.positional.first.type;
+        final future = ctx.typeSystem.asInstanceOf(
+          valueType,
+          ctx.types.bySpec(CoreTypes.future),
+        );
+        final arguments = future == null
+            ? const <TypeRef>[]
+            : interfaceArgumentsOf(future);
+        bridgeTypeParameters.putIfAbsent(
+          'T',
+          () => future == null
+              ? valueType
+              : arguments.isEmpty
+              ? CoreTypes.dynamic.ref(ctx)
+              : arguments.first,
+        );
+      }
       _inferBridgeTypeParameters(
         fd,
         argsPair.positional,

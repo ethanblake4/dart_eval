@@ -4,6 +4,8 @@ import 'dart:async';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_closure.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'stream_subscription.dart';
 
@@ -428,24 +430,36 @@ class $Stream implements $Instance {
           params: [
             BridgeParameter(
               'onData',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function),
+                nullable: true,
+              ),
               false,
             ),
           ],
           namedParams: [
             BridgeParameter(
               'onError',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
               'onDone',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.function),
+                nullable: true,
+              ),
               true,
             ),
             BridgeParameter(
               'cancelOnError',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.bool),
+                nullable: true,
+              ),
               true,
             ),
           ],
@@ -721,6 +735,16 @@ class $Stream implements $Instance {
     return $Stream.wrap(Stream.empty());
   }
 
+  static $Value? $error(Runtime runtime, Object? r, Object? s, Object? c) =>
+      $Stream.wrap(Stream<Object?>.error(r!));
+
+  static $Value? $fromFuture(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $Stream.wrap(Stream.fromFuture((r as $Value).$value as Future));
+
   /// Creates a new [$Stream] from an [Iterable]
   static $Value? $fromIterable(
     Runtime runtime,
@@ -755,13 +779,13 @@ class $Stream implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'first':
-        return $value.first as $Value;
+        return $Future.wrap($value.first);
       case 'last':
-        return $value.last as $Value;
+        return $Future.wrap($value.last);
       case 'length':
         return $Future.wrap((() async => $int(await $value.length))());
       case 'single':
-        return $value.single as $Value;
+        return $Future.wrap($value.single);
       case 'isBroadcast':
         return $bool($value.isBroadcast);
       case 'asBroadcastStream':
@@ -797,9 +821,18 @@ class $Stream implements $Instance {
       case 'lastWhere':
         return $Closure(__lastWhere.func, this);
       case 'listen':
-        return $Closure(__listen.func, this);
+        return $Closure.withNamed(
+          __listen.func,
+          this,
+          positionalParameterCount: 1,
+          namedParameters: const ['onError', 'onDone', 'cancelOnError'],
+        );
       case 'map':
         return $Closure(__map.func, this);
+      case 'toList':
+        return $Closure(__toList.func, this);
+      case 'take':
+        return $Closure(__take.func, this);
       /*case 'pipe':
         return $Closure(__pipe.func, this);*/
       case 'reduce':
@@ -863,9 +896,18 @@ class $Stream implements $Instance {
     final $Stream $target = target as $Stream;
     final convert = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
-      $target.$value.asyncExpand(
-        (event) => convert.call(runtime, null, event, null, 1) as Stream,
-      ),
+      $target.$value.asyncExpand((event) {
+        final stream = convert.call(
+          runtime,
+          null,
+          runtime.wrapAlways(event, recursive: true),
+          null,
+          1,
+        );
+        return stream == null || stream is $null
+            ? null
+            : TypedInterop.stream(stream, runtime);
+      }),
     );
   }
 
@@ -1069,8 +1111,8 @@ class $Stream implements $Instance {
     final $Stream $target = target as $Stream;
     final onError = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
-      $target.$value.handleError((error /*, stackTrace*/) {
-        onError.call(runtime, null, error /*, stackTrace*/, null, 1);
+      $target.$value.handleError((Object error, StackTrace trace) {
+        $callError(runtime, onError, error, trace);
       }),
     );
   }
@@ -1117,29 +1159,81 @@ class $Stream implements $Instance {
     Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    final onData = (r as $Value?) as EvalCallable;
-    final onError = (s as $Value?) as EvalCallable?;
-    final onDone =
-        (c is List && c.isNotEmpty ? c[0] as $Value? : null) as EvalCallable?;
-    final cancelOnError =
-        (c is List && c.length > 1 ? c[1] as $Value? : null) as $bool?;
+    final onData = r == null || r is $null ? null : r as EvalCallable;
+    final onError = s == null || s is $null ? null : s as EvalCallable;
+    final done = c is List && c.isNotEmpty ? c[0] : null;
+    final onDone = done == null || done is $null ? null : done as EvalCallable;
+    final cancel = c is List && c.length > 1 ? c[1] : null;
+    final cancelOnError = cancel == null || cancel is $null
+        ? null
+        : cancel as $bool;
     return $StreamSubscription.wrap(
       $target.$value.listen(
-        (event) {
-          onData.call(runtime, null, runtime.wrap(event), null, 1);
-        },
+        onData == null
+            ? null
+            : (event) {
+                onData.call(runtime, null, runtime.wrap(event), null, 1);
+              },
         onDone: () {
           onDone?.call(runtime, null, null, null, 0);
         },
-        onError: (error /*, stackTrace*/) {
-          onError?.call(runtime, null, error /*, stackTrace*/, null, 1);
-        },
+        onError: onError == null
+            ? null
+            : (Object error, StackTrace trace) {
+                $callError(runtime, onError, error, trace);
+              },
         cancelOnError: cancelOnError?.$value,
       ),
     );
   }
 
+  /// Invokes a guest error handler with its supported arity.
+  static void $callError(
+    Runtime runtime,
+    EvalCallable handler,
+    Object error,
+    StackTrace trace,
+  ) {
+    final callable = handler is TypedCheckedFunction
+        ? handler.function
+        : handler;
+    final twoArgs =
+        callable is TypedClosure && callable.descriptor.accepts(2, const []) ||
+        callable is $Closure && callable.positionalParameterCount == 2;
+    handler.call(
+      runtime,
+      null,
+      runtime.wrapAlways(error),
+      twoArgs ? $StackTrace.wrap(trace) : null,
+      twoArgs ? 2 : 1,
+    );
+  }
+
   static const $Function __map = $Function(_map);
+
+  static const $Function __toList = $Function(_toList);
+
+  static $Value _toList(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $Future.wrap(
+    (target as $Stream).$value.toList().then(
+      (values) => runtime.wrap(values, recursive: true),
+    ),
+  );
+
+  static const $Function __take = $Function(_take);
+
+  static $Value _take(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $Stream.wrap((target as $Stream).$value.take((r as $int).$value));
 
   static $Value _map(
     Runtime runtime,

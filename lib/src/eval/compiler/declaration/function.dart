@@ -98,17 +98,10 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
         isAsync: b.isAsynchronous,
         returnsVoid: expectedReturnType.isSpec(CoreTypes.voidType),
       );
-      if (b.isGenerator && b.isAsynchronous) {
-        throw CompileError(
-          'async* generators are not supported',
-          b,
-          ctx.library,
-          ctx,
-        );
-      }
       if (b.isGenerator) {
-        setupSyncGenerator(
+        setupGenerator(
           ctx,
+          asynchronous: b.isAsynchronous,
           returnType: d.returnType == null ? null : expectedReturnType,
         );
       }
@@ -130,7 +123,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
         i++;
       }
 
-      if (b.isAsynchronous) {
+      if (b.isAsynchronous && !b.isGenerator) {
         setupAsyncFunction(
           ctx,
           returnType: d.returnType == null
@@ -173,7 +166,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   );
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
-    if (b.isAsynchronous) {
+    if (b.isAsynchronous && !b.isGenerator) {
       asyncComplete(ctx, null);
       ctx.endScope();
       return;

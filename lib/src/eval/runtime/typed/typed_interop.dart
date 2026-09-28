@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
@@ -8,12 +10,20 @@ import 'typed_instance.dart';
 import 'typed_host_collections.dart';
 import 'typed_program.dart';
 import 'typed_closure.dart';
+import 'typed_call_site.dart';
+import 'typed_async.dart';
 
 /// The dynamic-call boundary uses boxed language values exclusively.
 ///
 /// The compiler emits every scalar box and unbox operation. Host functions must
 /// use an explicit bridge wrapper, such as $Function or $Closure.
 abstract final class TypedInterop {
+  /// Guest Stream implementations keep their own listen dispatch.
+  static Stream<Object?> stream(Object? value, Runtime runtime) =>
+      value is TypedInstance
+      ? _GuestHostStream(value, runtime)
+      : (value as $Value).$value as Stream<Object?>;
+
   /// Adapts guest iterators returned to an SDK superclass implementation.
   static Iterator<T> exportIterator<T>(Object? value, Runtime runtime) {
     if (value is $Iterator) {
@@ -363,6 +373,230 @@ abstract final class TypedInterop {
   static Runtime _runtime(Runtime? runtime) =>
       runtime ??
       (throw StateError('A Runtime is required to invoke dart_eval objects'));
+}
+
+final class _GuestHostStream extends Stream<Object?> {
+  _GuestHostStream(this.receiver, this.runtime);
+  final TypedInstance receiver;
+  final Runtime runtime;
+
+  @override
+  StreamSubscription<Object?> listen(
+    void Function(Object?)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    final member = receiver.resolve(TypedMemberKind.method, 'listen');
+    final closure = member?.boundClosure;
+    final descriptor = closure?.descriptor;
+    EvalFunction callback(EvalCallableFunc function, int index, int arity) {
+      final wrapped = $Closure.withNamed(
+        function,
+        null,
+        positionalParameterCount: arity,
+        namedParameters: const [],
+      );
+      if (descriptor == null ||
+          index < 0 ||
+          index >= descriptor.parameterTypeIds.length ||
+          descriptor.parameterTypeIds[index] < 0) {
+        return wrapped;
+      }
+      final type = runtime.resolveTypedEnvironmentType(
+        descriptor.parameterTypeIds[index],
+        actualOwnerType: member!.receiver.$getRuntimeType(runtime),
+        callableTypeArguments: closure!.definingTypeArguments,
+        typeEnvironment: closure.definingTypeEnvironment,
+      );
+      if (!runtime.isTypedFunctionTypeDescriptor(type)) return wrapped;
+      return TypedCheckedFunction(runtime, type, wrapped);
+    }
+
+    int namedIndex(String name) => descriptor == null
+        ? -1
+        : descriptor.positionalCount + descriptor.namedNames.indexOf(name);
+    final subscription = receiver.invoke(
+      'listen',
+      1,
+      onData == null
+          ? null
+          : callback(
+              (runtime, target, r, s, c) {
+                onData(r);
+                return null;
+              },
+              0,
+              1,
+            ),
+      [
+        onError == null
+            ? null
+            : callback(
+                (runtime, target, r, s, c) {
+                  final trace =
+                      (s as $StackTrace?)?.$value ?? StackTrace.current;
+                  if (onError is void Function(Object, StackTrace)) {
+                    onError(r!, trace);
+                  } else {
+                    Function.apply(onError, [r]);
+                  }
+                  return null;
+                },
+                namedIndex('onError'),
+                2,
+              ),
+        onDone == null
+            ? null
+            : callback(
+                (runtime, target, r, s, c) {
+                  onDone();
+                  return null;
+                },
+                namedIndex('onDone'),
+                0,
+              ),
+        cancelOnError == null ? null : $bool(cancelOnError),
+      ],
+      namedNames: const ['onError', 'onDone', 'cancelOnError'],
+      runtime: runtime,
+    );
+    return subscription is TypedInstance
+        ? _GuestHostSubscription(subscription, runtime)
+        : subscription!.$value as StreamSubscription<Object?>;
+  }
+}
+
+final class _GuestHostSubscription implements StreamSubscription<Object?> {
+  _GuestHostSubscription(this.receiver, this.runtime);
+  final TypedInstance receiver;
+  final Runtime runtime;
+
+  TypedMember? _member(String name) =>
+      receiver.resolve(TypedMemberKind.method, name);
+
+  int? _parameterType(TypedMember? member) {
+    final closure = member?.boundClosure;
+    if (closure == null || closure.descriptor.parameterTypeIds.isEmpty) {
+      return null;
+    }
+    final type = closure.descriptor.parameterTypeIds.first;
+    if (type < 0) return null;
+    return runtime.resolveTypedEnvironmentType(
+      type,
+      actualOwnerType: member!.receiver.$getRuntimeType(runtime),
+      callableTypeArguments: closure.definingTypeArguments,
+      typeEnvironment: closure.definingTypeEnvironment,
+    );
+  }
+
+  EvalFunction _callback(String name, int arity, EvalCallableFunc function) {
+    final callback = $Closure.withNamed(
+      function,
+      null,
+      positionalParameterCount: arity,
+      namedParameters: const [],
+    );
+    final type = _parameterType(_member(name));
+    return type != null && runtime.isTypedFunctionTypeDescriptor(type)
+        ? TypedCheckedFunction(runtime, type, callback)
+        : callback;
+  }
+
+  Future<Object?> _future(Object? value) =>
+      TypedAsyncState(-1, runtime).complete(value);
+
+  @override
+  Future<void> cancel() => _future(
+    receiver.invoke('cancel', 0, null, null, runtime: runtime),
+  ).then<void>((_) {});
+
+  @override
+  void pause([Future<void>? resumeSignal]) {
+    receiver.invoke(
+      'pause',
+      resumeSignal == null ? 0 : 1,
+      resumeSignal == null
+          ? null
+          : $Future<void>.wrap(
+              resumeSignal,
+              runtimeTypeId: _parameterType(_member('pause')),
+              runtime: runtime,
+            ),
+      null,
+      runtime: runtime,
+    );
+  }
+
+  @override
+  void resume() => receiver.invoke('resume', 0, null, null, runtime: runtime);
+
+  @override
+  bool get isPaused =>
+      TypedInterop.toBool(receiver.getProperty('isPaused', runtime: runtime));
+
+  @override
+  void onData(void Function(Object?)? handleData) => receiver.invoke(
+    'onData',
+    1,
+    handleData == null
+        ? null
+        : _callback('onData', 1, (runtime, target, r, s, c) {
+            handleData(r);
+            return null;
+          }),
+    null,
+    runtime: runtime,
+  );
+
+  @override
+  void onError(Function? handleError) => receiver.invoke(
+    'onError',
+    1,
+    handleError == null
+        ? null
+        : _callback('onError', 2, (runtime, target, r, s, c) {
+            if (handleError is void Function(Object, StackTrace)) {
+              handleError(
+                r!,
+                (s as $StackTrace?)?.$value ?? StackTrace.current,
+              );
+            } else {
+              Function.apply(handleError, [r]);
+            }
+            return null;
+          }),
+    null,
+    runtime: runtime,
+  );
+
+  @override
+  void onDone(void Function()? handleDone) => receiver.invoke(
+    'onDone',
+    1,
+    handleDone == null
+        ? null
+        : _callback('onDone', 0, (runtime, target, r, s, c) {
+            handleDone();
+            return null;
+          }),
+    null,
+    runtime: runtime,
+  );
+
+  @override
+  Future<E> asFuture<E>([E? futureValue]) =>
+      _future(
+        receiver.invoke(
+          'asFuture',
+          1,
+          TypedInterop.boxExternal(futureValue, runtime: runtime),
+          null,
+          runtime: runtime,
+        ),
+      ).then<E>(
+        (value) => TypedInterop.exportExternal(value, runtime: runtime) as E,
+      );
 }
 
 final class _GuestHostIterable<T> extends Iterable<T> {

@@ -319,19 +319,8 @@ class $StreamSubscription<T> implements $Instance {
     self.$value.onError(
       (r as $Value?) == null || (r as $Value?) is $null
           ? null
-          : (a0, [a1, a2]) {
-              final _a0 = runtime.wrapAlways(a0);
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                _a0,
-                a1 != null ? runtime.wrapAlways(a1) : null,
-                a2 != null
-                    ? [runtime.wrapAlways(a2)]
-                    : a1 != null
-                    ? 2
-                    : 1,
-              );
+          : (Object error, StackTrace trace) {
+              $Stream.$callError(runtime, r as EvalCallable, error, trace);
             },
     );
     return null;

@@ -203,6 +203,16 @@ class DartCorePlugin implements EvalPlugin {
     );
     runtime.registerBridgeFuncRegisters(
       'dart:core',
+      'Stream.error',
+      $Stream.$error,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Stream.fromFuture',
+      $Stream.$fromFuture,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
       'Stream.fromIterable',
       $Stream.$fromIterable,
     );

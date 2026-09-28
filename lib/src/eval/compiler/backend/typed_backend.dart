@@ -1274,10 +1274,14 @@ class _LoweringSession {
         );
       }
       for (final op in block.code) {
-        if (op is generators.BeginSyncGenerator) {
+        if (op is generators.BeginGenerator) {
           lowered.add(
             TypedOperation(
-              b._named(['rBeginSyncGenerator']),
+              b._named([
+                op.asynchronous
+                    ? 'rBeginAsyncGenerator'
+                    : 'rBeginSyncGenerator',
+              ]),
               value(op.result),
               [],
               immediate: op.runtimeTypeId,
@@ -1286,10 +1290,14 @@ class _LoweringSession {
           );
           continue;
         }
-        if (op is generators.YieldSync) {
+        if (op is generators.YieldGenerator) {
           lowered.add(
             TypedOperation(
-              b._named([op.delegate ? 'rYieldSyncStar' : 'rYieldSync']),
+              b._named([
+                op.asynchronous
+                    ? (op.delegate ? 'rYieldAsyncStar' : 'rYieldAsync')
+                    : (op.delegate ? 'rYieldSyncStar' : 'rYieldSync'),
+              ]),
               null,
               [value(op.value)],
               clobbers: {0, 1, 2, 3, 4, 6, 7, 8},

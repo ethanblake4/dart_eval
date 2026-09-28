@@ -6,6 +6,7 @@ import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'typed_program.dart';
 import 'typed_async.dart';
+import 'typed_generator.dart';
 
 final class _Handler {
   late TypedExceptionRegion region;
@@ -82,7 +83,9 @@ final class TypedExceptionState {
   int handle(Object error, StackTrace trace, Runtime? runtime) {
     while (depth > 0) {
       final handler = _handlers[depth - 1];
-      if (handler.phase == 0 && handler.region.catchTarget >= 0) {
+      if (handler.phase == 0 &&
+          handler.region.catchTarget >= 0 &&
+          error is! TypedGeneratorCancellation) {
         handler.phase = 1;
         handler.error = error;
         handler.trace = trace;
@@ -177,6 +180,11 @@ abstract final class TypedExceptions {
     while (true) {
       final target = frame.exceptions?.handle(error, trace, runtime) ?? -1;
       if (target >= 0) return TypedExceptionTransfer(frame, target);
+      if (frame.asyncGenerator case final generator?) {
+        final thrown = error is WrappedException ? error.exception : error;
+        generator.fail(thrown, trace);
+        return const TypedExceptionTransfer(null, -1);
+      }
       if (frame.asyncState != null) {
         final future = TypedAsync.fail(frame, error, trace);
         if (frame.parent == null) {

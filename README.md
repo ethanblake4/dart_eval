@@ -23,7 +23,7 @@ up-to-date parsing. While compilation and execution aren't quite there yet, dart
 has over 300 tests that are run in CI to ensure correctness.
 
 Currently dart_eval implements a majority of the Dart spec, but there 
-are still missing features like generators and extension methods.
+are still missing features like extension methods.
 In addition, parts of the standard library haven't been implemented. See the
 [language feature support table](#language-feature-support-table) for details.
 
@@ -552,14 +552,14 @@ may vary when bridging.
 | Functions | ✅ | [4 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/functions_test.dart#L36) |
 | Anonymous functions | ✅ | [7 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/functions_test.dart#L104) |
 | Arrow functions | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/functions_test.dart#L237) |
-| Sync generators | ❌ | N/A |
-| Async generators | ❌ | N/A |
+| Sync generators | ✅ | [Tests](test/language/sync_generator_test.dart) |
+| Async generators | ✅ | [10 tests](test/language/async_generator_test.dart) |
 | Tear-offs | ✅ | [3 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/tearoffs_test.dart#L12) |
 | For loops | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L13) |
 | While loops | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L69) |
 | Do-while loops | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L86) |
 | For-each loops | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L54) |
-| Async for-each | ❌ | N/A |
+| Async for-each | ✅ | [Tests](test/language/async_generator_test.dart) |
 | Switch statements | ✅ | [20 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/switch_test.dart) |
 | Switch expressions | ❌ | N/A |
 | Labels, `break` & `continue` | Partial | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L126), [+more](https://github.com/ethanblake4/dart_eval/blob/master/test/language/switch_test.dart) |
