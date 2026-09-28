@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart'
     show TypedRuntimeInterop, WrappedException;
 import 'package:dart_eval/src/eval/runtime/typed/typed_closure.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
@@ -14,11 +15,7 @@ import 'package:dart_eval/stdlib/core.dart';
 class $Future<T> implements Future<T>, $Instance {
   /// Configure [$Future] for runtime in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFuncRegisters(
-      'dart:core',
-      'Future.',
-      _futureNew,
-    );
+    runtime.registerBridgeFuncRegisters('dart:core', 'Future.', _futureNew);
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Future.delayed',
@@ -322,8 +319,7 @@ class $Future<T> implements Future<T>, $Instance {
     FutureOr<$Value?> onErrorCb(Object error, StackTrace stackTrace) {
       final handler = onError!;
       final twoArgs =
-          handler is TypedClosure &&
-          handler.descriptor.accepts(2, const []);
+          handler is TypedClosure && handler.descriptor.accepts(2, const []);
       return handler.call(
         runtime,
         target,
@@ -332,19 +328,17 @@ class $Future<T> implements Future<T>, $Instance {
         twoArgs ? 2 : 1,
       );
     }
+
     // A bridge callback can return either a boxed value or a Future of boxed
     // values. Inferring $Value? here treats $Future<Object?> as a plain value
     // instead of adopting it, because it is not a Future<$Value?>.
-    final $result = ($t.$value).then<Object?>(
-      (value) {
-        try {
-          return $then.call(runtime, target, runtime.wrap(value), null, 1);
-        } on WrappedException catch (error, trace) {
-          Error.throwWithStackTrace(error.exception, trace);
-        }
-      },
-      onError: onError == null ? null : onErrorCb,
-    );
+    final $result = ($t.$value).then<Object?>((value) {
+      try {
+        return $then.call(runtime, target, runtime.wrap(value), null, 1);
+      } on WrappedException catch (error, trace) {
+        Error.throwWithStackTrace(error.exception, trace);
+      }
+    }, onError: onError == null ? null : onErrorCb);
     return $Future.wrap(
       $result,
       runtimeTypeId: runtimeTypeId,
@@ -376,13 +370,17 @@ class $Future<T> implements Future<T>, $Instance {
     final $t = target as $Future;
     final timeLimit = (r as $Value).$value as Duration;
     final onTimeout = s as EvalFunction?;
-    FutureOr<dynamic> onTimeoutCb() =>
-        onTimeout!.call(runtime, target, null, null, 0)?.$value;
+    FutureOr<Object?> onTimeoutCb() =>
+        _futureArg(runtime, onTimeout!.call(runtime, target, null, null, 0));
+    // Host futures may hold boxed $Value payloads. Widen before a recovery
+    // callback returns an exported value such as a native collection view.
     return $Future.wrap(
-      $t.$value.timeout(
-        timeLimit,
-        onTimeout: onTimeout == null ? null : onTimeoutCb,
-      ),
+      $t.$value
+          .then<Object?>((value) => value)
+          .timeout(
+            timeLimit,
+            onTimeout: onTimeout == null ? null : onTimeoutCb,
+          ),
     );
   }
 
@@ -414,29 +412,29 @@ class $Future<T> implements Future<T>, $Instance {
     final $t = target as $Future;
     final onError = r as EvalFunction;
     final test = s as EvalFunction?;
-    FutureOr<dynamic> onErrorCb(Object error, StackTrace stackTrace) {
+    FutureOr<Object?> onErrorCb(Object error, StackTrace stackTrace) {
       final twoArgs =
-          onError is TypedClosure &&
-          onError.descriptor.accepts(2, const []);
-      return onError
-          .call(
-            runtime,
-            target,
-            runtime.wrap(error),
-            twoArgs ? $StackTrace.wrap(stackTrace) : null,
-            twoArgs ? 2 : 1,
-          )
-          ?.$value;
+          onError is TypedClosure && onError.descriptor.accepts(2, const []);
+      return _futureArg(
+        runtime,
+        onError.call(
+          runtime,
+          target,
+          runtime.wrap(error),
+          twoArgs ? $StackTrace.wrap(stackTrace) : null,
+          twoArgs ? 2 : 1,
+        ),
+      );
     }
+
     bool testCb(Object error) =>
         test!.call(runtime, target, runtime.wrap(error), null, 1)?.$value
             as bool? ??
         false;
     return $Future.wrap(
-      $t.$value.catchError(
-        onErrorCb,
-        test: test == null ? null : testCb,
-      ),
+      $t.$value
+          .then<Object?>((value) => value)
+          .catchError(onErrorCb, test: test == null ? null : testCb),
     );
   }
 
@@ -462,24 +460,30 @@ $Value? _futureDelayed(Runtime runtime, Object? r, Object? s, Object? c) {
       (r as $Value).$value,
       computation == null
           ? null
-          : () => computation.call(runtime, null, null, null, 0)?.$value,
+          : () => _futureArg(
+              runtime,
+              computation.call(runtime, null, null, null, 0),
+            ),
     ),
   );
 }
 
-/// Eval objects ([TypedInstance]) have no host value — the future completes
-/// with the instance itself so `then` hands it back via [Runtime.wrap].
-Object? _futureArg(Object? arg) =>
-    arg is TypedInstance ? arg : (arg is $Value ? arg.$value : arg);
+/// Keep guest instance identity and export collections through their lazy
+/// boundary views rather than exposing maps with boxed keys to host Dart.
+Object? _futureArg(Runtime runtime, Object? arg) => arg is TypedInstance
+    ? arg
+    : TypedInterop.exportExternal(arg, runtime: runtime);
 
 $Value? _futureValue(Runtime runtime, Object? r, Object? s, Object? c) {
-  return $Future.wrap(Future.value(_futureArg(r)));
+  return $Future.wrap(Future.value(_futureArg(runtime, r)));
 }
 
 $Value? _futureError(Runtime runtime, Object? r, Object? s, Object? c) {
-  final error = _futureArg(r);
-  final stackTrace = _futureArg(s);
-  return $Future.wrap(Future.error(error ?? Object(), stackTrace as StackTrace?));
+  final error = _futureArg(runtime, r);
+  final stackTrace = _futureArg(runtime, s);
+  return $Future.wrap(
+    Future.error(error ?? Object(), stackTrace as StackTrace?),
+  );
 }
 
 // `Future(computation)` queues on the event loop (after microtasks), so it
@@ -487,20 +491,26 @@ $Value? _futureError(Runtime runtime, Object? r, Object? s, Object? c) {
 $Value? _futureNew(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = r as EvalFunction;
   return $Future.wrap(
-    Future(() => computation.call(runtime, null, null, null, 0)?.$value),
+    Future(
+      () => _futureArg(runtime, computation.call(runtime, null, null, null, 0)),
+    ),
   );
 }
 
 $Value? _futureSync(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = r as EvalFunction;
   return $Future.wrap(
-    Future.sync(() => computation.call(runtime, null, null, null, 0)?.$value),
+    Future.sync(
+      () => _futureArg(runtime, computation.call(runtime, null, null, null, 0)),
+    ),
   );
 }
 
 $Value? _futureMicrotask(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = r as EvalFunction;
   return $Future.wrap(
-    Future.microtask(() => computation.call(runtime, null, null, null, 0)?.$value),
+    Future.microtask(
+      () => _futureArg(runtime, computation.call(runtime, null, null, null, 0)),
+    ),
   );
 }

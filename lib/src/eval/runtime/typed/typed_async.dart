@@ -17,54 +17,82 @@ final class TypedAsyncState {
   final Runtime? runtime;
   Completer<Object?>? _completer;
   $Future<Object?>? _future;
+  bool _deferErrors = true;
+  // A resumed body's listeners run in the same microtask as its completion.
   $Future<Object?> get future => _future ??= $Future.wrap(
-    (_completer ??= Completer<Object?>()).future,
+    (_completer ??= Completer<Object?>.sync()).future,
     runtimeTypeId: runtimeTypeId < 0 ? null : runtimeTypeId,
     runtime: runtime,
   );
 
-  Future<Object?> _checked(Object? value) =>
-      Future<Object?>.value(value).then((payload) {
-        final boxed = TypedInterop.boxExternal(payload, runtime: runtime);
-        if (runtimeTypeId >= 0) {
-          runtime?.assertTypedFuturePayload(boxed, runtimeTypeId);
-        }
-        return boxed;
-      });
+  $Value? _checkedPayload(Object? payload) {
+    final boxed = TypedInterop.boxExternal(payload, runtime: runtime);
+    if (runtimeTypeId >= 0) {
+      runtime?.assertTypedFuturePayload(boxed, runtimeTypeId);
+    }
+    return boxed;
+  }
+
+  FutureOr<Object?> _checked(Object? value) {
+    final subject = value is $Future ? value.$value : value;
+    return subject is Future
+        ? subject.then(_checkedPayload)
+        : _checkedPayload(subject);
+  }
+
+  void _completeError(
+    Completer<Object?> completer,
+    Object error,
+    StackTrace trace,
+  ) {
+    final thrown = error is WrappedException ? error.exception : error;
+    // An inline custom Future can fail before the caller receives its result.
+    if (_deferErrors) {
+      scheduleMicrotask(() => completer.completeError(thrown, trace));
+    } else {
+      completer.completeError(thrown, trace);
+    }
+  }
 
   $Future<Object?> complete(Object? value) {
-    var completer = _completer;
+    final completer = _completer;
     final runtime = this.runtime;
     if (runtime != null && _isGuestFuture(value, runtime)) {
       // A returned guest Future is adopted like `await`: this state's future
       // completes when the guest's own `then` reports a value or an error.
-      final c = _completer ??= Completer<Object?>();
+      final c = _completer ??= Completer<Object?>.sync();
       try {
         _attachGuestThen(
           value as TypedInstance,
           runtime,
-          (payload) => c.complete(_checked(payload)),
-          (error, trace) => c.completeError(
-            error is WrappedException ? error.exception : error,
-            trace ?? StackTrace.current,
-          ),
+          (payload) {
+            try {
+              c.complete(_checked(payload));
+            } catch (error, trace) {
+              _completeError(c, error, trace);
+            }
+          },
+          (error, trace) =>
+              _completeError(c, error, trace ?? StackTrace.current),
         );
       } catch (error, trace) {
-        c.completeError(
-          error is WrappedException ? error.exception : error,
-          trace,
-        );
+        _completeError(c, error, trace);
       }
+      _deferErrors = false;
       return future;
     }
     if (completer == null) {
       return $Future.wrap(
-        _checked(value),
+        Future<Object?>.sync(() => _checked(value)),
         runtimeTypeId: runtimeTypeId < 0 ? null : runtimeTypeId,
         runtime: runtime,
       );
     }
-    completer.complete(_checked(value));
+    try {
+      completer.complete(_checked(value));
+    } catch (error, trace) {
+      _completeError(completer, error, trace);
+    }
     return future;
   }
 
@@ -78,7 +106,7 @@ final class TypedAsyncState {
         runtime: runtime,
       );
     }
-    completer.completeError(thrown, trace);
+    _completeError(completer, thrown, trace);
     return future;
   }
 }
@@ -111,9 +139,7 @@ void _attachGuestThen(
   'then',
   1,
   TypedHostFunction(onValue),
-  TypedHostFunction(
-    (error, [StackTrace? trace]) => onError(error, trace),
-  ),
+  TypedHostFunction((error, [StackTrace? trace]) => onError(error, trace)),
   namedNames: const ['onError'],
   runtime: runtime,
 );
@@ -137,7 +163,8 @@ abstract final class TypedAsync {
     Runtime? runtime,
     TypedAsyncResume resume,
   ) {
-    final future = frame.asyncState?.future;
+    final state = frame.asyncState;
+    final future = state?.future;
     frame.detachAsync();
     // A guest class may implement `Future` directly — `Future.value` cannot
     // adopt it, so call its `then` and forward the completion ourselves.
@@ -174,6 +201,7 @@ abstract final class TypedAsync {
       } catch (error, trace) {
         resume(program, frame, pc, null, error, trace, runtime);
       }
+      state?._deferErrors = false;
       return future;
     }
     // Future.value also schedules a non-Future await and adopts returned
@@ -193,6 +221,7 @@ abstract final class TypedAsync {
         resume(program, frame, pc, null, error, trace, runtime);
       },
     );
+    state?._deferErrors = false;
     return future;
   }
 

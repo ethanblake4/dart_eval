@@ -34,6 +34,159 @@ Iterable<(String, Runtime)> _runtimes(Program program) sync* {
 }
 
 void main() {
+  test(
+    'custom Futures preserve inline values and catchable early errors',
+    () async {
+      final program = _compile('''
+      import 'dart:async';
+      class ThrowingFuture implements Future<int> {
+        dynamic noSuchMethod(Invocation invocation) { throw 'sentinel'; }
+      }
+      class InlineFuture implements Future<int> {
+        final dynamic value;
+        InlineFuture([this.value = 7]);
+        dynamic noSuchMethod(Invocation invocation) {
+          invocation.positionalArguments[0](value);
+          return Future.value(value);
+        }
+      }
+      int stage = 0;
+      int readStage() => stage;
+      Future<int> inline() async {
+        stage = 1;
+        var value = await InlineFuture();
+        stage = 2;
+        return value;
+      }
+      Future<int> returned() async => ThrowingFuture();
+      Future<int> awaited() async => await ThrowingFuture();
+      Future<int> wrongInline() async => await InlineFuture('wrong type');
+    ''');
+      for (final (kind, runtime) in _runtimes(program)) {
+        for (final function in ['returned', 'awaited']) {
+          await expectLater(
+            runtime.executeLib(_library, function),
+            throwsA(
+              predicate<Object>(
+                (error) => error is $Value && error.$value == 'sentinel',
+              ),
+            ),
+            reason: '$kind $function',
+          );
+        }
+        final pending = runtime.executeLib(_library, 'inline');
+        expect(runtime.executeLib(_library, 'readStage'), 2, reason: kind);
+        expect(await pending, $int(7), reason: kind);
+        expect(runtime.executeLib(_library, 'readStage'), 2, reason: kind);
+        await expectLater(
+          runtime.executeLib(_library, 'wrongInline'),
+          throwsA(isA<TypeError>()),
+          reason: kind,
+        );
+      }
+    },
+  );
+
+  test(
+    'resumed async errors notify listeners before the next microtask',
+    () async {
+      final program = _compile('''
+      import 'dart:async';
+      Future<String> main() async {
+        var events = <String>[];
+        Future<void> fail() async {
+          await null;
+          events.add('throw');
+          throw 'failure';
+        }
+        scheduleMicrotask(() => events.add('before'));
+        var pending = fail().catchError((error) { events.add('caught'); });
+        scheduleMicrotask(() => events.add('after'));
+        await pending;
+        await Future<void>.delayed(Duration.zero);
+        return events.join(',');
+      }
+    ''');
+      for (final (kind, runtime) in _runtimes(program)) {
+        expect(
+          await runtime.executeLib(_library, 'main'),
+          $String('before,throw,caught,after'),
+          reason: kind,
+        );
+      }
+    },
+  );
+
+  test(
+    'Future factories and recovery callbacks preserve collection aliases',
+    () async {
+      final program = _compile('''
+      import 'dart:async';
+      Future<bool> main() async {
+        var source = <int, dynamic>{1: 9};
+        source[2] = source;
+        var failure = Completer<Map<int, dynamic>>();
+        failure.completeError('failure');
+        var pending = [
+          Future.value(source),
+          Future.sync(() => source),
+          Future.microtask(() => source),
+          Future(() => source),
+          Future.delayed(Duration.zero, () => source),
+          Future<Map<int, dynamic>>.error('failure').catchError((e) => source),
+          failure.future.catchError((e) => source),
+          Completer<Map<int, dynamic>>().future.timeout(
+            Duration.zero, onTimeout: () => source),
+        ];
+        for (var future in pending) {
+          var value = await future;
+          if (!identical(value, source) ||
+              !identical(value[2], source) || value[1] != 9) return false;
+          value[3] = 11;
+          if (source[3] != 11) return false;
+        }
+        return true;
+      }
+    ''');
+      for (final (kind, runtime) in _runtimes(program)) {
+        expect(
+          await runtime.executeLib(_library, 'main'),
+          $bool(true),
+          reason: kind,
+        );
+      }
+    },
+  );
+
+  test(
+    'async result checks deliver failures through the returned Future',
+    () async {
+      final program = _compile('''
+      Future<int> immediate(dynamic value) async => value;
+      Future<int> resumed(dynamic value) async {
+        await 0;
+        return value;
+      }
+      Future<int> adopted(dynamic value) async => Future.value(value);
+    ''');
+      for (final (kind, runtime) in _runtimes(program)) {
+        for (final function in ['immediate', 'resumed', 'adopted']) {
+          final future = runtime.executeLib(
+            _library,
+            function,
+            arguments: {'value': 'wrong type'},
+          );
+          expect(future, isA<Future>(), reason: '$kind $function');
+          await expectLater(
+            future,
+            throwsA(isA<TypeError>()),
+            reason: '$kind $function',
+          );
+        }
+      }
+    },
+  );
+
   test('async code runs synchronously through its first await', () async {
     final program = _compile('''
       int stage = 0;
