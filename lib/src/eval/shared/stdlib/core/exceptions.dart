@@ -232,7 +232,7 @@ class $FormatException implements FormatException, $Instance {
   FormatException get $reified => $value;
 
   /// Wrap a [FormatException] in a [$FormatException]
-  $FormatException.wrap(this.$value) : _superclass = $Object($value);
+  $FormatException.wrap(this.$value) : _superclass = $Exception.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);

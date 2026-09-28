@@ -275,7 +275,7 @@ void compileConstructorDeclaration(
       stInfo = compileBlock(b.block, clsType, ctx, name: '$n()');
     } else if (b is ExpressionFunctionBody) {
       ctx.beginScope();
-      final V = compileExpression(b.expression, ctx);
+      final V = compileExpression(b.expression, ctx, clsType);
       stInfo = doReturn(ctx, clsType, V, isAsync: b.isAsynchronous);
       ctx.endScope();
     } else {

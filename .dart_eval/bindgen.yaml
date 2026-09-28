@@ -11,9 +11,10 @@
 version: 1
 defaults:
   mode: wrap
-  implicitSupers: true
+  implicitSupers: false
 libraries:
   - uri: dart:core
+    typedefs: [Comparator]
     outDir: lib/src/eval/shared/stdlib/core
     registry:
       file: lib/src/eval/shared/types.dart
@@ -138,6 +139,8 @@ libraries:
         include: false
   - uri: dart:async
     outDir: lib/src/eval/shared/stdlib/async
+    functions:
+      - unawaited
     registry:
       file: lib/src/eval/shared/types.dart
       class: AsyncTypes
@@ -161,6 +164,8 @@ libraries:
         file: stream_subscription.dart
       StreamSink:
         file: stream_sink.dart
+      EventSink:
+        file: event_sink.dart
       StreamIterator:
         file: stream_iterator.dart
       StreamTransformer:
@@ -179,6 +184,8 @@ libraries:
       # Generated wrappers.
       LinkedHashMap:
         file: linked_hash_map.dart
+      UnmodifiableMapView:
+        include: false # Guest maps need a source-level delegating view.
       ListQueue:
         file: list_queue.dart
       Queue:
@@ -199,7 +206,7 @@ libraries:
       ListBase:
         include: false
       MapBase:
-        include: false
+        file: map_base.dart
       SetBase:
         include: false
       ListMixin:
@@ -260,6 +267,33 @@ libraries:
         handMaintained: true
       InternetAddressType:
         handMaintained: true
+      SocketException:
+        file: exceptions.dart
+        implementsSdk: true
+      HttpException:
+        file: exceptions.dart
+        implementsSdk: true
+      OSError:
+        file: exceptions.dart
+        implementsSdk: true
+        constructors:
+          new:
+            params:
+              errorCode:
+                default: OSError.noErrorCode
+      HttpHeaders:
+        file: http_headers.dart
+      RedirectInfo:
+        file: redirect_info.dart
+      Socket:
+        file: socket_connection.dart
+        imports: [dart:async, dart:typed_data]
+        hooks: socket_hooks.dart
+        statics:
+          connect:
+            hook: socketConnect
+          startConnect:
+            hook: socketStartConnect
       HttpClient:
         handMaintained: true
       HttpClientRequest:
@@ -321,4 +355,6 @@ libraries:
       ByteData:
         file: typed_data.dart
       Uint8List:
+        file: typed_data.dart
+      Uint32List:
         file: typed_data.dart

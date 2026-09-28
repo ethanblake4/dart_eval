@@ -7,7 +7,7 @@ import 'package:dart_eval/src/eval/cli/bind.dart';
 import 'package:dart_eval/src/eval/cli/compile.dart';
 import 'package:dart_eval/src/eval/cli/run.dart';
 
-void main(List<String> args) {
+Future<void> main(List<String> args) async {
   final parser = ArgParser();
 
   final compileCmd = parser.addCommand('compile');
@@ -17,6 +17,7 @@ void main(List<String> args) {
   final runCmd = parser.addCommand('run');
   runCmd.addOption('library', abbr: 'l');
   runCmd.addOption('function', abbr: 'f', defaultsTo: 'main');
+  runCmd.addMultiOption('permission', allowed: cliPermissionDomains);
   runCmd.addFlag('help', abbr: 'h');
 
   final dumpCmd = parser.addCommand('dump');
@@ -83,9 +84,11 @@ void main(List<String> args) {
 
       print('Usage:');
       print(
-        '   dart_eval run <file> [-l, --library <library>] [-f, --function <function>] [-h, --help]',
+        '   dart_eval run <file> [-l, --library <library>] [-f, --function <function>] [--permission <domain>] [-h, --help]',
       );
       if (command['help']) {
+        print('Permission domains: ${cliPermissionDomains.join(', ')}.');
+        print('Repeat --permission to grant more than one domain.');
         print('\nNote that bindings are not supported in the run command.');
       }
       exit(command['help'] ? 0 : 1);
@@ -99,7 +102,12 @@ void main(List<String> args) {
       );
       exit(1);
     }
-    cliRun(command.rest[0], command['library'], command['function'] ?? 'main');
+    await cliRun(
+      command.rest[0],
+      command['library'],
+      command['function'] ?? 'main',
+      permissions: command['permission'] as List<String>,
+    );
   } else if (command.name == 'dump') {
     if (command['help']! || command.rest.length != 1) {
       if (command['help']) {
@@ -115,18 +123,20 @@ void main(List<String> args) {
     final evc = File(command.rest[0]).readAsBytesSync();
     final program = Program.read(evc.buffer).typedProgram;
     final bytes = ByteData.sublistView(program.code);
-    for (var pc = 0; pc < program.code.length;) {
-      final instruction = TypedOp.instructions[program.code[pc]];
+    for (final (pc, instruction) in program.instructions) {
+      final escape = program.code[pc] == TypedOp.ext ? 1 : 0;
+      final immediateOffset = pc + 1 + escape;
       final operand = switch (instruction.immediate) {
         TypedImmediate.none => '',
-        TypedImmediate.branch => ' ${bytes.getUint32(pc + 1, Endian.little)}',
+        TypedImmediate.branch =>
+          ' ${bytes.getUint32(immediateOffset, Endian.little)}',
         TypedImmediate.shortBranch =>
-          ' ${pc + instruction.length + bytes.getInt16(pc + 1, Endian.little)}',
-        TypedImmediate.integer => ' ${bytes.getInt16(pc + 1, Endian.little)}',
-        _ => ' ${bytes.getUint16(pc + 1, Endian.little)}',
+          ' ${pc + instruction.length + escape + bytes.getInt16(immediateOffset, Endian.little)}',
+        TypedImmediate.integer =>
+          ' ${bytes.getInt16(immediateOffset, Endian.little)}',
+        _ => ' ${bytes.getUint16(immediateOffset, Endian.little)}',
       };
       print('$pc: ${instruction.name}$operand');
-      pc += instruction.length;
     }
   } else if (command.name == 'bind') {
     if (command['help']!) {

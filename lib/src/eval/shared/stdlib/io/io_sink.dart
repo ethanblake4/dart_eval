@@ -61,9 +61,28 @@ class $IOSink implements $Instance {
     switch (identifier) {
       case 'close':
       case 'done':
+      case 'addError':
+      case 'addStream':
         return _streamSink.$getProperty(runtime, identifier);
+      case 'add':
+        return $Closure(__add.func, this);
     }
     return _stringSink.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __add = $Function(_add);
+
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    (target!.$value as IOSink).add(
+      List<int>.from((r as $Value).$reified as List),
+    );
+    return null;
   }
 
   @override

@@ -15,6 +15,8 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
+import 'string_sink.dart';
+
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
@@ -111,6 +113,20 @@ class $StringBuffer implements $Instance {
         ),
       ),
 
+      'writeCharCode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'charCode',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
       'writeAll': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
@@ -147,20 +163,6 @@ class $StringBuffer implements $Instance {
                 nullable: true,
               ),
               true,
-            ),
-          ],
-        ),
-      ),
-
-      'writeCharCode': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'charCode',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-              false,
             ),
           ],
         ),
@@ -225,7 +227,7 @@ class $StringBuffer implements $Instance {
   StringBuffer get $reified => $value;
 
   /// Wrap a [StringBuffer] in a [$StringBuffer]
-  $StringBuffer.wrap(this.$value) : _superclass = $Object($value);
+  $StringBuffer.wrap(this.$value) : _superclass = $StringSink.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
@@ -245,14 +247,14 @@ class $StringBuffer implements $Instance {
       case 'write':
         return $Closure(__write.func, this);
 
+      case 'writeCharCode':
+        return $Closure(__writeCharCode.func, this);
+
       case 'writeAll':
         return $Closure(__writeAll.func, this);
 
       case 'writeln':
         return $Closure(__writeln.func, this);
-
-      case 'writeCharCode':
-        return $Closure(__writeCharCode.func, this);
 
       case 'clear':
         return $Closure(__clear.func, this);
@@ -270,6 +272,19 @@ class $StringBuffer implements $Instance {
   ) {
     final self = target! as $StringBuffer;
     self.$value.write((r as $Value?)!.$reified);
+    return null;
+  }
+
+  static const $Function __writeCharCode = $Function(_writeCharCode);
+  static $Value? _writeCharCode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $StringBuffer;
+    self.$value.writeCharCode((r as $int).$value);
     return null;
   }
 
@@ -303,19 +318,6 @@ class $StringBuffer implements $Instance {
           ? ""
           : (r is $Value ? r : null)?.$reified,
     );
-    return null;
-  }
-
-  static const $Function __writeCharCode = $Function(_writeCharCode);
-  static $Value? _writeCharCode(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $StringBuffer;
-    self.$value.writeCharCode((r as $int).$value);
     return null;
   }
 

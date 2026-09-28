@@ -483,14 +483,15 @@ final class ArgumentBinder {
     final positional = signature.positional;
     final named = {for (final spec in signature.named) spec.name: spec};
 
-    // The signature resolved formal annotations in the declaring scope. Bind
-    // those exact parameter identities to the call's receiver and type args;
-    // resolving AST annotations again here can pick a different scope.
+    // Infer a method's own parameters, not class parameters fixed by its
+    // receiver. Constructors still infer their class parameters from arguments.
     final parameterDefs = {
       for (final entry in signature.typeParameterRefs.entries)
         if (entry.value case TypeParameterTypeRef(:final parameter)
-            when inferParameterNames == null ||
-                inferParameterNames.contains(entry.key))
+            when (parameterHost is ConstructorDeclaration ||
+                    signature.typeParameters.contains(parameter)) &&
+                (inferParameterNames == null ||
+                    inferParameterNames.contains(entry.key)))
           parameter,
     };
     final argumentSubstitution = Substitution.of(resolveGenerics);
@@ -535,7 +536,7 @@ final class ArgumentBinder {
       // Only the callee's own parameters lower: class and enclosing-scope
       // parameters stay meaningful through the frame's type environment,
       // where the runtime check resolves them against the actual owner.
-      final coercionType = paramType.requiresTypeEnvironment
+      var coercionType = paramType.requiresTypeEnvironment
           ? paramType
                 .lowerTypeParameters(
                   ctx,
@@ -551,13 +552,23 @@ final class ArgumentBinder {
       // its remaining type parameters act as inference variables (`[1]`
       // under `Iterable<T>` still produces `List<int>` and binds T to int),
       // while the erased formal would clamp the argument to `dynamic`.
-      final argBound = unifyPattern ?? coercionType;
+      final argBound =
+          unifyPattern?.substituteTypeParameters(argumentSubstitution) ??
+          coercionType;
       var arg0 = _compileArg(ctx, argument, argBound);
       if (unifyPattern != null) {
         // Inference reads the argument's own type — coercion below may
         // erase still-unbound parameters to `dynamic`, which would record
         // `T -> dynamic` instead of the actual constraint.
         _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
+        if (candidates.isNotEmpty) {
+          coercionType = spec.type.substituteTypeParameters(
+            Substitution.of({
+              ...resolveGenerics,
+              ..._solveArguments(candidates),
+            }),
+          );
+        }
       }
       arg0 = coerceArgumentForParameter(
         ctx,
@@ -725,20 +736,25 @@ final class ArgumentBinder {
           : paramType;
       var arg0 = _compileArg(ctx, argument, context).boxIfNeeded(ctx);
       if (named) {
-        if (arg0.type.assignmentConversionTo(ctx, paramType) ==
-            AssignmentConversion.invalid) {
+        final nominalFunction =
+            paramType.isSpec(CoreTypes.function) && arg0.type.isFunctionLike;
+        if (!nominalFunction &&
+            arg0.type.assignmentConversionTo(ctx, paramType) ==
+                AssignmentConversion.invalid) {
           throw CompileError(
             'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
             argumentList,
           );
         }
-        arg0 = convertForAssignment(
-          ctx,
-          arg0,
-          paramType,
-          representation: MachineRepresentation.object,
-          source: argumentList,
-        );
+        if (!nominalFunction) {
+          arg0 = convertForAssignment(
+            ctx,
+            arg0,
+            paramType,
+            representation: MachineRepresentation.object,
+            source: argumentList,
+          );
+        }
       }
       return _providedBridgeArgument(
         ctx,
@@ -828,7 +844,8 @@ final class ArgumentBinder {
     Map<TypeParameterDef, Set<TypeRef>> candidates,
   ) => {
     for (final entry in candidates.entries)
-      entry.key: TypeRef.commonBaseType(ctx, entry.value),
+      if (entry.value.isNotEmpty)
+        entry.key: TypeRef.commonBaseType(ctx, entry.value),
   };
 
   void _resolveInvocationGenerics(
@@ -1120,6 +1137,24 @@ final class ArgumentBinder {
         resolveGenerics,
         source ?? dec,
       );
+    }
+
+    // Give context-sensitive arguments (notably closures) the return
+    // context's type arguments before compiling their bodies.
+    if (returnContext != null &&
+        typeArguments == null &&
+        typeParams.isNotEmpty &&
+        signature.returnAnnotated) {
+      final pattern = signature.returnType.substituteTypeParameters(
+        signature.substitutionFor(seedGenerics, includeOwn: false),
+      );
+      final bindings = <TypeParameterDef, TypeRef>{};
+      ctx.typeSystem.unify(pattern, returnContext, bindings);
+      for (final parameter in typeParams) {
+        if (bindings[parameter] case final inferred?) {
+          resolveGenerics[parameter] = inferred;
+        }
+      }
     }
 
     final constrainedParameters = <TypeParameterDef>{};

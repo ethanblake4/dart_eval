@@ -833,14 +833,14 @@ String familyOf(String name) {
   );
   add(
     'rMapIndexCS',
-    'r = (c as Map<Object?, Object?>)[s];',
+    "r = c is TypedInstance ? TypedInterop.invoke(runtime, c, '[]', 1, s, null) : (c as Map<Object?, Object?>)[s];",
     inputs: [8, 7],
     output: 6,
     mayThrow: true,
   );
   add(
     'mapSetCSR',
-    '(c as Map<Object?, Object?>)[s] = r;',
+    "if (c is TypedInstance) { TypedInterop.invoke(runtime, c, '[]=', 2, s, r); } else { (c as Map<Object?, Object?>)[s] = r; }",
     inputs: [8, 7, 6],
     mayThrow: true,
   );

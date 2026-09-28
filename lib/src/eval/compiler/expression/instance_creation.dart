@@ -63,14 +63,24 @@ Variable compileInstanceCreation(
       ],
     );
   } else if (type.typeArguments == null && bound != null) {
-    // Downward inference: `Optional.absent()` under `Optional<int>` produces
-    // `Optional<int>`.
-    final boundChain = bound;
-    if (boundChain.file == staticType.file &&
-        boundChain.name == staticType.name &&
-        interfaceArgumentsOf(boundChain).isNotEmpty) {
+    // Infer a constructor's type arguments from the expected interface, even
+    // when the constructed class implements that interface indirectly.
+    final declaration = nominalDeclOf(staticType);
+    final view = declaration == null
+        ? null
+        : ctx.typeSystem.asInstanceOf(
+            declaration.thisType,
+            nominalDeclOf(bound),
+          );
+    if (view != null && declaration!.typeParameters.isNotEmpty) {
+      final inferred = <TypeParameterDef, TypeRef>{};
+      ctx.typeSystem.unify(view, bound, inferred);
       instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
-        arguments: interfaceArgumentsOf(boundChain),
+        arguments: [
+          for (var i = 0; i < declaration.typeParameters.length; i++)
+            inferred[declaration.typeParameters[i]] ??
+                declaration.defaultTypeArguments[i],
+        ],
       );
     }
   }

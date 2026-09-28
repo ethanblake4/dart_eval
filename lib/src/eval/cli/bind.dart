@@ -252,7 +252,9 @@ void cliBindFromConfig(String configPath) async {
         '$defaultImports\n${entry.value}',
         uri: Uri.parse(library.uri),
       );
-      outFile.writeAsStringSync(content);
+      if (!outFile.existsSync() || outFile.readAsStringSync() != content) {
+        outFile.writeAsStringSync(content);
+      }
       print('Generated ${relative(outFile.path, from: projectRoot.path)}');
       numBound++;
     }
@@ -289,7 +291,10 @@ void cliBindFromConfig(String configPath) async {
       '$registryImports\n${entry.value.join('\n')}',
       uri: Uri.parse(entry.key),
     );
-    registryFile.writeAsStringSync(content);
+    if (!registryFile.existsSync() ||
+        registryFile.readAsStringSync() != content) {
+      registryFile.writeAsStringSync(content);
+    }
     print(
       'Generated registry ${relative(registryFile.path, from: projectRoot.path)}',
     );

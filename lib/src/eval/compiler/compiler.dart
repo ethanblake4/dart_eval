@@ -418,6 +418,17 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       _ctx,
       () => _bridgeStaticFunctionIdx++,
     );
+    final referencedNames = <String>{};
+    for (final library in reachableLibraries) {
+      for (final declaration in library.declarations) {
+        final names = DeclarationOrBridge.nameOf(declaration);
+        for (final name in names.isEmpty ? const ['#'] : names) {
+          referencedNames.addAll(
+            discoveredIdentifiers[library]?[name] ?? const {},
+          );
+        }
+      }
+    }
 
     // Populate lookup tables [_topLevelDeclarationsMap],
     // [_instanceDeclarationsMap], and [_topLevelGlobalIndices], and generate
@@ -872,6 +883,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             continue;
           }
           if (member is! MethodDeclaration) continue;
+          if (!member.isOperator &&
+              !referencedNames.contains(member.name.lexeme)) {
+            continue;
+          }
           compileMethodDeclaration(
             member,
             _ctx,
@@ -1255,12 +1270,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (method.isStatic) _assignBridgeIndex(lib, '${type.name}.$name');
     });
     classDef.getters.forEach((name, getter) {
-      if (getter.isStatic)
+      if (getter.isStatic) {
         _assignBridgeIndex(lib, '${type.name}.${MemberName.getter(name).key}');
+      }
     });
     classDef.setters.forEach((name, setter) {
-      if (setter.isStatic)
+      if (setter.isStatic) {
         _assignBridgeIndex(lib, '${type.name}.${MemberName.setter(name).key}');
+      }
     });
     classDef.fields.forEach((name, field) {
       if (field.isStatic) {
@@ -1431,6 +1448,7 @@ _resolveImportsAndExports(
     ],
   );
   final usedDeclarationsForLibrary = <int, Set<String>>{};
+  final libraryById = {for (final l in libraries) libraryIds[l]!: l};
 
   final worklist = <Library>[];
   final importMap = <Library, List<_Import>>{};
@@ -1651,20 +1669,32 @@ _resolveImportsAndExports(
           continue;
         }
         processedImports.add(iid);
-        final lib = uriMap[import.uri]!;
-        // Scan the imported library's declarations: for a prefixed import the
-        // member names live in the prefix's children, not the importer's own
-        // decl list — scanning `result[library]` would never find `p.member`.
-        final decs = result[lib]?.entries.toList();
-        if (decs == null) continue;
+        // Scan names visible through the import. A facade may only export
+        // declarations from other libraries and contain none of its own.
+        final decs = <(String, DeclarationOrBridge)>[];
+        if (import.prefix == null) {
+          for (final entry
+              in result[library]?.entries ??
+                  const <MapEntry<String, DeclarationOrPrefix>>[]) {
+            if (entry.value.declaration case final declaration?) {
+              decs.add((entry.key, declaration));
+            }
+          }
+        } else {
+          for (final entry
+              in result[library]?[import.prefix]?.children?.entries ??
+                  const <MapEntry<String, DeclarationOrBridge>>[]) {
+            decs.add((entry.key, entry.value));
+          }
+        }
         for (final declaration in decs) {
-          if (ids.contains(_accessorBaseName(declaration.key))) {
-            final applyLib =
-                declaration.value.declaration?.sourceLib ?? libraryIds[lib]!;
+          if (ids.contains(_accessorBaseName(declaration.$1))) {
+            final applyLib = declaration.$2.sourceLib;
             applyUsedDeclarations[applyLib] ??= {'main'};
-            applyUsedDeclarations[applyLib]!.add(declaration.key);
-            if (!worklist.contains(lib)) {
-              worklist.add(lib);
+            applyUsedDeclarations[applyLib]!.add(declaration.$1);
+            final owner = libraryById[applyLib]!;
+            if (!worklist.contains(owner)) {
+              worklist.add(owner);
             }
           }
         }
@@ -1755,7 +1785,8 @@ Iterable<Library> _discoverReachableLibraries(
   final libraryGraph = DirectedGraph<Uri>({
     for (final l in libraries)
       l.uri: {
-        for (final import in l.imports) l.uri.resolve(import.uri.stringValue!),
+        for (final import in l.imports)
+          l.uri.resolve(_selectedImportUri(import)),
         for (final export in l.exports) l.uri.resolve(export.uri.stringValue!),
       },
   });
@@ -1794,7 +1825,7 @@ class _Import {
     String? prefix, [
     List<Combinator> combinators = const [],
   ]) {
-    final uri = Uri.parse(import.uri.stringValue!);
+    final uri = Uri.parse(_selectedImportUri(import));
     return _Import(
       base.resolveUri(uri),
       import.prefix?.name,
@@ -1802,6 +1833,23 @@ class _Import {
       import.deferredKeyword != null,
     );
   }
+}
+
+String _selectedImportUri(ImportDirective import) {
+  var uri = import.uri.stringValue!;
+  for (final configuration in import.configurations) {
+    final enabled = switch (configuration.name.toSource()) {
+      'dart.library.io' => const bool.fromEnvironment('dart.library.io'),
+      'dart.library.js_interop' => const bool.fromEnvironment(
+        'dart.library.js_interop',
+      ),
+      _ => false,
+    };
+    if (enabled == (configuration.value?.stringValue != 'false')) {
+      uri = configuration.uri.stringValue!;
+    }
+  }
+  return uri;
 }
 
 /// The named types a class-like declaration places in superinterface position

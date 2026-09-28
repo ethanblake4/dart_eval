@@ -628,12 +628,81 @@ final class CallResolver {
               L.type,
               resolvedMember.ownerDecl!.library,
             );
+      if (isStatic && br is BridgeConstructorDef && bound != null) {
+        final declaration = nominalDeclOf(staticType!);
+        final view = declaration == null
+            ? null
+            : ctx.typeSystem.asInstanceOf(
+                declaration.thisType,
+                nominalDeclOf(bound),
+              );
+        if (view != null) {
+          final inferred = <TypeParameterDef, TypeRef>{};
+          ctx.typeSystem.unify(view, bound, inferred);
+          for (final entry in receiverTypeParameters.entries) {
+            final parameter = (entry.value as TypeParameterTypeRef).parameter;
+            if (inferred[parameter] case final argument?) {
+              bridgeTypeParameters[entry.key] = argument;
+            }
+          }
+        }
+      }
+      final explicitArguments = e.typeArguments?.arguments;
+      if (explicitArguments != null && fd.generics.isNotEmpty) {
+        if (explicitArguments.length != fd.generics.length) {
+          throw CompileError(
+            'Expected ${fd.generics.length} type arguments for ${e.methodName.name}',
+            e,
+          );
+        }
+        final names = fd.generics.keys.toList();
+        for (var index = 0; index < names.length; index++) {
+          bridgeTypeParameters[names[index]] = TypeRef.fromAnnotation(
+            ctx,
+            ctx.library,
+            explicitArguments[index],
+          );
+        }
+      } else if (bound != null && fd.generics.isNotEmpty) {
+        final names = fd.generics.keys.toList();
+        final placeholders = <String, TypeParameterTypeRef>{
+          for (var index = 0; index < names.length; index++)
+            names[index]: TypeParameterTypeRef(
+              ctx.typeParameterDefs.key(
+                TypeParameterOwner(
+                  TypeParameterOwnerKind.callSite,
+                  ctx.library,
+                  e.methodName.name,
+                  e.offset,
+                ),
+                index,
+                names[index],
+              ),
+            ),
+        };
+        final returnPattern = TypeRef.fromBridgeAnnotation(
+          ctx,
+          fd.returns,
+          specifiedType: ownerType,
+          typeParameters: {...receiverTypeParameters, ...placeholders},
+        );
+        final inferred = <TypeParameterDef, TypeRef>{};
+        ctx.typeSystem.unify(returnPattern, bound, inferred);
+        for (final entry in placeholders.entries) {
+          if (inferred[entry.value.parameter] case final argument?) {
+            bridgeTypeParameters[entry.key] = argument;
+          }
+        }
+      }
       final signature = CallSignature.bridge(
         ctx,
         fd,
         returnFallback: CoreTypes.dynamic.ref(ctx),
         owner: ownerType,
-        typeParameters: receiverTypeParameters.cast<String, TypeRef>(),
+        typeParameters: {
+          ...receiverTypeParameters.cast<String, TypeRef>(),
+          ...bridgeTypeParameters,
+        },
       );
       final bridgeTargetName = isStatic
           ? '${staticType!.name}.${ctorNameOf(e.methodName.name)}'
@@ -712,6 +781,21 @@ final class CallResolver {
         argTypes: argsPair.positional.map((a) => a.type).toList(),
         namedArgTypes: argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
       );
+      if (isStatic &&
+          br is BridgeConstructorDef &&
+          staticType is InterfaceTypeRef &&
+          bridgeTypeParameters.isNotEmpty) {
+        mReturnType = staticType.copyWith(
+          arguments: [
+            for (final name in receiverTypeParameters.keys)
+              bridgeTypeParameters[name] ??
+                  (receiverTypeParameters[name] as TypeParameterTypeRef)
+                      .parameter
+                      .bound ??
+                  CoreTypes.dynamic.ref(ctx),
+          ],
+        );
+      }
     } else if (L.type.isSpec(CoreTypes.dynamic)) {
       target = DynamicCall(
         receiver: L.copyIntoFreshSlot(ctx, 'dynamic_receiver'),
@@ -780,8 +864,36 @@ final class CallResolver {
           returnContext: bound,
         );
       } else if (declaration is ConstructorDeclaration && isStatic) {
+        var instantiatedType = staticType!;
+        // A context fills unresolved class arguments; it must not replace
+        // concrete arguments supplied through an alias such as T = C<List<int>>.
+        if (bound != null &&
+            e.typeArguments == null &&
+            staticType is InterfaceTypeRef &&
+            (staticType.arguments.isEmpty ||
+                staticType.arguments.any((arg) => arg.hasInferenceVariables))) {
+          final owner = nominalDeclOf(staticType);
+          final view = owner == null
+              ? null
+              : ctx.typeSystem.asInstanceOf(
+                  owner.thisType,
+                  nominalDeclOf(bound),
+                );
+          if (view != null && owner!.typeParameters.isNotEmpty) {
+            final inferred = <TypeParameterDef, TypeRef>{};
+            ctx.typeSystem.unify(view, bound, inferred);
+            instantiatedType = staticType.copyWith(
+              arguments: [
+                for (var i = 0; i < owner.typeParameters.length; i++)
+                  inferred[owner.typeParameters[i]] ??
+                      owner.defaultTypeArguments[i],
+              ],
+            );
+          }
+        }
         target = ConstructorCall(
-          staticType: staticType!,
+          staticType: staticType,
+          instantiatedType: instantiatedType,
           name: ctorNameOf(e.methodName.name),
           offset: DeferredOrOffset.lookupStatic(
             ctx,
@@ -800,6 +912,7 @@ final class CallResolver {
           source: e,
           returnContext: bound,
         );
+        mReturnType = instantiatedType;
       } else {
         if (!isStatic) throw StateError('Instance call has no resolved target');
         target = StaticCall(
@@ -820,7 +933,7 @@ final class CallResolver {
           returnContext: bound,
         );
       }
-      mReturnType = argsPair.declaredReturn;
+      mReturnType ??= argsPair.declaredReturn;
     }
 
     final numericReturn = resolvedMember is BridgeMember && !isStatic
@@ -1410,6 +1523,8 @@ final class CallResolver {
     TypeRef? sigReturn;
     DeferredOrOffset offset;
     BridgeDeclaration? bridgeDecl;
+    TypeRef? bridgeConstructorType;
+    final bridgeConstructorGenerics = <String, TypeRef>{};
     Declaration? sourceDecl;
     TypeRef? aliasType;
 
@@ -1426,6 +1541,46 @@ final class CallResolver {
         } else if (bridge is BridgeClassDef) {
           bridgeType = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
           sigReturn = bridgeType;
+          final names = bridge.type.generics.keys.toList();
+          final explicit = e.typeArguments?.arguments;
+          if (explicit != null && explicit.length != names.length) {
+            throw CompileError(
+              'Expected ${names.length} type arguments for ${e.methodName.name}',
+              e,
+            );
+          }
+          List<TypeRef>? inferred;
+          if (explicit != null) {
+            inferred = [
+              for (final argument in explicit)
+                TypeRef.fromAnnotation(ctx, ctx.library, argument),
+            ];
+          } else if (bound != null && names.isNotEmpty) {
+            final declaration = nominalDeclOf(bridgeType);
+            final view = declaration == null
+                ? null
+                : ctx.typeSystem.asInstanceOf(
+                    declaration.thisType,
+                    nominalDeclOf(bound),
+                  );
+            if (view != null) {
+              final bindings = <TypeParameterDef, TypeRef>{};
+              ctx.typeSystem.unify(view, bound, bindings);
+              inferred = [
+                for (var i = 0; i < declaration!.typeParameters.length; i++)
+                  bindings[declaration.typeParameters[i]] ??
+                      declaration.defaultTypeArguments[i],
+              ];
+            }
+          }
+          if (inferred != null) {
+            bridgeConstructorType = (bridgeType as InterfaceTypeRef).copyWith(
+              arguments: inferred,
+            );
+            for (var index = 0; index < names.length; index++) {
+              bridgeConstructorGenerics[names[index]] = inferred[index];
+            }
+          }
         } else if (bridge is BridgeEnumDef) {
           bridgeType = TypeRef.fromBridgeTypeRef(ctx, bridge.type);
         }
@@ -1563,6 +1718,7 @@ final class CallResolver {
       final type = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
       callTarget = ConstructorCall(
         staticType: type,
+        instantiatedType: bridgeConstructorType,
         externalIndex:
             ctx.bridgeStaticFunctionIndices[type.file]!['${type.name}.']!,
         classBridge: bridge,
@@ -1572,6 +1728,7 @@ final class CallResolver {
           ctx,
           function,
           returnFallback: CoreTypes.dynamic.ref(ctx),
+          typeParameters: bridgeConstructorGenerics,
         ),
       );
     } else if (bridgeDecl is BridgeFunctionDeclaration) {
@@ -1653,15 +1810,31 @@ final class CallResolver {
         final ctorClassName = ctorDecl is Declaration
             ? declarationName(ctorDecl)
             : null;
-        if (boundChain != null &&
-            e.typeArguments == null &&
-            boundChain.name == ctorClassName) {
-          final contextArgs = interfaceArgumentsOf(boundChain);
-          // Declared parameters pin too — `C(id)` under `List<C<T>>` is
-          // `C<T>`; only unresolved inference vars don't constrain.
-          if (contextArgs.isNotEmpty &&
-              !contextArgs.any((t) => t.hasInferenceVariables)) {
-            inferredCtorArgs = contextArgs;
+        if (boundChain != null && e.typeArguments == null) {
+          final owner = nominalDeclOf(aliasType ?? sigReturn!);
+          final view = owner == null
+              ? null
+              : ctx.typeSystem.asInstanceOf(
+                  owner.thisType,
+                  nominalDeclOf(boundChain),
+                );
+          if (view != null) {
+            final inferred = <TypeParameterDef, TypeRef>{};
+            ctx.typeSystem.unify(view, boundChain, inferred);
+            final contextArgs = [
+              for (final param in owner!.typeParameters)
+                inferred[param] ?? CoreTypes.dynamic.ref(ctx),
+            ];
+            if (contextArgs.isNotEmpty &&
+                !contextArgs.any((t) => t.hasInferenceVariables)) {
+              inferredCtorArgs = contextArgs;
+            }
+          } else if (boundChain.name == ctorClassName) {
+            final contextArgs = interfaceArgumentsOf(boundChain);
+            if (contextArgs.isNotEmpty &&
+                !contextArgs.any((t) => t.hasInferenceVariables)) {
+              inferredCtorArgs = contextArgs;
+            }
           }
         }
         inferredCtorArgs ??= [
@@ -1801,7 +1974,7 @@ void _inferBridgeTypeParameters(
     if (reference != null &&
         (function.generics.containsKey(reference) ||
             inferableNames.contains(reference))) {
-      inferred[reference] = actual;
+      inferred.putIfAbsent(reference, () => actual);
       return;
     }
     final genericFunction = formal.gft;

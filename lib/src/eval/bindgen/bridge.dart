@@ -70,7 +70,7 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
 
         return '''
         @override
-        $returnType ${e.displayName}${e.typeParameters.isEmpty ? '' : '<${e.typeParameters.join(', ')}>'}(${parameterHeader(e.formalParameters, preserveTypes: true)}) {
+        $returnType ${e.isOperator ? 'operator ' : ''}${e.displayName}${e.typeParameters.isEmpty ? '' : '<${e.typeParameters.join(', ')}>'}(${parameterHeader(e.formalParameters, preserveTypes: true)}) {
           final runtime = \$runtime;
           ${returnType is VoidType ? '' : 'return '}${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
             ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.name ?? '')).join(', ')}

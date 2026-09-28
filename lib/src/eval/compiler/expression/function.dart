@@ -175,9 +175,12 @@ Variable compileFunctionExpression(
           ),
           _ => null,
         };
-        final boundReturnType =
-            (bound is FunctionTypeRef ? bound.signature.returnType : null) ??
-            declaredClosureReturnType;
+        final contextualReturn = bound is FunctionTypeRef
+            ? bound.signature.returnType
+            : null;
+        final boundReturnType = contextualReturn?.isTypeParameter == true
+            ? declaredClosureReturnType
+            : contextualReturn ?? declaredClosureReturnType;
         if (b.isGenerator && b.isAsynchronous) {
           throw CompileError(
             'async* generators are not supported',
@@ -409,7 +412,15 @@ Variable compileFunctionExpression(
     final signature = closureType.signature;
     final shouldInfer =
         signature.returnType.isSpec(CoreTypes.dynamic) ||
-        signature.returnType.isTypeParameter;
+        signature.returnType.isTypeParameter ||
+        (interfaceArgumentsOf(
+              signature.returnType,
+            ).any((arg) => arg.isSpec(CoreTypes.dynamic)) &&
+            ctx.typeSystem.asInstanceOf(
+                  inferredClosureReturnType!,
+                  nominalDeclOf(signature.returnType),
+                ) !=
+                null);
     if (shouldInfer) {
       closureType = FunctionTypeRef(
         FunctionSignature(

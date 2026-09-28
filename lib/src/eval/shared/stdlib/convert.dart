@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert/utf.dart';
 
 const convertSource = '''
 final utf8 = Utf8Codec();
+final latin1 = Encoding.getByName('latin1')!;
 final json = JsonCodec();
 final Base64Codec base64Url = Base64Codec.urlSafe();
 final base64 = Base64Codec();

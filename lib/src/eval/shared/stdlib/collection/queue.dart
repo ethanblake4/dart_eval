@@ -26,7 +26,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
-        $DoubleLinkedQueueEntry;
+        $DoubleLinkedQueueEntry,
+        $MapBase;
 
 /// dart_eval wrapper binding for [Queue]
 class $Queue<E> implements $Instance {

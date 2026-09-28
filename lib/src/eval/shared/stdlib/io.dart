@@ -1,5 +1,9 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/directory.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/exceptions.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/http_headers.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/redirect_info.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/socket_connection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/file_system_entity.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/http.dart';
@@ -31,6 +35,12 @@ class DartIoPlugin implements EvalPlugin {
     registry.defineBridgeClass($ProcessStartMode.$declaration);
     $InternetAddress.configureForCompile(registry);
     $InternetAddressType.configureForCompile(registry);
+    $SocketException.configureForCompile(registry);
+    $HttpException.configureForCompile(registry);
+    $OSError.configureForCompile(registry);
+    $HttpHeaders.configureForCompile(registry);
+    $RedirectInfo.configureForCompile(registry);
+    $Socket.configureForCompile(registry);
     registry.addSource($HttpStatusSource());
     registry.addSource(
       DartSource('dart:io', '''
@@ -55,6 +65,12 @@ class DartIoPlugin implements EvalPlugin {
     );
     $InternetAddress.configureForRuntime(runtime);
     $InternetAddressType.configureForRuntime(runtime);
+    $SocketException.configureForRuntime(runtime);
+    $HttpException.configureForRuntime(runtime);
+    $OSError.configureForRuntime(runtime);
+    $HttpHeaders.configureForRuntime(runtime);
+    $RedirectInfo.configureForRuntime(runtime);
+    $Socket.configureForRuntime(runtime);
     $Process.configureForRuntime(runtime);
     $ProcessInfo.configureForRuntime(runtime);
     $ProcessResult.configureForRuntime(runtime);

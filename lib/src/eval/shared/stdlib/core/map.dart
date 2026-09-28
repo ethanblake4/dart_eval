@@ -17,12 +17,13 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:core', 'Map.', _$Map$new);
+    runtime.registerBridgeFuncRegisters('dart:core', 'Map.from', _$Map$from);
+    runtime.registerBridgeFuncRegisters('dart:core', 'Map.of', _$Map$of);
     runtime.registerBridgeFuncRegisters(
       'dart:core',
-      'Map.from',
-      _$Map$from,
+      'Map.fromEntries',
+      _$Map$fromEntries,
     );
-    runtime.registerBridgeFuncRegisters('dart:core', 'Map.of', _$Map$of);
   }
 
   static const $type = BridgeTypeRef(CoreTypes.map);
@@ -69,8 +70,72 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         ),
         isFactory: true,
       ),
+      'fromEntries': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter(
+              'entries',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.mapEntry, [
+                      BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                      BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                    ]),
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+        ),
+        isFactory: true,
+      ),
     },
     methods: {
+      'map': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'K2': BridgeGenericParam(), 'V2': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.map, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('K2')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('V2')),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'transform',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.mapEntry, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('K2')),
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('V2')),
+                      ]),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'key',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                        false,
+                      ),
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
       '[]': BridgeMethodDef(
         BridgeFunctionDef(
           params: [
@@ -437,6 +502,45 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     return $Map.wrap(Map.of(other));
   }
 
+  static $Value? _$Map$fromEntries(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final entries = (r as $Value).$reified as Iterable;
+    return $Map.wrap(
+      Map.fromEntries(
+        entries.map(
+          (entry) => (entry is $Value ? entry.$reified : entry) as MapEntry,
+        ),
+      ),
+    );
+  }
+
+  static const $Function __map = $Function(_map);
+
+  static $Value? _map(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final transform = r as EvalCallable;
+    final mapped = (target!.$reified as Map).map((key, value) {
+      final entry = transform.call(
+        runtime,
+        null,
+        runtime.wrapAlways(key, recursive: true),
+        runtime.wrapAlways(value, recursive: true),
+        2,
+      );
+      return (entry as $Value).$reified as MapEntry;
+    });
+    return $Map.wrap(mapped);
+  }
+
   @override
   final Map<K, V> $value;
 
@@ -445,6 +549,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
+      case 'map':
+        return $Closure(__map.func, this);
       case '[]':
         return $Closure(__indexGet.func, this);
       case '[]=':
@@ -625,8 +731,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     final test = (r as $Value?) as EvalFunction;
     (target!.$value as Map).removeWhere(
       (key, value) =>
-          test.call(runtime, null, key as $Value?, value as $Value?, 2)!
-              .$value as bool,
+          test.call(runtime, null, key as $Value?, value as $Value?, 2)!.$value
+              as bool,
     );
     return null;
   }
@@ -723,7 +829,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   ) {
     final action = (r as $Value?) as EvalFunction;
     (target!.$value as Map).forEach(
-      (key, value) => action.call(runtime, null, key as $Value?, value as $Value?, 2),
+      (key, value) =>
+          action.call(runtime, null, key as $Value?, value as $Value?, 2),
     );
     return null;
   }

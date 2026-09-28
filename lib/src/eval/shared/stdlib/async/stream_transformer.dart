@@ -24,6 +24,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $Zone,
         $StreamSubscription,
         $StreamSink,
+        $EventSink,
         $StreamIterator,
         $StreamTransformer,
         $StreamView,
@@ -35,10 +36,13 @@ import 'package:dart_eval/stdlib/core.dart'
         $Zone,
         $StreamSubscription,
         $StreamSink,
+        $EventSink,
         $StreamIterator,
         $StreamTransformer,
         $StreamView,
         $StreamController;
+
+import 'event_sink.dart';
 
 /// dart_eval wrapper binding for [StreamTransformer]
 class $StreamTransformer<S, T> implements $Instance {
@@ -155,7 +159,7 @@ class $StreamTransformer<S, T> implements $Instance {
                       BridgeParameter(
                         'sink',
                         BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, [
+                          BridgeTypeRef(AsyncTypes.eventSink, [
                             BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
                           ]),
                         ),
@@ -198,7 +202,7 @@ class $StreamTransformer<S, T> implements $Instance {
                       BridgeParameter(
                         'sink',
                         BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, [
+                          BridgeTypeRef(AsyncTypes.eventSink, [
                             BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
                           ]),
                         ),
@@ -225,7 +229,7 @@ class $StreamTransformer<S, T> implements $Instance {
                       BridgeParameter(
                         'sink',
                         BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, [
+                          BridgeTypeRef(AsyncTypes.eventSink, [
                             BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
                           ]),
                         ),
@@ -394,7 +398,7 @@ class $StreamTransformer<S, T> implements $Instance {
                   runtime,
                   null,
                   runtime.wrapAlways(data, recursive: true),
-                  $Object(sink),
+                  $EventSink.wrap(sink),
                   2,
                 );
               },
@@ -408,7 +412,7 @@ class $StreamTransformer<S, T> implements $Instance {
                   null,
                   $Object(error),
                   $StackTrace.wrap(stackTrace),
-                  [$Object(sink)],
+                  [$EventSink.wrap(sink)],
                 );
               },
         handleDone:
@@ -419,7 +423,7 @@ class $StreamTransformer<S, T> implements $Instance {
                 ((c is $Value ? c : null)! as EvalCallable?)?.call(
                   runtime,
                   null,
-                  $Object(sink),
+                  $EventSink.wrap(sink),
                   null,
                   1,
                 );

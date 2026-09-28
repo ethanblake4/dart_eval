@@ -14,13 +14,21 @@ class NetworkPermission implements Permission {
   /// customization is needed, use the default constructor to specify a
   /// RegExp [Pattern] directly.
   factory NetworkPermission.url(String url) {
-    final uri = Uri.parse(url);
+    final uri = Uri.parse(
+      url.contains('://') ||
+              url.startsWith('/') ||
+              url.startsWith('?') ||
+              url.startsWith('#')
+          ? url
+          : '//$url',
+    );
     final schemePattern = uri.scheme == ''
         ? r'[-a-zA-Z0-9@:%._\+~#=]{0,256}'
         : uri.scheme;
     final hostPattern = uri.host == ''
         ? r'[-a-zA-Z0-9@:%._\+~#=]{1,256}'
         : uri.host;
+    final portPattern = uri.hasPort ? ':${uri.port}' : r'(?::[0-9]+)?';
     final pathPattern = uri.path == ''
         ? r'[-a-zA-Z0-9@:%_\+.~&//=]*'
         : uri.path;
@@ -31,7 +39,7 @@ class NetworkPermission implements Permission {
         ? r'[-a-zA-Z0-9@:%_\+.~#?&//=]*'
         : uri.fragment;
     final pattern =
-        '^$schemePattern:?\\/*$hostPattern\\/?$pathPattern\\??$queryPattern\\#?$fragmentPattern\$';
+        '^$schemePattern:?\\/*$hostPattern$portPattern\\/?$pathPattern\\??$queryPattern\\#?$fragmentPattern\$';
     return NetworkPermission(RegExp(pattern));
   }
 

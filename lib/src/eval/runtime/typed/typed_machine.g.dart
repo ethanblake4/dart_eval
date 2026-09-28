@@ -776,10 +776,10 @@ abstract final class TypedMachine {
            c = TypedCollections.newConstSet(runtime);
            continue dispatch;
         case TypedOp.rMapIndexCS:
-           r = (c as Map<Object?, Object?>)[s];
+           r = c is TypedInstance ? TypedInterop.invoke(runtime, c, '[]', 1, s, null) : (c as Map<Object?, Object?>)[s];
            continue dispatch;
         case TypedOp.mapSetCSR:
-           (c as Map<Object?, Object?>)[s] = r;
+           if (c is TypedInstance) { TypedInterop.invoke(runtime, c, '[]=', 2, s, r); } else { (c as Map<Object?, Object?>)[s] = r; }
            continue dispatch;
         case TypedOp.setAddCR:
            (c as Set<Object?>).add(r);

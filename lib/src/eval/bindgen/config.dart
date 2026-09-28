@@ -58,7 +58,8 @@ class BindgenDefaults {
   /// `wrap` | `bridge` | `both` (equivalent to @Bind `wrap`/`bridge`).
   final String mode;
 
-  /// Equivalent to @Bind `implicitSupers`.
+  /// Include inherited members by default. Parameterized direct supertypes
+  /// are also included automatically unless the class overrides this option.
   final bool implicitSupers;
 
   /// When true, `==`, `toString`, `noSuchMethod`, `hashCode` and `runtimeType`

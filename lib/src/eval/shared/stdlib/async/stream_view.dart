@@ -24,6 +24,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Zone,
         $StreamSubscription,
         $StreamSink,
+        $EventSink,
         $StreamIterator,
         $StreamTransformer,
         $StreamView,
@@ -35,12 +36,14 @@ import 'package:dart_eval/stdlib/async.dart'
         $Zone,
         $StreamSubscription,
         $StreamSink,
+        $EventSink,
         $StreamIterator,
         $StreamTransformer,
         $StreamView,
         $StreamController;
 
 import 'stream_subscription.dart';
+import 'event_sink.dart';
 
 /// dart_eval wrapper binding for [StreamView]
 class $StreamView<T> implements $Instance {
@@ -1120,7 +1123,7 @@ class $StreamView<T> implements $Instance {
                       BridgeParameter(
                         'sink',
                         BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, [
+                          BridgeTypeRef(AsyncTypes.eventSink, [
                             BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
                           ]),
                         ),
@@ -2098,7 +2101,7 @@ class $StreamView<T> implements $Instance {
               ((s is $Value ? s : null)! as EvalCallable?)?.call(
                 runtime,
                 null,
-                $Object(sink),
+                $EventSink.wrap(sink),
                 null,
                 1,
               );

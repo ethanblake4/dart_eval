@@ -163,6 +163,9 @@ class AsyncTypes {
   /// Bridge spec for [Completer].
   static const completer = BridgeTypeSpec('dart:async', 'Completer');
 
+  /// Bridge spec for [EventSink].
+  static const eventSink = BridgeTypeSpec('dart:async', 'EventSink');
+
   /// Bridge spec for [StreamController].
   static const streamController = BridgeTypeSpec(
     'dart:async',
@@ -249,6 +252,12 @@ class CollectionTypes {
 
   /// Bridge spec for [SetBase].
   static const setBase = BridgeTypeSpec('dart:collection', 'SetBase');
+
+  /// Bridge spec for [UnmodifiableMapView].
+  static const unmodifiableMapView = BridgeTypeSpec(
+    'dart:collection',
+    'UnmodifiableMapView',
+  );
 }
 
 /// Bridge type specs for `dart:convert`.
@@ -346,6 +355,12 @@ class IoTypes {
     'HttpClientResponse',
   );
 
+  /// Bridge spec for [HttpException].
+  static const httpException = BridgeTypeSpec('dart:io', 'HttpException');
+
+  /// Bridge spec for [HttpHeaders].
+  static const httpHeaders = BridgeTypeSpec('dart:io', 'HttpHeaders');
+
   /// Bridge spec for [HttpStatus].
   static const httpStatus = BridgeTypeSpec('dart:io', 'HttpStatus');
 
@@ -361,6 +376,9 @@ class IoTypes {
   /// Bridge spec for [IOSink].
   static const ioSink = BridgeTypeSpec('dart:io', 'IOSink');
 
+  /// Bridge spec for [OSError].
+  static const osError = BridgeTypeSpec('dart:io', 'OSError');
+
   /// Bridge spec for [Process].
   static const process = BridgeTypeSpec('dart:io', 'Process');
 
@@ -375,6 +393,15 @@ class IoTypes {
 
   /// Bridge spec for [ProcessStartMode].
   static const processStartMode = BridgeTypeSpec('dart:io', 'ProcessStartMode');
+
+  /// Bridge spec for [RedirectInfo].
+  static const redirectInfo = BridgeTypeSpec('dart:io', 'RedirectInfo');
+
+  /// Bridge spec for [Socket].
+  static const socket = BridgeTypeSpec('dart:io', 'Socket');
+
+  /// Bridge spec for [SocketException].
+  static const socketException = BridgeTypeSpec('dart:io', 'SocketException');
 }
 
 /// Bridge type specs for `dart:math`.
@@ -396,6 +423,9 @@ class TypedDataTypes {
 
   /// Bridge spec for [TypedData].
   static const typedData = BridgeTypeSpec('dart:typed_data', 'TypedData');
+
+  /// Bridge spec for [Uint32List].
+  static const uint32List = BridgeTypeSpec('dart:typed_data', 'Uint32List');
 
   /// Bridge spec for [Uint8List].
   static const uint8List = BridgeTypeSpec('dart:typed_data', 'Uint8List');

@@ -20,8 +20,10 @@ enum PatternBindContext { none, declare, declareFinal, matching }
 /// The names a pattern binds — [declared] selects declared variables (fresh
 /// bindings, e.g. `var (a, b) = ...`) vs assigned variables (writes to
 /// existing locals, e.g. `(a, b) = ...`).
-Iterable<String> patternBoundNames(AstNode pattern, {required bool declared})
-    sync* {
+Iterable<String> patternBoundNames(
+  AstNode pattern, {
+  required bool declared,
+}) sync* {
   switch (pattern) {
     case DeclaredVariablePattern pat:
       if (declared && pat.name.lexeme != '_') yield pat.name.lexeme;
@@ -32,7 +34,9 @@ Iterable<String> patternBoundNames(AstNode pattern, {required bool declared})
         (f) => patternBoundNames(f.pattern, declared: declared),
       );
     case ListPattern pat:
-      yield* pat.elements.expand((e) => patternBoundNames(e, declared: declared));
+      yield* pat.elements.expand(
+        (e) => patternBoundNames(e, declared: declared),
+      );
     case ParenthesizedPattern pat:
       yield* patternBoundNames(pat.pattern, declared: declared);
     case LogicalOrPattern pat:
@@ -259,10 +263,13 @@ Variable patternMatchAndBind(
       if (Abi.unboxedAcrossCalls(V.type).isBoxed) {
         V = V.boxIfNeeded(ctx);
       }
+      final bindingType = pat is DeclaredVariablePattern && pat.type != null
+          ? TypeRef.fromAnnotation(ctx, ctx.library, pat.type!)
+          : V.type;
       final v = Variable.ssa(
         ctx,
         Assign(ctx.svar(variableName), V.ssa),
-        V.type,
+        bindingType,
         rep: V.rep,
       );
       if (bindsVariable) ctx.setLocal(variableName, v, isFinal: isFinal);
@@ -302,17 +309,16 @@ Variable patternMatchAndBind(
       return CallResolver(ctx).invokeOperator(left, '&&', [right]).result;
     case ObjectPattern pat:
       var result = _typeTest(ctx, pat.type, V);
+      final matchedType = TypeRef.fromAnnotation(ctx, ctx.library, pat.type);
+      final matchedValue = V.copyWith(type: matchedType);
       for (final field in pat.fields) {
         // `(:var x)` shorthand: the getter name is the pattern's own name.
         final propName =
-            field.name?.name?.lexeme ??
-            (field.pattern is VariablePattern
-                ? (field.pattern as VariablePattern).name.lexeme
-                : null);
+            field.name?.name?.lexeme ?? _shorthandPatternName(field.pattern);
         if (propName == null) {
           throw CompileError('Object pattern field requires a name', field);
         }
-        final fieldValue = GetTarget.read(ctx, V, propName);
+        final fieldValue = GetTarget.read(ctx, matchedValue, propName);
         final fieldResult = patternMatchAndBind(
           ctx,
           field.pattern,
@@ -352,10 +358,29 @@ Variable patternMatchAndBind(
         V,
         patternContext: patternContext,
       );
+    case NullCheckPattern pat:
+      final nonNull = CallResolver(
+        ctx,
+      ).invokeOperator(V, '!=', [BuiltinValue().push(ctx)]).result;
+      final matched = patternMatchAndBind(
+        ctx,
+        pat.pattern,
+        V.copyWith(type: V.type.withNullable(false)),
+        patternContext: patternContext,
+      );
+      return CallResolver(ctx).invokeOperator(nonNull, '&&', [matched]).result;
     default:
       throw CompileError('Unsupported pattern type: ${pattern.runtimeType}');
   }
 }
+
+String? _shorthandPatternName(DartPattern pattern) => switch (pattern) {
+  VariablePattern(:final name) => name.lexeme,
+  NullCheckPattern(:final pattern) ||
+  NullAssertPattern(:final pattern) ||
+  ParenthesizedPattern(:final pattern) => _shorthandPatternName(pattern),
+  _ => null,
+};
 
 Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
   final slot = patType != null

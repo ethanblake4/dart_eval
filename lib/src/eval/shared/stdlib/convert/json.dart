@@ -33,9 +33,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
-
-import 'codec.dart';
-
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -55,500 +52,7 @@ import 'package:dart_eval/stdlib/async.dart'
 
 import 'converter.dart';
 import 'chunked_conversion.dart';
-
-/// dart_eval wrapper binding for [JsonCodec]
-class $JsonCodec implements $Instance {
-  /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
-  static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFuncRegisters(
-      'dart:convert',
-      'JsonCodec.',
-      $JsonCodec.$new,
-    );
-
-    runtime.registerBridgeFuncRegisters(
-      'dart:convert',
-      'JsonCodec.withReviver',
-      $JsonCodec.$withReviver,
-    );
-  }
-
-  /// Configure this class for use during compilation
-  static void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeClass($declaration);
-  }
-
-  /// Compile-time type specification of [$JsonCodec]
-  static const $spec = BridgeTypeSpec('dart:convert', 'JsonCodec');
-
-  /// Compile-time type declaration of [$JsonCodec]
-  static const $type = BridgeTypeRef($spec);
-
-  /// Compile-time class declaration of [$JsonCodec]
-  static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-
-      $implements: [
-        BridgeTypeRef(ConvertTypes.codec, [
-          BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.object, []),
-            nullable: true,
-          ),
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-        ]),
-      ],
-    ),
-    constructors: {
-      '': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [
-            BridgeParameter(
-              'reviver',
-              BridgeTypeAnnotation(
-                BridgeTypeRef.genericFunction(
-                  BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.object, []),
-                      nullable: true,
-                    ),
-                    params: [
-                      BridgeParameter(
-                        'key',
-                        BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, []),
-                          nullable: true,
-                        ),
-                        false,
-                      ),
-
-                      BridgeParameter(
-                        'value',
-                        BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, []),
-                          nullable: true,
-                        ),
-                        false,
-                      ),
-                    ],
-                    namedParams: [],
-                  ),
-                ),
-                nullable: true,
-              ),
-              true,
-            ),
-
-            BridgeParameter(
-              'toEncodable',
-              BridgeTypeAnnotation(
-                BridgeTypeRef.genericFunction(
-                  BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.object, []),
-                      nullable: true,
-                    ),
-                    params: [
-                      BridgeParameter(
-                        'null',
-                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
-                        false,
-                      ),
-                    ],
-                    namedParams: [],
-                  ),
-                ),
-                nullable: true,
-              ),
-              true,
-            ),
-          ],
-          params: [],
-        ),
-        isFactory: false,
-      ),
-
-      'withReviver': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'reviver',
-              BridgeTypeAnnotation(
-                BridgeTypeRef.genericFunction(
-                  BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.dynamic),
-                    ),
-                    params: [
-                      BridgeParameter(
-                        'key',
-                        BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, []),
-                          nullable: true,
-                        ),
-                        false,
-                      ),
-
-                      BridgeParameter(
-                        'value',
-                        BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, []),
-                          nullable: true,
-                        ),
-                        false,
-                      ),
-                    ],
-                    namedParams: [],
-                  ),
-                ),
-              ),
-              false,
-            ),
-          ],
-        ),
-        isFactory: false,
-      ),
-    },
-
-    methods: {
-      'encode': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-          namedParams: [
-            BridgeParameter(
-              'toEncodable',
-              BridgeTypeAnnotation(
-                BridgeTypeRef.genericFunction(
-                  BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.object, []),
-                      nullable: true,
-                    ),
-                    params: [
-                      BridgeParameter(
-                        'object',
-                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
-                        false,
-                      ),
-                    ],
-                    namedParams: [],
-                  ),
-                ),
-                nullable: true,
-              ),
-              true,
-            ),
-          ],
-          params: [
-            BridgeParameter(
-              'value',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, []),
-                nullable: true,
-              ),
-              false,
-            ),
-          ],
-        ),
-      ),
-
-      'decode': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
-          namedParams: [
-            BridgeParameter(
-              'reviver',
-              BridgeTypeAnnotation(
-                BridgeTypeRef.genericFunction(
-                  BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.object, []),
-                      nullable: true,
-                    ),
-                    params: [
-                      BridgeParameter(
-                        'key',
-                        BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, []),
-                          nullable: true,
-                        ),
-                        false,
-                      ),
-
-                      BridgeParameter(
-                        'value',
-                        BridgeTypeAnnotation(
-                          BridgeTypeRef(CoreTypes.object, []),
-                          nullable: true,
-                        ),
-                        false,
-                      ),
-                    ],
-                    namedParams: [],
-                  ),
-                ),
-                nullable: true,
-              ),
-              true,
-            ),
-          ],
-          params: [
-            BridgeParameter(
-              'source',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-              false,
-            ),
-          ],
-        ),
-      ),
-
-      'fuse': BridgeMethodDef(
-        BridgeFunctionDef(
-          generics: {'R': BridgeGenericParam()},
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.codec, [
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, []),
-                nullable: true,
-              ),
-              BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
-            ]),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'other',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(ConvertTypes.codec, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-      ),
-    },
-    getters: {
-      'encoder': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.jsonEncoder, []),
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
-      'decoder': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.jsonDecoder, []),
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
-      'inverted': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.codec, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, []),
-                nullable: true,
-              ),
-            ]),
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-    },
-    setters: {},
-    fields: {},
-    wrap: true,
-    bridge: false,
-  );
-
-  /// Wrapper for the [JsonCodec.new] constructor
-  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $JsonCodec.wrap(
-      JsonCodec(
-        reviver:
-            (r is $Value ? r : null) == null ||
-                (r is $Value ? r : null) is $null
-            ? null
-            : (Object? key, Object? value) {
-                return ((r is $Value ? r : null)! as EvalCallable?)
-                    ?.call(
-                      runtime,
-                      null,
-                      (key == null ? const $null() : $Object(key)),
-                      (value == null ? const $null() : $Object(value)),
-                      2,
-                    )
-                    ?.$value;
-              },
-        toEncodable:
-            (s is $Value ? s : null) == null ||
-                (s is $Value ? s : null) is $null
-            ? null
-            : (dynamic arg0) {
-                return ((s is $Value ? s : null)! as EvalCallable?)
-                    ?.call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(arg0, recursive: true),
-                      null,
-                      1,
-                    )
-                    ?.$value;
-              },
-      ),
-    );
-  }
-
-  /// Wrapper for the [JsonCodec.withReviver] constructor
-  static $Value? $withReviver(
-    Runtime runtime,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    return $JsonCodec.wrap(
-      JsonCodec.withReviver((Object? key, Object? value) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          (key == null ? const $null() : $Object(key)),
-          (value == null ? const $null() : $Object(value)),
-          2,
-        )?.$value;
-      }),
-    );
-  }
-
-  final $Instance _superclass;
-
-  @override
-  final JsonCodec $value;
-
-  @override
-  JsonCodec get $reified => $value;
-
-  /// Wrap a [JsonCodec] in a [$JsonCodec]
-  $JsonCodec.wrap(this.$value) : _superclass = $Object($value);
-
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
-
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'encoder':
-        final _encoder = $value.encoder;
-        return $JsonEncoder.wrap(_encoder);
-      case 'decoder':
-        final _decoder = $value.decoder;
-        return $JsonDecoder.wrap(_decoder);
-      case 'inverted':
-        final _inverted = $value.inverted;
-        return $Codec.wrap(_inverted);
-      case 'encode':
-        return $Closure(__encode.func, this);
-
-      case 'decode':
-        return $Closure(__decode.func, this);
-
-      case 'fuse':
-        return $Closure(__fuse.func, this);
-    }
-    return _superclass.$getProperty(runtime, identifier);
-  }
-
-  static const $Function __encode = $Function(_encode);
-  static $Value? _encode(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $JsonCodec;
-    final result = self.$value.encode(
-      (r as $Value?)!.$reified,
-      toEncodable:
-          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
-          ? null
-          : (dynamic object) {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    runtime.wrapAlways(object, recursive: true),
-                    null,
-                    1,
-                  )
-                  ?.$value;
-            },
-    );
-    return $String(result);
-  }
-
-  static const $Function __decode = $Function(_decode);
-  static $Value? _decode(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $JsonCodec;
-    final result = self.$value.decode(
-      (r as $String).$value,
-      reviver:
-          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
-          ? null
-          : (Object? key, Object? value) {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    (key == null ? const $null() : $Object(key)),
-                    (value == null ? const $null() : $Object(value)),
-                    2,
-                  )
-                  ?.$value;
-            },
-    );
-    return runtime.wrapAlways(result, recursive: true);
-  }
-
-  static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $JsonCodec;
-    final result = self.$value.fuse((r as $Value?)!.$value);
-    return $Codec.wrap(result);
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return _superclass.$setProperty(runtime, identifier, value);
-  }
-}
+import 'codec.dart';
 
 /// dart_eval wrapper binding for [JsonEncoder]
 class $JsonEncoder implements $Instance {
@@ -1296,6 +800,500 @@ class $JsonDecoder implements $Instance {
     final self = target! as $JsonDecoder;
     final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
     return $Object(result);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
+
+/// dart_eval wrapper binding for [JsonCodec]
+class $JsonCodec implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:convert',
+      'JsonCodec.',
+      $JsonCodec.$new,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:convert',
+      'JsonCodec.withReviver',
+      $JsonCodec.$withReviver,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$JsonCodec]
+  static const $spec = BridgeTypeSpec('dart:convert', 'JsonCodec');
+
+  /// Compile-time type declaration of [$JsonCodec]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$JsonCodec]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+
+      $implements: [
+        BridgeTypeRef(ConvertTypes.codec, [
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object, []),
+            nullable: true,
+          ),
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+        ]),
+      ],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [
+            BridgeParameter(
+              'reviver',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.object, []),
+                      nullable: true,
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'key',
+                        BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.object, []),
+                          nullable: true,
+                        ),
+                        false,
+                      ),
+
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.object, []),
+                          nullable: true,
+                        ),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'toEncodable',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.object, []),
+                      nullable: true,
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'null',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [],
+        ),
+        isFactory: false,
+      ),
+
+      'withReviver': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'reviver',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.dynamic),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'key',
+                        BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.object, []),
+                          nullable: true,
+                        ),
+                        false,
+                      ),
+
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.object, []),
+                          nullable: true,
+                        ),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {
+      'encode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [
+            BridgeParameter(
+              'toEncodable',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.object, []),
+                      nullable: true,
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'object',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'decode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+          namedParams: [
+            BridgeParameter(
+              'reviver',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.object, []),
+                      nullable: true,
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'key',
+                        BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.object, []),
+                          nullable: true,
+                        ),
+                        false,
+                      ),
+
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.object, []),
+                          nullable: true,
+                        ),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'source',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'fuse': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'R': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.codec, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(ConvertTypes.codec, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+    },
+    getters: {
+      'encoder': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.jsonEncoder, []),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'decoder': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.jsonDecoder, []),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'inverted': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.codec, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [JsonCodec.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $JsonCodec.wrap(
+      JsonCodec(
+        reviver:
+            (r is $Value ? r : null) == null ||
+                (r is $Value ? r : null) is $null
+            ? null
+            : (Object? key, Object? value) {
+                return ((r is $Value ? r : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      (key == null ? const $null() : $Object(key)),
+                      (value == null ? const $null() : $Object(value)),
+                      2,
+                    )
+                    ?.$value;
+              },
+        toEncodable:
+            (s is $Value ? s : null) == null ||
+                (s is $Value ? s : null) is $null
+            ? null
+            : (dynamic arg0) {
+                return ((s is $Value ? s : null)! as EvalCallable?)
+                    ?.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(arg0, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
+              },
+      ),
+    );
+  }
+
+  /// Wrapper for the [JsonCodec.withReviver] constructor
+  static $Value? $withReviver(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $JsonCodec.wrap(
+      JsonCodec.withReviver((Object? key, Object? value) {
+        return ((r as $Value?)! as EvalCallable)(
+          runtime,
+          null,
+          (key == null ? const $null() : $Object(key)),
+          (value == null ? const $null() : $Object(value)),
+          2,
+        )?.$value;
+      }),
+    );
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final JsonCodec $value;
+
+  @override
+  JsonCodec get $reified => $value;
+
+  /// Wrap a [JsonCodec] in a [$JsonCodec]
+  $JsonCodec.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'encoder':
+        final _encoder = $value.encoder;
+        return $JsonEncoder.wrap(_encoder);
+      case 'decoder':
+        final _decoder = $value.decoder;
+        return $JsonDecoder.wrap(_decoder);
+      case 'inverted':
+        final _inverted = $value.inverted;
+        return $Codec.wrap(_inverted);
+      case 'encode':
+        return $Closure(__encode.func, this);
+
+      case 'decode':
+        return $Closure(__decode.func, this);
+
+      case 'fuse':
+        return $Closure(__fuse.func, this);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __encode = $Function(_encode);
+  static $Value? _encode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $JsonCodec;
+    final result = self.$value.encode(
+      (r as $Value?)!.$reified,
+      toEncodable:
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
+          ? null
+          : (dynamic object) {
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(
+                    runtime,
+                    null,
+                    runtime.wrapAlways(object, recursive: true),
+                    null,
+                    1,
+                  )
+                  ?.$value;
+            },
+    );
+    return $String(result);
+  }
+
+  static const $Function __decode = $Function(_decode);
+  static $Value? _decode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $JsonCodec;
+    final result = self.$value.decode(
+      (r as $String).$value,
+      reviver:
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
+          ? null
+          : (Object? key, Object? value) {
+              return ((s is $Value ? s : null)! as EvalCallable?)
+                  ?.call(
+                    runtime,
+                    null,
+                    (key == null ? const $null() : $Object(key)),
+                    (value == null ? const $null() : $Object(value)),
+                    2,
+                  )
+                  ?.$value;
+            },
+    );
+    return runtime.wrapAlways(result, recursive: true);
+  }
+
+  static const $Function __fuse = $Function(_fuse);
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $JsonCodec;
+    final result = self.$value.fuse((r as $Value?)!.$value);
+    return $Codec.wrap(result);
   }
 
   @override

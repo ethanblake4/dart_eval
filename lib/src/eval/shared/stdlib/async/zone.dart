@@ -24,6 +24,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Zone,
         $StreamSubscription,
         $StreamSink,
+        $EventSink,
         $StreamIterator,
         $StreamTransformer,
         $StreamView,

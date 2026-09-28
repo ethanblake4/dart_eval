@@ -41,7 +41,13 @@ class $Point<T extends num> implements $Instance {
 
   /// Compile-time class declaration of [$Point]
   static const $declaration = BridgeClassDef(
-    BridgeClassType($type, generics: {'T': BridgeGenericParam()}),
+    BridgeClassType(
+      $type,
+
+      generics: {
+        'T': BridgeGenericParam($extends: BridgeTypeRef(CoreTypes.num, [])),
+      },
+    ),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(

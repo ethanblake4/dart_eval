@@ -2,6 +2,7 @@
 library;
 
 export '../src/eval/shared/stdlib/async/completer.dart';
+export '../src/eval/shared/stdlib/async/event_sink.dart';
 export '../src/eval/shared/stdlib/async/stream_controller.dart';
 export '../src/eval/shared/stdlib/async/stream.dart';
 export '../src/eval/shared/stdlib/async/stream_sink.dart';

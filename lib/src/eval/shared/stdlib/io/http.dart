@@ -3,6 +3,10 @@ import 'dart:io';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/io_sink.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/http_headers.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/redirect_info.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/socket_connection.dart';
+import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval wrapper for [HttpClient]
@@ -30,6 +34,39 @@ class $HttpClient implements $Instance {
       ),
     },
     methods: {
+      'close': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [
+            BridgeParameter(
+              'force',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+          ],
+        ),
+      ),
+      'openUrl': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpClientRequest)),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'method',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+            BridgeParameter(
+              'url',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
+              false,
+            ),
+          ],
+        ),
+      ),
       'get': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -176,6 +213,10 @@ class $HttpClient implements $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
+      case 'close':
+        return $Closure(__closeClient.func, this);
+      case 'openUrl':
+        return $Closure(__openUrl.func, this);
       case 'get':
         return $Closure(__get.func, this);
       case 'post':
@@ -194,6 +235,40 @@ class $HttpClient implements $Instance {
   }
 
   static const $Function __get = $Function(_get);
+
+  static const $Function __closeClient = $Function(_closeClient);
+
+  static $Value? _closeClient(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    (target!.$value as HttpClient).close(
+      force: (r as $Value?)?.$reified as bool? ?? false,
+    );
+    return null;
+  }
+
+  static const $Function __openUrl = $Function(_openUrl);
+
+  static $Value? _openUrl(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final method = (r as $Value).$reified as String;
+    final url = (s as $Value).$reified as Uri;
+    runtime.assertPermission('network', url.toString());
+    return $Future.wrap(
+      (target!.$value as HttpClient)
+          .openUrl(method, url)
+          .then((value) => $HttpClientRequest.wrap(value)),
+    );
+  }
 
   static $Value? _get(
     Runtime runtime,
@@ -334,6 +409,29 @@ class $HttpClientRequest implements $Instance {
     BridgeClassType($type, isAbstract: true, $implements: [$IOSink.$type]),
     constructors: {},
     methods: {
+      'abort': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'exception',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'stackTrace',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.stackTrace),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
       'close': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -344,9 +442,28 @@ class $HttpClientRequest implements $Instance {
         ),
       ),
     },
-    getters: {},
+    getters: {
+      'headers': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpHeaders)),
+        ),
+      ),
+    },
     setters: {},
-    fields: {},
+    fields: {
+      'followRedirects': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+      ),
+      'maxRedirects': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+      ),
+      'contentLength': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+      ),
+      'persistentConnection': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+      ),
+    },
     wrap: true,
   );
 
@@ -355,6 +472,18 @@ class $HttpClientRequest implements $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
+      case 'abort':
+        return $Closure(__abort.func, this);
+      case 'headers':
+        return $HttpHeaders.wrap($value.headers);
+      case 'followRedirects':
+        return $bool($value.followRedirects);
+      case 'maxRedirects':
+        return $int($value.maxRedirects);
+      case 'contentLength':
+        return $int($value.contentLength);
+      case 'persistentConnection':
+        return $bool($value.persistentConnection);
       case 'close':
         return $Closure(__close.func, this);
       default:
@@ -363,6 +492,22 @@ class $HttpClientRequest implements $Instance {
   }
 
   static const $Function __close = $Function(_close);
+
+  static const $Function __abort = $Function(_abort);
+
+  static $Value? _abort(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    (target!.$value as HttpClientRequest).abort(
+      (r as $Value?)?.$reified,
+      (s as $Value?)?.$reified as StackTrace?,
+    );
+    return null;
+  }
 
   static $Value? _close(
     Runtime runtime,
@@ -385,7 +530,18 @@ class $HttpClientRequest implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    _superclass.$setProperty(runtime, identifier, value);
+    switch (identifier) {
+      case 'followRedirects':
+        $value.followRedirects = value.$reified as bool;
+      case 'maxRedirects':
+        $value.maxRedirects = value.$reified as int;
+      case 'contentLength':
+        $value.contentLength = value.$reified as int;
+      case 'persistentConnection':
+        $value.persistentConnection = value.$reified as bool;
+      default:
+        _superclass.$setProperty(runtime, identifier, value);
+    }
   }
 }
 
@@ -415,8 +571,58 @@ class $HttpClientResponse implements $Instance {
       ]),
     ),
     constructors: {},
-    methods: {},
-    getters: {},
+    methods: {
+      'detachSocket': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.socket)),
+            ]),
+          ),
+        ),
+      ),
+    },
+    getters: {
+      'headers': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(IoTypes.httpHeaders)),
+        ),
+      ),
+      'statusCode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+        ),
+      ),
+      'contentLength': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+        ),
+      ),
+      'isRedirect': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'redirects': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(IoTypes.redirectInfo)),
+            ]),
+          ),
+        ),
+      ),
+      'persistentConnection': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+      ),
+      'reasonPhrase': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+        ),
+      ),
+    },
     setters: {},
     fields: {},
     wrap: true,
@@ -426,8 +632,32 @@ class $HttpClientResponse implements $Instance {
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
-    return _superclass.$getProperty(runtime, identifier);
+    return switch (identifier) {
+      'headers' => $HttpHeaders.wrap($value.headers),
+      'statusCode' => $int($value.statusCode),
+      'contentLength' => $int($value.contentLength),
+      'isRedirect' => $bool($value.isRedirect),
+      'redirects' => wrapList($value.redirects, $RedirectInfo.wrap),
+      'persistentConnection' => $bool($value.persistentConnection),
+      'reasonPhrase' => $String($value.reasonPhrase),
+      'detachSocket' => $Closure(__detachSocket.func, this),
+      _ => _superclass.$getProperty(runtime, identifier),
+    };
   }
+
+  static const $Function __detachSocket = $Function(_detachSocket);
+
+  static $Value? _detachSocket(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $Future.wrap(
+    (target!.$value as HttpClientResponse).detachSocket().then(
+      (socket) => $Socket.wrap(socket),
+    ),
+  );
 
   @override
   get $reified => $value;

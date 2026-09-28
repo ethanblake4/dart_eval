@@ -33,25 +33,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
-
-import 'codec.dart';
-
-import 'package:dart_eval/stdlib/typed_data.dart'
-    hide
-        $Converter,
-        $Codec,
-        $Encoding,
-        $JsonEncoder,
-        $JsonDecoder,
-        $JsonCodec,
-        $Utf8Decoder,
-        $Utf8Codec,
-        $Utf8Encoder,
-        $Base64Encoder,
-        $Base64Decoder,
-        $Base64Codec,
-        $ByteConversionSink,
-        $ChunkedConversionSink;
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -71,6 +52,350 @@ import 'package:dart_eval/stdlib/async.dart'
 
 import 'converter.dart';
 import 'byte_conversion.dart';
+import 'codec.dart';
+
+import 'package:dart_eval/stdlib/typed_data.dart'
+    hide
+        $Converter,
+        $Codec,
+        $Encoding,
+        $JsonEncoder,
+        $JsonDecoder,
+        $JsonCodec,
+        $Utf8Decoder,
+        $Utf8Codec,
+        $Utf8Encoder,
+        $Base64Encoder,
+        $Base64Decoder,
+        $Base64Codec,
+        $ByteConversionSink,
+        $ChunkedConversionSink;
+
+/// dart_eval wrapper binding for [Utf8Decoder]
+class $Utf8Decoder implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:convert',
+      'Utf8Decoder.',
+      $Utf8Decoder.$new,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$Utf8Decoder]
+  static const $spec = BridgeTypeSpec('dart:convert', 'Utf8Decoder');
+
+  /// Compile-time type declaration of [$Utf8Decoder]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$Utf8Decoder]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+
+      $implements: [
+        BridgeTypeRef(ConvertTypes.converter, [
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+        ]),
+        BridgeTypeRef(CoreTypes.object, [
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+        ]),
+        BridgeTypeRef(AsyncTypes.streamTransformer, [
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+        ]),
+      ],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [
+            BridgeParameter(
+              'allowMalformed',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
+            ),
+          ],
+          params: [],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {
+      'bind': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stream, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'stream',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.stream, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.list, [
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                    ]),
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'cast': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'RS': BridgeGenericParam(), 'RT': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('RS')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('RT')),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'convert': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'codeUnits',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+
+      'fuse': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'T': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'next',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(ConvertTypes.converter, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'startChunkedConversion': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.byteConversionSink, []),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'sink',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.sink, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [Utf8Decoder.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Utf8Decoder.wrap(
+      Utf8Decoder(
+        allowMalformed: (r is $Value ? r : null) == null
+            ? false
+            : (r as $bool).$value,
+      ),
+    );
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final Utf8Decoder $value;
+
+  @override
+  Utf8Decoder get $reified => $value;
+
+  /// Wrap a [Utf8Decoder] in a [$Utf8Decoder]
+  $Utf8Decoder.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'bind':
+        return $Closure(__bind.func, this);
+
+      case 'cast':
+        return $Closure(__cast.func, this);
+
+      case 'convert':
+        return $Closure(__convert.func, this);
+
+      case 'fuse':
+        return $Closure(__fuse.func, this);
+
+      case 'startChunkedConversion':
+        return $Closure(__startChunkedConversion.func, this);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __bind = $Function(_bind);
+  static $Value? _bind(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Utf8Decoder;
+    final result = self.$value.bind((r as $Value?)!.$value);
+    return $Stream.wrap(result.map((e) => $String(e)));
+  }
+
+  static const $Function __cast = $Function(_cast);
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Utf8Decoder;
+    final result = self.$value.cast();
+    return $Converter.wrap(result);
+  }
+
+  static const $Function __convert = $Function(_convert);
+  static $Value? _convert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Utf8Decoder;
+    final result = self.$value.convert(
+      ((r as $Value?)!.$reified as List).cast<int>(),
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+      (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
+          ?.$value,
+    );
+    return $String(result);
+  }
+
+  static const $Function __fuse = $Function(_fuse);
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Utf8Decoder;
+    final result = self.$value.fuse((r as $Value?)!.$value);
+    return $Converter.wrap(result);
+  }
+
+  static const $Function __startChunkedConversion = $Function(
+    _startChunkedConversion,
+  );
+  static $Value? _startChunkedConversion(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Utf8Decoder;
+    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    return $ByteConversionSink.wrap(result);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
 
 /// dart_eval wrapper binding for [Utf8Codec]
 class $Utf8Codec implements $Instance {
@@ -702,332 +1027,6 @@ class $Utf8Encoder implements $Instance {
     final self = target! as $Utf8Encoder;
     final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
     return $Object(result);
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return _superclass.$setProperty(runtime, identifier, value);
-  }
-}
-
-/// dart_eval wrapper binding for [Utf8Decoder]
-class $Utf8Decoder implements $Instance {
-  /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
-  static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFuncRegisters(
-      'dart:convert',
-      'Utf8Decoder.',
-      $Utf8Decoder.$new,
-    );
-  }
-
-  /// Configure this class for use during compilation
-  static void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeClass($declaration);
-  }
-
-  /// Compile-time type specification of [$Utf8Decoder]
-  static const $spec = BridgeTypeSpec('dart:convert', 'Utf8Decoder');
-
-  /// Compile-time type declaration of [$Utf8Decoder]
-  static const $type = BridgeTypeRef($spec);
-
-  /// Compile-time class declaration of [$Utf8Decoder]
-  static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-
-      $implements: [
-        BridgeTypeRef(ConvertTypes.converter, [
-          BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-            ]),
-          ),
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-        ]),
-        BridgeTypeRef(CoreTypes.object, [
-          BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-            ]),
-          ),
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-        ]),
-        BridgeTypeRef(AsyncTypes.streamTransformer, [
-          BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-            ]),
-          ),
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-        ]),
-      ],
-    ),
-    constructors: {
-      '': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [
-            BridgeParameter(
-              'allowMalformed',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
-              true,
-            ),
-          ],
-          params: [],
-        ),
-        isFactory: false,
-      ),
-    },
-
-    methods: {
-      'bind': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.stream, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-            ]),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'stream',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.stream, [
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.list, [
-                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-                    ]),
-                  ),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-      ),
-
-      'cast': BridgeMethodDef(
-        BridgeFunctionDef(
-          generics: {'RS': BridgeGenericParam(), 'RT': BridgeGenericParam()},
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.converter, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('RS')),
-              BridgeTypeAnnotation(BridgeTypeRef.ref('RT')),
-            ]),
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
-      'convert': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'codeUnits',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-                ]),
-              ),
-              false,
-            ),
-
-            BridgeParameter(
-              'start',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-              true,
-            ),
-
-            BridgeParameter(
-              'end',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.int, []),
-                nullable: true,
-              ),
-              true,
-            ),
-          ],
-        ),
-      ),
-
-      'fuse': BridgeMethodDef(
-        BridgeFunctionDef(
-          generics: {'T': BridgeGenericParam()},
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.converter, [
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-                ]),
-              ),
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
-            ]),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'next',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(ConvertTypes.converter, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-      ),
-
-      'startChunkedConversion': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.byteConversionSink, []),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'sink',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.sink, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-      ),
-    },
-    getters: {},
-    setters: {},
-    fields: {},
-    wrap: true,
-    bridge: false,
-  );
-
-  /// Wrapper for the [Utf8Decoder.new] constructor
-  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $Utf8Decoder.wrap(
-      Utf8Decoder(
-        allowMalformed: (r is $Value ? r : null) == null
-            ? false
-            : (r as $bool).$value,
-      ),
-    );
-  }
-
-  final $Instance _superclass;
-
-  @override
-  final Utf8Decoder $value;
-
-  @override
-  Utf8Decoder get $reified => $value;
-
-  /// Wrap a [Utf8Decoder] in a [$Utf8Decoder]
-  $Utf8Decoder.wrap(this.$value) : _superclass = $Object($value);
-
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
-
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'bind':
-        return $Closure(__bind.func, this);
-
-      case 'cast':
-        return $Closure(__cast.func, this);
-
-      case 'convert':
-        return $Closure(__convert.func, this);
-
-      case 'fuse':
-        return $Closure(__fuse.func, this);
-
-      case 'startChunkedConversion':
-        return $Closure(__startChunkedConversion.func, this);
-    }
-    return _superclass.$getProperty(runtime, identifier);
-  }
-
-  static const $Function __bind = $Function(_bind);
-  static $Value? _bind(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $Utf8Decoder;
-    final result = self.$value.bind((r as $Value?)!.$value);
-    return $Stream.wrap(result.map((e) => $String(e)));
-  }
-
-  static const $Function __cast = $Function(_cast);
-  static $Value? _cast(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $Utf8Decoder;
-    final result = self.$value.cast();
-    return $Converter.wrap(result);
-  }
-
-  static const $Function __convert = $Function(_convert);
-  static $Value? _convert(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $Utf8Decoder;
-    final result = self.$value.convert(
-      ((r as $Value?)!.$reified as List).cast<int>(),
-      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
-      (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
-          ?.$value,
-    );
-    return $String(result);
-  }
-
-  static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $Utf8Decoder;
-    final result = self.$value.fuse((r as $Value?)!.$value);
-    return $Converter.wrap(result);
-  }
-
-  static const $Function __startChunkedConversion = $Function(
-    _startChunkedConversion,
-  );
-  static $Value? _startChunkedConversion(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $Utf8Decoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
-    return $ByteConversionSink.wrap(result);
   }
 
   @override

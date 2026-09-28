@@ -123,53 +123,6 @@ class $RegExp implements $Instance {
     },
 
     methods: {
-      'allMatches': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.iterable, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.regExpMatch, [])),
-            ]),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'input',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-              false,
-            ),
-
-            BridgeParameter(
-              'start',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-              true,
-            ),
-          ],
-        ),
-      ),
-
-      'matchAsPrefix': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.match, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'string',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-              false,
-            ),
-
-            BridgeParameter(
-              'start',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-              true,
-            ),
-          ],
-        ),
-      ),
-
       'escape': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
@@ -198,6 +151,30 @@ class $RegExp implements $Instance {
               'input',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               false,
+            ),
+          ],
+        ),
+      ),
+
+      'allMatches': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.regExpMatch, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'input',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
             ),
           ],
         ),
@@ -317,7 +294,7 @@ class $RegExp implements $Instance {
   RegExp get $reified => $value;
 
   /// Wrap a [RegExp] in a [$RegExp]
-  $RegExp.wrap(this.$value) : _superclass = $Object($value);
+  $RegExp.wrap(this.$value) : _superclass = $Pattern.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
@@ -340,14 +317,11 @@ class $RegExp implements $Instance {
       case 'isDotAll':
         final _isDotAll = $value.isDotAll;
         return $bool(_isDotAll);
-      case 'allMatches':
-        return $Closure(__allMatches.func, this);
-
-      case 'matchAsPrefix':
-        return $Closure(__matchAsPrefix.func, this);
-
       case 'firstMatch':
         return $Closure(__firstMatch.func, this);
+
+      case 'allMatches':
+        return $Closure(__allMatches.func, this);
 
       case 'hasMatch':
         return $Closure(__hasMatch.func, this);
@@ -356,6 +330,19 @@ class $RegExp implements $Instance {
         return $Closure(__stringMatch.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __firstMatch = $Function(_firstMatch);
+  static $Value? _firstMatch(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $RegExp;
+    final result = self.$value.firstMatch((r as $String).$value);
+    return result == null ? const $null() : $RegExpMatch.wrap(result);
   }
 
   static const $Function __allMatches = $Function(_allMatches);
@@ -372,35 +359,6 @@ class $RegExp implements $Instance {
       (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
     );
     return $Iterable.wrap((result).map((e) => $RegExpMatch.wrap(e)));
-  }
-
-  static const $Function __matchAsPrefix = $Function(_matchAsPrefix);
-  static $Value? _matchAsPrefix(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $RegExp;
-    final result = self.$value.matchAsPrefix(
-      (r as $String).$value,
-      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
-    );
-    return result == null ? const $null() : $Match.wrap(result);
-  }
-
-  static const $Function __firstMatch = $Function(_firstMatch);
-  static $Value? _firstMatch(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $RegExp;
-    final result = self.$value.firstMatch((r as $String).$value);
-    return result == null ? const $null() : $RegExpMatch.wrap(result);
   }
 
   static const $Function __hasMatch = $Function(_hasMatch);
@@ -472,65 +430,6 @@ class $RegExpMatch implements $Instance {
     },
 
     methods: {
-      'group': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.string, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'group',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-              false,
-            ),
-          ],
-        ),
-      ),
-
-      '[]': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.string, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'group',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-              false,
-            ),
-          ],
-        ),
-      ),
-
-      'groups': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.string, []),
-                nullable: true,
-              ),
-            ]),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'groupIndices',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-      ),
-
       'namedGroup': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -549,33 +448,13 @@ class $RegExpMatch implements $Instance {
       ),
     },
     getters: {
-      'start': BridgeMethodDef(
+      'groupNames': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
-      'end': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
-      'groupCount': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
-      'input': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+            ]),
+          ),
           namedParams: [],
           params: [],
         ),
@@ -584,18 +463,6 @@ class $RegExpMatch implements $Instance {
       'pattern': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.regExp, [])),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
-      'groupNames': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.iterable, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-            ]),
-          ),
           namedParams: [],
           params: [],
         ),
@@ -616,7 +483,7 @@ class $RegExpMatch implements $Instance {
   RegExpMatch get $reified => $value;
 
   /// Wrap a [RegExpMatch] in a [$RegExpMatch]
-  $RegExpMatch.wrap(this.$value) : _superclass = $Object($value);
+  $RegExpMatch.wrap(this.$value) : _superclass = $Match.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
@@ -624,78 +491,16 @@ class $RegExpMatch implements $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
-      case 'start':
-        final _start = $value.start;
-        return $int(_start);
-      case 'end':
-        final _end = $value.end;
-        return $int(_end);
-      case 'groupCount':
-        final _groupCount = $value.groupCount;
-        return $int(_groupCount);
-      case 'input':
-        final _input = $value.input;
-        return $String(_input);
-      case 'pattern':
-        final _pattern = $value.pattern;
-        return $RegExp.wrap(_pattern);
       case 'groupNames':
         final _groupNames = $value.groupNames;
         return $Iterable.wrap((_groupNames).map((e) => $String(e)));
-      case 'group':
-        return $Closure(__group.func, this);
-
-      case '[]':
-        return $Closure(__operatorIndexGet.func, this);
-
-      case 'groups':
-        return $Closure(__groups.func, this);
-
+      case 'pattern':
+        final _pattern = $value.pattern;
+        return $RegExp.wrap(_pattern);
       case 'namedGroup':
         return $Closure(__namedGroup.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
-  }
-
-  static const $Function __group = $Function(_group);
-  static $Value? _group(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $RegExpMatch;
-    final result = self.$value.group((r as $int).$value);
-    return result == null ? const $null() : $String(result);
-  }
-
-  static const $Function __operatorIndexGet = $Function(_operatorIndexGet);
-  static $Value? _operatorIndexGet(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $RegExpMatch;
-    final result = self.$value[(r as $int).$value];
-    return result == null ? const $null() : $String(result);
-  }
-
-  static const $Function __groups = $Function(_groups);
-  static $Value? _groups(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $RegExpMatch;
-    final result = self.$value.groups(
-      ((r as $Value?)!.$reified as List).cast<int>(),
-    );
-    return $List.view(result, (e) => e == null ? const $null() : $String(e));
   }
 
   static const $Function __namedGroup = $Function(_namedGroup);

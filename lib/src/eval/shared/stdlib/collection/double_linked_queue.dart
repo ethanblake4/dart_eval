@@ -26,7 +26,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
-        $DoubleLinkedQueueEntry;
+        $DoubleLinkedQueueEntry,
+        $MapBase;
 
 import 'queue.dart';
 
@@ -1876,6 +1877,248 @@ class $DoubleLinkedQueue<E> implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
+
+/// dart_eval wrapper binding for [DoubleLinkedQueueEntry]
+class $DoubleLinkedQueueEntry<E> implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:collection',
+      'DoubleLinkedQueueEntry.',
+      $DoubleLinkedQueueEntry.$new,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$DoubleLinkedQueueEntry]
+  static const $spec = BridgeTypeSpec(
+    'dart:collection',
+    'DoubleLinkedQueueEntry',
+  );
+
+  /// Compile-time type declaration of [$DoubleLinkedQueueEntry]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$DoubleLinkedQueueEntry]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType($type, generics: {'E': BridgeGenericParam()}),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'element',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+              false,
+            ),
+          ],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {
+      'append': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'e',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'prepend': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'e',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'remove': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'previousEntry': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'nextEntry': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {
+      'element': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+        isStatic: false,
+      ),
+    },
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [DoubleLinkedQueueEntry.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $DoubleLinkedQueueEntry.wrap(
+      DoubleLinkedQueueEntry((r as $Value?)!.$value),
+    );
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final DoubleLinkedQueueEntry<E> $value;
+
+  @override
+  DoubleLinkedQueueEntry get $reified => $value;
+
+  /// Wrap a [DoubleLinkedQueueEntry] in a [$DoubleLinkedQueueEntry]
+  $DoubleLinkedQueueEntry.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'element':
+        final _element = $value.element;
+        return runtime.wrapAlways(_element, recursive: true);
+      case 'append':
+        return $Closure(__append.func, this);
+
+      case 'prepend':
+        return $Closure(__prepend.func, this);
+
+      case 'remove':
+        return $Closure(__remove.func, this);
+
+      case 'previousEntry':
+        return $Closure(__previousEntry.func, this);
+
+      case 'nextEntry':
+        return $Closure(__nextEntry.func, this);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __append = $Function(_append);
+  static $Value? _append(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $DoubleLinkedQueueEntry;
+    self.$value.append((r as $Value?)!.$value);
+    return null;
+  }
+
+  static const $Function __prepend = $Function(_prepend);
+  static $Value? _prepend(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $DoubleLinkedQueueEntry;
+    self.$value.prepend((r as $Value?)!.$value);
+    return null;
+  }
+
+  static const $Function __remove = $Function(_remove);
+  static $Value? _remove(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $DoubleLinkedQueueEntry;
+    final result = self.$value.remove();
+    return runtime.wrapAlways(result, recursive: true);
+  }
+
+  static const $Function __previousEntry = $Function(_previousEntry);
+  static $Value? _previousEntry(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $DoubleLinkedQueueEntry;
+    final result = self.$value.previousEntry();
+    return result == null ? const $null() : $Object(result);
+  }
+
+  static const $Function __nextEntry = $Function(_nextEntry);
+  static $Value? _nextEntry(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $DoubleLinkedQueueEntry;
+    final result = self.$value.nextEntry();
+    return result == null ? const $null() : $Object(result);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    switch (identifier) {
+      case 'element':
+        $value.element = value.$reified;
+        return;
+    }
     return _superclass.$setProperty(runtime, identifier, value);
   }
 }

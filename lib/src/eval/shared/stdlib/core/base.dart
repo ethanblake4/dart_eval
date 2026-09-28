@@ -483,6 +483,18 @@ class $String implements $Instance {
       ),
     },
     methods: {
+      '*': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'times',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              false,
+            ),
+          ],
+        ),
+      ),
       '+': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
@@ -628,6 +640,38 @@ class $String implements $Instance {
             BridgeParameter(
               'replace',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              false,
+            ),
+          ],
+        ),
+      ),
+      'replaceAllMapped': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'from',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)),
+              false,
+            ),
+            BridgeParameter(
+              'replace',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.string),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'match',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.match)),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               false,
             ),
           ],
@@ -891,6 +935,8 @@ class $String implements $Instance {
         return $bool($value.isNotEmpty);
       case '+':
         return $Closure(__concat.func, this);
+      case '*':
+        return $Closure(__repeat.func, this);
       case '[]':
         return $Closure(__index.func, this);
       case 'codeUnitAt':
@@ -915,6 +961,8 @@ class $String implements $Instance {
         return $Closure(__padRight.func, this);
       case 'replaceAll':
         return $Closure(__replaceAll.func, this);
+      case 'replaceAllMapped':
+        return $Closure(__replaceAllMapped.func, this);
       case 'replaceFirst':
         return $Closure(__replaceFirst.func, this);
       case 'replaceRange':
@@ -1124,7 +1172,36 @@ class $String implements $Instance {
     }
   }
 
+  static const $Function __repeat = $Function(_repeat);
+
+  static $Value? _repeat(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $String((target as $String).$value * ((r as $Value).$reified as int));
+
   static const $Function __replaceAll = $Function(_replaceAll);
+
+  static const $Function __replaceAllMapped = $Function(_replaceAllMapped);
+
+  static $Value? _replaceAllMapped(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final from = (r as $Value).$reified as Pattern;
+    final replace = s as EvalCallable;
+    return $String(
+      (target as $String).$value.replaceAllMapped(from, (match) {
+        final result = replace.call(runtime, null, $Match.wrap(match), null, 1);
+        return (result as $Value).$reified as String;
+      }),
+    );
+  }
 
   static $Value? _replaceAll(
     final Runtime runtime,

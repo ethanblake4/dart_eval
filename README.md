@@ -231,7 +231,12 @@ automatically load these bindings and make them available to your project.
 
 To run the generated EVC file, use:
 
-`dart_eval run program.evc -p package:my_package/main.dart -f main`
+`dart_eval run program.evc -l package:my_package/main.dart -f main`
+
+To allow network requests from the program, add `--permission network`.
+Repeat the option to allow more domains, such as `--permission filesystem`.
+The run command grants access to the whole domain. It also accepts
+`filesystem:read`, `filesystem:write`, `process:run`, and `process:kill`.
 
 Note that the run command does *not* support bindings, so any file compiled
 with bindings will need to be run in a specialized runner that includes the

@@ -127,17 +127,25 @@ extension TypedRuntimeInterop on Runtime {
     if (expected < 0 || expected >= _typeDescriptors.length) return true;
     final expectedDescriptor = _typeDescriptors[expected];
     final expectedNominal = expectedDescriptor[0];
-    if (expectedNominal == _dynamicTypeId ||
-        expectedNominal == _voidTypeId) {
+    if (expectedNominal == _dynamicTypeId || expectedNominal == _voidTypeId) {
       return true;
     }
     if (value == null || value is $null) {
-      return expectedDescriptor[1] == 1 ||
-          expectedNominal == _nullTypeId;
+      return expectedDescriptor[1] == 1 || expectedNominal == _nullTypeId;
     }
     // Every non-null value satisfies Object. Host bridge values may be opaque
     // and unable to report a runtime type, so accept before reifying.
     if (expectedNominal == _objectTypeId) return true;
+    // Generated MapEntry wrappers expose a nominal runtime type. Check their
+    // payload when the destination expects instantiated key/value arguments.
+    if (expectedNominal == lookupType(CoreTypes.mapEntry) &&
+        expectedDescriptor.length >= 4 &&
+        value is $Value &&
+        value.$reified is MapEntry) {
+      final entry = value.$reified as MapEntry;
+      return isTypedValueType(wrapAlways(entry.key), expectedDescriptor[2]) &&
+          isTypedValueType(wrapAlways(entry.value), expectedDescriptor[3]);
+    }
     final actual = (value as $Value).$getRuntimeType(this);
     return _isSubtypeMemoized(actual, expected, null);
   }
@@ -980,11 +988,8 @@ extension TypedRuntimeInterop on Runtime {
         if (actualRow.length == 6 &&
             actualRow[2] == RuntimeTypeDescriptorTag.typeParameter &&
             actualRow[3] < 0) {
-          if (actualRow[3] == renamed &&
-              actualRow[4] == expectedRow[4]) {
-            return actualRow[1] == 0 ||
-                expectedRow[1] == 1 ||
-                nullableExpected;
+          if (actualRow[3] == renamed && actualRow[4] == expectedRow[4]) {
+            return actualRow[1] == 0 || expectedRow[1] == 1 || nullableExpected;
           }
           return _isTypedDescriptorSubtypeInEnvironment(
             actualRow[5],
@@ -1064,8 +1069,7 @@ extension TypedRuntimeInterop on Runtime {
                   expected,
                   actual,
                   callableTypeArguments,
-                  signatureParameterRenames:
-                      signatureParameterRenames,
+                  signatureParameterRenames: signatureParameterRenames,
                 )) {
               return true;
             }
@@ -1102,8 +1106,7 @@ extension TypedRuntimeInterop on Runtime {
               expected,
               actualOwnerType,
               callableTypeArguments,
-              signatureParameterRenames:
-                  signatureParameterRenames,
+              signatureParameterRenames: signatureParameterRenames,
             )) {
           return true;
         }
@@ -1213,6 +1216,7 @@ extension TypedRuntimeInterop on Runtime {
           ) ??
           type;
     }
+
     for (var i = 0; i < targetParameters; i++) {
       final sourceBound = source[9 + i], targetBound = target[9 + i];
       if (!_isTypedDescriptorSubtypeInEnvironment(
@@ -1337,8 +1341,7 @@ extension TypedRuntimeInterop on Runtime {
     if (sourceDescriptor[0] == _dynamicTypeId) {
       final targetDescriptor = _typeDescriptors[resolvedTarget];
       return targetDescriptor[0] == _dynamicTypeId ||
-          (targetDescriptor[0] == _objectTypeId &&
-              targetDescriptor[1] == 1);
+          (targetDescriptor[0] == _objectTypeId && targetDescriptor[1] == 1);
     }
     return _isTypedDescriptorSubtypeInEnvironment(
       resolvedSource,

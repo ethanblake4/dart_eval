@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/collection/hash_map.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/hash_set.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_map.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_set.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/map_base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/list_queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/typedefs.dart';
@@ -15,7 +16,26 @@ class DartCollectionPlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.addSource(sdkTypedefsSource);
+    registry.addSource(
+      DartSource('dart:collection', '''
+      ${sdkTypedefsSource.stringSource}
+      class UnmodifiableMapView<K, V> implements Map<K, V> {
+        final Map<K, V> _map;
+        UnmodifiableMapView(this._map);
+
+        V? operator [](Object? key) => _map[key];
+        Iterable<K> get keys => _map.keys;
+        Iterable<V> get values => _map.values;
+        Iterable<MapEntry<K, V>> get entries => _map.entries;
+        int get length => _map.length;
+        bool get isEmpty => _map.isEmpty;
+        bool get isNotEmpty => _map.isNotEmpty;
+        bool containsKey(Object? key) => _map.containsKey(key);
+        bool containsValue(Object? value) => _map.containsValue(value);
+        void forEach(void Function(K, V) action) => _map.forEach(action);
+      }
+    '''),
+    );
     $LinkedHashMap.configureForCompile(registry);
     $ListQueue.configureForCompile(registry);
     $Queue.configureForCompile(registry);
@@ -23,6 +43,7 @@ class DartCollectionPlugin implements EvalPlugin {
     $HashMap.configureForCompile(registry);
     $HashSet.configureForCompile(registry);
     $LinkedHashSet.configureForCompile(registry);
+    $MapBase.configureForCompile(registry);
   }
 
   @override
@@ -34,5 +55,6 @@ class DartCollectionPlugin implements EvalPlugin {
     $HashMap.configureForRuntime(runtime);
     $HashSet.configureForRuntime(runtime);
     $LinkedHashSet.configureForRuntime(runtime);
+    $MapBase.configureForRuntime(runtime);
   }
 }

@@ -221,130 +221,6 @@ class $Error implements Error, $Instance {
   StackTrace? get stackTrace => $value.stackTrace;
 }
 
-/// dart_eval wrapper binding for [AssertionError]
-class $AssertionError implements AssertionError, $Instance {
-  /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
-  static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFuncRegisters(
-      'dart:core',
-      'AssertionError.',
-      $AssertionError.$new,
-    );
-  }
-
-  /// Configure this class for use during compilation
-  static void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeClass($declaration);
-  }
-
-  /// Compile-time type specification of [$AssertionError]
-  static const $spec = BridgeTypeSpec('dart:core', 'AssertionError');
-
-  /// Compile-time type declaration of [$AssertionError]
-  static const $type = BridgeTypeRef($spec);
-
-  /// Compile-time class declaration of [$AssertionError]
-  static const $declaration = BridgeClassDef(
-    BridgeClassType($type, $implements: [BridgeTypeRef(CoreTypes.error, [])]),
-    constructors: {
-      '': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'message',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, []),
-                nullable: true,
-              ),
-              true,
-            ),
-          ],
-        ),
-        isFactory: false,
-      ),
-    },
-
-    methods: {},
-    getters: {
-      'stackTrace': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.stackTrace, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-    },
-    setters: {},
-    fields: {
-      'message': BridgeFieldDef(
-        BridgeTypeAnnotation(
-          BridgeTypeRef(CoreTypes.object, []),
-          nullable: true,
-        ),
-        isStatic: false,
-      ),
-    },
-    wrap: true,
-    bridge: false,
-  );
-
-  /// Wrapper for the [AssertionError.new] constructor
-  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $AssertionError.wrap(
-      AssertionError((r is $Value ? r : null)?.$reified),
-    );
-  }
-
-  final $Instance _superclass;
-
-  @override
-  final AssertionError $value;
-
-  @override
-  AssertionError get $reified => $value;
-
-  /// Wrap a [AssertionError] in a [$AssertionError]
-  $AssertionError.wrap(this.$value) : _superclass = $Object($value);
-
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
-
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'stackTrace':
-        final _stackTrace = $value.stackTrace;
-        return _stackTrace == null
-            ? const $null()
-            : $StackTrace.wrap(_stackTrace);
-      case 'message':
-        final _message = $value.message;
-        return _message == null ? const $null() : $Object(_message);
-    }
-    return _superclass.$getProperty(runtime, identifier);
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return _superclass.$setProperty(runtime, identifier, value);
-  }
-
-  @override
-  Object? get message => $value.message;
-
-  @override
-  StackTrace? get stackTrace => $value.stackTrace;
-
-  @override
-  String toString() => $value.toString();
-}
-
 /// dart_eval wrapper binding for [TypeError]
 class $TypeError implements TypeError, $Instance {
   /// Configure this class for use in a [Runtime]
@@ -370,7 +246,13 @@ class $TypeError implements TypeError, $Instance {
 
   /// Compile-time class declaration of [$TypeError]
   static const $declaration = BridgeClassDef(
-    BridgeClassType($type, $implements: [BridgeTypeRef(CoreTypes.error, [])]),
+    BridgeClassType(
+      $type,
+
+      $extends: BridgeTypeRef(CoreTypes.error, []),
+
+      $implements: [BridgeTypeRef(CoreTypes.error, [])],
+    ),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -383,18 +265,7 @@ class $TypeError implements TypeError, $Instance {
     },
 
     methods: {},
-    getters: {
-      'stackTrace': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.stackTrace, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-    },
+    getters: {},
     setters: {},
     fields: {},
     wrap: true,
@@ -415,20 +286,13 @@ class $TypeError implements TypeError, $Instance {
   TypeError get $reified => $value;
 
   /// Wrap a [TypeError] in a [$TypeError]
-  $TypeError.wrap(this.$value) : _superclass = $Object($value);
+  $TypeError.wrap(this.$value) : _superclass = $Error.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'stackTrace':
-        final _stackTrace = $value.stackTrace;
-        return _stackTrace == null
-            ? const $null()
-            : $StackTrace.wrap(_stackTrace);
-    }
     return _superclass.$getProperty(runtime, identifier);
   }
 
@@ -441,33 +305,15 @@ class $TypeError implements TypeError, $Instance {
   StackTrace? get stackTrace => $value.stackTrace;
 }
 
-/// dart_eval wrapper binding for [ArgumentError]
-class $ArgumentError implements ArgumentError, $Instance {
+/// dart_eval wrapper binding for [NoSuchMethodError]
+class $NoSuchMethodError implements NoSuchMethodError, $Instance {
   /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:core',
-      'ArgumentError.',
-      $ArgumentError.$new,
-    );
-
-    runtime.registerBridgeFuncRegisters(
-      'dart:core',
-      'ArgumentError.value',
-      $ArgumentError.$_value,
-    );
-
-    runtime.registerBridgeFuncRegisters(
-      'dart:core',
-      'ArgumentError.notNull',
-      $ArgumentError.$notNull,
-    );
-
-    runtime.registerBridgeFuncRegisters(
-      'dart:core',
-      'ArgumentError.checkNotNull',
-      $ArgumentError.$checkNotNull,
+      'NoSuchMethodError.withInvocation',
+      $NoSuchMethodError.$withInvocation,
     );
   }
 
@@ -476,226 +322,86 @@ class $ArgumentError implements ArgumentError, $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$ArgumentError]
-  static const $spec = BridgeTypeSpec('dart:core', 'ArgumentError');
+  /// Compile-time type specification of [$NoSuchMethodError]
+  static const $spec = BridgeTypeSpec('dart:core', 'NoSuchMethodError');
 
-  /// Compile-time type declaration of [$ArgumentError]
+  /// Compile-time type declaration of [$NoSuchMethodError]
   static const $type = BridgeTypeRef($spec);
 
-  /// Compile-time class declaration of [$ArgumentError]
+  /// Compile-time class declaration of [$NoSuchMethodError]
   static const $declaration = BridgeClassDef(
-    BridgeClassType($type, $implements: [BridgeTypeRef(CoreTypes.error, [])]),
+    BridgeClassType(
+      $type,
+
+      $extends: BridgeTypeRef(CoreTypes.error, []),
+
+      $implements: [BridgeTypeRef(CoreTypes.error, [])],
+    ),
     constructors: {
-      '': BridgeConstructorDef(
+      'withInvocation': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
           namedParams: [],
           params: [
             BridgeParameter(
-              'message',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
-              true,
-            ),
-
-            BridgeParameter(
-              'name',
+              'receiver',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.string, []),
+                BridgeTypeRef(CoreTypes.object, []),
                 nullable: true,
               ),
-              true,
-            ),
-          ],
-        ),
-        isFactory: false,
-      ),
-
-      'value': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'value',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
               false,
             ),
 
             BridgeParameter(
-              'name',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.string, []),
-                nullable: true,
-              ),
-              true,
-            ),
-
-            BridgeParameter(
-              'message',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
-              true,
-            ),
-          ],
-        ),
-        isFactory: false,
-      ),
-
-      'notNull': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'name',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.string, []),
-                nullable: true,
-              ),
-              true,
-            ),
-          ],
-        ),
-        isFactory: false,
-      ),
-    },
-
-    methods: {
-      'checkNotNull': BridgeMethodDef(
-        BridgeFunctionDef(
-          generics: {'T': BridgeGenericParam()},
-          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'argument',
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T'), nullable: true),
+              'invocation',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.invocation, [])),
               false,
             ),
-
-            BridgeParameter(
-              'name',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.string, []),
-                nullable: true,
-              ),
-              true,
-            ),
           ],
         ),
+        isFactory: true,
+      ),
+    },
 
-        isStatic: true,
-      ),
-    },
-    getters: {
-      'stackTrace': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.stackTrace, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-    },
+    methods: {},
+    getters: {},
     setters: {},
-    fields: {
-      'invalidValue': BridgeFieldDef(
-        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
-        isStatic: false,
-      ),
-
-      'name': BridgeFieldDef(
-        BridgeTypeAnnotation(
-          BridgeTypeRef(CoreTypes.string, []),
-          nullable: true,
-        ),
-        isStatic: false,
-      ),
-
-      'message': BridgeFieldDef(
-        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
-        isStatic: false,
-      ),
-    },
+    fields: {},
     wrap: true,
     bridge: false,
   );
 
-  /// Wrapper for the [ArgumentError.new] constructor
-  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $ArgumentError.wrap(
-      ArgumentError(
-        (r is $Value ? r : null)?.$reified,
-        (s is $Value ? s : null)?.$value,
-      ),
-    );
-  }
-
-  /// Wrapper for the [ArgumentError.value] constructor
-  static $Value? $_value(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $ArgumentError.wrap(
-      ArgumentError.value(
-        (r as $Value?)!.$reified,
-        (s is $Value ? s : null)?.$value,
-        (c is $Value ? c : null)?.$reified,
-      ),
-    );
-  }
-
-  /// Wrapper for the [ArgumentError.notNull] constructor
-  static $Value? $notNull(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $ArgumentError.wrap(
-      ArgumentError.notNull((r is $Value ? r : null)?.$value),
-    );
-  }
-
-  /// Wrapper for the [ArgumentError.checkNotNull] method
-  static $Value? $checkNotNull(
+  /// Wrapper for the [NoSuchMethodError.withInvocation] constructor
+  static $Value? $withInvocation(
     Runtime runtime,
     Object? r,
     Object? s,
     Object? c,
   ) {
-    final value = ArgumentError.checkNotNull(
-      (r as $Value?)!.$value,
-      (s is $Value ? s : null)?.$value,
+    return $NoSuchMethodError.wrap(
+      NoSuchMethodError.withInvocation(
+        (r as $Value?)!.$reified,
+        (s as $Value?)!.$value,
+      ),
     );
-    return runtime.wrapAlways(value, recursive: true);
   }
 
   final $Instance _superclass;
 
   @override
-  final ArgumentError $value;
+  final NoSuchMethodError $value;
 
   @override
-  ArgumentError get $reified => $value;
+  NoSuchMethodError get $reified => $value;
 
-  /// Wrap a [ArgumentError] in a [$ArgumentError]
-  $ArgumentError.wrap(this.$value) : _superclass = $Object($value);
+  /// Wrap a [NoSuchMethodError] in a [$NoSuchMethodError]
+  $NoSuchMethodError.wrap(this.$value) : _superclass = $Error.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'stackTrace':
-        final _stackTrace = $value.stackTrace;
-        return _stackTrace == null
-            ? const $null()
-            : $StackTrace.wrap(_stackTrace);
-      case 'invalidValue':
-        final _invalidValue = $value.invalidValue;
-        return runtime.wrapAlways(_invalidValue, recursive: true);
-      case 'name':
-        final _name = $value.name;
-        return _name == null ? const $null() : $String(_name);
-      case 'message':
-        final _message = $value.message;
-        return runtime.wrapAlways(_message, recursive: true);
-    }
     return _superclass.$getProperty(runtime, identifier);
   }
 
@@ -703,15 +409,6 @@ class $ArgumentError implements ArgumentError, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     return _superclass.$setProperty(runtime, identifier, value);
   }
-
-  @override
-  dynamic get invalidValue => $value.invalidValue;
-
-  @override
-  String? get name => $value.name;
-
-  @override
-  dynamic get message => $value.message;
 
   @override
   StackTrace? get stackTrace => $value.stackTrace;
@@ -789,6 +486,8 @@ class $RangeError implements RangeError, $Instance {
   static const $declaration = BridgeClassDef(
     BridgeClassType(
       $type,
+
+      $extends: BridgeTypeRef(CoreTypes.argumentError, []),
 
       $implements: [
         BridgeTypeRef(CoreTypes.argumentError, []),
@@ -1143,33 +842,9 @@ class $RangeError implements RangeError, $Instance {
           params: [],
         ),
       ),
-
-      'stackTrace': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.stackTrace, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
     },
     setters: {},
     fields: {
-      'name': BridgeFieldDef(
-        BridgeTypeAnnotation(
-          BridgeTypeRef(CoreTypes.string, []),
-          nullable: true,
-        ),
-        isStatic: false,
-      ),
-
-      'message': BridgeFieldDef(
-        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
-        isStatic: false,
-      ),
-
       'start': BridgeFieldDef(
         BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num, []), nullable: true),
         isStatic: false,
@@ -1323,7 +998,7 @@ class $RangeError implements RangeError, $Instance {
   RangeError get $reified => $value;
 
   /// Wrap a [RangeError] in a [$RangeError]
-  $RangeError.wrap(this.$value) : _superclass = $Object($value);
+  $RangeError.wrap(this.$value) : _superclass = $ArgumentError.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
@@ -1331,26 +1006,15 @@ class $RangeError implements RangeError, $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
-      case 'stackTrace':
-        final _stackTrace = $value.stackTrace;
-        return _stackTrace == null
-            ? const $null()
-            : $StackTrace.wrap(_stackTrace);
-      case 'invalidValue':
-        final _invalidValue = $value.invalidValue;
-        return _invalidValue == null ? const $null() : $num(_invalidValue);
-      case 'name':
-        final _name = $value.name;
-        return _name == null ? const $null() : $String(_name);
-      case 'message':
-        final _message = $value.message;
-        return runtime.wrapAlways(_message, recursive: true);
       case 'start':
         final _start = $value.start;
         return _start == null ? const $null() : $num(_start);
       case 'end':
         final _end = $value.end;
         return _end == null ? const $null() : $num(_end);
+      case 'invalidValue':
+        final _invalidValue = $value.invalidValue;
+        return _invalidValue == null ? const $null() : $num(_invalidValue);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -1382,15 +1046,15 @@ class $RangeError implements RangeError, $Instance {
   String toString() => $value.toString();
 }
 
-/// dart_eval wrapper binding for [NoSuchMethodError]
-class $NoSuchMethodError implements NoSuchMethodError, $Instance {
+/// dart_eval wrapper binding for [AssertionError]
+class $AssertionError implements AssertionError, $Instance {
   /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:core',
-      'NoSuchMethodError.withInvocation',
-      $NoSuchMethodError.$withInvocation,
+      'AssertionError.',
+      $AssertionError.$new,
     );
   }
 
@@ -1399,85 +1063,74 @@ class $NoSuchMethodError implements NoSuchMethodError, $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$NoSuchMethodError]
-  static const $spec = BridgeTypeSpec('dart:core', 'NoSuchMethodError');
+  /// Compile-time type specification of [$AssertionError]
+  static const $spec = BridgeTypeSpec('dart:core', 'AssertionError');
 
-  /// Compile-time type declaration of [$NoSuchMethodError]
+  /// Compile-time type declaration of [$AssertionError]
   static const $type = BridgeTypeRef($spec);
 
-  /// Compile-time class declaration of [$NoSuchMethodError]
+  /// Compile-time class declaration of [$AssertionError]
   static const $declaration = BridgeClassDef(
-    BridgeClassType($type, $implements: [BridgeTypeRef(CoreTypes.error, [])]),
+    BridgeClassType(
+      $type,
+
+      $extends: BridgeTypeRef(CoreTypes.error, []),
+
+      $implements: [BridgeTypeRef(CoreTypes.error, [])],
+    ),
     constructors: {
-      'withInvocation': BridgeConstructorDef(
+      '': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
           namedParams: [],
           params: [
             BridgeParameter(
-              'receiver',
+              'message',
               BridgeTypeAnnotation(
                 BridgeTypeRef(CoreTypes.object, []),
                 nullable: true,
               ),
-              false,
-            ),
-
-            BridgeParameter(
-              'invocation',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.invocation, [])),
-              false,
+              true,
             ),
           ],
         ),
-        isFactory: true,
+        isFactory: false,
       ),
     },
 
     methods: {},
-    getters: {
-      'stackTrace': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.stackTrace, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [],
+    getters: {},
+    setters: {},
+    fields: {
+      'message': BridgeFieldDef(
+        BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.object, []),
+          nullable: true,
         ),
+        isStatic: false,
       ),
     },
-    setters: {},
-    fields: {},
     wrap: true,
     bridge: false,
   );
 
-  /// Wrapper for the [NoSuchMethodError.withInvocation] constructor
-  static $Value? $withInvocation(
-    Runtime runtime,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    return $NoSuchMethodError.wrap(
-      NoSuchMethodError.withInvocation(
-        (r as $Value?)!.$reified,
-        (s as $Value?)!.$value,
-      ),
+  /// Wrapper for the [AssertionError.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $AssertionError.wrap(
+      AssertionError((r is $Value ? r : null)?.$reified),
     );
   }
 
   final $Instance _superclass;
 
   @override
-  final NoSuchMethodError $value;
+  final AssertionError $value;
 
   @override
-  NoSuchMethodError get $reified => $value;
+  AssertionError get $reified => $value;
 
-  /// Wrap a [NoSuchMethodError] in a [$NoSuchMethodError]
-  $NoSuchMethodError.wrap(this.$value) : _superclass = $Object($value);
+  /// Wrap a [AssertionError] in a [$AssertionError]
+  $AssertionError.wrap(this.$value) : _superclass = $Error.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
@@ -1485,11 +1138,9 @@ class $NoSuchMethodError implements NoSuchMethodError, $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
-      case 'stackTrace':
-        final _stackTrace = $value.stackTrace;
-        return _stackTrace == null
-            ? const $null()
-            : $StackTrace.wrap(_stackTrace);
+      case 'message':
+        final _message = $value.message;
+        return _message == null ? const $null() : $Object(_message);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -1498,6 +1149,384 @@ class $NoSuchMethodError implements NoSuchMethodError, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     return _superclass.$setProperty(runtime, identifier, value);
   }
+
+  @override
+  Object? get message => $value.message;
+
+  @override
+  StackTrace? get stackTrace => $value.stackTrace;
+
+  @override
+  String toString() => $value.toString();
+}
+
+/// dart_eval wrapper binding for [ArgumentError]
+class $ArgumentError implements ArgumentError, $Instance {
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'ArgumentError.',
+      $ArgumentError.$new,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'ArgumentError.value',
+      $ArgumentError.$_value,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'ArgumentError.notNull',
+      $ArgumentError.$notNull,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'ArgumentError.checkNotNull',
+      $ArgumentError.$checkNotNull,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$ArgumentError]
+  static const $spec = BridgeTypeSpec('dart:core', 'ArgumentError');
+
+  /// Compile-time type declaration of [$ArgumentError]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$ArgumentError]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+
+      $extends: BridgeTypeRef(CoreTypes.error, []),
+
+      $implements: [BridgeTypeRef(CoreTypes.error, [])],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+              true,
+            ),
+
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+        isFactory: false,
+      ),
+
+      'value': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+              false,
+            ),
+
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+              true,
+            ),
+          ],
+        ),
+        isFactory: false,
+      ),
+
+      'notNull': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {
+      'checkNotNull': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'T': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'argument',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T'), nullable: true),
+              false,
+            ),
+
+            BridgeParameter(
+              'name',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+
+        isStatic: true,
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {
+      'invalidValue': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+        isStatic: false,
+      ),
+
+      'name': BridgeFieldDef(
+        BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.string, []),
+          nullable: true,
+        ),
+        isStatic: false,
+      ),
+
+      'message': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+        isStatic: false,
+      ),
+    },
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [ArgumentError.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $ArgumentError.wrap(
+      ArgumentError(
+        (r is $Value ? r : null)?.$reified,
+        (s is $Value ? s : null)?.$value,
+      ),
+    );
+  }
+
+  /// Wrapper for the [ArgumentError.value] constructor
+  static $Value? $_value(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $ArgumentError.wrap(
+      ArgumentError.value(
+        (r as $Value?)!.$reified,
+        (s is $Value ? s : null)?.$value,
+        (c is $Value ? c : null)?.$reified,
+      ),
+    );
+  }
+
+  /// Wrapper for the [ArgumentError.notNull] constructor
+  static $Value? $notNull(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $ArgumentError.wrap(
+      ArgumentError.notNull((r is $Value ? r : null)?.$value),
+    );
+  }
+
+  /// Wrapper for the [ArgumentError.checkNotNull] method
+  static $Value? $checkNotNull(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final value = ArgumentError.checkNotNull(
+      (r as $Value?)!.$value,
+      (s is $Value ? s : null)?.$value,
+    );
+    return runtime.wrapAlways(value, recursive: true);
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final ArgumentError $value;
+
+  @override
+  ArgumentError get $reified => $value;
+
+  /// Wrap a [ArgumentError] in a [$ArgumentError]
+  $ArgumentError.wrap(this.$value) : _superclass = $Error.wrap($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'invalidValue':
+        final _invalidValue = $value.invalidValue;
+        return runtime.wrapAlways(_invalidValue, recursive: true);
+      case 'name':
+        final _name = $value.name;
+        return _name == null ? const $null() : $String(_name);
+      case 'message':
+        final _message = $value.message;
+        return runtime.wrapAlways(_message, recursive: true);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+
+  @override
+  dynamic get invalidValue => $value.invalidValue;
+
+  @override
+  String? get name => $value.name;
+
+  @override
+  dynamic get message => $value.message;
+
+  @override
+  StackTrace? get stackTrace => $value.stackTrace;
+
+  @override
+  String toString() => $value.toString();
+}
+
+/// dart_eval wrapper binding for [StateError]
+class $StateError implements StateError, $Instance {
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'StateError.',
+      $StateError.$new,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$StateError]
+  static const $spec = BridgeTypeSpec('dart:core', 'StateError');
+
+  /// Compile-time type declaration of [$StateError]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$StateError]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+
+      $extends: BridgeTypeRef(CoreTypes.error, []),
+
+      $implements: [BridgeTypeRef(CoreTypes.error, [])],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {},
+    getters: {},
+    setters: {},
+    fields: {
+      'message': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+        isStatic: false,
+      ),
+    },
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [StateError.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $StateError.wrap(StateError((r as $String).$value));
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final StateError $value;
+
+  @override
+  StateError get $reified => $value;
+
+  /// Wrap a [StateError] in a [$StateError]
+  $StateError.wrap(this.$value) : _superclass = $Error.wrap($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'message':
+        final _message = $value.message;
+        return $String(_message);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+
+  @override
+  String get message => $value.message;
 
   @override
   StackTrace? get stackTrace => $value.stackTrace;
@@ -1531,7 +1560,13 @@ class $UnsupportedError implements UnsupportedError, $Instance {
 
   /// Compile-time class declaration of [$UnsupportedError]
   static const $declaration = BridgeClassDef(
-    BridgeClassType($type, $implements: [BridgeTypeRef(CoreTypes.error, [])]),
+    BridgeClassType(
+      $type,
+
+      $extends: BridgeTypeRef(CoreTypes.error, []),
+
+      $implements: [BridgeTypeRef(CoreTypes.error, [])],
+    ),
     constructors: {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
@@ -1550,18 +1585,7 @@ class $UnsupportedError implements UnsupportedError, $Instance {
     },
 
     methods: {},
-    getters: {
-      'stackTrace': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.stackTrace, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-    },
+    getters: {},
     setters: {},
     fields: {
       'message': BridgeFieldDef(
@@ -1590,7 +1614,7 @@ class $UnsupportedError implements UnsupportedError, $Instance {
   UnsupportedError get $reified => $value;
 
   /// Wrap a [UnsupportedError] in a [$UnsupportedError]
-  $UnsupportedError.wrap(this.$value) : _superclass = $Object($value);
+  $UnsupportedError.wrap(this.$value) : _superclass = $Error.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
@@ -1598,11 +1622,6 @@ class $UnsupportedError implements UnsupportedError, $Instance {
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
-      case 'stackTrace':
-        final _stackTrace = $value.stackTrace;
-        return _stackTrace == null
-            ? const $null()
-            : $StackTrace.wrap(_stackTrace);
       case 'message':
         final _message = $value.message;
         return _message == null ? const $null() : $String(_message);
@@ -1653,6 +1672,8 @@ class $UnimplementedError implements UnimplementedError, $Instance {
     BridgeClassType(
       $type,
 
+      $extends: BridgeTypeRef(CoreTypes.error, []),
+
       $implements: [
         BridgeTypeRef(CoreTypes.error, []),
         BridgeTypeRef(CoreTypes.unsupportedError, []),
@@ -1679,18 +1700,7 @@ class $UnimplementedError implements UnimplementedError, $Instance {
     },
 
     methods: {},
-    getters: {
-      'stackTrace': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.stackTrace, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-    },
+    getters: {},
     setters: {},
     fields: {
       'message': BridgeFieldDef(
@@ -1721,7 +1731,7 @@ class $UnimplementedError implements UnimplementedError, $Instance {
   UnimplementedError get $reified => $value;
 
   /// Wrap a [UnimplementedError] in a [$UnimplementedError]
-  $UnimplementedError.wrap(this.$value) : _superclass = $Object($value);
+  $UnimplementedError.wrap(this.$value) : _superclass = $Error.wrap($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
@@ -1732,11 +1742,6 @@ class $UnimplementedError implements UnimplementedError, $Instance {
       case 'message':
         final _message = $value.message;
         return _message == null ? const $null() : $String(_message);
-      case 'stackTrace':
-        final _stackTrace = $value.stackTrace;
-        return _stackTrace == null
-            ? const $null()
-            : $StackTrace.wrap(_stackTrace);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -1748,122 +1753,6 @@ class $UnimplementedError implements UnimplementedError, $Instance {
 
   @override
   String? get message => $value.message;
-
-  @override
-  StackTrace? get stackTrace => $value.stackTrace;
-
-  @override
-  String toString() => $value.toString();
-}
-
-/// dart_eval wrapper binding for [StateError]
-class $StateError implements StateError, $Instance {
-  /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
-  static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFuncRegisters(
-      'dart:core',
-      'StateError.',
-      $StateError.$new,
-    );
-  }
-
-  /// Configure this class for use during compilation
-  static void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeClass($declaration);
-  }
-
-  /// Compile-time type specification of [$StateError]
-  static const $spec = BridgeTypeSpec('dart:core', 'StateError');
-
-  /// Compile-time type declaration of [$StateError]
-  static const $type = BridgeTypeRef($spec);
-
-  /// Compile-time class declaration of [$StateError]
-  static const $declaration = BridgeClassDef(
-    BridgeClassType($type, $implements: [BridgeTypeRef(CoreTypes.error, [])]),
-    constructors: {
-      '': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'message',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-              false,
-            ),
-          ],
-        ),
-        isFactory: false,
-      ),
-    },
-
-    methods: {},
-    getters: {
-      'stackTrace': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.stackTrace, []),
-            nullable: true,
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-    },
-    setters: {},
-    fields: {
-      'message': BridgeFieldDef(
-        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-        isStatic: false,
-      ),
-    },
-    wrap: true,
-    bridge: false,
-  );
-
-  /// Wrapper for the [StateError.new] constructor
-  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $StateError.wrap(StateError((r as $String).$value));
-  }
-
-  final $Instance _superclass;
-
-  @override
-  final StateError $value;
-
-  @override
-  StateError get $reified => $value;
-
-  /// Wrap a [StateError] in a [$StateError]
-  $StateError.wrap(this.$value) : _superclass = $Object($value);
-
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
-
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'stackTrace':
-        final _stackTrace = $value.stackTrace;
-        return _stackTrace == null
-            ? const $null()
-            : $StackTrace.wrap(_stackTrace);
-      case 'message':
-        final _message = $value.message;
-        return $String(_message);
-    }
-    return _superclass.$getProperty(runtime, identifier);
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return _superclass.$setProperty(runtime, identifier, value);
-  }
-
-  @override
-  String get message => $value.message;
 
   @override
   StackTrace? get stackTrace => $value.stackTrace;

@@ -194,15 +194,15 @@ class Bindgen implements BridgeDeclarationRegistry {
       }
     }
 
-    for (final element in library.classes) {
-      final cc = libraryConfig.classes[element.name];
-      if (cc == null || !cc.include || cc.handMaintained) continue;
-      await process(element, cc.file ?? '${element.name}.dart');
-    }
-    for (final element in library.enums) {
-      final cc = libraryConfig.classes[element.name];
-      if (cc == null || !cc.include || cc.handMaintained) continue;
-      await process(element, cc.file ?? '${element.name}.dart');
+    for (final entry in libraryConfig.classes.entries) {
+      final cc = entry.value;
+      if (!cc.include || cc.handMaintained) continue;
+      final element = library.exportNamespace.get2(entry.key);
+      if (element is ClassElement) {
+        await process(element, cc.file ?? '${entry.key}.dart');
+      } else if (element is EnumElement) {
+        await process(element, cc.file ?? '${entry.key}.dart');
+      }
     }
     for (final element in library.topLevelFunctions) {
       final fc = libraryConfig.functions[element.name];
@@ -384,9 +384,15 @@ class Bindgen implements BridgeDeclarationRegistry {
       ctx.typeParamNames = element is InterfaceElement
           ? element.typeParameters.map((e) => e.name ?? '').toSet()
           : const {};
+      // Generic supertype members need the concrete type arguments from this
+      // class, so include them unless the class config says otherwise.
+      final parameterizedSupertype =
+          element is ClassElement &&
+          element.allSupertypes.any((type) => type.typeArguments.isNotEmpty);
       ctx.implicitSupers =
           cc?.implicitSupers ??
           lc.defaults.implicitSupers ||
+              parameterizedSupertype ||
               (bindAnnoValue?.getField('implicitSupers')?.toBoolValue() ??
                   false);
       if (cc?.libOverride != null) {
@@ -626,7 +632,7 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
       };
       buf.writeln('''
   @override
-  ${dartTypeErased(method.returnType)} ${method.name}(${parameterHeader(method.formalParameters)}) =>
+  ${dartTypeErased(method.returnType)} ${method.isOperator ? 'operator ' : ''}${method.name}(${parameterHeader(method.formalParameters)}) =>
       $call;
 ''');
     }
@@ -735,6 +741,22 @@ class \$${element.name}Fn {
     final supertype = element.supertype;
     final objectWrapper = '\$Object(\$value)';
     if (supertype == null || ctx.implicitSupers || element is EnumElement) {
+      ctx.imports.add('package:dart_eval/stdlib/core.dart');
+      return objectWrapper;
+    }
+    // A class with Object as its superclass can inherit its API from a
+    // single interface. Reuse that interface's wrapper for runtime lookup.
+    if (supertype.isDartCoreObject &&
+        element is ClassElement &&
+        element.interfaces.length == 1) {
+      final interface = element.interfaces.single;
+      final bound = boundSdkClassFor(ctx, interface.element);
+      if (bound?.$1 == interface.element) {
+        final interfaceWrapper = wrapType(ctx, interface, '\$value');
+        if (interfaceWrapper != null) return interfaceWrapper;
+      }
+    }
+    if (supertype.isDartCoreObject) {
       ctx.imports.add('package:dart_eval/stdlib/core.dart');
       return objectWrapper;
     }

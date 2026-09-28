@@ -24,6 +24,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Zone,
         $StreamSubscription,
         $StreamSink,
+        $EventSink,
         $StreamIterator,
         $StreamTransformer,
         $StreamView,
@@ -35,6 +36,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $Zone,
         $StreamSubscription,
         $StreamSink,
+        $EventSink,
         $StreamIterator,
         $StreamTransformer,
         $StreamView,
@@ -83,10 +85,13 @@ class $StreamController<T> implements $Instance {
         BridgeTypeRef(AsyncTypes.streamSink, [
           BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
         ]),
-        BridgeTypeRef(CoreTypes.object, [
+        BridgeTypeRef(AsyncTypes.eventSink, [
           BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
         ]),
         BridgeTypeRef(CoreTypes.sink, [
+          BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+        ]),
+        BridgeTypeRef(CoreTypes.object, [
           BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
         ]),
       ],

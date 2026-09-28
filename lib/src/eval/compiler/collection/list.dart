@@ -41,7 +41,8 @@ Variable compileListLiteral(
     // `List<T>` binds `T` to `num` — let the elements decide. A bare type
     // parameter is the same target: `[0]` under `Iterable<E>` produces
     // `List<int>` and binds `E`.
-    if (boundType.hasInferenceVariables || boundType.isTypeParameter) {
+    if ((boundType.hasInferenceVariables || boundType.isTypeParameter) &&
+        elements.isNotEmpty) {
       boundType = boundType.isTypeParameter
           ? null
           : boundType.lowerTypeParameters(ctx);
@@ -82,9 +83,7 @@ Variable compileListLiteral(
     final elementTypes = compileListElement(e, list, ctx, _boxListElements);
     // A Never-typed element (a throw, or a call declared Never) ends the
     // literal's evaluation — the whole expression never produces a value.
-    if (elementTypes.any(
-      (t) => t.isSpec(CoreTypes.never) && !t.nullable,
-    )) {
+    if (elementTypes.any((t) => t.isSpec(CoreTypes.never) && !t.nullable)) {
       ctx.endScope();
       return Variable.never(ctx);
     }

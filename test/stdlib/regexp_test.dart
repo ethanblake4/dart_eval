@@ -8,6 +8,20 @@ void main() {
     compiler = Compiler();
   });
   group('Regex Tests', () {
+    test('RegExp and RegExpMatch use their interface wrappers', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            String main() {
+              final match = RegExp(r'(a)').matchAsPrefix('abc');
+              return match!.group(1)! + ':' + match.start.toString();
+            }
+          ''',
+        },
+      });
+      expect(runtime.executeLib('package:example/main.dart', 'main'), 'a:0');
+    });
+
     test('RegExp.firstMatch()', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

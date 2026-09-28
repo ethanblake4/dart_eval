@@ -33,25 +33,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
-
-import 'codec.dart';
-
-import 'package:dart_eval/stdlib/typed_data.dart'
-    hide
-        $Converter,
-        $Codec,
-        $Encoding,
-        $JsonEncoder,
-        $JsonDecoder,
-        $JsonCodec,
-        $Utf8Decoder,
-        $Utf8Codec,
-        $Utf8Encoder,
-        $Base64Encoder,
-        $Base64Decoder,
-        $Base64Codec,
-        $ByteConversionSink,
-        $ChunkedConversionSink;
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -72,323 +53,24 @@ import 'package:dart_eval/stdlib/async.dart'
 import 'converter.dart';
 import 'byte_conversion.dart';
 
-/// dart_eval wrapper binding for [Base64Codec]
-class $Base64Codec implements $Instance {
-  /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
-  static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFuncRegisters(
-      'dart:convert',
-      'Base64Codec.',
-      $Base64Codec.$new,
-    );
+import 'package:dart_eval/stdlib/typed_data.dart'
+    hide
+        $Converter,
+        $Codec,
+        $Encoding,
+        $JsonEncoder,
+        $JsonDecoder,
+        $JsonCodec,
+        $Utf8Decoder,
+        $Utf8Codec,
+        $Utf8Encoder,
+        $Base64Encoder,
+        $Base64Decoder,
+        $Base64Codec,
+        $ByteConversionSink,
+        $ChunkedConversionSink;
 
-    runtime.registerBridgeFuncRegisters(
-      'dart:convert',
-      'Base64Codec.urlSafe',
-      $Base64Codec.$urlSafe,
-    );
-  }
-
-  /// Configure this class for use during compilation
-  static void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.defineBridgeClass($declaration);
-  }
-
-  /// Compile-time type specification of [$Base64Codec]
-  static const $spec = BridgeTypeSpec('dart:convert', 'Base64Codec');
-
-  /// Compile-time type declaration of [$Base64Codec]
-  static const $type = BridgeTypeRef($spec);
-
-  /// Compile-time class declaration of [$Base64Codec]
-  static const $declaration = BridgeClassDef(
-    BridgeClassType(
-      $type,
-
-      $implements: [
-        BridgeTypeRef(ConvertTypes.codec, [
-          BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-            ]),
-          ),
-          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-        ]),
-      ],
-    ),
-    constructors: {
-      '': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [],
-          params: [],
-        ),
-        isFactory: false,
-      ),
-
-      'urlSafe': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [],
-          params: [],
-        ),
-        isFactory: false,
-      ),
-    },
-
-    methods: {
-      'encode': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'input',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-      ),
-
-      'decode': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(TypedDataTypes.uint8List, []),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'encoded',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-              false,
-            ),
-          ],
-        ),
-      ),
-
-      'fuse': BridgeMethodDef(
-        BridgeFunctionDef(
-          generics: {'R': BridgeGenericParam()},
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.codec, [
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-                ]),
-              ),
-              BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
-            ]),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'other',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(ConvertTypes.codec, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-      ),
-
-      'normalize': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'source',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-              false,
-            ),
-
-            BridgeParameter(
-              'start',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-              true,
-            ),
-
-            BridgeParameter(
-              'end',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.int, []),
-                nullable: true,
-              ),
-              true,
-            ),
-          ],
-        ),
-      ),
-    },
-    getters: {
-      'encoder': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.base64Encoder, []),
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
-      'decoder': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.base64Decoder, []),
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
-      'inverted': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(ConvertTypes.codec, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.list, [
-                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-                ]),
-              ),
-            ]),
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-    },
-    setters: {},
-    fields: {},
-    wrap: true,
-    bridge: false,
-  );
-
-  /// Wrapper for the [Base64Codec.new] constructor
-  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $Base64Codec.wrap(Base64Codec());
-  }
-
-  /// Wrapper for the [Base64Codec.urlSafe] constructor
-  static $Value? $urlSafe(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $Base64Codec.wrap(Base64Codec.urlSafe());
-  }
-
-  final $Instance _superclass;
-
-  @override
-  final Base64Codec $value;
-
-  @override
-  Base64Codec get $reified => $value;
-
-  /// Wrap a [Base64Codec] in a [$Base64Codec]
-  $Base64Codec.wrap(this.$value) : _superclass = $Object($value);
-
-  @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
-
-  @override
-  $Value? $getProperty(Runtime runtime, String identifier) {
-    switch (identifier) {
-      case 'encoder':
-        final _encoder = $value.encoder;
-        return $Base64Encoder.wrap(_encoder);
-      case 'decoder':
-        final _decoder = $value.decoder;
-        return $Base64Decoder.wrap(_decoder);
-      case 'inverted':
-        final _inverted = $value.inverted;
-        return $Codec.wrap(_inverted);
-      case 'encode':
-        return $Closure(__encode.func, this);
-
-      case 'decode':
-        return $Closure(__decode.func, this);
-
-      case 'fuse':
-        return $Closure(__fuse.func, this);
-
-      case 'normalize':
-        return $Closure(__normalize.func, this);
-    }
-    return _superclass.$getProperty(runtime, identifier);
-  }
-
-  static const $Function __encode = $Function(_encode);
-  static $Value? _encode(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $Base64Codec;
-    final result = self.$value.encode(
-      ((r as $Value?)!.$reified as List).cast<int>(),
-    );
-    return $String(result);
-  }
-
-  static const $Function __decode = $Function(_decode);
-  static $Value? _decode(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $Base64Codec;
-    final result = self.$value.decode((r as $String).$value);
-    return $Uint8List.wrap(result);
-  }
-
-  static const $Function __fuse = $Function(_fuse);
-  static $Value? _fuse(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $Base64Codec;
-    final result = self.$value.fuse((r as $Value?)!.$value);
-    return $Codec.wrap(result);
-  }
-
-  static const $Function __normalize = $Function(_normalize);
-  static $Value? _normalize(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $Base64Codec;
-    final result = self.$value.normalize(
-      (r as $String).$value,
-      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
-      (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
-          ?.$value,
-    );
-    return $String(result);
-  }
-
-  @override
-  void $setProperty(Runtime runtime, String identifier, $Value value) {
-    return _superclass.$setProperty(runtime, identifier, value);
-  }
-}
+import 'codec.dart';
 
 /// dart_eval wrapper binding for [Base64Encoder]
 class $Base64Encoder implements $Instance {
@@ -1012,6 +694,324 @@ class $Base64Decoder implements $Instance {
     final self = target! as $Base64Decoder;
     final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
     return $Object(result);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
+
+/// dart_eval wrapper binding for [Base64Codec]
+class $Base64Codec implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:convert',
+      'Base64Codec.',
+      $Base64Codec.$new,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:convert',
+      'Base64Codec.urlSafe',
+      $Base64Codec.$urlSafe,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$Base64Codec]
+  static const $spec = BridgeTypeSpec('dart:convert', 'Base64Codec');
+
+  /// Compile-time type declaration of [$Base64Codec]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$Base64Codec]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+
+      $implements: [
+        BridgeTypeRef(ConvertTypes.codec, [
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+        ]),
+      ],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [],
+        ),
+        isFactory: false,
+      ),
+
+      'urlSafe': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {
+      'encode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'input',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'decode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(TypedDataTypes.uint8List, []),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'encoded',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'fuse': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'R': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.codec, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(ConvertTypes.codec, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'normalize': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'source',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
+    },
+    getters: {
+      'encoder': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.base64Encoder, []),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'decoder': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.base64Decoder, []),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'inverted': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.codec, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [Base64Codec.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Base64Codec.wrap(Base64Codec());
+  }
+
+  /// Wrapper for the [Base64Codec.urlSafe] constructor
+  static $Value? $urlSafe(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Base64Codec.wrap(Base64Codec.urlSafe());
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final Base64Codec $value;
+
+  @override
+  Base64Codec get $reified => $value;
+
+  /// Wrap a [Base64Codec] in a [$Base64Codec]
+  $Base64Codec.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'encoder':
+        final _encoder = $value.encoder;
+        return $Base64Encoder.wrap(_encoder);
+      case 'decoder':
+        final _decoder = $value.decoder;
+        return $Base64Decoder.wrap(_decoder);
+      case 'inverted':
+        final _inverted = $value.inverted;
+        return $Codec.wrap(_inverted);
+      case 'encode':
+        return $Closure(__encode.func, this);
+
+      case 'decode':
+        return $Closure(__decode.func, this);
+
+      case 'fuse':
+        return $Closure(__fuse.func, this);
+
+      case 'normalize':
+        return $Closure(__normalize.func, this);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __encode = $Function(_encode);
+  static $Value? _encode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Base64Codec;
+    final result = self.$value.encode(
+      ((r as $Value?)!.$reified as List).cast<int>(),
+    );
+    return $String(result);
+  }
+
+  static const $Function __decode = $Function(_decode);
+  static $Value? _decode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Base64Codec;
+    final result = self.$value.decode((r as $String).$value);
+    return $Uint8List.wrap(result);
+  }
+
+  static const $Function __fuse = $Function(_fuse);
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Base64Codec;
+    final result = self.$value.fuse((r as $Value?)!.$value);
+    return $Codec.wrap(result);
+  }
+
+  static const $Function __normalize = $Function(_normalize);
+  static $Value? _normalize(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Base64Codec;
+    final result = self.$value.normalize(
+      (r as $String).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+      (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
+          ?.$value,
+    );
+    return $String(result);
   }
 
   @override

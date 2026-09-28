@@ -421,8 +421,8 @@ class $Stream implements $Instance {
       'listen': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+            BridgeTypeRef(AsyncTypes.streamSubscription, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
             ]),
           ),
           params: [
@@ -1118,8 +1118,8 @@ class $Stream implements $Instance {
   ) {
     final $Stream $target = target as $Stream;
     final onData = (r as $Value?) as EvalCallable;
-    final onDone = (s as $Value?) as EvalCallable?;
-    final onError =
+    final onError = (s as $Value?) as EvalCallable?;
+    final onDone =
         (c is List && c.isNotEmpty ? c[0] as $Value? : null) as EvalCallable?;
     final cancelOnError =
         (c is List && c.length > 1 ? c[1] as $Value? : null) as $bool?;

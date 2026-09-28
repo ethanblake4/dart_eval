@@ -26,7 +26,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
-        $DoubleLinkedQueueEntry;
+        $DoubleLinkedQueueEntry,
+        $MapBase;
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
 /// dart_eval wrapper binding for [LinkedHashMap]

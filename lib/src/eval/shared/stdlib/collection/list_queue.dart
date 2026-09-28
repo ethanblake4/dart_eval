@@ -26,7 +26,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
-        $DoubleLinkedQueueEntry;
+        $DoubleLinkedQueueEntry,
+        $MapBase;
 
 import 'queue.dart';
 

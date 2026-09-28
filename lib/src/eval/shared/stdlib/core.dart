@@ -21,6 +21,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/stack_trace.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/string_buffer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/typedefs.dart' as core_typedefs;
 import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
 import 'core/duration.dart';
@@ -35,6 +36,7 @@ class DartCorePlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.addSource(core_typedefs.sdkTypedefsSource);
     configurePrintForCompile(registry);
     configureIdenticalForCompile(registry);
     registry.defineBridgeClass($dynamicCls);

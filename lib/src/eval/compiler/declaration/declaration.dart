@@ -76,8 +76,8 @@ partitionClassMembers(List<ClassMember> members) {
   return (constructors, fields, methods);
 }
 
-/// Compiles members in declaration order — fields first, then methods, then
-/// constructors — tracking [fieldIndex] across field declarations so each
+/// Compiles constructors before methods so inferred field initializer types
+/// are available to method bodies, tracking [fieldIndex] across field declarations so each
 /// instance field lands at a stable slot.
 void compileClassMembers(
   CompilerContext ctx,
@@ -95,7 +95,7 @@ void compileClassMembers(
   Declaration? layerOwner;
   final layerMembers = <MethodDeclaration>{};
   var layer = 0;
-  for (final m in <ClassMember>[...fields, ...methods, ...constructors]) {
+  for (final m in <ClassMember>[...constructors, ...fields, ...methods]) {
     ctx.currentClass = parent;
     final previousLibrary = ctx.library;
     final previousSuperMembers = ctx.lexicalSuperMembers;
