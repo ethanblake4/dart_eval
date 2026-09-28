@@ -12,7 +12,9 @@
 /// test as [TestKind.unsupported].
 library;
 
+import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -121,7 +123,7 @@ class SdkTest {
   String get uri => 'package:sdk_language/$relPath';
 }
 
-enum TestOutcome { passed, failed, compileError, skipped }
+enum TestOutcome { passed, failed, compileError, skipped, timedOut }
 
 /// The checked-out SDK tree: `.dart_tool/sdk_language/<sha>`.
 class SdkSuite {
@@ -451,13 +453,65 @@ Future<TestOutcome> runSdkTestSources(
   }
 }
 
+void _sdkSourceWorker((SendPort, SdkTest, List<DartSource>) request) async {
+  final (port, test, sources) = request;
+  port.send(await runSdkTestSources(test, Compiler(), sources));
+}
+
+/// Run both compilation and execution in a worker that can be terminated.
+/// A Future timeout in the executing isolate cannot interrupt synchronous
+/// guest loops or compiler work that never returns to the event loop.
+Future<TestOutcome> runSdkTestSourcesIsolated(
+  SdkTest test,
+  List<DartSource> sources, {
+  Duration timeout = const Duration(seconds: 60),
+}) async {
+  final port = ReceivePort();
+  final result = Completer<TestOutcome>();
+  TestOutcome? reported;
+  final subscription = port.listen((message) {
+    if (result.isCompleted) return;
+    if (message is TestOutcome) {
+      reported = message;
+    } else {
+      // Pending timers can fail after main returns. Accept its outcome only
+      // after a clean worker exit; uncaught errors override that outcome.
+      result.complete(
+        message == null ? reported ?? TestOutcome.failed : TestOutcome.failed,
+      );
+    }
+  });
+  Isolate? worker;
+  try {
+    worker = await Isolate.spawn(
+      _sdkSourceWorker,
+      (port.sendPort, test, sources),
+      onError: port.sendPort,
+      onExit: port.sendPort,
+    );
+    return await result.future.timeout(
+      timeout,
+      onTimeout: () => TestOutcome.timedOut,
+    );
+  } finally {
+    worker?.kill(priority: Isolate.immediate);
+    await subscription.cancel();
+    port.close();
+  }
+}
+
 /// Registers [tests] as a `dart_test` group under [label].
 ///
 /// Outcome assertions follow the SDK's status-file convention: a test must
 /// pass unless `suite.yaml`'s `expect_fail` lists it, in which case any
 /// non-passing outcome satisfies the suite. An expected-failure that starts
 /// *passing* fails loudly — that's the reminder to remove the stale entry.
-void registerSdkSuite(String label, List<SdkTest> tests, SdkSuite suite) {
+void registerSdkSuite(
+  String label,
+  List<SdkTest> tests,
+  SdkSuite suite, {
+  bool isolateTests = false,
+}) {
   // One shared Compiler amortizes shim parsing across tests, but its parse
   // cache retains every test file's AST — rebuild it periodically so the
   // full suite doesn't OOM on big runs.
@@ -480,7 +534,19 @@ void registerSdkSuite(String label, List<SdkTest> tests, SdkSuite suite) {
           compiler = Compiler();
           sinceReset = 0;
         }
-        final outcome = await runSdkTest(suite, sdkTest, compiler);
+        late TestOutcome outcome;
+        if (isolateTests) {
+          try {
+            outcome = await runSdkTestSourcesIsolated(
+              sdkTest,
+              suite.collectSources(sdkTest),
+            );
+          } on UnsupportedError {
+            outcome = TestOutcome.skipped;
+          }
+        } else {
+          outcome = await runSdkTest(suite, sdkTest, compiler);
+        }
         results[outcome] = (results[outcome] ?? 0) + 1;
         final expectedFail = suite.config.expectedFailure(sdkTest.relPath);
         if (expectedFail != null) {
@@ -494,7 +560,7 @@ void registerSdkSuite(String label, List<SdkTest> tests, SdkSuite suite) {
         } else {
           expect(outcome, TestOutcome.passed);
         }
-      }, timeout: const Timeout(Duration(seconds: 30)));
+      }, timeout: Timeout(Duration(seconds: isolateTests ? 70 : 30)));
     }
 
     tearDownAll(() {

@@ -15,6 +15,7 @@ import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'member/member_lookup.dart';
 import 'member/member_name.dart';
+import 'backend/representation.dart' show representationForType;
 
 abstract class AbstractScopeContext {
   List<Map<String, LocalBinding>> get locals;
@@ -168,17 +169,19 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     }
   }
 
-  /// Drops allocation proofs on the named locals, as they would be after a
-  /// reassignment merge. Used before compiling a loop whose body reassigns
-  /// them — the back edge can make them hold a differently-typed value.
+  /// Drops promotions and allocation proofs on reassigned locals before a
+  /// loop header: the back edge can supply a differently-typed value.
   void widenAssignedLocals(Set<String> names) {
-    for (var i = 0; i < locals.length; i++) {
-      final frame = locals[i];
-      for (final name in names) {
-        final binding = frame[name];
-        if (binding == null) continue;
-        binding.clearValueFacts();
+    for (final name in names) {
+      final binding = lookupBinding(name);
+      if (binding == null) continue;
+      var value = binding.current;
+      if (representationForType(binding.declaredType) ==
+          MachineRepresentation.object) {
+        value = value.boxIfNeeded(this);
       }
+      binding.rebind(value.withType(binding.declaredType));
+      binding.clearValueFacts();
     }
   }
 
@@ -253,7 +256,11 @@ class CompilerContext with ScopeContext {
       op is CompleteJump ||
       op is Jump;
 
-  bool get blockEndsControlFlow => blockCode.any(isTerminatorOp);
+  // pushOp starts a fresh block before appending past a terminator, so only
+  // the tail can end control flow. Scanning the entire block for every emitted
+  // operation makes large literals and cascades quadratic to compile.
+  bool get blockEndsControlFlow =>
+      blockCode.isNotEmpty && isTerminatorOp(blockCode.last);
 
   @override
   bool get flowTerminated => _flowTerminated || blockEndsControlFlow;

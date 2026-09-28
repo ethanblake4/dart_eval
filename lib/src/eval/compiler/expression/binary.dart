@@ -144,7 +144,9 @@ Variable compileBinaryExpression(
             rep: ValueRep.bool,
           );
   }
-  final result = CallResolver(ctx).invokeOperator(L, method, [R]).result;
+  final result = CallResolver(ctx).invokeOperator(L, method, [
+    R,
+  ], lexicalSuper: e.leftOperand is SuperExpression).result;
   if (!e.inConstantContext && !(leftConst && R.isConst)) return result;
   // Operators on const operands produce compile-time constants that must
   // canonicalize: `identical("ab", "a" + "b")` holds in the host VM.

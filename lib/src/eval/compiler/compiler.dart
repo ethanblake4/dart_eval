@@ -883,7 +883,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             continue;
           }
           if (member is! MethodDeclaration) continue;
+          // An implicit extension invocation `value(...)` never names `call`
+          // in the AST, but still needs its extension implementation.
           if (!member.isOperator &&
+              member.name.lexeme != 'call' &&
               !referencedNames.contains(member.name.lexeme)) {
             continue;
           }

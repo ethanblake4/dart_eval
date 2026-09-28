@@ -1911,7 +1911,7 @@ abstract final class TypedMachine {
   static Object? runEntry(TypedProgram program, TypedEntry arguments, int functionId, {Runtime? runtime}) {
     runtime?.prepareTypedRuntime();
     final entry = program.functions[functionId];
-    final root = TypedFrame(entry)
+    final root = TypedFrame(entry, null, runtime?.maxCallDepth ?? 10000)
       ..environment = arguments.environment
       ..typeEnvironmentReceiver = arguments.typeEnvironmentReceiver
       ..typeArguments = arguments.typeArguments

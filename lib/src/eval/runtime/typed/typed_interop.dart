@@ -322,7 +322,7 @@ abstract final class TypedInterop {
     return toBool(invoke(runtime, a, '==', 1, b, null));
   }
 
-  static bool isNull(Object? value) => value == null;
+  static bool isNull(Object? value) => value == null || value is $null;
 
   @pragma('vm:never-inline')
   static int toInt(Object? value) => (value as $int).$value;

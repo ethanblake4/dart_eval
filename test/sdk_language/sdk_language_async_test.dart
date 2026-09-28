@@ -11,6 +11,58 @@ final _asyncHelperSource = DartSource(
 );
 
 void main() {
+  test(
+    'isolated SDK cases stop synchronous loops and release their worker',
+    () async {
+      final sdkTest = SdkTest('runaway_test.dart', TestKind.runnable);
+      final outcome = await runSdkTestSourcesIsolated(sdkTest, [
+        DartSource(sdkTest.uri, 'void main() { while (true) {} }'),
+      ], timeout: const Duration(seconds: 2));
+      expect(outcome, TestOutcome.timedOut);
+      expect(
+        await runSdkTestSourcesIsolated(sdkTest, [
+          DartSource(sdkTest.uri, 'void main() {}'),
+        ]),
+        TestOutcome.passed,
+      );
+    },
+  );
+
+  test('isolated SDK cases contain uncaught asynchronous errors', () async {
+    final sdkTest = SdkTest('uncaught_test.dart', TestKind.runnable);
+    expect(
+      await runSdkTestSourcesIsolated(sdkTest, [
+        DartSource(sdkTest.uri, '''
+        import 'dart:async';
+        Future<void> main() async {
+          scheduleMicrotask(() { throw StateError('worker error'); });
+          await Future<void>.delayed(const Duration(seconds: 30));
+        }
+      '''),
+      ]),
+      TestOutcome.failed,
+    );
+  });
+
+  test(
+    'isolated SDK cases wait for errors scheduled after main returns',
+    () async {
+      final sdkTest = SdkTest('late_error_test.dart', TestKind.runnable);
+      expect(
+        await runSdkTestSourcesIsolated(sdkTest, [
+          DartSource(sdkTest.uri, '''
+        void main() {
+          Future<void>.delayed(const Duration(milliseconds: 10), () {
+            throw StateError('late worker error');
+          });
+        }
+      '''),
+        ]),
+        TestOutcome.failed,
+      );
+    },
+  );
+
   test('waits for an async SDK main to finish', () async {
     final test = SdkTest('async_main_test.dart', TestKind.runnable);
     final source = DartSource(test.uri, '''
@@ -37,11 +89,10 @@ void main() {
 }
 ''');
 
-    final outcome = await runSdkTestSources(
-      sdkTest,
-      Compiler(),
-      [source, _asyncHelperSource],
-    );
+    final outcome = await runSdkTestSources(sdkTest, Compiler(), [
+      source,
+      _asyncHelperSource,
+    ]);
 
     expect(outcome, TestOutcome.failed);
 
@@ -96,11 +147,10 @@ void main() {
 }
 ''');
 
-    final outcome = await runSdkTestSources(
-      sdkTest,
-      Compiler(),
-      [source, _asyncHelperSource],
-    );
+    final outcome = await runSdkTestSources(sdkTest, Compiler(), [
+      source,
+      _asyncHelperSource,
+    ]);
 
     expect(outcome, TestOutcome.failed);
   });

@@ -62,6 +62,10 @@ class _UnloadedEnumValues {
 /// should check permissions using [checkPermission] or [assertPermission].
 ///
 class Runtime {
+  /// Maximum nested evaluated calls before throwing [StackOverflowError].
+  /// Evaluated frames live on the heap, so the host stack cannot enforce this.
+  int maxCallDepth = 10000;
+
   /// The current runtime version code
   static const int versionCode = 106;
 

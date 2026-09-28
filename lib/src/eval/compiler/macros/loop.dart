@@ -32,7 +32,7 @@ StatementInfo macroLoop(
   // Locals reassigned by the body or updaters can hold a differently-typed
   // value on the back edge, so their allocation proofs are dropped before
   // the header/condition is compiled against the pre-loop state.
-  ctx.widenAssignedLocals(assignedLocalNames(assignedNamesScan));
+  ctx.widenAssignedLocals(assignedLoopLocalNames(assignedNamesScan));
   final initialState = ctx.saveState();
   final edgeStates = <ContextSaveState>[];
   final header = BasicBlock<Operation>([], label: ctx.label('loop_header'));

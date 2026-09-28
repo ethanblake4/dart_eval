@@ -1048,6 +1048,7 @@ final class CallResolver {
     List<Variable> args, {
     Map<String, Variable>? namedArgs,
     BoundExtension? extensionPin,
+    bool lexicalSuper = false,
   }) {
     if (method == null) {
       return invokeFunctionValue(receiver, args, namedArgs);
@@ -1104,7 +1105,13 @@ final class CallResolver {
         }
       }
     }
-    return _invokeResolvedOperator(recv, method, args, namedArgs);
+    return _invokeResolvedOperator(
+      recv,
+      method,
+      args,
+      namedArgs,
+      lexicalSuper: lexicalSuper,
+    );
   }
 
   /// Bind and emit evaluated operands; callers with a resolved member retain it.
@@ -1115,6 +1122,7 @@ final class CallResolver {
     Map<String, Variable>? namedArgs, {
     ResolvedMember? resolved,
     TypeRef? returnType,
+    bool lexicalSuper = false,
   }) {
     var recv = receiver;
     final values = [...args];
@@ -1188,9 +1196,14 @@ final class CallResolver {
       ],
       returnType: returnType,
     );
-    final target = Devirtualizer(ctx).refine(
-      VirtualCall(receiver: recv, name: method, member: resolved?.member),
+    final virtual = VirtualCall(
+      receiver: recv,
+      name: method,
+      member: resolved?.member,
     );
+    final target = lexicalSuper
+        ? Devirtualizer(ctx).refineSuper(virtual)
+        : Devirtualizer(ctx).refine(virtual);
     if (resolved?.member case SourceMember sourceMember
         when sourceMember.sourceDeclaration is MethodDeclaration) {
       final seedGenerics = _sourceTargetTypeArguments(target, resolved!);

@@ -241,8 +241,10 @@ class TypedEntry {
 /// receives the caller's list in C and borrows it until returning. It uses its
 /// own outgoing list for nested calls, so argument lists need no copy.
 class TypedFrame {
-  TypedFrame(this.function, [this.parent])
-    : intSpills = Int64List(function.intSpillCount),
+  TypedFrame(this.function, [this.parent, int maxCallDepth = 10000])
+    : depth = (parent?.depth ?? 0) + 1,
+      maxCallDepth = parent?.maxCallDepth ?? maxCallDepth,
+      intSpills = Int64List(function.intSpillCount),
       doubleSpills = Float64List(function.doubleSpillCount),
       boolSpills = Uint8List(function.boolSpillCount),
       objectSpills = List<Object?>.filled(function.objectSpillCount, null),
@@ -253,6 +255,7 @@ class TypedFrame {
   /// Reuse a frame for repeated calls at the same depth. Recursive invocations
   /// still have distinct storage, and every run owns its entire frame chain.
   TypedFrame _childFor(TypedFunction callee) {
+    if (depth >= maxCallDepth) throw StackOverflowError();
     var child = _child;
     if (child == null) {
       child = _child = TypedFrame(callee, this);
@@ -265,6 +268,9 @@ class TypedFrame {
     }
     return child;
   }
+
+  final int depth;
+  final int maxCallDepth;
 
   @pragma('vm:never-inline')
   TypedFrame enterStatic(

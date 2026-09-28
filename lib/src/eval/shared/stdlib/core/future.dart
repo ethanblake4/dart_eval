@@ -332,7 +332,10 @@ class $Future<T> implements Future<T>, $Instance {
         twoArgs ? 2 : 1,
       );
     }
-    final $result = ($t.$value).then(
+    // A bridge callback can return either a boxed value or a Future of boxed
+    // values. Inferring $Value? here treats $Future<Object?> as a plain value
+    // instead of adopting it, because it is not a Future<$Value?>.
+    final $result = ($t.$value).then<Object?>(
       (value) {
         try {
           return $then.call(runtime, target, runtime.wrap(value), null, 1);

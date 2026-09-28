@@ -12,5 +12,10 @@ import 'sdk_language.dart';
 
 void main() async {
   final suite = await SdkSuite.load();
-  registerSdkSuite('sdk_language full', suite.allTests(), suite);
+  registerSdkSuite(
+    'sdk_language full',
+    suite.allTests(),
+    suite,
+    isolateTests: true,
+  );
 }

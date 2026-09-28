@@ -32,6 +32,11 @@ dart test test/sdk_language/core_test.dart           # core only
 dart test -P sdk-full test/sdk_language/full_test.dart   # everything
 ```
 
+The full suite compiles and executes each case in its own isolate. A worker is
+killed after 60 seconds, including when synchronous code prevents timers from
+running inside it. Uncaught asynchronous errors stay within that case, and
+compiler graphs and runtime state are released before the next case.
+
 ## Status lists
 
 The suite follows the SDK's status-file convention: every runnable test is

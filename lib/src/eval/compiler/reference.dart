@@ -204,7 +204,9 @@ class PrefixedIdentifierReference implements Reference {
 /// A [Reference] with a variable that can be indexed into and a variable index. Accessing its value may use [IndexList]
 /// [IndexMap] or [InvokeDynamic] depending on the state of the target variable.
 class IndexedReference implements Reference {
-  IndexedReference(this._variable, this._index);
+  IndexedReference(this._variable, this._index, {this.lexicalSuper = false});
+
+  final bool lexicalSuper;
 
   Variable _variable;
   Variable _index;
@@ -351,7 +353,9 @@ class IndexedReference implements Reference {
       );
     }
 
-    final result = CallResolver(ctx).invokeOperator(_variable, '[]', [_index]);
+    final result = CallResolver(
+      ctx,
+    ).invokeOperator(_variable, '[]', [_index], lexicalSuper: lexicalSuper);
     _variable = result.target!;
     _index = result.args[0];
 
@@ -410,9 +414,10 @@ class IndexedReference implements Reference {
             source: source,
           );
 
-    final result = CallResolver(
-      ctx,
-    ).invokeOperator(_variable, '[]=', [_index, converted]);
+    final result = CallResolver(ctx).invokeOperator(_variable, '[]=', [
+      _index,
+      converted,
+    ], lexicalSuper: lexicalSuper);
     _variable = result.target!;
     _index = result.args[0];
     return result.args[1];

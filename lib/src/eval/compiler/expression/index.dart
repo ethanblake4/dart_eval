@@ -39,6 +39,7 @@ IndexedReference compileIndexReference(
   return IndexedReference(
     receiver,
     compileExpression(expression.index, ctx, context),
+    lexicalSuper: expression.realTarget is SuperExpression,
   );
 }
 
