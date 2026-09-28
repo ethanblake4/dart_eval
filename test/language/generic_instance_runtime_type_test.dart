@@ -3,6 +3,67 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('null membership resolves class and inherited type arguments', () {
+    const source = '''
+      class Box<T> {
+        bool acceptsNull() => null is T;
+        bool rejectsNull() => null is! T;
+      }
+      class NullableBox<T> extends Box<T?> {}
+      class IndirectBox<T> extends NullableBox<T> {}
+
+      bool main() {
+        return Box<int?>().acceptsNull() &&
+            Box<Null>().acceptsNull() &&
+            Box<dynamic>().acceptsNull() &&
+            Box<int>().rejectsNull() &&
+            !Box<int>().acceptsNull() &&
+            !Box<int?>().rejectsNull() &&
+            IndirectBox<String>().acceptsNull();
+      }
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
+  test('null membership resolves escaped callable type arguments', () {
+    const source = '''
+      bool Function() make<T>() => () => null is T;
+      bool rejectsNull<T>() => null is! T;
+      bool bounded<T extends Object>() => null is T;
+      bool isNull<T>(T value) => value is Null;
+
+      bool main() => make<String?>()() &&
+          make<Null>()() && !make<String>()() &&
+          rejectsNull<int>() && !rejectsNull<int?>() &&
+          !bounded<int>() && isNull<int?>(null) &&
+          !isNull<int?>(7) && isNull<Null>(null);
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
+  test('dynamic context keeps unconstrained callable parameters at bounds', () {
+    const source = '''
+      class Base {}
+      class Child extends Base {}
+
+      bool main() {
+        B local<A extends B, B extends Base>(A value) {
+          return value;
+        }
+        final identity = <A extends B, B>(A value) => value;
+        dynamic value = identity(local(Child()));
+        return value is Child;
+      }
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
   test('explicit substitutions recurse through parameter types', () {
     const source = '''
       int calls = 0;

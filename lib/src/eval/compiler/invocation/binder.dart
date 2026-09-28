@@ -294,7 +294,11 @@ final class ArgumentBinder {
     var allTypeArgumentsDefaulted = false;
     if (declaredSignature != null && site.shape.typeArguments == null) {
       inferredSubstitutions.addAll(_solveArguments(inferredArguments));
+      // An uninformative context must leave unconstrained parameters at
+      // their bounds, rather than infer `dynamic` over a narrower bound.
       if (site.context != null &&
+          !site.context!.isSpec(CoreTypes.dynamic) &&
+          !site.context!.isSpec(CoreTypes.voidType) &&
           inferredSubstitutions.length < ownParameters.length) {
         final bindings = <TypeParameterDef, TypeRef>{};
         ctx.typeSystem.unify(

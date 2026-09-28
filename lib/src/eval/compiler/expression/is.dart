@@ -37,10 +37,15 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   /// with a provably non-nullable `x`, and `x is T` where `x` is statically
   /// `Null` but `Null` isn't a `T`, are both statically `false` — flow
   /// analysis then treats that edge of a branch as unreachable.
+  /// A bare type parameter can instantiate to a nullable type, so its
+  /// null membership must be checked in the runtime type environment.
   final definitelyFalse = slot.isSpec(CoreTypes.nullType)
-      ? !V.type.nullable && !V.type.isSpec(CoreTypes.dynamic)
+      ? !V.type.nullable &&
+            !V.type.isSpec(CoreTypes.dynamic) &&
+            !V.type.isTypeParameter
       : V.type.isSpec(CoreTypes.nullType) &&
-          !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, slot);
+            !slot.isTypeParameter &&
+            !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, slot);
   if (definitelyFalse) {
     return BuiltinValue(boolval: not).push(ctx);
   }
