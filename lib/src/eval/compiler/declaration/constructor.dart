@@ -1106,10 +1106,10 @@ void compileAliasForwardingConstructor(
   final parentName = declarationName(parent);
   final n = '$parentName.$constructorName';
   final targetDecl = target.declaration as ConstructorDeclaration;
-  final targetType = TypeRef.lookupDeclaration(
+  final targetType = TypeRef.fromAnnotation(
     ctx,
-    target.sourceLib,
-    targetDecl.parent!.parent! as Declaration,
+    ctx.library,
+    parent.superclass,
   );
   ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction('$n()');
   ctx.beginScope();
@@ -1176,6 +1176,7 @@ void compileAliasForwardingConstructor(
         representation: MachineRepresentation.integer,
       ),
     );
+    ctx.pushOp(SetTypeEnvironment(SSA('arg_$i')));
   }
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
       aliasAbi.machine;

@@ -238,13 +238,14 @@ Variable compileInstanceOf(
         : null;
     final seedGenerics = <String, TypeRef>{};
     if (classTypeParams != null) {
-      final resolvedChain = instantiatedType;
-      final appliedArgs =
-          resolvedChain.file == resolved.library &&
-              ctorDecl != null &&
-              resolvedChain.name == declarationName(ctorDecl as Declaration)
-          ? interfaceArgumentsOf(resolvedChain)
-          : interfaceArgumentsOf(instantiatedType);
+      final appliedType = ctx.typeSystem.asInstanceOf(
+        instantiatedType,
+        ctx.types.find(
+          resolved.library,
+          declarationName(ctorDecl as Declaration),
+        ),
+      );
+      final appliedArgs = interfaceArgumentsOf(appliedType ?? instantiatedType);
       for (var i = 0; i < classTypeParams.length; i++) {
         final bound = classTypeParams[i].bound;
         seedGenerics[classTypeParams[i].name.lexeme] = i < appliedArgs.length

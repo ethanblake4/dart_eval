@@ -256,6 +256,22 @@ final class TypeSystem {
     return indices;
   }
 
+  /// Argument depth needed by a root and its instantiated hierarchy. Visit
+  /// each declaration once so expanding inheritance cycles cannot diverge.
+  int supertypeArgumentDepth(TypeRef type) {
+    var depth = 0;
+    final seen = <(int, String)>{};
+    final worklist = [type];
+    while (worklist.isNotEmpty) {
+      final current = worklist.removeLast();
+      final currentDepth = typeArgumentDepth(current);
+      if (currentDepth > depth) depth = currentDepth;
+      if (!seen.add((current.file, current.name))) continue;
+      worklist.addAll(directSupertypes(current));
+    }
+    return depth;
+  }
+
   /// The [type] produced by removing every type-parameter reference —
   /// each parameter replaced by its declared bound (or `dynamic` when
   /// unbounded). Callers use this when a type leaves the scope that gave

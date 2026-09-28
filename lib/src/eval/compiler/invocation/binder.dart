@@ -984,6 +984,12 @@ final class ArgumentBinder {
       typeArguments: typeArguments,
       source: source,
       seedGenerics: seeds,
+      inferParameterNames:
+          target is ConstructorCall &&
+              target.instantiatedType != null &&
+              interfaceArgumentsOf(target.instantiatedType!).isNotEmpty
+          ? const {}
+          : null,
       returnContext: returnContext,
       argIndexOffset: argIndexOffset,
       fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
@@ -1170,10 +1176,9 @@ final class ArgumentBinder {
       resolveGenerics: resolveGenerics,
       constrainedParameters: constrainedParameters,
       inferParameterNames: inferParameterNames,
-      // Only function/method declarations take explicit type arguments at the
-      // call site; constructor calls infer regardless (e.g. List<int>() still
-      // infers the constructor's own generics).
-      inferGenerics: !isCallableDecl || typeArguments == null,
+      // Explicit arguments also fix a constructor's class parameters. Do not
+      // infer them again from a dynamic argument and discard its type check.
+      inferGenerics: typeArguments == null,
       fillOmitted: fillOmitted,
       defaultsSignature: defaultsSignature,
     );
