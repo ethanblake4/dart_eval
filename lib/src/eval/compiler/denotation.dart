@@ -1,4 +1,6 @@
 import 'helpers/global.dart';
+import 'helpers/deferred_import.dart';
+import 'builtins.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
 import 'helpers/return.dart';
@@ -977,6 +979,7 @@ final class PrefixDenotation extends Denotation {
       final stub = _deferredLoadLibrary(ctx, prefix);
       if (stub != null) return _SyntheticDenotation(stub);
     }
+    checkDeferredImport(ctx, prefix);
     final child =
         children[forSet
             ? MemberName.setter(name).key
@@ -1683,8 +1686,8 @@ Receiver compileReceiver(
 /// Field-wise equality for shadow comparison of dispatch results.
 
 /// A deferred import prefix exposes an implicit `loadLibrary` member. Since
-/// all libraries are compiled eagerly, it resolves to a stub closure
-/// returning an already-completed `Future<Null>` — and it shadows any
+/// all libraries are compiled eagerly, it resolves to a closure enabling
+/// access through this prefix. It shadows any
 /// `loadLibrary` declared by the imported library itself.
 Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
   if (!(ctx.deferredPrefixes[ctx.library]?.contains(prefix) ?? false)) {
@@ -1694,9 +1697,12 @@ Variable? _deferredLoadLibrary(CompilerContext ctx, String prefix) {
       ctx.bridgeStaticFunctionIndices[ctx
           .libraryMap['dart:core']]?['deferred_loadLibrary'];
   if (idx == null) return null;
+  final key = BuiltinValue(
+    stringval: deferredImportKey(ctx, prefix),
+  ).push(ctx).boxIfNeeded(ctx);
   return Variable.ssa(
     ctx,
-    InvokeExternal(ctx.svar('loadLibrary'), idx, []),
+    InvokeExternal(ctx.svar('loadLibrary'), idx, [key.ssa]),
     CoreTypes.function.ref(ctx),
     facts: ValueFacts(
       callableSignature: CallSignature.returnOnly(

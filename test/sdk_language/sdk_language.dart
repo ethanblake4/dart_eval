@@ -15,10 +15,13 @@ library;
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/model/source.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conditional_import.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 import 'package:yaml/yaml.dart';
@@ -193,7 +196,9 @@ class SdkSuite {
             .listSync(recursive: true)
             .whereType<File>()
             .where((f) => f.path.endsWith('_test.dart'))
-            .map((f) => _normalizeRelPath(p.relative(f.path, from: languageRoot)))
+            .map(
+              (f) => _normalizeRelPath(p.relative(f.path, from: languageRoot)),
+            )
             .toList()
           ..sort();
     return [for (final rel in files) classify(rel)];
@@ -220,7 +225,9 @@ class SdkSuite {
     // file may define main() — scan `part` targets relative to the test.
     var hasMain = RegExp(r'\bmain\s*\(').hasMatch(source);
     if (!hasMain) {
-      for (final m in RegExp(r'''part\s+['"]([^'"]+)['"]''').allMatches(source)) {
+      for (final m in RegExp(
+        r'''part\s+['"]([^'"]+)['"]''',
+      ).allMatches(source)) {
         final partFile = File(p.join(p.dirname(file.path), m.group(1)!));
         if (partFile.existsSync() &&
             RegExp(r'\bmain\s*\(').hasMatch(partFile.readAsStringSync())) {
@@ -282,15 +289,26 @@ class SdkSuite {
   };
 
   static final _directivePattern = RegExp(
-    '''^\\s*(?:import|export|part)\\s+(?:deferred\\s+)?(?:'|")([^'"]+)''',
+    r'''^\s*(?:import|export|part)\s+(?:deferred\s+)?['"][^'"]+['"][^;]*;''',
     multiLine: true,
   );
+
+  static Iterable<String> _directiveUris(String source) sync* {
+    for (final match in _directivePattern.allMatches(source)) {
+      final unit = parseString(
+        content: match.group(0)!,
+        throwIfDiagnostics: false,
+      ).unit;
+      for (final directive in unit.directives.whereType<UriBasedDirective>()) {
+        yield selectedDirectiveUri(directive);
+      }
+    }
+  }
 
   /// First unsupported import URI in [source], or null.
   static String? _unsupportedImport(String source) {
     if (_harnessFlag.hasMatch(source)) return 'requires SDK test harness flags';
-    for (final m in _directivePattern.allMatches(source)) {
-      final uri = m.group(1)!;
+    for (final uri in _directiveUris(source)) {
       if (uri.startsWith('dart:')) {
         final lib = uri.substring(5).split('.').first;
         if (!_supportedDartLibs.contains(lib)) return uri;
@@ -329,8 +347,8 @@ class SdkSuite {
         source,
       );
       final base = Uri.parse('package:sdk_language/$rel');
-      for (final m in _directivePattern.allMatches(source)) {
-        final uri = Uri.parse(m.group(1)!);
+      for (final path in _directiveUris(source)) {
+        final uri = Uri.parse(path);
         if (uri.scheme == 'dart') {
           final lib = uri.pathSegments.first.split('.').first;
           if (!_supportedDartLibs.contains(lib)) {
@@ -367,8 +385,8 @@ class SdkSuite {
       // Vendored files may pull in siblings via relative imports
       // (e.g. variations.dart → config.dart).
       final base = Uri.parse('package:$packageRel');
-      for (final m in _directivePattern.allMatches(source)) {
-        final uri = base.resolveUri(Uri.parse(m.group(1)!));
+      for (final path in _directiveUris(source)) {
+        final uri = base.resolveUri(Uri.parse(path));
         if (uri.scheme == 'package') {
           _collectPackage(uri.toString().substring(8), sources);
         }

@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
+import '../helpers/deferred_import.dart';
 import '../invocation/binder.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
@@ -185,6 +186,10 @@ void compileConstructorDeclaration(
     final b = d.body;
 
     if (redirectTarget != null) {
+      checkDeferredImport(
+        ctx,
+        d.redirectedConstructor!.type.importPrefix?.name.lexeme,
+      );
       // `factory C.f(...) = D.g;` forwards its parameters along the target's
       // parameter layout; omitted slots use the target's defaults.
       final (targetType, targetRef, ctorName, targetCtor) = redirectTarget;

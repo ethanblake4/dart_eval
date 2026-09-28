@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import 'helpers/conditional_import.dart';
 import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
@@ -1427,7 +1428,8 @@ _resolveImportsAndExports(
     // and the value being a set of its exports.
     for (final l in libraries)
       l.uri: {
-        for (final export in l.exports) l.uri.resolve(export.uri.stringValue!),
+        for (final export in l.exports)
+          l.uri.resolve(selectedDirectiveUri(export)),
       },
   });
 
@@ -1530,7 +1532,7 @@ _resolveImportsAndExports(
       final exportsPerUri = <Uri, List<ExportDirective>>{};
       for (final lib in importedLibs) {
         for (final export in lib.exports) {
-          final uri = lib.uri.resolve(export.uri.stringValue!);
+          final uri = lib.uri.resolve(selectedDirectiveUri(export));
           final uriList = exportsPerUri[uri];
           if (uriList != null) {
             uriList.add(export);
@@ -1609,9 +1611,12 @@ _resolveImportsAndExports(
           (ctx.deferredPrefixes[libraryIds[l]!] ??= {}).add(import.prefix!);
           // The prefix's implicit `loadLibrary` member is served by a fixed
           // dart:core bridge returning a `() -> Future<Null>` closure.
-          ctx.bridgeStaticFunctionIndices
-              .putIfAbsent(libraryIds[uriMap[dartCoreUri]!]!, () => {})
-              .putIfAbsent('deferred_loadLibrary', allocateBridgeIndex);
+          ctx.bridgeStaticFunctionIndices.putIfAbsent(
+              libraryIds[uriMap[dartCoreUri]!]!,
+              () => {},
+            )
+            ..putIfAbsent('deferred_loadLibrary', allocateBridgeIndex)
+            ..putIfAbsent('deferred_checkLoaded', allocateBridgeIndex);
         }
       } else {
         for (final d in visibleDeclarations) {
@@ -1789,8 +1794,9 @@ Iterable<Library> _discoverReachableLibraries(
     for (final l in libraries)
       l.uri: {
         for (final import in l.imports)
-          l.uri.resolve(_selectedImportUri(import)),
-        for (final export in l.exports) l.uri.resolve(export.uri.stringValue!),
+          l.uri.resolve(selectedDirectiveUri(import)),
+        for (final export in l.exports)
+          l.uri.resolve(selectedDirectiveUri(export)),
       },
   });
 
@@ -1828,7 +1834,7 @@ class _Import {
     String? prefix, [
     List<Combinator> combinators = const [],
   ]) {
-    final uri = Uri.parse(_selectedImportUri(import));
+    final uri = Uri.parse(selectedDirectiveUri(import));
     return _Import(
       base.resolveUri(uri),
       import.prefix?.name,
@@ -1836,23 +1842,6 @@ class _Import {
       import.deferredKeyword != null,
     );
   }
-}
-
-String _selectedImportUri(ImportDirective import) {
-  var uri = import.uri.stringValue!;
-  for (final configuration in import.configurations) {
-    final enabled = switch (configuration.name.toSource()) {
-      'dart.library.io' => const bool.fromEnvironment('dart.library.io'),
-      'dart.library.js_interop' => const bool.fromEnvironment(
-        'dart.library.js_interop',
-      ),
-      _ => false,
-    };
-    if (enabled == (configuration.value?.stringValue != 'false')) {
-      uri = configuration.uri.stringValue!;
-    }
-  }
-  return uri;
 }
 
 /// The named types a class-like declaration places in superinterface position

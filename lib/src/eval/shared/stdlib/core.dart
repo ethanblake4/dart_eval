@@ -21,7 +21,8 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/stack_trace.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/string_buffer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/typedefs.dart' as core_typedefs;
+import 'package:dart_eval/src/eval/shared/stdlib/core/typedefs.dart'
+    as core_typedefs;
 import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
 import 'core/duration.dart';
@@ -226,12 +227,44 @@ class DartCorePlugin implements EvalPlugin {
       'deferred_loadLibrary',
       _deferredLoadLibrary,
     );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'deferred_checkLoaded',
+      _deferredCheckLoaded,
+    );
   }
 }
 
-/// Deferred import prefixes expose `loadLibrary` as an implicit member. Since
-/// all libraries are compiled eagerly, it returns a completed future.
-$Value? _deferredLoadLibrary(Runtime runtime, Object? r, Object? s, Object? c) =>
-    $Closure(
-      (runtime, target, r, s, c) => $Future.wrap(Future<Null>.value(null)),
+final _deferredImports = Expando<_DeferredImports>();
+
+final class _DeferredImports {
+  final loaded = <String>{};
+  final loads = <String, Future<Null>>{};
+}
+
+_DeferredImports _importsFor(Runtime runtime) =>
+    _deferredImports[runtime] ??= _DeferredImports();
+
+$Value? _deferredLoadLibrary(Runtime runtime, Object? r, Object? s, Object? c) {
+  final key = (r as $Value).$value as String;
+  return $Closure((runtime, target, r, s, c) {
+    final state = _importsFor(runtime);
+    return $Future.wrap(
+      state.loads.putIfAbsent(
+        key,
+        () => Future<Null>(() {
+          state.loaded.add(key);
+          return null;
+        }),
+      ),
     );
+  });
+}
+
+$Value? _deferredCheckLoaded(Runtime runtime, Object? r, Object? s, Object? c) {
+  final key = (r as $Value).$value as String;
+  if (!_importsFor(runtime).loaded.contains(key)) {
+    throw StateError('Deferred import "$key" has not been loaded');
+  }
+  return null;
+}

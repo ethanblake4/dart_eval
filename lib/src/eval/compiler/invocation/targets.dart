@@ -619,6 +619,24 @@ final class NoSuchMethodCall extends CallTarget {
     ).result;
   }
 
+  /// A missing superclass setter dispatches on `this`, preserving the
+  /// setter-shaped invocation and the original assigned value.
+  void emitSetter(CompilerContext ctx, Variable value) {
+    final bridge =
+        ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
+    final invocation = Variable.ssa(
+      ctx,
+      InvokeExternal(ctx.svar('inv'), bridge['Invocation.setter']!, [
+        _symbolFor(ctx, '$name=').ssa,
+        value.boxIfNeeded(ctx).ssa,
+      ]),
+      CoreTypes.invocation.ref(ctx),
+    );
+    CallResolver(
+      ctx,
+    ).invokeOperator(ctx.lookupLocal('#this')!, 'noSuchMethod', [invocation]);
+  }
+
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     final coreLib = ctx.libraryMap['dart:core']!;

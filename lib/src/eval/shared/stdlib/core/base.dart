@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
+import '../../library_environment.dart';
 import 'num.dart';
 
 const $dynamicCls = BridgeClassDef(
@@ -267,11 +268,11 @@ class $bool implements $Instance {
     Object? s,
     Object? c,
   ) {
+    final name = (r as $Value).$value as String;
+    final libraryValue = sdkLibraryEnvironment[name];
+    if (libraryValue != null) return $bool(libraryValue == 'true');
     return $bool(
-      bool.fromEnvironment(
-        (r as $Value?)!.$value,
-        defaultValue: (s as $Value?)?.$value ?? false,
-      ),
+      bool.fromEnvironment(name, defaultValue: (s as $Value?)?.$value ?? false),
     );
   }
 
@@ -282,7 +283,10 @@ class $bool implements $Instance {
     Object? s,
     Object? c,
   ) {
-    return $bool(bool.hasEnvironment((r as $Value?)!.$value));
+    final name = (r as $Value).$value as String;
+    return $bool(
+      sdkLibraryEnvironment.containsKey(name) || bool.hasEnvironment(name),
+    );
   }
 
   /// Wrapper for the [bool.parse] static method
@@ -889,11 +893,11 @@ class $String implements $Instance {
     final Object? s,
     final Object? c,
   ) {
+    final name = (r as $Value).$value as String;
+    final libraryValue = sdkLibraryEnvironment[name];
+    if (libraryValue != null) return $String(libraryValue);
     return $String(
-      String.fromEnvironment(
-        (r as $Value?)!.$value,
-        defaultValue: (s as $Value?)?.$value ?? '',
-      ),
+      String.fromEnvironment(name, defaultValue: (s as $Value?)?.$value ?? ''),
     );
   }
 

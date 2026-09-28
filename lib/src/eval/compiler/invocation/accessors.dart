@@ -1018,6 +1018,12 @@ sealed class SetTarget {
         ctx.lookupLocal('#this')!,
       ).emit(ctx, value);
     }
+    if (!ctx.memberLookup
+        .superMemberTarget(self.type, name, kind: MemberKind.setter)
+        .found) {
+      NoSuchMethodCall(name: name).emitSetter(ctx, value);
+      return value;
+    }
     final owner = _superOwner(ctx, self, name, MemberKind.setter);
     if (ctx
             .topLevelDeclarationsMap[owner.type.file]?[owner.type.name]
