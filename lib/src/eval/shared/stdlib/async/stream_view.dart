@@ -1912,7 +1912,15 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.toList();
     return $Future.wrap(
       result.then(
-        (e) => $List.view(e, (e) => runtime.wrapAlways(e, recursive: true)),
+        (e) => $List.view(
+          e,
+          (e) => runtime.wrapAlways(e, recursive: true),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+                runtime.lookupType(CoreTypes.dynamic),
+          ]),
+        ),
       ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [

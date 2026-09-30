@@ -43,12 +43,16 @@ Variable compilePostfixExpression(
         return emitNullGuard(
           ctx,
           receiver.value!,
-          (t) => assertNonNull(
-            IdentifierReference.receiver(
-              receiver.withValue(t),
-              pa.propertyName.name,
-            ).getValue(ctx, pa, bound),
-          ),
+          (t) {
+            final result = assertNonNull(
+              IdentifierReference.receiver(
+                receiver.withValue(t),
+                pa.propertyName.name,
+              ).getValue(ctx, pa, bound),
+            );
+            promoteNonNull(ctx, pa);
+            return result;
+          },
           source: e,
           narrow: pa.operator.type == TokenType.QUESTION_PERIOD,
         );
@@ -108,11 +112,8 @@ Variable compilePostfixExpression(
     return emitNullGuard(
       ctx,
       target,
-      (t) => _postfixOnReference(
-        e,
-        ctx,
-        compileIndexReference(operand, ctx, t),
-      ),
+      (t) =>
+          _postfixOnReference(e, ctx, compileIndexReference(operand, ctx, t)),
       source: e,
     );
   }

@@ -33,6 +33,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [ByteConversionSink]
 class $ByteConversionSink implements $Instance {
@@ -239,7 +240,14 @@ class $ByteConversionSink implements $Instance {
         ((r as $Value?)! as EvalCallable)(
           runtime,
           null,
-          $List.view(accumulated, (e) => $int(e)),
+          $List.view(
+            accumulated,
+            (e) => $int(e),
+            runtime: runtime,
+            runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+              runtime.lookupType(CoreTypes.int),
+            ]),
+          ),
           null,
           1,
         );

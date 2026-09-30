@@ -45,6 +45,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExp,
         $RegExpMatch,
         $StringSink;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [Pattern]
 class $Pattern implements $Instance {
@@ -416,7 +417,14 @@ class $Match implements $Instance {
     final result = self.$value.groups(
       ((r as $Value?)!.$reified as List).cast<int>(),
     );
-    return $List.view(result, (e) => e == null ? const $null() : $String(e));
+    return $List.view(
+      result,
+      (e) => e == null ? const $null() : $String(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.internParameterizedType(CoreTypes.string, [], nullable: true),
+      ]),
+    );
   }
 
   @override

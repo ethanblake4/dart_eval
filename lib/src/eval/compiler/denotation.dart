@@ -12,6 +12,7 @@ import 'member/member_name.dart';
 import 'member/resolved_member.dart';
 import 'backend/representation.dart' show MachineRepresentation;
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart';
 import 'invocation/deferred.dart';
@@ -442,13 +443,23 @@ final class InstanceMemberDenotation extends Denotation {
     CompilerContext ctx,
     Variable object, [
     bool viaSuper = false,
-  ]) =>
-      // A bound receiver's current value is authoritative; an unbound
-      // value (ephemeral cascade target) carries facts on itself.
-      ((viaSuper ? ctx.lookupBinding('#this') : object.binding)?.current ??
-              object)
-          .facts
-          .promotedMembers?[viaSuper ? 'super:$name' : name];
+    AstNode? source,
+  ]) {
+    // Before Dart 3.9, a non-cascaded null-aware access does not use
+    // field promotions established before the access.
+    if (source is PropertyAccess &&
+        source.operator.type == TokenType.QUESTION_PERIOD &&
+        !source.isCascaded &&
+        !ctx.soundFlowAnalysis(source)) {
+      return null;
+    }
+    // A bound receiver's current value is authoritative; an unbound
+    // value (ephemeral cascade target) carries facts on itself.
+    return ((viaSuper ? ctx.lookupBinding('#this') : object.binding)?.current ??
+            object)
+        .facts
+        .promotedMembers?[viaSuper ? 'super:$name' : name];
+  }
 
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) =>
@@ -504,6 +515,7 @@ final class InstanceMemberDenotation extends Denotation {
         ctx,
         object,
         receiver is SuperReceiver,
+        source,
       );
       if (promoted != null) return promoted;
     }
@@ -593,7 +605,7 @@ final class InstanceMemberDenotation extends Denotation {
       boundContext: boundContext,
       typeArguments: typeArguments,
     );
-    final promoted = _promotedFieldType(ctx, $this);
+    final promoted = _promotedFieldType(ctx, $this, false, source);
     return promoted == null ? value : value.withType(promoted);
   }
 
@@ -613,7 +625,7 @@ final class InstanceMemberDenotation extends Denotation {
         boundContext: boundContext,
         typeArguments: typeArguments,
       );
-      final promoted = _promotedFieldType(ctx, self, true);
+      final promoted = _promotedFieldType(ctx, self, true, source);
       return promoted == null ? value : value.withType(promoted);
     }
     if (declared != null) {
@@ -636,7 +648,7 @@ final class InstanceMemberDenotation extends Denotation {
       boundContext: boundContext,
       typeArguments: typeArguments,
     );
-    final promoted = _promotedFieldType(ctx, object);
+    final promoted = _promotedFieldType(ctx, object, false, source);
     return promoted == null ? value : value.withType(promoted);
   }
 
@@ -1596,7 +1608,8 @@ final class _TypeMemberDenotation extends Denotation {
     final member =
         getterMember ?? ctx.topLevelDeclarationsMap[type.file]![fqName];
     final memberDecl = member?.declaration;
-    if (memberDecl is ConstructorDeclaration || member == null && name == 'new') {
+    if (memberDecl is ConstructorDeclaration ||
+        member == null && name == 'new') {
       return materializeConstructorTearOff(
         ctx,
         type,

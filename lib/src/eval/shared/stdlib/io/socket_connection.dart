@@ -2590,7 +2590,16 @@ class $Socket implements $Instance {
     final self = target! as $Socket;
     final result = self.$value.toList();
     return $Future.wrap(
-      result.then((e) => $List.view(e, (e) => $Uint8List.wrap(e))),
+      result.then(
+        (e) => $List.view(
+          e,
+          (e) => $Uint8List.wrap(e),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(TypedDataTypes.uint8List),
+          ]),
+        ),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
         runtime.internParameterizedType(CoreTypes.list, [

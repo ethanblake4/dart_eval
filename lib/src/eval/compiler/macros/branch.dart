@@ -168,6 +168,9 @@ StatementInfo macroBranch(
         ? thenState
         : initialState,
   );
+  // Surviving snapshots retain their flow facts, but their outgoing edges
+  // already converted local storage back to the initial representation.
+  ctx.restoreBoxingState(initialState);
   if (thenContinues && elseContinues) {
     ctx.mergeBranchState([thenState, elseState]);
     for (var i = 0; i < ctx.locals.length; i++) {
@@ -189,7 +192,10 @@ StatementInfo macroBranch(
     // No edge reaches the join — anything after is dead code. It still
     // analyzes, so keep compiling, but report that control never continues
     // (willAlwaysThrow doubles as the "unreachable" marker elsewhere).
-    return info.copyWith(willAlwaysThrow: markNeverTerminates(ctx).willAlwaysThrow || info.willAlwaysThrow);
+    return info.copyWith(
+      willAlwaysThrow:
+          markNeverTerminates(ctx).willAlwaysThrow || info.willAlwaysThrow,
+    );
   }
   return info;
 }

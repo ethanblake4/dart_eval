@@ -2,10 +2,15 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
-String _source(String version, {bool wrongTypes = false}) {
+String _source(
+  String version, {
+  bool wrongTypes = false,
+  bool repeatedLocal = false,
+}) {
   final modern = version == '3.9';
   final nullable = modern != wrongTypes ? 'int' : 'int?';
   final demoted = modern != wrongTypes ? 'num' : 'Object';
+  final receiver = repeatedLocal ? 'value' : 'number()';
   return '''
 // @dart = $version
 typedef Exactly<T> = T Function(T);
@@ -23,25 +28,25 @@ int casts(bool flag) {
   return result ?? 0;
 }
 int main() {
-
+  ${repeatedLocal ? 'int value = 3;' : ''}
   int? call;
-  number()?.gcd(call = 0);
+  $receiver?.gcd(call = 0);
   call.check<Exactly<$nullable>>();
   int? cascade;
-  number()?..bitLength.gcd(cascade = 0);
+  $receiver?..bitLength.gcd(cascade = 0);
   cascade.check<Exactly<$nullable>>();
   int? coalesce = 1;
-  number() ?? (coalesce = null, 0).\$2;
+  $receiver ?? (coalesce = null, 0).\$2;
   coalesce.check<Exactly<$nullable>>();
   int? store = 1;
-  int storeValue = number();
+  int storeValue = $receiver;
   storeValue ??= (store = null, 0).\$2;
   store.check<Exactly<$nullable>>();
   int? tested = 1;
-  if (number() is int) {} else { tested = null; }
+  if ($receiver is int) {} else { tested = null; }
   tested.check<Exactly<$nullable>>();
   int? nullTest = 1;
-  if (number() is Null) { nullTest = null; }
+  if ($receiver is Null) { nullTest = null; }
   nullTest.check<Exactly<$nullable>>();
   Object object = 1;
   object as num;
@@ -121,25 +126,39 @@ int main() {
   });
 
   for (final version in ['3.8', '3.9']) {
-    test('Dart $version flow joins retain versioned static types', () {
-      final program = Compiler().compile({
-        'flow_version': {'main.dart': _source(version)},
+    for (final repeatedLocal in [false, true]) {
+      final receiver = repeatedLocal ? 'reused local' : 'call result';
+      test('Dart $version flow joins retain types for $receiver', () {
+        final program = Compiler().compile({
+          'flow_version': {
+            'main.dart': _source(version, repeatedLocal: repeatedLocal),
+          },
+        });
+        for (final runtime in [
+          Runtime.ofProgram(program),
+          Runtime(program.write().buffer),
+        ]) {
+          expect(
+            runtime.executeLib('package:flow_version/main.dart', 'main'),
+            6,
+          );
+        }
       });
-      for (final runtime in [
-        Runtime.ofProgram(program),
-        Runtime(program.write().buffer),
-      ]) {
-        expect(runtime.executeLib('package:flow_version/main.dart', 'main'), 6);
-      }
-    });
 
-    test('Dart $version rejects the other version\'s flow types', () {
-      expect(
-        () => Compiler().compile({
-          'flow_version': {'main.dart': _source(version, wrongTypes: true)},
-        }),
-        throwsA(isA<CompileError>()),
-      );
-    });
+      test('Dart $version rejects wrong flow types for $receiver', () {
+        expect(
+          () => Compiler().compile({
+            'flow_version': {
+              'main.dart': _source(
+                version,
+                wrongTypes: true,
+                repeatedLocal: repeatedLocal,
+              ),
+            },
+          }),
+          throwsA(isA<CompileError>()),
+        );
+      });
+    }
   }
 }

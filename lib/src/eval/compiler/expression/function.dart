@@ -92,6 +92,7 @@ Variable compileFunctionExpression(
   late final int fnOffset;
   TypeRef? inferredClosureReturnType;
   TypeRef? declaredClosureReturnType;
+  final parameterTypes = <FormalParameter, TypeRef>{};
   final typeParameters =
       e.typeParameters?.typeParameters ?? const <TypeParameter>[];
   try {
@@ -157,23 +158,8 @@ Variable compileFunctionExpression(
           allowUnboxed: false,
           sortNamed: true,
           parameterOffset: 1,
+          ignoreDefaults: true,
         );
-
-        var boundPositionalParams = const <TypeRef>[];
-        var boundNamedParams = const <TypeRef>[];
-        if (bound is FunctionTypeRef) {
-          boundPositionalParams = bound.signature.positional;
-          boundNamedParams = [
-            for (final entry in bound.signature.named.entries.sorted(
-              (a, b) => a.key.compareTo(b.key),
-            ))
-              entry.value.type,
-          ];
-        }
-        final inorderBoundParams = [
-          ...boundPositionalParams,
-          ...boundNamedParams,
-        ];
 
         final b = e.body;
         // Local function declarations carry their return annotation on the
@@ -211,9 +197,14 @@ Variable compileFunctionExpression(
               ctx.library,
               p,
             );
-          } else if (i < inorderBoundParams.length) {
-            type = inorderBoundParams[i];
+          } else if (bound is FunctionTypeRef) {
+            type = p.isNamed
+                ? bound.signature.named[p.name!.lexeme]?.type ?? type
+                : bound.signature.positional.elementAtOrNull(i) ?? type;
           }
+          ctx.functionParameterTypes[fnOffset]![i] = type;
+          parameterTypes[p] = type;
+          compileParameterDefault(ctx, ctx.library, p, bound: type);
           vRep = Variable.of(
             ctx,
             SSA('arg_${i + 1}'),
@@ -351,13 +342,14 @@ Variable compileFunctionExpression(
       .toList();
 
   (Object?, int) parameterDefault(FormalParameter parameter) {
-    final (value, thunk) = compileParameterDefault(ctx, ctx.library, parameter);
-    final annotation = parameter.type;
-    if (value is int &&
-        annotation != null &&
-        ctx.typeFactory
-            .formalParameterAnnotationType(ctx.library, parameter)
-            .isSpec(CoreTypes.double)) {
+    final type = parameterTypes[parameter]!;
+    final (value, thunk) = compileParameterDefault(
+      ctx,
+      ctx.library,
+      parameter,
+      bound: type,
+    );
+    if (value is int && type.isSpec(CoreTypes.double)) {
       return (value.toDouble(), thunk);
     }
     return (value, thunk);
@@ -381,50 +373,50 @@ Variable compileFunctionExpression(
   final boundIsParametricSignature =
       bound is FunctionTypeRef && boundContainsTypeParameter(bound);
 
-  // A generic literal always uses its own signature — the bound context
-  // describes the target, not the literal's type parameters.
-  FunctionTypeRef closureType =
-      (bound is! FunctionTypeRef || boundIsParametricSignature) ||
-          e.typeParameters != null
-      ? FunctionTypeRef(
-          FunctionSignature(
-            typeParameters: [
-              for (var i = 0; i < typeParameters.length; i++)
-                ctx.typeParameterDefs.key(
-                  TypeParameterOwner(
-                    TypeParameterOwnerKind.closure,
-                    ctx.library,
-                    '<anonymous>',
-                    fnOffset,
-                  ),
-                  i,
-                  typeParameters[i].name.lexeme,
-                ),
-            ],
-            // `literalParameterType` resolves annotations against the
-            // closure's own type-parameter scope, which is popped before
-            // this point — reuse the types the parameter list compiled to
-            // (positional, then name-sorted named).
-            positional: ctx.functionParameterTypes[fnOffset]!
-                .take(positional.length)
-                .toList(),
-            requiredPositional: requiredPositionalArgCount,
-            named: {
-              for (var i = 0; i < sortedNamedArgs.length; i++)
-                sortedNamedArgs[i].name!.lexeme: (
-                  type: ctx
-                      .functionParameterTypes[fnOffset]![positional.length + i],
-                  required: sortedNamedArgs[i].isRequired,
-                ),
-            },
-            returnType:
-                declaredClosureReturnType ??
-                inferredClosureReturnType ??
-                CoreTypes.dynamic.ref(ctx),
+  // Context supplies inferred types, while the literal retains its own
+  // optional parameters and generic signature.
+  FunctionTypeRef closureType = FunctionTypeRef(
+    FunctionSignature(
+      typeParameters: [
+        for (var i = 0; i < typeParameters.length; i++)
+          ctx.typeParameterDefs.key(
+            TypeParameterOwner(
+              TypeParameterOwnerKind.closure,
+              ctx.library,
+              '<anonymous>',
+              fnOffset,
+            ),
+            i,
+            typeParameters[i].name.lexeme,
           ),
-          decl: ctx.types.bySpec(CoreTypes.function),
-        )
-      : bound.withNullable(false);
+      ],
+      // `literalParameterType` resolves annotations against the
+      // closure's own type-parameter scope, which is popped before
+      // this point — reuse the types the parameter list compiled to
+      // (positional, then name-sorted named).
+      positional: ctx.functionParameterTypes[fnOffset]!
+          .take(positional.length)
+          .toList(),
+      requiredPositional: requiredPositionalArgCount,
+      named: {
+        for (var i = 0; i < sortedNamedArgs.length; i++)
+          sortedNamedArgs[i].name!.lexeme: (
+            type: ctx.functionParameterTypes[fnOffset]![positional.length + i],
+            required: sortedNamedArgs[i].isRequired,
+          ),
+      },
+      returnType:
+          declaredClosureReturnType ??
+          (bound is FunctionTypeRef &&
+                  !boundIsParametricSignature &&
+                  e.typeParameters == null
+              ? bound.signature.returnType
+              : null) ??
+          inferredClosureReturnType ??
+          CoreTypes.dynamic.ref(ctx),
+    ),
+    decl: ctx.types.bySpec(CoreTypes.function),
+  );
   if (declaredClosureReturnType == null && inferredClosureReturnType != null) {
     // Replace a placeholder return — `dynamic`, or a type parameter (a
     // bridge `S Function(E)` gives the closure a param-typed return) —

@@ -275,7 +275,10 @@ PromotionSlot? promotableMemberSlot(
   String? member;
   var viaSuper = false;
   if (target is PropertyAccess &&
-      (target.operator.type == TokenType.PERIOD || target.isCascaded)) {
+      (target.operator.type == TokenType.PERIOD ||
+          target.isCascaded ||
+          (target.operator.type == TokenType.QUESTION_PERIOD &&
+              ctx.soundFlowAnalysis(target)))) {
     // A cascaded `.._f` has a null target — the receiver is the ambient
     // cascade variable.
     receiver = target.realTarget;

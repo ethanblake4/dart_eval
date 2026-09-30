@@ -185,8 +185,8 @@ mixin ScopeContext on Object implements AbstractScopeContext {
     }
   }
 
-  /// Like [resolveBranchStateDiscontinuity] but only rewrites the `boxed` flag
-  /// on each local's type, without emitting box/unbox operations. Use when the
+  /// Like [resolveBranchStateDiscontinuity] but only restores each local's
+  /// representation, without emitting box/unbox operations. Use when the
   /// boxing ops have already been emitted elsewhere and only the compile-time
   /// bookkeeping needs to catch up.
   void restoreBoxingState(ContextSaveState initial) {

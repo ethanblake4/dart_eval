@@ -981,7 +981,16 @@ class $Utf8Encoder implements $Instance {
     final self = target! as $Utf8Encoder;
     final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(
-      result.map((e) => $List.view(e, (e) => $int(e))),
+      result.map(
+        (e) => $List.view(
+          e,
+          (e) => $int(e),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        ),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.internParameterizedType(CoreTypes.list, [

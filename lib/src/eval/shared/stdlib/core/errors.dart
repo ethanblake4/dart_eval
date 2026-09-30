@@ -49,6 +49,7 @@ import 'package:dart_eval/stdlib/core.dart'
 import 'stack_trace.dart';
 import 'symbol.dart';
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
 import 'error_hooks.dart' as hooks;
@@ -2104,12 +2105,23 @@ class $Invocation implements Invocation, $Instance {
         return $Symbol.wrap(_memberName);
       case 'typeArguments':
         final _typeArguments = $value.typeArguments;
-        return $List.view(_typeArguments, (e) => $Type(e));
+        return $List.view(
+          _typeArguments,
+          (e) => $Type(e),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.type),
+          ]),
+        );
       case 'positionalArguments':
         final _positionalArguments = $value.positionalArguments;
         return $List.view(
           _positionalArguments,
           (e) => runtime.wrapAlways(e, recursive: true),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.dynamic),
+          ]),
         );
       case 'namedArguments':
         final _namedArguments = $value.namedArguments;

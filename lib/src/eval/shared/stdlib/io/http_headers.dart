@@ -25,6 +25,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $HttpHeaders,
         $RedirectInfo,
         $Socket;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [HttpHeaders]
 class $HttpHeaders implements $Instance {
@@ -1617,7 +1618,14 @@ class $HttpHeaders implements $Instance {
     Object? c,
   ) {
     final value = HttpHeaders.generalHeaders;
-    return $List.view(value, (e) => $String(e));
+    return $List.view(
+      value,
+      (e) => $String(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   /// Wrapper for the [HttpHeaders.entityHeaders] getter
@@ -1628,7 +1636,14 @@ class $HttpHeaders implements $Instance {
     Object? c,
   ) {
     final value = HttpHeaders.entityHeaders;
-    return $List.view(value, (e) => $String(e));
+    return $List.view(
+      value,
+      (e) => $String(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   /// Wrapper for the [HttpHeaders.responseHeaders] getter
@@ -1639,7 +1654,14 @@ class $HttpHeaders implements $Instance {
     Object? c,
   ) {
     final value = HttpHeaders.responseHeaders;
-    return $List.view(value, (e) => $String(e));
+    return $List.view(
+      value,
+      (e) => $String(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   /// Wrapper for the [HttpHeaders.requestHeaders] getter
@@ -1650,7 +1672,14 @@ class $HttpHeaders implements $Instance {
     Object? c,
   ) {
     final value = HttpHeaders.requestHeaders;
-    return $List.view(value, (e) => $String(e));
+    return $List.view(
+      value,
+      (e) => $String(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   final $Instance _superclass;
@@ -1741,7 +1770,14 @@ class $HttpHeaders implements $Instance {
     final result = self.$value[(r as $String).$value];
     return result == null
         ? const $null()
-        : $List.view(result, (e) => $String(e));
+        : $List.view(
+            result,
+            (e) => $String(e),
+            runtime: runtime,
+            runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+              runtime.lookupType(CoreTypes.string),
+            ]),
+          );
   }
 
   static const $Function __value = $Function(_value);
@@ -1847,7 +1883,14 @@ class $HttpHeaders implements $Instance {
         runtime,
         null,
         $String(name),
-        $List.view(values, (e) => $String(e)),
+        $List.view(
+          values,
+          (e) => $String(e),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.string),
+          ]),
+        ),
         2,
       );
     });

@@ -1,5 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show RuntimeException, TypedRuntimeInterop;
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
@@ -76,6 +78,77 @@ void main() {
       expect(result, equals(2));
     });
   });
+
+  test(
+    'typed native list views satisfy callback checks without eager mapping',
+    () {
+      final program = compiler.compile({
+        'test': {
+          'main.dart': '''
+bool main(dynamic values) {
+  bool Function(List<String>) callback = (items) {
+    if (items is! List<String> || items[0] != 'alpha') return false;
+    items[0] = 'beta';
+    return true;
+  };
+  return callback(values);
+}
+''',
+        },
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime.ofProgram(Program.read(program.write().buffer)),
+      ]) {
+        final backing = ['alpha'];
+        var mappings = 0;
+        final view = $List.view(
+          backing,
+          (value) {
+            mappings++;
+            return $String(value);
+          },
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.string),
+          ]),
+        );
+        expect(mappings, 0);
+        expect(
+          runtime.executeLib(
+            'package:test/main.dart',
+            'main',
+            arguments: {'values': view},
+          ),
+          true,
+        );
+        expect(backing, ['beta']);
+        expect(mappings, 1);
+        final wrong = $List.view(
+          [1],
+          $int.new,
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        );
+        expect(
+          () => runtime.executeLib(
+            'package:test/main.dart',
+            'main',
+            arguments: {'values': wrong},
+          ),
+          throwsA(
+            isA<RuntimeException>().having(
+              (error) => error.caughtException,
+              'cause',
+              isA<TypeError>(),
+            ),
+          ),
+        );
+      }
+    },
+  );
 
   test('\$List.view is lazy and writes through, fresh and serialized', () {
     const source = '''

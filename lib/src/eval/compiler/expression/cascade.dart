@@ -106,5 +106,8 @@ Variable compileCascadeExpression(
   }
   // `o?..sections` still evaluates to `o` when `o` is null — the result
   // keeps the target's declared type even if sections narrowed it.
+  if (e.isNullAware && (!ctx.soundFlowAnalysis(e) || target.type.nullable)) {
+    result = result.withFacts(target.facts);
+  }
   return result.withType(target.type);
 }

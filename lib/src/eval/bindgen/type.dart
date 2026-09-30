@@ -373,12 +373,18 @@ String? wrapType(
       return '$unionStr\$$boundName($expr)';
     }
     if (boundName == 'List') {
-      if (wrapList) {
-        return '$unionStr\$List.wrap($expr)';
-      }
       final generic = type as ParameterizedType;
       final arg = generic.typeArguments.first;
-      return '$unionStr\$List.view($expr, (e) => ${wrapNested(arg, 'e')})';
+      final metadata = _typeArgumentMetadata(
+        ctx,
+        'list',
+        arg,
+        runtimeTypeOwner,
+      );
+      if (wrapList) {
+        return '$unionStr\$List.wrap($expr$metadata)';
+      }
+      return '$unionStr\$List.view($expr, (e) => ${wrapNested(arg, 'e')}$metadata)';
     }
     if (boundName == 'Iterable' && type is ParameterizedType) {
       final arg = type.typeArguments.first;
@@ -400,7 +406,12 @@ String? wrapType(
     if (boundName == 'Stream') {
       final generic = type as ParameterizedType;
       final arg = generic.typeArguments.first;
-      final metadata = _asyncTypeMetadata(ctx, 'stream', arg, runtimeTypeOwner);
+      final metadata = _typeArgumentMetadata(
+        ctx,
+        'stream',
+        arg,
+        runtimeTypeOwner,
+      );
       return '$unionStr\$Stream.wrap($expr.map((e) => ${wrapNested(arg, 'e')})$metadata)';
     }
     if (boundName == 'Future') {
@@ -460,7 +471,7 @@ String? wrapType(
   return null;
 }
 
-String _asyncTypeMetadata(
+String _typeArgumentMetadata(
   BindgenContext ctx,
   String spec,
   DartType payload,
@@ -483,7 +494,7 @@ String _wrapFuture(
   String? owner, {
   bool wrapPayload = true,
 }) {
-  final metadata = _asyncTypeMetadata(ctx, 'future', payload, owner);
+  final metadata = _typeArgumentMetadata(ctx, 'future', payload, owner);
   final value = wrapPayload
       ? '$expr.then((e) => ${wrapVar(ctx, payload, 'e', runtimeTypeOwner: owner)})'
       : expr;

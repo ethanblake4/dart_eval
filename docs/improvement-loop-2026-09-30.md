@@ -356,3 +356,88 @@ pass. Logs: cycle3-pass1-ordinary.log, sdk-full-cycle3-pass1.log,
 cycle3-lub-before.log, cycle3-lub-after.log, and cycle3-lub-sdk.log. Full analysis
 has only the existing dependency warning and benchmark import info after
 fixing two new brace-style infos; focused type-system analysis is clean.
+
+## Third cycle, correctness pass 2
+
+Branch joins now restore reconciled local representations after choosing the
+surviving flow snapshot. Previously, a statically unreachable null edge could
+leave the compiler using a pre-reconciliation boxed view of an integer SSA
+slot. Repeated null-aware calls and cascades on the same scalar exposed the
+conflict. The fix reuses existing bookkeeping and emits no bytecode.
+
+Null assertions in guarded property access now record field promotions on
+the successful branch. Member reads and cascade result facts honor the Dart
+3.8/3.9 split: older non-cascaded null-aware reads use the declared field type,
+and newly promoted cascade facts only escape a nonnullable modern guard.
+Both SDK null-aware-field fixtures pass fresh and serialized. Twelve focused
+checks cover versioned static types, reused scalar locals, and nullable
+receivers. Logs: cycle3-flow-before.log, cycle3-flow-after.log,
+cycle3-flow-focused.log, and cycle3-field-promotion-after.log.
+Native Dart also returns the expected result 10 under both language versions;
+focused analysis is clean. Evidence: cycle3-field-native.log and
+cycle3-flow-analyze.log. The two field-access statuses are removed.
+
+Closure parameter types are resolved before compiling their defaults, so
+contextual const collections keep their inferred element types. Named contexts
+match by name, and each literal retains its own optional calling shape.
+The existing ignoreDefaults flag avoids creating an untyped thunk first.
+Native, fresh, and serialized regressions pass, including the SDK contextual
+default fixture; 81 focused closure, capture, and await checks pass.
+Its stale status is removed too.
+
+Ordinary-class primary headers lower into existing constructor and field AST
+nodes through an isolated adapter for the pinned analyzer. Original tokens,
+type annotations, defaults, and expressions keep their source locations.
+Named generic constructors, redirects, mutable/final declaring parameters,
+initializer scope, and body scope reuse ordinary lowering. Native checks
+confirmed that nondeclaring header parameters remain visible in the body,
+while declaring and super formals resolve through fields or lexical names.
+Late field initializers and function-typed declaring parameters are explicitly
+unsupported; declaration-initializer closure capture remains a later group.
+
+Field formals retain a separate initial boxed value while initializer arithmetic
+can change the local's representation. No additional boxing is required.
+The allocator removes the snapshot copy for a simple constructor, verified by
+identical whole-program bytecode arrays. Six focused constructor regressions
+pass fresh and serialized; five positive native sources agree. The primary SDK
+survey found six passing expected-failure fixtures, whose statuses are removed.
+
+Initial broad validation exposed a native HTTP callback regression: its newly
+correct List<String> parameter check saw a generated List<dynamic> view.
+The binding generator now reifies known List arguments using the same metadata
+helper as Future and Stream. The hand-maintained List view forwards that
+metadata into its existing wrapper fields, preserving lazy conversion and
+writeback without allocating another adapter. All generated stdlib edits come
+from generate_stdlib; a second run has identical hashes. The configured
+hand-maintained collection-view implementation is the only direct stdlib edit.
+
+The HTTP integration and native-Future/bindgen checks pass after regeneration.
+The new mapped-list regression checks typed callback admission, rejection of a
+wrong element type, lazy reads, and writeback in fresh and serialized programs.
+All five wrapper tests pass, and focused generator/view analysis is clean.
+Evidence: cycle3-list-focused.log, cycle3-list-wrappers-verified.log,
+cycle3-list-analyze.log, and cycle3-list-generate-idempotence.log.
+The same initial SDK run identified one more passing initializing-formal
+wildcard fixture; its stale status is removed, bringing this pass's removals
+to ten.
+
+Final ordinary validation passes 1896 tests with 62 skips. SDK-full passes
+2700 harness checks with 362 skips and no unexpected outcomes or stale
+statuses. Actual SDK outcomes are 2280 passed, 134 failed, and 286 compile
+errors. Full analysis has only the existing dependency warning and benchmark
+unused-import info. Logs: cycle3-pass2-ordinary-verified.log,
+sdk-full-cycle3-pass2-verified.log, and cycle3-pass2-analyze-verified.log.
+
+The final AOT comparison against checkpoint 398086a ran all 22 drivers with
+seven samples, alternating executable order and using CPU affinity mask 4.
+All 21 execution checksums matched. Most cases stayed close; overflow calls
+and named-default binding initially appeared 75% and 68% slower, respectively.
+Longer reverse-order runs with 15 samples did not reproduce either slowdown:
+overflow calls took 135.527 ms versus 141.386 ms, and named-default binding
+took 32314 us versus 32622 us. Whole serialized programs for all six call
+cases and eleven dynamic cases are byte-identical to the baseline. The short
+runs contain large timing spikes, so their medians do not establish a
+regression. No interpreter implementation changed in this pass. Evidence:
+cycle3-pass2-aot/summary.csv, its calls-repeat and dynamic-repeat logs, and
+cycle3-pass2-bytecode-comparison.log. The earlier cleanup's mixed-object-call
+timing issue remains a separate question for the performance pass.

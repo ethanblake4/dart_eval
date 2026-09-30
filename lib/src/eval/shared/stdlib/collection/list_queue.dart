@@ -1570,7 +1570,15 @@ class $ListQueue<E> implements $Instance {
     final result = self.$value.toList(
       growable: (r is $Value ? r : null) == null ? true : (r as $bool).$value,
     );
-    return $List.view(result, (e) => runtime.wrapAlways(e, recursive: true));
+    return $List.view(
+      result,
+      (e) => runtime.wrapAlways(e, recursive: true),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
+    );
   }
 
   static const $Function __toSet = $Function(_toSet);

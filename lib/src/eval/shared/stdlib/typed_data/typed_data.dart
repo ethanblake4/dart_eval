@@ -19,6 +19,7 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/stdlib/core.dart'
     hide $ByteBuffer, $TypedData, $ByteData, $Uint8List, $Uint32List;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
 /// dart_eval wrapper binding for [ByteBuffer]
@@ -4046,7 +4047,14 @@ class $Uint8List implements $Instance {
     final result = self.$value.toList(
       growable: (r is $Value ? r : null) == null ? true : (r as $bool).$value,
     );
-    return $List.view(result, (e) => $int(e));
+    return $List.view(
+      result,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
   }
 
   static const $Function __toSet = $Function(_toSet);
@@ -4540,7 +4548,14 @@ class $Uint8List implements $Instance {
     final self = target! as $Uint8List;
     final result =
         (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
-    return $List.view(result, (e) => $int(e));
+    return $List.view(
+      result,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
   }
 
   static const $Function __sublist = $Function(_sublist);
@@ -6783,7 +6798,14 @@ class $Uint32List implements $Instance {
     final result = self.$value.toList(
       growable: (r is $Value ? r : null) == null ? true : (r as $bool).$value,
     );
-    return $List.view(result, (e) => $int(e));
+    return $List.view(
+      result,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
   }
 
   static const $Function __toSet = $Function(_toSet);
@@ -7277,7 +7299,14 @@ class $Uint32List implements $Instance {
     final self = target! as $Uint32List;
     final result =
         (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
-    return $List.view(result, (e) => $int(e));
+    return $List.view(
+      result,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
   }
 
   static const $Function __sublist = $Function(_sublist);

@@ -48,6 +48,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExpMatch,
         $StringSink;
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [Uri]
 class $Uri implements $Instance {
@@ -1341,7 +1342,14 @@ class $Uri implements $Instance {
       (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
       (c is $Value ? c : null)?.$value,
     );
-    return $List.view(value, (e) => $int(e));
+    return $List.view(
+      value,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
   }
 
   /// Wrapper for the [Uri.parseIPv6Address] method
@@ -1356,7 +1364,14 @@ class $Uri implements $Instance {
       (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
       (c is $Value ? c : null)?.$value,
     );
-    return $List.view(value, (e) => $int(e));
+    return $List.view(
+      value,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
   }
 
   /// Wrapper for the [Uri.base] getter
@@ -1408,7 +1423,14 @@ class $Uri implements $Instance {
         return $String(_fragment);
       case 'pathSegments':
         final _pathSegments = $value.pathSegments;
-        return $List.view(_pathSegments, (e) => $String(e));
+        return $List.view(
+          _pathSegments,
+          (e) => $String(e),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.string),
+          ]),
+        );
       case 'queryParameters':
         final _queryParameters = $value.queryParameters;
         return wrapMap(
@@ -1419,8 +1441,17 @@ class $Uri implements $Instance {
         final _queryParametersAll = $value.queryParametersAll;
         return wrapMap(
           _queryParametersAll,
-          (key, value) =>
-              MapEntry($String(key), $List.view(value, (e) => $String(e))),
+          (key, value) => MapEntry(
+            $String(key),
+            $List.view(
+              value,
+              (e) => $String(e),
+              runtime: runtime,
+              runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+                runtime.lookupType(CoreTypes.string),
+              ]),
+            ),
+          ),
         );
       case 'isAbsolute':
         final _isAbsolute = $value.isAbsolute;

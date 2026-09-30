@@ -70,6 +70,7 @@ List<FormalParameter> resolveFPLDefaults(
   // while this function is still being compiled — closures, call sites, and
   // exports all share the cached indices afterwards.
   for (final param in [...positional, ...named]) {
+    if (ignoreDefaults) continue;
     // The declared parameter type is the default value's context type.
     var bound = param.type == null
         ? null

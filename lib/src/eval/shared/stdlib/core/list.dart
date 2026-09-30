@@ -1151,8 +1151,15 @@ class $List<E> implements List<E>, $Instance {
   /// [$Value]. Writes cross the boundary through [$Value.$reified].
   static $List<$Value?> view<T>(
     List<T> value,
-    $Value Function(T value) mapper,
-  ) => $MappedListView<T>(value, mapper);
+    $Value Function(T value) mapper, {
+    int? runtimeTypeId,
+    Runtime? runtime,
+  }) => $MappedListView<T>(
+    value,
+    mapper,
+    runtimeTypeId: runtimeTypeId,
+    runtime: runtime,
+  );
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -2031,8 +2038,12 @@ class $List<E> implements List<E>, $Instance {
 /// Canonical list storage over a native host list. Conversion stays lazy and
 /// direct list bytecodes can use it without knowing which wrapper created it.
 final class $MappedListView<E> extends $List<$Value?> {
-  $MappedListView(this.hostBacking, $Value Function(E value) mapper)
-    : super.wrap(_MappedCanonicalList<E>(hostBacking, mapper));
+  $MappedListView(
+    this.hostBacking,
+    $Value Function(E value) mapper, {
+    super.runtimeTypeId,
+    super.runtime,
+  }) : super.wrap(_MappedCanonicalList<E>(hostBacking, mapper));
 
   final List<E> hostBacking;
 }

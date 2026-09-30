@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'helpers/conditional_import.dart';
+import 'helpers/primary_constructor.dart';
 import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
@@ -1075,6 +1076,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     }
 
     final declaration = declarationOrBridge.declaration!;
+    if (declaration is ClassDeclaration) lowerPrimaryConstructor(declaration);
 
     // Extensions declare no top-level name binding themselves; their
     // `E.member` namespace keys are registered from `visibleExtensions` in

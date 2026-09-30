@@ -107,7 +107,7 @@ void compileConstructorDeclaration(
 
   final fieldIdx = fieldIndexInfo.count;
 
-  final fieldFormalNames = <String>[];
+  final fieldFormals = <String, SSA>{};
   // The factory's own signature is the checked boundary. Its target may
   // accept wider types or extra optional parameters.
   final redirectTarget = _redirectTarget(ctx, d);
@@ -143,7 +143,11 @@ void compileConstructorDeclaration(
     var vrep = Variable.of(ctx, SSA('arg_$i'), type, rep: abi.parameters[i]);
     if (p is FieldFormalParameter) {
       vrep = vrep.boxIfNeeded(ctx);
-      fieldFormalNames.add(p.name.lexeme);
+      // Preserve the field's boxed value when initializer expressions unbox
+      // the parameter's local slot.
+      fieldFormals[p.name.lexeme] = vrep
+          .copyIntoFreshSlot(ctx, 'field_initializer')
+          .ssa;
     } else if (p is SuperFormalParameter) {
       vrep = vrep.boxIfNeeded(ctx);
       if (p.isNamed) {
@@ -343,7 +347,7 @@ void compileConstructorDeclaration(
   // Non-late declaration initializers precede initializer-list entries.
   // Evaluate before the superconstructor call and apply once it exists.
   final usedNames = {
-    ...fieldFormalNames,
+    ...fieldFormals.keys,
     for (final init in otherInitializers)
       if (init is ConstructorFieldInitializer) init.fieldName.name,
   };
@@ -458,12 +462,12 @@ void compileConstructorDeclaration(
     _setupEnum(ctx, parent, inst.ssa);
   }
 
-  for (final fieldFormal in fieldFormalNames) {
+  for (final fieldFormal in fieldFormals.entries) {
     ctx.pushOp(
       SetPropertyStatic(
         inst.ssa,
-        fieldIndices[fieldFormal]!,
-        ctx.lookupLocal(fieldFormal)!.ssa,
+        fieldIndices[fieldFormal.key]!,
+        fieldFormal.value,
       ),
     );
   }
@@ -486,10 +490,14 @@ void compileConstructorDeclaration(
   final body = d.body;
   if (d.factoryKeyword == null && body is! EmptyFunctionBody) {
     ctx.beginScope();
-    // Initializing formals are only in scope in the initializer list; in the
-    // body the bare name resolves to `this.<field>` instead.
+    // Initializing and super formals are only in scope in the initializer list;
+    // in the body a bare field name resolves to `this.<field>` instead.
     for (final frame in ctx.locals) {
-      for (final name in fieldFormalNames) {
+      for (final name in {
+        ...fieldFormals.keys,
+        ...superParams.positional,
+        ...superParams.named,
+      }) {
         frame.remove(name);
       }
     }

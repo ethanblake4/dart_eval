@@ -642,7 +642,16 @@ class $Base64Decoder implements $Instance {
     final self = target! as $Base64Decoder;
     final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(
-      result.map((e) => $List.view(e, (e) => $int(e))),
+      result.map(
+        (e) => $List.view(
+          e,
+          (e) => $int(e),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        ),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.internParameterizedType(CoreTypes.list, [

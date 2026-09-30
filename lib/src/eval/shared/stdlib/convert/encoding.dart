@@ -37,6 +37,7 @@ import 'package:dart_eval/stdlib/core.dart'
 import 'converter.dart';
 import 'codec.dart';
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -53,7 +54,6 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [Encoding]
 class $Encoding implements $Instance {
@@ -346,7 +346,14 @@ class $Encoding implements $Instance {
   ) {
     final self = target! as $Encoding;
     final result = self.$value.encode((r as $String).$value);
-    return $List.view(result, (e) => $int(e));
+    return $List.view(
+      result,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
   }
 
   static const $Function __decode = $Function(_decode);
