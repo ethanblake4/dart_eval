@@ -10,26 +10,17 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
-/// Whether a cascade section's operator is `?..` (null-aware). Only the first
-/// section of a cascade may carry it — `a?..b..c` short-circuits them all.
-bool _isNullAwareSection(Expression section) {
-  return switch (section) {
-    MethodInvocation m => m.isCascaded && m.isNullAware,
-    PropertyAccess p => p.isCascaded && p.isNullAware,
-    IndexExpression i => i.isCascaded && i.isNullAware,
-    AnonymousMethodInvocation a => a.isCascaded && a.isNullAware,
-    AssignmentExpression a => _isNullAwareSection(a.leftHandSide),
-    _ => false,
-  };
-}
-
 Variable compileCascadeExpression(
   CascadeExpression e,
   CompilerContext ctx,
   TypeRef? bound,
 ) {
   // A cascade evaluates to its target, so the context type flows into it.
-  final receiverValue = compileExpression(e.target, ctx, bound).boxIfNeeded(ctx);
+  final receiverValue = compileExpression(
+    e.target,
+    ctx,
+    bound,
+  ).boxIfNeeded(ctx);
   // The cascade target is an implicit temp — a detached view of the same
   // SSA value — so member promotions recorded inside sections survive a
   // write to the source local (`..f([c = C()])`).
@@ -88,23 +79,22 @@ Variable compileCascadeExpression(
     }
   }
 
-  if (e.cascadeSections.isNotEmpty &&
-      _isNullAwareSection(e.cascadeSections.first)) {
+  if (e.isNullAware) {
     // `target?..section` — a null target skips every section.
     macroBranch(
       ctx,
       null,
       elseEdgeUnreachable: () =>
-          !target.type.nullable && !target.type.isSpec(CoreTypes.dynamic),
+          ctx.soundFlowAnalysis(e) &&
+          !target.type.nullable &&
+          !target.type.isSpec(CoreTypes.dynamic),
       condition: (ctx) => compileNonNullCondition(ctx, target),
       thenBranch: (ctx, _) {
         // Inside `?..` the target is non-null: sections read members off
         // the narrowed view, and member promotions of an ephemeral target
         // ride on that variable.
         promoteNonNull(ctx, e.target);
-        compileSections(
-          target.withType(target.type.withNullable(false)),
-        );
+        compileSections(target.withType(target.type.withNullable(false)));
         transferMemberFacts();
         return StatementInfo();
       },

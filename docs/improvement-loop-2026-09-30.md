@@ -151,3 +151,22 @@ All 18 focused async/context tests pass fresh and serialized, including a
 reentrant native callback regression with awaited list, map and set elements.
 Both SDK await-context cases and all three collection-await cases pass.
 Targeted analysis is clean. These five paths had no expect_fail entries.
+
+## Second cycle, correctness pass 2
+
+Flow analysis now respects the Dart 3.9 feature boundary. Older libraries keep
+both statically possible flow joins and discard promotion interests after full
+demotion; current libraries retain modern pruning and folded bytecode.
+Chained null-aware cascades use the analyzer's complete cascade predicate.
+
+Nullable type tests no longer incorrectly narrow a non-nullable local. Native
+Dart 3.13.4 confirms this for ordinary and late Object/num locals. Deferred
+initializers may use a boolean condition's recorded promotions only when its
+local dependencies are never assigned in the containing function. Existing
+write-capture and epoch checks remain.
+
+All ten enabled/disabled sound-flow SDK fixtures and three related nnbd cases
+pass fresh and serialized. Six focused regressions check both language
+versions, reject the opposite version's inferred types and retain mutation
+barriers. Targeted analysis is clean, with no runtime changes. The newly
+passing SDK paths have no expect_fail entries.

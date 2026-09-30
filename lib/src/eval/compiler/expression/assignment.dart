@@ -81,7 +81,7 @@ Variable _assignWithReference(
   if (e.operator.type == TokenType.EQ) {
     final R = compileExpression(e.rightHandSide, ctx, rhsContext());
     final set = R.type != setterType() ? R.boxIfNeeded(ctx) : R;
-    final stored = L.setValue(ctx, set);
+    final stored = L.setValue(ctx, set, e);
     // `b = cond` records the condition's promotions on `b` — `if (b)`
     // applies them (promotion through bool locals; matching the record
     // made at `bool b = cond` declarations).
@@ -118,6 +118,7 @@ Variable _assignWithReference(
       // A provably non-null LHS never runs the write branch; its state must
       // not join (the writes in it would spuriously demote locals).
       thenEdgeUnreachable: () =>
+          ctx.soundFlowAnalysis(e) &&
           !readValue!.type.nullable &&
           !readValue!.type.isSpec(CoreTypes.dynamic),
       condition: (ctx) {
@@ -131,7 +132,7 @@ Variable _assignWithReference(
         // evaluate `e` when `x` is non-null.
         final R = compileExpression(e.rightHandSide, ctx, rhsContext());
         final set = R.type != setterType() ? R.boxIntoFreshSlot(ctx) : R;
-        final V = L.setValue(ctx, set).boxIntoFreshSlot(ctx);
+        final V = L.setValue(ctx, set, e).boxIntoFreshSlot(ctx);
         // T2' is the RHS expression's type after coercion to the write
         // context: R's own type when it already conforms, else the type the
         // conversion produced (e.g. a `.call` tear-off coerced to Function).
@@ -194,6 +195,6 @@ Variable _assignWithReference(
     final set = res.type != L.resolveType(ctx, forSet: true)
         ? res.boxIfNeeded(ctx)
         : res;
-    return L.setValue(ctx, set);
+    return L.setValue(ctx, set, e);
   }
 }

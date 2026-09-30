@@ -44,7 +44,7 @@ void compileVariableDeclarationList(
 
     if (init != null) {
       // A `late` initializer evaluates after the declaration — recorded
-      // condition promotions can't apply inside it.
+      // conditions require stable dependencies inside it.
       if (l.lateKeyword != null) ctx.lateInitializerDepth++;
       Variable res;
       try {

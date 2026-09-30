@@ -683,6 +683,11 @@ class CompilerContext with ScopeContext {
   /// result rule for `?:`/`??`/`??=`, and `K?` as the `??`-operand context)
   /// apply to [node]: the feature shipped with Dart 3.4.
   bool inferenceUpdate3(AstNode node) => languageVersionAtLeast(node, 3, 4);
+
+  /// Dart 3.9 keeps promotion interests after demotion and excludes
+  /// statically impossible branches from flow joins.
+  bool soundFlowAnalysis(AstNode? node) =>
+      node == null || languageVersionAtLeast(node, 3, 9);
   late final MemberLookup memberLookup = MemberLookup(this);
   late final RuntimeTypes runtimeTypes = RuntimeTypes(this);
   final Map<int, TypeRef> bridgeTypeRefCache = {};

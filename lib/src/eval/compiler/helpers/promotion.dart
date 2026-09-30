@@ -12,11 +12,8 @@ import 'assigned_locals.dart';
 /// The action one branch edge takes with a proved promotion: [member] is
 /// null for a local's own type, or the member name for a `x._f` member
 /// promotion recorded on `x`'s binding facts.
-typedef PromotionApply = void Function(
-  Variable local,
-  TypeRef type,
-  String? member,
-);
+typedef PromotionApply =
+    void Function(Variable local, TypeRef type, String? member);
 
 /// Records the local promotions that hold when [expression] has [value].
 ///
@@ -99,7 +96,7 @@ void promoteMember(
 /// promotable member of a local. Used to implement promotion through
 /// boolean variables (`bool b = x != null; if (b) ...`).
 (Map<String, (TypeRef, int)> whenTrue, Map<String, (TypeRef, int)> whenFalse)
-    conditionPromotions(CompilerContext ctx, Expression expression) {
+conditionPromotions(CompilerContext ctx, Expression expression) {
   final whenTrue = <String, (TypeRef, int)>{};
   final whenFalse = <String, (TypeRef, int)>{};
   PromotionApply collect(Map<String, (TypeRef, int)> map) =>
@@ -148,9 +145,17 @@ void _visitPromotions(
   }
   // A bool local carries the condition it was assigned: `if (b)` applies
   // the recorded true-promotions, `if (!b)` the false ones.
-  if (expression is SimpleIdentifier &&
-      !excluded.contains(expression.name) &&
-      ctx.lateInitializerDepth == 0) {
+  if (expression is SimpleIdentifier && !excluded.contains(expression.name)) {
+    // A deferred initializer may run after any writes in the containing
+    // function. Conditions whose local dependencies are never assigned
+    // remain valid there; other dependencies must not promote.
+    final body = ctx.lateInitializerDepth == 0
+        ? null
+        : expression.thisOrAncestorOfType<FunctionBody>();
+    final deferredWrites = body == null
+        ? const <String>{}
+        : assignedLocalNames([body]);
+    if (deferredWrites.contains(expression.name)) return;
     final binding = ctx.lookupBinding(expression.name);
     if (binding != null && !binding.writeCaptured) {
       final recorded = value
@@ -158,7 +163,15 @@ void _visitPromotions(
           : binding.current.facts.falsePromotions;
       if (recorded != null) {
         for (final entry in recorded.entries) {
-          _applyRecorded(ctx, entry.key, entry.value, promote, excluded);
+          _applyRecorded(
+            ctx,
+            entry.key,
+            entry.value,
+            promote,
+            deferredWrites.isEmpty
+                ? excluded
+                : {...excluded, ...deferredWrites},
+          );
         }
       }
     }
@@ -186,10 +199,7 @@ void _visitPromotions(
       );
       return;
     }
-    final slot = switch ((
-      expression.leftOperand,
-      expression.rightOperand,
-    )) {
+    final slot = switch ((expression.leftOperand, expression.rightOperand)) {
       (final Expression slot, NullLiteral()) => slot,
       (NullLiteral(), final Expression slot) => slot,
       _ => null,
@@ -235,7 +245,11 @@ void _applyRecorded(
       binding.current.writeEpoch != recorded.$2) {
     return;
   }
-  promote(binding.current, recorded.$1, dot < 0 ? null : key.substring(dot + 1));
+  promote(
+    binding.current,
+    recorded.$1,
+    dot < 0 ? null : key.substring(dot + 1),
+  );
 }
 
 /// The promotion slot [target] addresses — the local itself when
@@ -261,8 +275,7 @@ PromotionSlot? promotableMemberSlot(
   String? member;
   var viaSuper = false;
   if (target is PropertyAccess &&
-      (target.operator.type == TokenType.PERIOD ||
-          target.isCascaded)) {
+      (target.operator.type == TokenType.PERIOD || target.isCascaded)) {
     // A cascaded `.._f` has a null target — the receiver is the ambient
     // cascade variable.
     receiver = target.realTarget;
@@ -303,8 +316,7 @@ PromotionSlot? promotableMemberSlot(
     while (receiver is ParenthesizedExpression) {
       receiver = receiver.expression;
     }
-    if (receiver == null ||
-        (target is PropertyAccess && target.isCascaded)) {
+    if (receiver == null || (target is PropertyAccess && target.isCascaded)) {
       // Cascaded `.._f` — promote the ambient cascade target. A bound
       // target stores facts on its binding; an ephemeral target
       // (`getC().._f`) carries them on the variable itself.
@@ -368,19 +380,13 @@ void _promoteSlot(
     // `x is S` narrows only when `S` is a subtype of the declared type —
     // an `is` check never widens a local to a type it can't represent.
     // The tested type joins the types of interest in *both* branches —
-    // `if (x is! S) { x = valueOfS }` still promotes `x` to `S`. A
-    // nullable `S` against a non-nullable local proves its non-null
-    // part — `x is int?` on `Object x` promotes to `int`.
+    // `if (x is! S) { x = valueOfS }` still promotes `x` to `S`.
+    // A nullable tested type cannot promote a non-nullable local when
+    // it is not a subtype of the local's current type.
     local.binding?.typesOfInterest.add(tested);
-    var promotedTo = isPromotionSubtype(ctx, tested, local.type)
+    final promotedTo = isPromotionSubtype(ctx, tested, local.type)
         ? tested
         : null;
-    if (promotedTo == null && tested.nullable) {
-      final nonNull = tested.withNullable(false);
-      if (isPromotionSubtype(ctx, nonNull, local.type)) {
-        promotedTo = nonNull;
-      }
-    }
     if (promotedTo != null) {
       local.binding?.typesOfInterest.add(promotedTo);
       promote(local, promotionView(local.type, promotedTo), null);
@@ -466,9 +472,8 @@ TypeRef promotedMemberReadType(
   final key = viaSuper ? 'super:$member' : member;
   // The binding's current value is authoritative when bound; an unbound
   // ephemeral (cascade target) carries facts on itself.
-  final recorded = (local.binding?.current ?? local)
-      .facts
-      .promotedMembers?[key];
+  final recorded =
+      (local.binding?.current ?? local).facts.promotedMembers?[key];
   if (recorded != null) return recorded;
   final resolved = ctx.memberLookup.tryInterfaceMember(
     local.type,

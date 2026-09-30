@@ -81,7 +81,9 @@ Variable emitNullGuard(
     // `x?.y` with a statically non-nullable `x` never takes the null path;
     // that edge still compiles but contributes nothing to the flow join.
     elseEdgeUnreachable: () =>
-        !target.type.nullable && !target.type.isSpec(CoreTypes.dynamic),
+        ctx.soundFlowAnalysis(source) &&
+        !target.type.nullable &&
+        !target.type.isSpec(CoreTypes.dynamic),
     condition: (ctx) => compileNonNullCondition(ctx, target),
     thenBranch: (ctx, rt) {
       // The receiver is provably non-null here: promote it so member and

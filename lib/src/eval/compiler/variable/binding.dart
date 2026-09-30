@@ -162,7 +162,8 @@ final class LocalBinding {
       var minimalCount = 0;
       for (final type in candidates) {
         if (candidates.every(
-          (other) => identical(other, type) ||
+          (other) =>
+              identical(other, type) ||
               type.isAssignableTo(ctx, other, forceAllowDynamic: false),
         )) {
           minimalCount++;
@@ -179,6 +180,10 @@ final class LocalBinding {
               stored.type.isAssignableTo(ctx, declaredType.withNullable(false))
         ? declaredType.withNullable(false)
         : retained ?? declaredType;
+
+    if (localType == declaredType && !ctx.soundFlowAnalysis(source)) {
+      typesOfInterest.clear();
+    }
 
     // A binding whose cell is preserved in an exception slot still writes
     // through the cell. The trampoline restores the cell itself.
@@ -307,4 +312,3 @@ final class LocalBinding {
     _current = _current.copyWith(type: type);
   }
 }
-

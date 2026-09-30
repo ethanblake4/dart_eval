@@ -42,7 +42,8 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   while (operand is ParenthesizedExpression) {
     operand = operand.expression;
   }
-  final promotesLocal = operand is SimpleIdentifier || operand is ThisExpression;
+  final promotesLocal =
+      operand is SimpleIdentifier || operand is ThisExpression;
   final promotes = isPromotionSubtype(ctx, slot, V.type);
   // A cast whose operand can never be `slot` throws unconditionally. Only
   // the leaf-`Null` cases are provable: a statically-`Null` operand against
@@ -50,13 +51,13 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // non-nullable operand. The assert still runs (it produces the TypeError);
   // the code after it is compiled but unreachable.
   final guaranteedThrow =
-      V.type.isSpec(CoreTypes.nullType)
-      ? !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, slot)
-      : slot.isSpec(CoreTypes.nullType) &&
-              !V.type.nullable &&
-              !V.type.isSpec(CoreTypes.dynamic) ||
-          // No value has type `Never` — `x as Never` always throws.
-          slot.isSpec(CoreTypes.never);
+      slot.isSpec(CoreTypes.never) ||
+      ctx.soundFlowAnalysis(e) &&
+          (V.type.isSpec(CoreTypes.nullType)
+              ? !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, slot)
+              : slot.isSpec(CoreTypes.nullType) &&
+                    !V.type.nullable &&
+                    !V.type.isSpec(CoreTypes.dynamic));
   Variable update(Variable v, TypeRef type) {
     final result = v.withType(type);
     if (promotes && promotesLocal) {
@@ -69,6 +70,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
     }
     return result;
   }
+
   final typeId = ctx.runtimeTypes.idOf(slot);
   if (slot.nullable) {
     macroBranch(

@@ -117,7 +117,13 @@ import '../helpers/assigned_locals.dart';
     // A statically-folded leaf still links both edges (the builder requires
     // them); the reachability flags tell the join to drop the dead arm's
     // flow state.
-    final staticOutcome = compiledValue.facts.constBool;
+    // Before sound flow analysis, a type test's statically known result
+    // still contributes both branches to the flow join. Keep the folded
+    // runtime value without applying the newer reachability rule.
+    final staticOutcome =
+        expression is IsExpression && !ctx.soundFlowAnalysis(expression)
+        ? null
+        : compiledValue.facts.constBool;
     return (
       reachable && staticOutcome != false,
       reachable && staticOutcome != true,

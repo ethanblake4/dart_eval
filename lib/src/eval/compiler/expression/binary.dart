@@ -218,6 +218,7 @@ Variable _compileShortCircuit(
     // nothing to the flow join.
     thenEdgeUnreachable: () =>
         operator == '??' &&
+        ctx.soundFlowAnalysis(left) &&
         !L.type.nullable &&
         !L.type.isSpec(CoreTypes.dynamic) &&
         // `Null` isn't `nullable` but a Null LHS is always null — the
@@ -226,7 +227,9 @@ Variable _compileShortCircuit(
     // `Null ?? e` always evaluates `e` — the surviving-LHS edge never
     // routes to the join.
     elseEdgeUnreachable: () =>
-        operator == '??' && L.type.isSpec(CoreTypes.nullType),
+        operator == '??' &&
+        ctx.soundFlowAnalysis(left) &&
+        L.type.isSpec(CoreTypes.nullType),
     condition: (ctx) {
       if (operator == '??') {
         return Variable.ssa(
