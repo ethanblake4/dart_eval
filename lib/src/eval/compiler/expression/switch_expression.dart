@@ -5,14 +5,13 @@ import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../values/value_rep.dart';
-import '../invocation/resolver.dart';
 
 /// Compiles a `switch (e) { pattern => expr, ... }` expression: evaluates the
 /// subject once, pattern-matches each case in order, and assigns the winning
@@ -46,25 +45,16 @@ Variable compileSwitchExpression(
     return macroBranch(
       ctx,
       null,
-      condition: (ctx) {
+      conditionGraph: (ctx, yes, no) {
         final subject = switchExpr.copyIntoFreshSlot(ctx, 'case_value');
-        final matches = patternMatchAndBind(
+        return compilePatternCondition(
           ctx,
-          currentCase.guardedPattern.pattern,
+          currentCase.guardedPattern,
           subject,
+          yes,
+          no,
+          source: e.expression,
         );
-        final guard = currentCase.guardedPattern.whenClause;
-        if (guard != null) {
-          final guardExpr = compileExpression(
-            guard.expression,
-            ctx,
-            CoreTypes.bool.ref(ctx),
-          );
-          return CallResolver(
-            ctx,
-          ).invokeOperator(matches, '&&', [guardExpr]).result;
-        }
-        return matches;
       },
       thenBranch: (ctx, _) {
         // Box into a fresh slot so an unboxed local's SSA keeps its primitive

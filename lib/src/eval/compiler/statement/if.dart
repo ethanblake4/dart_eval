@@ -1,12 +1,10 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
-import '../invocation/resolver.dart';
 
 StatementInfo compileIfStatement(
   IfStatement s,
@@ -44,25 +42,14 @@ StatementInfo _compileIfCaseStatement(
   return macroBranch(
     ctx,
     expectedReturnType,
-    condition: (ctx) {
-      var matches = patternMatchAndBind(
-        ctx,
-        caseClause.guardedPattern.pattern,
-        caseValue,
-      );
-      final guard = caseClause.guardedPattern.whenClause;
-      if (guard != null) {
-        final guardExpr = compileExpression(
-          guard.expression,
-          ctx,
-          CoreTypes.bool.ref(ctx),
-        );
-        matches = CallResolver(
-          ctx,
-        ).invokeOperator(matches, '&&', [guardExpr]).result;
-      }
-      return matches;
-    },
+    conditionGraph: (ctx, yes, no) => compilePatternCondition(
+      ctx,
+      caseClause.guardedPattern,
+      caseValue,
+      yes,
+      no,
+      source: s.expression,
+    ),
     thenBranch: (ctx, expectedReturnType) =>
         compileStatement(s.thenStatement, expectedReturnType, ctx),
     elseBranch: elseStatement == null

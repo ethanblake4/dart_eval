@@ -157,7 +157,16 @@ void compileConstructorDeclaration(
       }
     }
 
-    ctx.setLocal(p.name!.lexeme, vrep).captureBinding(ctx, p);
+    ctx
+        .setLocal(
+          p.name!.lexeme,
+          vrep,
+          isFinal:
+              p.isFinal ||
+              p is FieldFormalParameter ||
+              p is SuperFormalParameter,
+        )
+        .captureBinding(ctx, p);
 
     i++;
   }

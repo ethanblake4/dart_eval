@@ -421,7 +421,7 @@ TypeRef promotionView(TypeRef declared, TypeRef promoted) {
           promoted.parameter == declared.parameter)) {
     return TypeParameterTypeRef(
       declared.parameter,
-      nullable: promoted.nullable,
+      nullable: declared.nullable && promoted.nullable,
       promotedBound: promoted,
     );
   }

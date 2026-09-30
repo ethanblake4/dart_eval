@@ -441,3 +441,70 @@ regression. No interpreter implementation changed in this pass. Evidence:
 cycle3-pass2-aot/summary.csv, its calls-repeat and dynamic-repeat logs, and
 cycle3-pass2-bytecode-comparison.log. The earlier cleanup's mixed-object-call
 timing issue remains a separate question for the performance pass.
+
+## Third cycle, correctness pass 3
+
+Refutable patterns now branch directly to the failed case after each test.
+Object getters, list indexing, nested matches, and guards execute only after
+their prerequisites pass. List patterns check type and exact length; record
+patterns check shape before field reads, including empty records. The existing
+intrinsic null comparison handles null-check patterns without calling an
+overridden equality operator. Known successful checks emit no branch, and
+the graph avoids constructing boolean joins for each conjunction. No runtime
+opcode, adapter, or interpreter change is needed.
+
+Successful pattern edges carry the refined matched type through logical AND
+and record fields. The original subject receives that promotion only when it
+is promotable and the guard does not reassign it. Pattern variables live in
+the guard and successful body, while enclosing locals merge failed-edge
+effects. A failed guard can mutate a switch source without changing the
+snapshot tested by later cases. OR alternative binding and short-circuit
+lowering remain a separate group.
+
+Two new regressions cover native results 38 and 1, fresh and serialized,
+including skipped getters/guards, short and long lists, wrong record shapes,
+empty records, variable shadowing, and guard reassignment. The logical-AND SDK
+static witness passes with assertions enabled. Initial focused validation
+passes eleven tests, including the existing pattern cases and the promoted
+type-parameter witness; pattern compiler analysis is clean.
+
+Mixin upper-bound depth now counts ordered application layers before the
+named class, with the existing alias distinction. Both issue_61218 fixtures
+pass fresh and serialized, and a native static witness agrees. Type-parameter
+promotion retains the original parameter's lexical nullability while allowing
+a nullable effective bound; nullable locals can still narrow to nonnullable
+values. This avoids changing an intersection of X1 with C1<X1>? into X1?.
+
+Primary declaration-initializer closures are scanned in constructor parameter
+scope through the existing capture analysis, and duplicate field-initializer
+visits are skipped. Body closures continue to capture fields. The original
+header token identifies a lowered primary constructor without a new registry.
+Native checks confirm initializing and super formals are implicitly final;
+their immutable captures reuse existing boxed values instead of capture cells.
+Fifteen focused tests pass fresh and serialized, with four native positive
+capture witnesses and the primary parameter-scope SDK fixture passing too.
+The first ordinary sweep exposed getter lookup through an unrelated interface
+pattern in package:http. Object-pattern reads now use the explicitly tested
+interface, whose getters are valid after its type check succeeds. The first
+SDK sweep exposed two typed-pattern shadowing regressions; the promotion slot
+is now resolved before the pattern can declare a variable with the subject's
+name. A third native/fresh/serialized regression returns 15 and covers both
+corrections. The HTTP integration passes, and both affected SDK fixtures pass
+fresh and serialized with assertions enabled.
+
+Thirteen stale expectations are removed after dual-runtime verification.
+These include the primary scope fixture, two mixin joins, greatest_closure_1,
+nullable object patterns, logical-AND/record/object/cast flow, exhaustiveness
+fallback, unary-pattern parentheses, and both pattern-null flow versions.
+Evidence: cycle3-pass3-pattern-probes.log, cycle3-pass3-flow-probes.log,
+cycle3-pattern-regressions.log, and
+cycle3-pass3-pattern-regressions-probes.log. The remaining list/rest, OR,
+guard-capture and collection if-case flow probes remain expected failures.
+Final ordinary validation passes 1906 tests with 62 skips. SDK-full passes
+2700 harness checks with 362 skips and no unexpected outcomes or stale
+statuses. Actual SDK outcomes are 2293 passed, 133 failed, and 274 compile
+errors. Full analysis initially found one new brace-style info, fixed without
+changing behavior; focused reanalysis is clean. The dependency warning and
+benchmark import info remain pre-existing. Diff checks pass. Final logs:
+cycle3-pass3-ordinary-verified.log, sdk-full-cycle3-pass3-verified.log,
+cycle3-pass3-analyze-verified.log, and cycle3-pattern-final-style.log.

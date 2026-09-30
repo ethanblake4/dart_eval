@@ -15,6 +15,14 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import '../values/value_rep.dart';
+import '../variable/binding.dart';
+
+typedef MacroConditionGraph =
+    (BasicBlockBuilder, bool, bool) Function(
+      CompilerContext ctx,
+      BasicBlock<Operation> whenTrue,
+      BasicBlock<Operation> whenFalse,
+    );
 
 /// A null comparison never calls an overridden equality operator.
 Variable compileNullCondition(CompilerContext ctx, Variable value) =>
@@ -48,6 +56,7 @@ StatementInfo macroBranch(
   TypeRef? expectedReturnType, {
   MacroVariableClosure? condition,
   Expression? conditionExpression,
+  MacroConditionGraph? conditionGraph,
   required MacroStatementClosure thenBranch,
   MacroStatementClosure? elseBranch,
   AstNode? source,
@@ -55,7 +64,14 @@ StatementInfo macroBranch(
   bool Function()? thenEdgeUnreachable,
   bool Function()? elseEdgeUnreachable,
 }) {
-  assert((condition == null) != (conditionExpression == null));
+  assert(
+    [
+          condition,
+          conditionExpression,
+          conditionGraph,
+        ].where((c) => c != null).length ==
+        1,
+  );
   assert(!testNullish || conditionExpression == null);
   ctx.beginScope();
   ctx.enterTypeInferenceContext();
@@ -66,7 +82,16 @@ StatementInfo macroBranch(
   final BasicBlockBuilder branches;
   var thenReachable = true;
   var elseReachable = true;
-  if (conditionExpression != null) {
+  Map<String, LocalBinding>? conditionLocals;
+  if (conditionGraph != null) {
+    // Pattern variables exist only on the successful edge, including guards.
+    ctx.beginScope();
+    final result = conditionGraph(ctx, thenBlock, elseBlock);
+    branches = result.$1;
+    thenReachable = result.$2;
+    elseReachable = result.$3;
+    conditionLocals = ctx.locals.removeLast();
+  } else if (conditionExpression != null) {
     final condition = compileCondition(
       conditionExpression,
       ctx,
@@ -103,9 +128,11 @@ StatementInfo macroBranch(
 
   ctx.builder = branches.block(0);
   ctx.inferTypes();
+  if (conditionLocals != null) ctx.locals.add(conditionLocals);
   ctx.beginScope();
   final thenResult = thenBranch(ctx, expectedReturnType);
   ctx.endScope();
+  if (conditionLocals != null) ctx.endScope();
   final thenState = ctx.saveState();
   ctx.uninferTypes();
   final thenEndsFlow = ctx.flowTerminated;

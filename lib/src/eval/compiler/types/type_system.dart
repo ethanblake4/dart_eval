@@ -924,9 +924,24 @@ final class TypeSystem {
       final key = nominalDeclOf(t) ?? t;
       if (!visiting.add(key)) return 0;
       var best = 0;
-      for (final supertype in directSupertypes(t)) {
+      for (final supertype in interfacesOf(t)) {
         final d = depth(supertype) + 1;
         if (d > best) best = d;
+      }
+      final superclass = superclassOf(t);
+      if (superclass != null) {
+        var superDepth = depth(superclass);
+        final mixins = mixinsOf(t);
+        for (final mixin in mixins) {
+          superDepth = math.max(superDepth, depth(mixin)) + 1;
+        }
+        // Each application adds an intermediate class. A named alias is
+        // itself the last application, rather than another subclass.
+        if (mixins.isNotEmpty &&
+            nominalDeclOf(t)?.kind == TypeDeclKind.classAlias) {
+          superDepth--;
+        }
+        best = math.max(best, superDepth + 1);
       }
       visiting.remove(key);
       return best;

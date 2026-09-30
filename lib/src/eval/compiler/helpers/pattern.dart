@@ -14,6 +14,8 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../values/abi.dart';
 import '../invocation/accessors.dart';
 import '../invocation/resolver.dart';
+import 'pattern_type.dart';
+import '../macros/branch.dart' show compileNonNullCondition;
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
@@ -177,6 +179,26 @@ Variable patternMatchAndBind(
   ListPatternElement pattern,
   Variable V, {
   PatternBindContext patternContext = PatternBindContext.none,
+  void Function(Variable)? requireMatch,
+}) {
+  final result = _matchPattern(
+    ctx,
+    pattern,
+    V,
+    patternContext: patternContext,
+    requireMatch: requireMatch,
+  );
+  if (requireMatch == null) return result;
+  requireMatch(result);
+  return BuiltinValue(boolval: true).push(ctx);
+}
+
+Variable _matchPattern(
+  CompilerContext ctx,
+  ListPatternElement pattern,
+  Variable V, {
+  required PatternBindContext patternContext,
+  void Function(Variable)? requireMatch,
 }) {
   switch (pattern) {
     case ConstantPattern pat:
@@ -185,6 +207,18 @@ Variable patternMatchAndBind(
       final constant = compileExpression(pat.expression, ctx, V.type);
       return CallResolver(ctx).invokeOperator(constant, '==', [V]).result;
     case RecordPattern pat:
+      if (requireMatch != null) {
+        final shape = recordPatternShape(ctx, pat);
+        requireMatch(_typeTestType(ctx, shape, V));
+        V = V.withType(
+          V.type is RecordTypeRef &&
+                  V.type
+                      .withNullable(false)
+                      .isAssignableTo(ctx, shape, forceAllowDynamic: false)
+              ? V.type.withNullable(false)
+              : shape,
+        );
+      }
       var positionalFields = 1;
       Variable? result;
       for (final field in pat.fields) {
@@ -194,8 +228,9 @@ Variable patternMatchAndBind(
           field.pattern,
           GetTarget.read(ctx, V, fieldName),
           patternContext: patternContext,
+          requireMatch: requireMatch,
         );
-        if (result == null) {
+        if (result == null || requireMatch != null) {
           result = fieldResult;
         } else {
           result = CallResolver(
@@ -203,12 +238,22 @@ Variable patternMatchAndBind(
           ).invokeOperator(result, '&&', [fieldResult]).result;
         }
       }
-      return result ??
-          (throw CompileError(
-            'Record pattern matching failed, no fields matched',
-            pattern,
-          ));
+      return result ?? BuiltinValue(boolval: true).push(ctx);
     case ListPattern pat:
+      if (requireMatch != null) {
+        final listType = matchedPatternType(ctx, pat, V.type);
+        requireMatch(_typeTestType(ctx, listType, V));
+        V = V.withType(listType);
+        if (pat.elements.any((element) => element is RestPatternElement)) {
+          throw CompileError('Rest list patterns are not supported', pat);
+        }
+        final length = GetTarget.read(ctx, V, 'length');
+        requireMatch(
+          CallResolver(ctx).invokeOperator(length, '==', [
+            BuiltinValue(intval: pat.elements.length).push(ctx),
+          ]).result,
+        );
+      }
       if (pat.elements.isEmpty) {
         return BuiltinValue(boolval: true).push(ctx);
       }
@@ -224,8 +269,9 @@ Variable patternMatchAndBind(
           element,
           listEl,
           patternContext: patternContext,
+          requireMatch: requireMatch,
         );
-        if (result == null) {
+        if (result == null || requireMatch != null) {
           result = elementResult;
         } else {
           result = CallResolver(
@@ -280,17 +326,20 @@ Variable patternMatchAndBind(
 
       return BuiltinValue(boolval: true).push(ctx);
     case LogicalOrPattern pat:
+      final alternativeContext = patternContext == PatternBindContext.matching
+          ? PatternBindContext.none
+          : patternContext;
       final left = patternMatchAndBind(
         ctx,
         pat.leftOperand,
         V,
-        patternContext: patternContext,
+        patternContext: alternativeContext,
       );
       final right = patternMatchAndBind(
         ctx,
         pat.rightOperand,
         V,
-        patternContext: patternContext,
+        patternContext: alternativeContext,
       );
       return CallResolver(ctx).invokeOperator(left, '||', [right]).result;
     case LogicalAndPattern pat:
@@ -299,16 +348,24 @@ Variable patternMatchAndBind(
         pat.leftOperand,
         V,
         patternContext: patternContext,
+        requireMatch: requireMatch,
       );
       final right = patternMatchAndBind(
         ctx,
         pat.rightOperand,
-        V,
+        requireMatch == null
+            ? V
+            : V.withType(matchedPatternType(ctx, pat.leftOperand, V.type)),
         patternContext: patternContext,
+        requireMatch: requireMatch,
       );
+      if (requireMatch != null) return right;
       return CallResolver(ctx).invokeOperator(left, '&&', [right]).result;
     case ObjectPattern pat:
       var result = _typeTest(ctx, pat.type, V);
+      requireMatch?.call(result);
+      // A tested interface can expose getters absent from the original
+      // static class, even when neither type is a subtype of the other.
       final matchedType = TypeRef.fromAnnotation(ctx, ctx.library, pat.type);
       final matchedValue = V.copyWith(type: matchedType);
       for (final field in pat.fields) {
@@ -324,10 +381,13 @@ Variable patternMatchAndBind(
           field.pattern,
           fieldValue,
           patternContext: patternContext,
+          requireMatch: requireMatch,
         );
-        result = CallResolver(
-          ctx,
-        ).invokeOperator(result, '&&', [fieldResult]).result;
+        result = requireMatch != null
+            ? fieldResult
+            : CallResolver(
+                ctx,
+              ).invokeOperator(result, '&&', [fieldResult]).result;
       }
       return result;
     case CastPattern pat:
@@ -340,6 +400,7 @@ Variable patternMatchAndBind(
         pat.pattern,
         boxed.copyWith(type: slot),
         patternContext: patternContext,
+        requireMatch: requireMatch,
       );
     case RelationalPattern pat:
       final operand = compileExpression(pat.operand, ctx, V.type);
@@ -357,18 +418,37 @@ Variable patternMatchAndBind(
         pat.pattern,
         V,
         patternContext: patternContext,
+        requireMatch: requireMatch,
       );
     case NullCheckPattern pat:
-      final nonNull = CallResolver(
-        ctx,
-      ).invokeOperator(V, '!=', [BuiltinValue().push(ctx)]).result;
+      final nonNull = compileNonNullCondition(ctx, V);
+      requireMatch?.call(nonNull);
       final matched = patternMatchAndBind(
         ctx,
         pat.pattern,
         V.copyWith(type: V.type.withNullable(false)),
         patternContext: patternContext,
+        requireMatch: requireMatch,
       );
+      if (requireMatch != null) return matched;
       return CallResolver(ctx).invokeOperator(nonNull, '&&', [matched]).result;
+    case NullAssertPattern pat:
+      if (V.type.nullable || V.type.isSpec(CoreTypes.dynamic)) {
+        final boxed = V.boxed ? V : V.boxIntoFreshSlot(ctx);
+        ctx.pushOp(
+          AssertType(
+            boxed.ssa,
+            ctx.runtimeTypes.idOf(CoreTypes.object.ref(ctx)),
+          ),
+        );
+      }
+      return patternMatchAndBind(
+        ctx,
+        pat.pattern,
+        V.withType(V.type.withNullable(false)),
+        patternContext: patternContext,
+        requireMatch: requireMatch,
+      );
     default:
       throw CompileError('Unsupported pattern type: ${pattern.runtimeType}');
   }
@@ -383,11 +463,13 @@ String? _shorthandPatternName(DartPattern pattern) => switch (pattern) {
 };
 
 Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
-  final slot = patType != null
-      ? TypeRef.fromAnnotation(ctx, ctx.library, patType)
-      : CoreTypes.dynamic.ref(ctx);
-
+  if (patType == null) return BuiltinValue(boolval: true).push(ctx);
+  final slot = TypeRef.fromAnnotation(ctx, ctx.library, patType);
   V.inferType(ctx, slot);
+  return _typeTestType(ctx, slot, V);
+}
+
+Variable _typeTestType(CompilerContext ctx, TypeRef slot, Variable V) {
   if (V.type.isAssignableTo(ctx, slot, forceAllowDynamic: false)) {
     return BuiltinValue(boolval: true).push(ctx);
   }

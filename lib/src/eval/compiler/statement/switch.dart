@@ -5,14 +5,13 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assigned_locals.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/break.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
 import '../invocation/resolver.dart';
 
 StatementInfo compileSwitchStatement(
@@ -33,7 +32,10 @@ StatementInfo compileSwitchStatement(
   // body is emitted into; the label's cleanup collects the jumping edge's
   // state for merging at that entry.
   final caseLabels =
-      <SwitchMember, (BasicBlock<Operation>, List<ContextSaveState>, CompilerLabel)>{};
+      <
+        SwitchMember,
+        (BasicBlock<Operation>, List<ContextSaveState>, CompilerLabel)
+      >{};
   for (final member in s.members) {
     if (member.labels.isEmpty) continue;
     final block = BasicBlock<Operation>([], label: ctx.label('switch_case'));
@@ -93,8 +95,10 @@ StatementInfo compileSwitchStatement(
   ctx.flushBlock();
   // Live tails (the "no case matched" path) link to the switch's end;
   // terminated ones (e.g. a `default` ending in `break`) are skipped.
-  ctx.builder =
-      ctx.builder.thenUnlessTerminated(endBlock, CompilerContext.isTerminatorOp);
+  ctx.builder = ctx.builder.thenUnlessTerminated(
+    endBlock,
+    CompilerContext.isTerminatorOp,
+  );
   final fallthroughState = ctx.saveState();
   ctx.restoreState(initialState);
   ctx.mergeBranchState([fallthroughState, ...breakStates]);
@@ -113,8 +117,11 @@ StatementInfo _compileSwitchCases(
   List<SwitchMember> cases,
   int index,
   TypeRef? expectedReturnType,
-  Map<SwitchMember, (BasicBlock<Operation>, List<ContextSaveState>,
-      CompilerLabel)> caseLabels,
+  Map<
+    SwitchMember,
+    (BasicBlock<Operation>, List<ContextSaveState>, CompilerLabel)
+  >
+  caseLabels,
   Map<SwitchMember, Set<String>> continueDefeats, {
   AstNode? source,
 }) {
@@ -134,40 +141,35 @@ StatementInfo _compileSwitchCases(
   return macroBranch(
     ctx,
     expectedReturnType,
-    condition: (ctx) {
-      final subject = switchExpr.copyIntoFreshSlot(ctx, 'case_value');
-      if (currentCase is SwitchCase) {
-        final caseVar = compileExpression(currentCase.expression, ctx);
-        _checkPrimitiveEquality(ctx, caseVar, currentCase.expression);
-        return CallResolver(
-          ctx,
-        ).invokeOperator(caseVar, '==', [subject]).result;
-      } else if (currentCase is SwitchPatternCase) {
-        final matches = patternMatchAndBind(
-          ctx,
-          currentCase.guardedPattern.pattern,
-          subject,
-        );
-        final guard = currentCase.guardedPattern.whenClause;
-        if (guard != null) {
-          // If there's a guard, we need to compile it and check if it matches
-          final guardExpr = compileExpression(
-            guard.expression,
-            ctx,
-            CoreTypes.bool.ref(ctx),
-          );
-          return CallResolver(
-            ctx,
-          ).invokeOperator(matches, '&&', [guardExpr]).result;
-        }
-        return matches;
-      } else {
-        throw CompileError(
-          'Unsupported switch case type: ${currentCase.runtimeType}',
-          currentCase,
-        );
-      }
-    },
+    condition: currentCase is SwitchPatternCase
+        ? null
+        : (ctx) {
+            final subject = switchExpr.copyIntoFreshSlot(ctx, 'case_value');
+            if (currentCase is SwitchCase) {
+              final caseVar = compileExpression(currentCase.expression, ctx);
+              _checkPrimitiveEquality(ctx, caseVar, currentCase.expression);
+              return CallResolver(
+                ctx,
+              ).invokeOperator(caseVar, '==', [subject]).result;
+            } else {
+              throw CompileError(
+                'Unsupported switch case type: ${currentCase.runtimeType}',
+                currentCase,
+              );
+            }
+          },
+    conditionGraph: currentCase is SwitchPatternCase
+        ? (ctx, yes, no) {
+            final subject = switchExpr.copyIntoFreshSlot(ctx, 'case_value');
+            return compilePatternCondition(
+              ctx,
+              currentCase.guardedPattern,
+              subject,
+              yes,
+              no,
+            );
+          }
+        : null,
     thenBranch: (ctx, expectedReturnType) {
       _enterLabeledCase(ctx, currentCase, caseLabels, continueDefeats);
       // Execute this case and following empty cases (Dart fall-through)
@@ -196,8 +198,11 @@ StatementInfo _compileSwitchCases(
 void _enterLabeledCase(
   CompilerContext ctx,
   SwitchMember member,
-  Map<SwitchMember, (BasicBlock<Operation>, List<ContextSaveState>,
-      CompilerLabel)> caseLabels,
+  Map<
+    SwitchMember,
+    (BasicBlock<Operation>, List<ContextSaveState>, CompilerLabel)
+  >
+  caseLabels,
   Map<SwitchMember, Set<String>> continueDefeats,
 ) {
   final entry = caseLabels[member];

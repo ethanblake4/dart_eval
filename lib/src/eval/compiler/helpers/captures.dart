@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'primary_constructor.dart';
 
 final _analyses = Expando<CaptureAnalysis>();
 CaptureAnalysis capturesFor(AstNode node) {
@@ -24,6 +25,7 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   final _scopes = <Map<String, (AstNode, AstNode)>>[];
   final _functions = <AstNode>[];
   final _members = <Set<String>>[];
+  final _primaryInitializers = <Expression>{};
   void scan(AstNode root) => root.accept(this);
   void _scope(void Function() visit) {
     _scopes.add({});
@@ -92,8 +94,9 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       // the body those names refer to fields and closures must capture this.
       if (node is ConstructorDeclaration) {
         for (final parameter in node.parameters.parameters) {
-          if (parameter is FieldFormalParameter) {
-            _scopes.last.remove(parameter.name.lexeme);
+          if (parameter is FieldFormalParameter ||
+              parameter is SuperFormalParameter) {
+            _scopes.last.remove(parameter.name!.lexeme);
           }
         }
       }
@@ -119,13 +122,28 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   void visitMethodDeclaration(MethodDeclaration node) =>
       _function(node, node.parameters, node.body, instance: !node.isStatic);
   @override
-  void visitConstructorDeclaration(ConstructorDeclaration node) => _function(
-    node,
-    node.parameters,
-    node.body,
-    instance: true,
-    initializers: node.initializers,
-  );
+  void visitConstructorDeclaration(ConstructorDeclaration node) {
+    final declarationInitializers = <Expression>[];
+    if (isLoweredPrimaryConstructor(node)) {
+      final owner = node.parent!.parent as ClassDeclaration;
+      for (final field in owner.body.members.whereType<FieldDeclaration>()) {
+        if (field.isStatic || field.fields.isLate) continue;
+        for (final variable in field.fields.variables) {
+          final initializer = variable.initializer;
+          if (initializer != null) declarationInitializers.add(initializer);
+        }
+      }
+      _primaryInitializers.addAll(declarationInitializers);
+    }
+    _function(
+      node,
+      node.parameters,
+      node.body,
+      instance: true,
+      initializers: [...declarationInitializers, ...node.initializers],
+    );
+  }
+
   @override
   void visitFunctionDeclaration(FunctionDeclaration node) {
     if (_functions.isNotEmpty) _declare(node.name.lexeme, node);
@@ -149,7 +167,11 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   @override
   void visitVariableDeclaration(VariableDeclaration node) {
     _declare(node.name.lexeme, node);
-    node.initializer?.accept(this);
+    final initializer = node.initializer;
+    // Primary declaration initializers were visited in constructor scope.
+    if (initializer != null && !_primaryInitializers.contains(initializer)) {
+      initializer.accept(this);
+    }
   }
 
   @override

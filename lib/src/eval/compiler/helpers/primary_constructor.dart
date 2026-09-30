@@ -7,6 +7,14 @@ import 'package:analyzer/src/dart/ast/ast.dart' as ast;
 
 import '../errors.dart';
 
+/// Lowering preserves the class header's name token as the constructor name.
+/// Ordinary constructor declarations have their own name token.
+bool isLoweredPrimaryConstructor(ConstructorDeclaration constructor) {
+  final owner = constructor.parent?.parent;
+  return owner is ClassDeclaration &&
+      identical(constructor.typeName?.token, owner.namePart.typeName);
+}
+
 /// Reuses ordinary constructor registration, signatures and field lowering.
 /// Original tokens and expression nodes retain their source locations.
 void lowerPrimaryConstructor(ClassDeclaration declaration) {
