@@ -23,3 +23,15 @@ No runtime, opcode, extra boxing, or emitted check changes in this pass.
 Targeted analysis is clean; async and IR effects suites pass all 61 tests.
 The functions suite passes. Async generator and native Future metadata failures
 remain for the next pass. Logs: `step1-focused.log`, `step1-language.log`.
+
+## Correctness pass 2
+
+Devirtualized calls bound against an abstract covariant interface could invoke
+an inherited concrete method with a narrower parameter type without checking
+the argument. Check the concrete implementation only when its parameter differs
+from the bound interface and the supplied argument is not statically safe.
+This uses existing AssertType instructions; runtime and dispatch are unchanged.
+
+Fresh and serialized regressions and related virtual-call suites pass all 17
+tests; targeted analysis is clean. The three override_covariant SDK tests pass.
+Removed their stale expected-failure entries.

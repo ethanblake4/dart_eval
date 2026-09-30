@@ -16,6 +16,7 @@ import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
 import '../values/abi.dart';
 import 'binder.dart';
 import 'resolver.dart';
@@ -138,6 +139,7 @@ final class StaticCall extends CallTarget {
       ctx.pushOp(InvokeExternal(s, index, call.vector()));
       return Variable.of(ctx, s, call.returnType, rep: resultRep);
     }
+    _checkImplementationArguments(ctx, call);
     final link = ownerLink;
     ctx.pushOp(
       Call(
@@ -155,6 +157,46 @@ final class StaticCall extends CallTarget {
       ),
     );
     return Variable.of(ctx, s, call.returnType, rep: resultRep);
+  }
+
+  // Direct calls bypass dynamic dispatch's argument checks. An inherited
+  // implementation can accept less than the interface used to bind the call.
+  void _checkImplementationArguments(CompilerContext ctx, BoundCall call) {
+    final implementation = member?.signature;
+    if (receiver == null || implementation == null || _signature == null) {
+      return;
+    }
+    final substitution = implementation.substitutionFor(call.typeArguments);
+    final interfaceSubstitution = _signature.substitutionFor(
+      call.typeArguments,
+    );
+    void check(Variable value, TypeRef type, TypeRef interfaceType) {
+      final expected = type.substituteTypeParameters(substitution);
+      if (expected ==
+              interfaceType.substituteTypeParameters(interfaceSubstitution) ||
+          expected.requiresTypeEnvironment ||
+          value.type.isAssignableTo(ctx, expected, forceAllowDynamic: false)) {
+        return;
+      }
+      ctx.pushOp(
+        AssertType(value.boxIfNeeded(ctx).ssa, ctx.runtimeTypes.idOf(expected)),
+      );
+    }
+
+    for (var i = 0; i < call.positional.length; i++) {
+      check(
+        call.positional[i],
+        implementation.positional[i].type,
+        _signature.positional[i].type,
+      );
+    }
+    for (final (name, value) in call.named) {
+      final parameter = implementation.named.firstWhere((p) => p.name == name);
+      final interfaceParameter = _signature.named.firstWhere(
+        (p) => p.name == name,
+      );
+      check(value, parameter.type, interfaceParameter.type);
+    }
   }
 }
 
