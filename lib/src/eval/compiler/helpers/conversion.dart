@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'type_check.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -181,7 +182,6 @@ Variable convertForAssignment(
   }
   if (conversion == AssignmentConversion.runtimeCheck) {
     converted = converted.boxIfNeeded(ctx, source);
-    final typeId = ctx.runtimeTypes.idOf(target);
     if (target.nullable) {
       macroBranch(
         ctx,
@@ -200,12 +200,12 @@ Variable convertForAssignment(
           );
         },
         thenBranch: (ctx, _) {
-          ctx.pushOp(AssertType(converted.ssa, typeId));
+          compileTypeAssertion(ctx, converted, target, source: source);
           return StatementInfo();
         },
       );
     } else {
-      ctx.pushOp(AssertType(converted.ssa, typeId));
+      compileTypeAssertion(ctx, converted, target, source: source);
     }
   }
 
@@ -236,4 +236,3 @@ Variable convertForAssignment(
     source: source,
   );
 }
-

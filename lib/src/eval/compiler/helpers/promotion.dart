@@ -271,6 +271,9 @@ PromotionSlot? promotableMemberSlot(
   Expression target, {
   Set<String> excluded = const {},
 }) {
+  while (target is ParenthesizedExpression) {
+    target = target.expression;
+  }
   Expression? receiver;
   String? member;
   var viaSuper = false;

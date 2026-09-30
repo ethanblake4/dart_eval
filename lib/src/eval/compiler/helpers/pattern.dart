@@ -19,6 +19,7 @@ import 'object_pattern_type.dart';
 import '../macros/branch.dart' show compileNonNullCondition, macroBranch;
 import '../statement/statement.dart';
 import 'conversion.dart';
+import 'type_check.dart';
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
@@ -475,7 +476,7 @@ Variable _matchPattern(
       final slot = TypeRef.fromAnnotation(ctx, ctx.library, pat.type);
       // AssertType needs an object operand; box into a fresh slot.
       final boxed = V.boxed ? V : V.boxIntoFreshSlot(ctx);
-      ctx.pushOp(AssertType(boxed.ssa, ctx.runtimeTypes.idOf(slot)));
+      compileTypeAssertion(ctx, boxed, slot, source: pat);
       return patternMatchAndBind(
         ctx,
         pat.pattern,
@@ -773,18 +774,8 @@ Variable _typeTestType(
   // keeps its (possibly unboxed) representation for other uses.
   final operand = V.boxed ? V : V.boxIntoFreshSlot(ctx);
   if (patternContext != PatternBindContext.matching) {
-    ctx.pushOp(AssertType(operand.ssa, ctx.runtimeTypes.idOf(slot)));
+    compileTypeAssertion(ctx, operand, slot);
     return BuiltinValue(boolval: true).push(ctx);
   }
-  return Variable.ssa(
-    ctx,
-    IsType(
-      ctx.svar('pattern_type'),
-      operand.ssa,
-      ctx.runtimeTypes.idOf(slot),
-      false,
-    ),
-    CoreTypes.bool.ref(ctx),
-    rep: ValueRep.bool,
-  );
+  return compileTypeTest(ctx, operand, slot);
 }

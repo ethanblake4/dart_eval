@@ -693,3 +693,33 @@ cycle4-pass1-final-ordinary.log, cycle4-pass1-final-analyze.log,
 cycle4-pass1-final-sdk-full-verified.log and
 cycle4-pass1-dual-sdk-stale-probes.log. MapBase inheritance, switch-statement
 subject promotion and unknown guest List indexing remain separate follow-ups.
+
+## Fourth cycle, second correctness pass
+
+Switch statements now promote their original subject on successful pattern
+edges, including later cases and parenthesized subjects. Both switch forms
+track the subject's write epoch: matching the original snapshot cannot promote
+a local reassigned by an earlier failed guard. Native Dart and both evaluated
+loading modes agree on the new subject-promotion witness.
+
+FutureOr membership lowering is shared by `is`, patterns, casts and checked
+assignment conversions. The union tests Future<T> and T instead of using the
+erased Object? descriptor. Ordinary nominal checks retain their existing
+instructions. Invalid union assertions use the existing TypeError assertion
+path; no runtime instruction or interpreter change is required. The focused
+witness covers function false positives, nullable members, accepted futures
+and rejected explicit, implicit and pattern casts.
+
+This checkpoint contains only the independent compiler promotion and FutureOr
+fixes. Their new witnesses pass with native Dart and both evaluated loading
+modes. The full working tree passes 1937 ordinary tests with 62 skips. SDK-full
+has 2315 actual passes, 251 compile errors and 134 expected failures, with 362
+skips and no unexpected outcomes. Full analysis retains the two existing
+diagnostics. The compiler subset passes all 1930 ordinary tests with 62 skips against
+the previous bindings in an isolated checkout. Its focused analysis is clean.
+Five stale SDK expectations are removed after fresh and serialized checks.
+
+Generated collection bindings, the hand-maintained Map lookup correction and
+coupled ordinary indexing changes remain uncommitted. The user deferred
+performance experiments and benchmark sweeps until an explicit resume, so
+their required AOT validation is pending. Correctness work continues.

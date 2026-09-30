@@ -86,11 +86,12 @@ void compileIrrefutablePattern(
   BasicBlock<Operation> whenTrue,
   BasicBlock<Operation> whenFalse, {
   Expression? source,
+  int? sourceEpoch,
 }) {
   final parent = ctx.builder;
   final guard = pattern.whenClause;
   // Resolve the subject before a pattern variable can shadow its name.
-  final slot = source == null
+  var slot = source == null
       ? null
       : promotableMemberSlot(
           ctx,
@@ -99,6 +100,9 @@ void compileIrrefutablePattern(
               ? const {}
               : assignedLocalNames([guard.expression]),
         );
+  if (sourceEpoch != null && slot?.local.writeEpoch != sourceEpoch) {
+    slot = null;
+  }
   final initialState = ctx.saveState();
   final matching = _PatternCondition(ctx, initialState, whenFalse);
 

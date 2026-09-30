@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assert.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -26,6 +27,7 @@ Variable compileSwitchExpression(
   // pattern-matching can freely box/unbox that copy without constraining
   // the shared subject's representation.
   final switchExpr = expression.copyIntoFreshSlot(ctx, 'switch_value');
+  final sourceEpoch = promotableMemberSlot(ctx, e.expression)?.local.writeEpoch;
 
   final resultSsa = ctx.svar('switch_result');
   final resultTypes = <TypeRef>[];
@@ -54,6 +56,7 @@ Variable compileSwitchExpression(
           yes,
           no,
           source: e.expression,
+          sourceEpoch: sourceEpoch,
         );
       },
       thenBranch: (ctx, _) {

@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assigned_locals.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart'
     show patternBoundNames;
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
@@ -25,6 +26,7 @@ StatementInfo compileSwitchStatement(
   // Evaluate once. Cases may change their operand representation without
   // rewriting the source binding or the value inspected by later cases.
   final switchExpr = expression.copyIntoFreshSlot(ctx, 'switch_value');
+  final sourceEpoch = promotableMemberSlot(ctx, s.expression)?.local.writeEpoch;
 
   final endBlock = BasicBlock<Operation>([], label: ctx.label('switch_end'));
   final initialState = ctx.saveState();
@@ -88,6 +90,7 @@ StatementInfo compileSwitchStatement(
     caseLabels,
     continueDefeats,
     source: s,
+    sourceEpoch: sourceEpoch,
   );
 
   ctx.labels.removeLast();
@@ -125,7 +128,8 @@ StatementInfo _compileSwitchCases(
   >
   caseLabels,
   Map<SwitchMember, Set<String>> continueDefeats, {
-  AstNode? source,
+  required SwitchStatement source,
+  int? sourceEpoch,
 }) {
   if (index >= cases.length) {
     // No more cases, return empty statement
@@ -169,6 +173,8 @@ StatementInfo _compileSwitchCases(
               subject,
               yes,
               no,
+              source: source.expression,
+              sourceEpoch: sourceEpoch,
             );
           }
         : null,
@@ -187,6 +193,8 @@ StatementInfo _compileSwitchCases(
         expectedReturnType,
         caseLabels,
         continueDefeats,
+        source: source,
+        sourceEpoch: sourceEpoch,
       );
     },
     source: source,

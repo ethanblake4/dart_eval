@@ -1,4 +1,3 @@
-import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -13,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import '../values/value_rep.dart';
+import '../helpers/type_check.dart';
 
 Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   var V = compileExpression(e.expression, ctx);
@@ -71,7 +71,6 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
     return result;
   }
 
-  final typeId = ctx.runtimeTypes.idOf(slot);
   if (slot.nullable) {
     macroBranch(
       ctx,
@@ -90,12 +89,12 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
         );
       },
       thenBranch: (ctx, _) {
-        ctx.pushOp(AssertType(V.ssa, typeId));
+        compileTypeAssertion(ctx, V, slot, source: e);
         return StatementInfo();
       },
     );
   } else {
-    ctx.pushOp(AssertType(V.ssa, typeId));
+    compileTypeAssertion(ctx, V, slot, source: e);
     if (guaranteedThrow) markNeverTerminates(ctx);
   }
   V = update(V, slot);
