@@ -286,7 +286,7 @@ Variable compileFunctionExpression(
               (returns.isEmpty
                   ? (b.isGenerator
                         ? CoreTypes.dynamic.ref(ctx)
-                        : CoreTypes.nullType.ref(ctx))
+                        : CoreTypes.never.ref(ctx))
                   : returns.every((t) => t == returns.first)
                   ? returns.first
                   : TypeRef.commonBaseType(ctx, returns.toSet()));
@@ -304,9 +304,7 @@ Variable compileFunctionExpression(
               : b.isAsynchronous
               ? CoreTypes.future
                     .ref(ctx)
-                    .copyWith(arguments: [
-                      ctx.typeSystem.flatten(inferred),
-                    ])
+                    .copyWith(arguments: [ctx.typeSystem.flatten(inferred)])
               : inferred;
           if (generator != null && boundResolved == null) {
             generator.runtimeTypeId = ctx.runtimeTypes.idOf(
@@ -485,4 +483,3 @@ Variable compileFunctionExpression(
     ),
   );
 }
-

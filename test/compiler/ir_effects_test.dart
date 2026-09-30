@@ -90,7 +90,7 @@ void main() {
     BoxSet(result, input, runtimeTypeId: 0),
     Unbox(result, input, MachineRepresentation.integer),
     CreateClosure(result, target, [input]),
-    Await(result, input, second),
+    Await(result, input, second, 0),
     SetGlobal(0, input),
     SetPropertyDynamic(input, 'setter', second),
     ListAppend(input, second),

@@ -29,7 +29,21 @@ StatementInfo doAsyncReturn(
     // relation, covering the `Future<S>`-payload case the manual
     // `asInstanceOf` fallback used to handle.
     final futureOrExpected = ctx.types.futureOr.instantiate([expected]);
-    if (!boxed.type.isAssignableTo(ctx, futureOrExpected)) {
+    var compatible = boxed.type.isAssignableTo(ctx, futureOrExpected);
+    if (!compatible) {
+      final future = ctx.typeSystem.asInstanceOf(
+        boxed.type,
+        ctx.types.bySpec(CoreTypes.future),
+      );
+      // Erased bridge results and unconstrained Future factories carry a
+      // dynamic payload. The async completion checks that payload after
+      // adopting the Future, rather than rejecting it during compilation.
+      compatible =
+          future != null &&
+          (interfaceArgumentsOf(future).isEmpty ||
+              interfaceArgumentsOf(future).first.isSpec(CoreTypes.dynamic));
+    }
+    if (!compatible) {
       throw CompileError(
         'Cannot return ${boxed.type} (expected: $futureOrExpected)',
       );
@@ -74,11 +88,7 @@ BeginAsync setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
   );
   ctx.setLocal(
     '#completer',
-    Variable.ssa(
-      ctx,
-      begin,
-      AsyncTypes.completer.ref(ctx),
-    ),
+    Variable.ssa(ctx, begin, AsyncTypes.completer.ref(ctx)),
   );
   return begin;
 }
