@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
+import '../helpers/constructor_type.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import '../builtins.dart';
@@ -535,7 +536,14 @@ final class ArgumentBinder {
           ? paramType
                 .lowerTypeParameters(
                   ctx,
-                  only: {...signature.typeParameters},
+                  only: parameterHost is ConstructorDeclaration
+                      ? {
+                          ...signature.typeParameters,
+                          for (final ref in signature.typeParameterRefs.values)
+                            if (ref case TypeParameterTypeRef(:final parameter))
+                              parameter,
+                        }
+                      : {...signature.typeParameters},
                   kinds: const {TypeParameterOwnerKind.typeAlias},
                 )
                 // A lowered bound can re-introduce a parameter the call
@@ -847,6 +855,7 @@ final class ArgumentBinder {
   /// signatures embed them directly in parameter types rather than a
   /// `typeParameterRefs` map.
   Set<TypeParameterDef> _callSiteParameters(TypeRef type) => switch (type) {
+    UnknownTypeRef() => const {},
     TypeParameterTypeRef(:final parameter) =>
       parameter.owner.kind == TypeParameterOwnerKind.callSite
           ? {parameter}
@@ -980,6 +989,7 @@ final class ArgumentBinder {
 
   bool _usesParameter(TypeRef type, Set<TypeParameterDef> parameters) =>
       switch (type) {
+        UnknownTypeRef() => false,
         TypeParameterTypeRef(:final parameter) => parameters.contains(
           parameter,
         ),
@@ -1018,8 +1028,11 @@ final class ArgumentBinder {
     final library = selected.library;
     final declaration = selected.declaration;
     final seeds = <String, TypeRef>{...seedGenerics};
+    Set<String>? inferParameterNames;
     if (target is ConstructorCall) {
-      final arguments = interfaceArgumentsOf(target.staticType);
+      final arguments = interfaceArgumentsOf(
+        target.instantiatedType ?? target.staticType,
+      );
       final classParameters = [
         for (final entry in target.signature!.typeParameterRefs.entries)
           if (entry.value is TypeParameterTypeRef &&
@@ -1030,8 +1043,30 @@ final class ArgumentBinder {
       for (var i = 0; i < arguments.length && i < classParameters.length; i++) {
         seeds.putIfAbsent(classParameters[i], () => arguments[i]);
       }
+      if (typeArguments == null) {
+        for (final entry in constructorContextArguments(
+          ctx,
+          target.staticType,
+          returnContext,
+        ).entries) {
+          final previous = seeds[entry.key.name];
+          if (previous == null ||
+              previous is TypeParameterTypeRef &&
+                  previous.parameter == entry.key) {
+            seeds[entry.key.name] = entry.value;
+          }
+        }
+      }
+      inferParameterNames = {
+        for (final name in classParameters)
+          if (seeds[name] == null ||
+              seeds[name]!.isTypeParameter ||
+              seeds[name]!.hasSchemaHoles ||
+              seeds[name]!.hasInferenceVariables)
+            name,
+      };
     }
-    return bindDeclaration(
+    final result = bindDeclaration(
       library,
       declaration,
       argumentList,
@@ -1039,12 +1074,7 @@ final class ArgumentBinder {
       typeArguments: typeArguments,
       source: source,
       seedGenerics: seeds,
-      inferParameterNames:
-          target is ConstructorCall &&
-              target.instantiatedType != null &&
-              interfaceArgumentsOf(target.instantiatedType!).isNotEmpty
-          ? const {}
-          : null,
+      inferParameterNames: inferParameterNames,
       returnContext: returnContext,
       argIndexOffset: argIndexOffset,
       fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
@@ -1052,6 +1082,27 @@ final class ArgumentBinder {
       // A devirtualized call binds against the interface signature but
       // fills omitted defaults from the implementation it dispatches to.
       defaultsSignature: target is StaticCall ? target.member?.signature : null,
+    );
+    if (target is! ConstructorCall) return result;
+    final parameters = [
+      for (final ref in target.signature!.typeParameterRefs.values)
+        if (ref case TypeParameterTypeRef(
+          :final parameter,
+        ) when parameter.owner.kind == TypeParameterOwnerKind.classLike)
+          parameter,
+    ];
+    return BoundCall(
+      positional: result.positional,
+      named: result.named,
+      vectorOverride: result.vector(),
+      typeArguments: result.typeArguments,
+      returnType: inferredConstructorType(
+        ctx,
+        target.instantiatedType ?? target.staticType,
+        parameters,
+        result.typeArguments,
+      ),
+      declaredReturn: result.declaredReturn,
     );
   }
 
@@ -1163,16 +1214,17 @@ final class ArgumentBinder {
     final resolveGenerics = {
       ...signature.substitutionFor(seedGenerics).bindings,
     };
+    final classParams = <TypeParameterDef>[];
     if (dec is ConstructorDeclaration) {
       // Constructor signatures reference the declaring class's type parameters;
-      // seed them from the call's explicit type arguments (or bounds).
-      final classParams = [
+      // Keep unresolved parameters until argument inference has completed.
+      classParams.addAll([
         for (final entry in signature.typeParameterRefs.entries)
           if (entry.value is TypeParameterTypeRef &&
               (entry.value as TypeParameterTypeRef).parameter.owner.kind ==
                   TypeParameterOwnerKind.classLike)
             (entry.value as TypeParameterTypeRef).parameter,
-      ];
+      ]);
       final explicitArgs = typeArguments?.arguments;
       for (var i = 0; i < classParams.length; i++) {
         final parameter = classParams[i];
@@ -1185,8 +1237,7 @@ final class ArgumentBinder {
         } else {
           resolveGenerics.putIfAbsent(
             parameter,
-            () => (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
-                .substituteTypeParameters(Substitution.of(resolveGenerics)),
+            () => TypeParameterTypeRef(parameter),
           );
         }
       }
@@ -1267,6 +1318,18 @@ final class ArgumentBinder {
     // Parameters nothing constrained still hold their own placeholder —
     // finalize them to their declared bound (or `dynamic`). A binding to
     // another parameter (the caller's own) is real and kept.
+    if (classParams.isNotEmpty) {
+      final knownTypes = {
+        for (final parameter in classParams)
+          if (resolveGenerics[parameter] case final resolved?
+              when resolved is! TypeParameterTypeRef ||
+                  resolved.parameter != parameter)
+            parameter: ctx.typeSystem.closeSchemaHoles(resolved),
+      };
+      resolveGenerics.addAll(
+        ctx.typeSystem.instantiateToBounds(classParams, knownTypes: knownTypes),
+      );
+    }
     for (final parameter in typeParams) {
       final resolved = resolveGenerics[parameter];
       final ownPlaceholder =
@@ -1276,6 +1339,9 @@ final class ArgumentBinder {
             (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
                 .substituteTypeParameters(Substitution.of(resolveGenerics));
       }
+      resolveGenerics[parameter] = ctx.typeSystem.closeSchemaHoles(
+        resolveGenerics[parameter]!,
+      );
     }
 
     // F-bounded inference (`X extends A<X>`): a direct binding like `X := C`

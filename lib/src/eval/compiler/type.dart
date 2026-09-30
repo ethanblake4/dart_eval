@@ -184,6 +184,7 @@ sealed class TypeRef {
   /// Whether the runtime descriptor for this type embeds a type parameter,
   /// so its id must be resolved against the active type environment.
   bool get requiresTypeEnvironment => switch (this) {
+    UnknownTypeRef() => false,
     TypeParameterTypeRef() => true,
     InterfaceTypeRef(:final arguments) => arguments.any(
       (type) => type.requiresTypeEnvironment,
@@ -199,15 +200,33 @@ sealed class TypeRef {
           ),
   };
 
-  /// Whether this type embeds a call-site type parameter — an inference
-  /// variable to be bound by unification rather than a declared parameter
-  /// visible in the current scope.
+  /// Call-site and unresolved alias parameters are inference variables,
+  /// rather than declared parameters visible in the current scope.
   bool get hasInferenceVariables {
     final self = this;
     return (self is TypeParameterTypeRef &&
-            self.parameter.owner.kind == TypeParameterOwnerKind.callSite) ||
+            (self.parameter.owner.kind == TypeParameterOwnerKind.callSite ||
+                self.parameter.owner.kind ==
+                    TypeParameterOwnerKind.typeAlias)) ||
         interfaceArgumentsOf(self).any((arg) => arg.hasInferenceVariables);
   }
+
+  /// An omitted pattern context constrains no type; unlike `dynamic`, it
+  /// lets the expression supply the missing part of a nested type schema.
+  bool get hasSchemaHoles => switch (this) {
+    UnknownTypeRef() => true,
+    InterfaceTypeRef(:final arguments) => arguments.any(
+      (t) => t.hasSchemaHoles,
+    ),
+    RecordTypeRef(:final positional, :final named) =>
+      positional.any((t) => t.hasSchemaHoles) ||
+          named.values.any((t) => t.hasSchemaHoles),
+    FunctionTypeRef(:final signature) =>
+      signature.returnType.hasSchemaHoles ||
+          signature.positional.any((t) => t.hasSchemaHoles) ||
+          signature.named.values.any((p) => p.type.hasSchemaHoles),
+    TypeParameterTypeRef() => false,
+  };
 
   /// Classifies Dart assignment compatibility of a [this] value into a
   /// [slot] without conflating `dynamic` with a subtype proof.
@@ -395,10 +414,22 @@ String ctorNameOf(String? name) => name == 'new' ? '' : name ?? '';
   return (type.name.lexeme, ctorName);
 }
 
-/// A nominal type — `C<T...>` over its [TypeDecl]. `dynamic`, `void`,
-/// `Never`, `Null`, `Object`, `Function`, and `Record` are interface
-/// types over their `dart:core` declarations too; dedicated subclasses
-/// would force a rewrite of every check for no gain.
+/// A compiler-only omitted context component. It never denotes a value's
+/// static or runtime type and is completed after upward inference.
+final class UnknownTypeRef extends TypeRef {
+  const UnknownTypeRef._() : super(nullable: false);
+
+  static const instance = UnknownTypeRef._();
+
+  @override
+  UnknownTypeRef withNullable(bool nullable) => this;
+
+  @override
+  UnknownTypeRef substituteTypeParameters(Substitution substitutions) => this;
+}
+
+/// A nominal type — `C<T...>` over its [TypeDecl]. Core types such as
+/// `dynamic`, `void`, and `Never` also use their declaration's core spec.
 final class InterfaceTypeRef extends TypeRef {
   InterfaceTypeRef(
     this.decl, {
@@ -544,15 +575,13 @@ final class TypeParameterTypeRef extends TypeRef {
   /// The parameter's declared name.
   String get name => parameter.name;
 
-  TypeParameterTypeRef copyWith({
-    bool? nullable,
-    TypeRef? promotedBound,
-  }) => TypeParameterTypeRef(
-    parameter,
-    nullable: nullable ?? this.nullable,
-    file: _file,
-    promotedBound: promotedBound ?? this.promotedBound,
-  );
+  TypeParameterTypeRef copyWith({bool? nullable, TypeRef? promotedBound}) =>
+      TypeParameterTypeRef(
+        parameter,
+        nullable: nullable ?? this.nullable,
+        file: _file,
+        promotedBound: promotedBound ?? this.promotedBound,
+      );
 
   @override
   TypeParameterTypeRef withNullable(bool nullable) =>
@@ -809,6 +838,7 @@ extension TypeRefNominal on TypeRef {
   /// function types, the owner library for type parameters, and -1 for
   /// records.
   int get file => switch (this) {
+    UnknownTypeRef() => -1,
     InterfaceTypeRef ref => ref.file,
     FunctionTypeRef ref => ref.file,
     TypeParameterTypeRef ref => ref.file,
@@ -818,6 +848,7 @@ extension TypeRefNominal on TypeRef {
   /// The simple name — the declaration's name, the parameter's name for
   /// type parameters, and the canonical `@record` name for records.
   String get name => switch (this) {
+    UnknownTypeRef() => '_',
     InterfaceTypeRef ref => ref.name,
     FunctionTypeRef ref => ref.name,
     TypeParameterTypeRef ref => ref.name,

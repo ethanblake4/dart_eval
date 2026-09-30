@@ -723,3 +723,65 @@ Generated collection bindings, the hand-maintained Map lookup correction and
 coupled ordinary indexing changes remain uncommitted. The user deferred
 performance experiments and benchmark sweeps until an explicit resume, so
 their required AOT validation is pending. Correctness work continues.
+
+## Fourth cycle, third correctness pass
+
+Omitted pattern-schema components now have a compiler-only unknown type.
+Unlike explicit dynamic annotations, these components let List, Map and
+record literals infer their missing types from values. Schema GLB combines
+nested holes with concrete sibling constraints. Remaining holes close before
+runtime metadata registration; no interpreter operation is added.
+
+Constructor inference now retains class parameters until supplied arguments
+have been analyzed. Field formals query the declaring class's parameterized
+type instead of erasing it through raw default arguments. Contexts constrain
+parameters before collection literals compile, and broad contexts still obey
+declared bounds. Named constructors retain the binder's inferred result.
+Unresolved alias parameters remain available for inference.
+
+Native comparisons and both evaluated loading modes agree on plain, explicit
+new, named and factory construction, Object contexts, broader superclass
+contexts and List<num> literal contexts. Focused compatibility checks caught
+and fixed an alias-constructor regression. The SDK schema fixture now passes
+in both modes. The object-pattern inference fixture exposed one more issue:
+super formals must substitute the superclass parameter through the subclass's
+parameterized superclass view. A transformed List<T> forwarding witness covers
+that substitution.
+
+SDK-full caught a constructor tear-off regression at `A.new<double>(42)`.
+Global initializer inference had erased the callable's signature to dynamic,
+so the caller did not widen the integer literal. Preserving field-formal types
+made the existing closure argument check expose that lost context. Global
+constructor tear-offs now retain their source signature, including explicit
+class arguments and static fields. A focused fresh and serialized witness
+covers these calls, and regress60816 now passes in both modes.
+
+Final primary validation passes 1944 ordinary tests with 62 skips. SDK-full
+has 2320 actual passes, 250 compile errors and 130 expected runtime failures;
+all 2700 harness checks pass, with 362 skips. Full analysis retains only the
+two existing diagnostics. Five stale entries are verified in both loading
+modes and removed: patterns/schema_test.dart,
+patterns/object_pattern_inference_test.dart, switch/issue_60375_test.dart,
+implicit_creation/implicit_new_or_const_generic_test.dart and
+patterns/implicit_instantiation_test.dart. Logs:
+cycle4-pass3-final-ordinary-after-tearoff.log,
+cycle4-pass3-final-analyze-after-tearoff.log and
+cycle4-pass3-final-sdk-after-tearoff.log.
+
+Against the previous bindings, the compiler-only checkpoint passes all 1937
+ordinary tests with 62 skips and 12 focused cases. All five stale fixtures and
+regress60816 pass in fresh and serialized runtimes. Focused analysis has no
+errors; it reports three null-aware collection style infos, two in existing
+code and one in constructor_type.dart. Logs:
+cycle4-pass3-compiler-snapshot-ordinary.log,
+cycle4-pass3-compiler-snapshot-analyze.log and
+cycle4-pass3-compiler-snapshot-dual-probes-targeted.log.
+
+The collection bindings and their coupled indexing changes remain pending
+AOT validation. Performance experiments and benchmark sweeps stay deferred
+until the user explicitly resumes them.
+
+The Object-typed list-rest metadata failure is isolated in an ignored probe.
+It comes from the existing hand-maintained List.sublist wrapper losing generic
+metadata. The schema witness checks static inference and returned contents;
+the separate runtime binding issue remains pending alongside AOT validation.

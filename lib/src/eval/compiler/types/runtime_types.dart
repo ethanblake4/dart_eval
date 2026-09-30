@@ -2,6 +2,7 @@ import 'package:dart_eval/dart_eval_bridge.dart' show AsyncTypes, CoreTypes;
 import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 
 import '../context.dart';
+import '../errors.dart';
 import '../type.dart';
 
 /// Owns the runtime-type tables the backend and Program read: the
@@ -36,6 +37,11 @@ final class RuntimeTypes {
   /// Allocates (or fetches) the descriptor id for [type]. Structural type
   /// equality decides identity, so structurally equal types share one id.
   int idOf(TypeRef type) {
+    if (type.hasSchemaHoles) {
+      throw CompileError(
+        'Unresolved type schema $type reached runtime metadata',
+      );
+    }
     final existing = descriptorIds[type];
     if (existing != null) return existing;
     final id = list.length;
@@ -112,17 +118,15 @@ final class RuntimeTypes {
     // type literals) degrade to `Object?`, matching the old `dynamic`
     // behavior. `is`/`as` desugar the union before reaching here.
     if (type is InterfaceTypeRef && type.decl.isSpec(AsyncTypes.futureOr)) {
-      return [
-        idOf(CoreTypes.object.ref(_ctx)),
-        1,
-      ];
+      return [idOf(CoreTypes.object.ref(_ctx)), 1];
     }
     return [
       (type is InterfaceTypeRef ? indexMap[type.decl] : null) ?? idOf(type),
       type.nullable ? 1 : 0,
-      for (final argument in type is InterfaceTypeRef && type.arguments.isEmpty
-          ? type.decl.defaultTypeArguments
-          : interfaceArgumentsOf(type))
+      for (final argument
+          in type is InterfaceTypeRef && type.arguments.isEmpty
+              ? type.decl.defaultTypeArguments
+              : interfaceArgumentsOf(type))
         idOf(argument),
     ];
   }
@@ -191,6 +195,8 @@ final class RuntimeTypes {
 
   Iterable<TypeParameterDef> _typeParametersIn(TypeRef type) sync* {
     switch (type) {
+      case UnknownTypeRef():
+        return;
       case TypeParameterTypeRef(:final parameter):
         yield parameter;
       case InterfaceTypeRef(:final arguments):

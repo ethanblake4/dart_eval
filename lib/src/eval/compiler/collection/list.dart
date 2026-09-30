@@ -41,11 +41,13 @@ Variable compileListLiteral(
       throw CompileError('Lists can only have one type argument');
     }
     boundType = interfaceArgumentsOf(bound).first;
+    if (boundType is UnknownTypeRef) boundType = null;
     // An inference variable is not a constraint: `<num>[...]` under
     // `List<T>` binds `T` to `num` — let the elements decide. A bare type
     // parameter is the same target: `[0]` under `Iterable<E>` produces
     // `List<int>` and binds `E`.
-    if ((boundType.hasInferenceVariables || boundType.isTypeParameter) &&
+    if (boundType != null &&
+        (boundType.hasInferenceVariables || boundType.isTypeParameter) &&
         elements.isNotEmpty) {
       boundType = boundType.isTypeParameter
           ? null
@@ -99,14 +101,16 @@ Variable compileListLiteral(
   }
   ctx.endScope();
 
-  if (listSpecifiedType == null) {
+  if (listSpecifiedType == null || listSpecifiedType.hasSchemaHoles) {
     list = list.copyWith(
       type: CoreTypes.list
           .ref(ctx)
           .copyWith(
             arguments: [
               resultTypes.isEmpty
-                  ? CoreTypes.dynamic.ref(ctx)
+                  ? ctx.typeSystem.closeSchemaHoles(
+                      listSpecifiedType ?? CoreTypes.dynamic.ref(ctx),
+                    )
                   : TypeRef.commonBaseType(ctx, resultTypes.toSet()),
             ],
           ),

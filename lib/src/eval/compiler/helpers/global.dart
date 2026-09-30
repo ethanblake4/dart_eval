@@ -5,6 +5,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import '../invocation/binder.dart';
 import 'conversion.dart';
+import 'constructor_tearoff.dart';
 import '../context.dart';
 import '../type.dart';
 import '../values/abi.dart';
@@ -109,6 +110,8 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     return CoreTypes.dynamic.ref(ctx);
   }
   if (expression is FunctionExpression) return CoreTypes.function.ref(ctx);
+  final constructorTearOff = _constructorTearOffType(ctx, library, expression);
+  if (constructorTearOff != null) return constructorTearOff;
   if (expression is InstanceCreationExpression) {
     final typeName = splitConstructorTypeName(
       ctx,
@@ -294,6 +297,53 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     }
   }
   return CoreTypes.dynamic.ref(ctx);
+}
+
+TypeRef? _constructorTearOffType(
+  CompilerContext ctx,
+  int library,
+  Expression? expression,
+) {
+  final (receiver, name) = switch (expression) {
+    PrefixedIdentifier(:final prefix, :final identifier) => (
+      prefix,
+      identifier.name,
+    ),
+    PropertyAccess(:final target, :final propertyName, isNullAware: false) => (
+      target,
+      propertyName.name,
+    ),
+    _ => (null, null),
+  };
+  if (receiver == null || name == null) return null;
+  final base = receiver is FunctionReference ? receiver.function : receiver;
+  final typeName = switch (base) {
+    SimpleIdentifier(:final name) => name,
+    PrefixedIdentifier(:final prefix, :final identifier) =>
+      '${prefix.name}.${identifier.name}',
+    _ => null,
+  };
+  var type = ctx.visibleTypes[library]?[typeName];
+  if (type == null || nominalDeclOf(type) is! SourceTypeDecl) return null;
+  if (receiver is FunctionReference && receiver.typeArguments != null) {
+    type = (type as InterfaceTypeRef).copyWith(
+      arguments: [
+        for (final argument in receiver.typeArguments!.arguments)
+          TypeRef.fromAnnotation(ctx, library, argument),
+      ],
+    );
+  }
+  final key = '${type.name}.${name == 'new' ? '' : name}';
+  final declaration = ctx.topLevelDeclarationsMap[type.file]?[key]?.declaration;
+  if (declaration is! ConstructorDeclaration &&
+      !(declaration == null && name == 'new')) {
+    return null;
+  }
+  return constructorTearOffSignature(
+    ctx,
+    type,
+    declaration as ConstructorDeclaration?,
+  ).toFunctionType(ctx);
 }
 
 /// Infers the element types of a collection literal, or null when an element

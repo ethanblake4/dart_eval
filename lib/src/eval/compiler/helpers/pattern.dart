@@ -108,7 +108,7 @@ TypeRef patternTypeBound(
         );
       }
 
-      var elementType = specifiedTypeArg ?? CoreTypes.dynamic.ref(ctx);
+      var elementType = specifiedTypeArg ?? UnknownTypeRef.instance;
       if (specifiedTypeArg == null) {
         for (final element in pat.elements) {
           TypeRef? constraint;
@@ -148,7 +148,7 @@ TypeRef patternTypeBound(
       return result;
     case RestPatternElement(:final pattern):
       return pattern == null
-          ? bound ?? CoreTypes.dynamic.ref(ctx)
+          ? bound ?? UnknownTypeRef.instance
           : patternTypeBound(ctx, pattern, source: source, bound: bound);
     case MapPattern pat:
       if (pat.typeArguments != null &&
@@ -156,7 +156,9 @@ TypeRef patternTypeBound(
         throw CompileError('Map patterns require two type arguments', source);
       }
       final explicit = mapPatternType(ctx, pat);
-      var valueType = interfaceArgumentsOf(explicit)[1];
+      TypeRef valueType = pat.typeArguments == null
+          ? UnknownTypeRef.instance
+          : interfaceArgumentsOf(explicit)[1];
       if (pat.typeArguments == null) {
         for (final entry in pat.elements.whereType<MapPatternEntry>()) {
           valueType = ctx.typeSystem.greatestLowerBound(
@@ -166,7 +168,12 @@ TypeRef patternTypeBound(
         }
       }
       return explicit.copyWith(
-        arguments: [interfaceArgumentsOf(explicit)[0], valueType],
+        arguments: [
+          pat.typeArguments == null
+              ? UnknownTypeRef.instance
+              : interfaceArgumentsOf(explicit)[0],
+          valueType,
+        ],
       );
     case RecordPattern pat:
       final positional = <TypeRef>[];
@@ -193,7 +200,7 @@ TypeRef patternTypeBound(
     case DeclaredVariablePattern pat:
       return pat.type != null
           ? TypeRef.fromAnnotation(ctx, ctx.library, pat.type!)
-          : bound ?? CoreTypes.dynamic.ref(ctx);
+          : bound ?? UnknownTypeRef.instance;
     case AssignedVariablePattern pat:
       return IdentifierReference(
         null,
@@ -213,7 +220,7 @@ TypeRef patternTypeBound(
         source: source,
       ).withNullable(true);
     case CastPattern():
-      return CoreTypes.dynamic.ref(ctx);
+      return UnknownTypeRef.instance;
     case ObjectPattern pat:
       final type = bound == null
           ? objectPatternContextType(ctx, pat.type)
@@ -228,7 +235,7 @@ TypeRef patternTypeBound(
     case WildcardPattern pat:
       final typeAnnotation = pat.type;
       if (typeAnnotation == null) {
-        return bound ?? CoreTypes.dynamic.ref(ctx);
+        return bound ?? UnknownTypeRef.instance;
       }
       final type = TypeRef.fromAnnotation(ctx, ctx.library, typeAnnotation);
       if (bound != null && !type.isAssignableTo(ctx, bound)) {
@@ -546,7 +553,7 @@ Variable _matchListPattern(
   final requiredContext =
       patternContext != PatternBindContext.matching &&
           value.type.isSpec(CoreTypes.dynamic)
-      ? patternTypeBound(ctx, pattern)
+      ? ctx.typeSystem.closeSchemaHoles(patternTypeBound(ctx, pattern))
       : value.type;
   final listType = listPatternType(ctx, pattern, requiredContext);
   final typeTest = _typeTestType(
@@ -640,7 +647,7 @@ Variable _matchMapPattern(
   final requiredContext =
       patternContext != PatternBindContext.matching &&
           subject.type.isSpec(CoreTypes.dynamic)
-      ? patternTypeBound(ctx, pattern)
+      ? ctx.typeSystem.closeSchemaHoles(patternTypeBound(ctx, pattern))
       : subject.type;
   final mapType = mapPatternType(ctx, pattern, requiredContext);
   var result = _typeTestType(

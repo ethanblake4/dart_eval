@@ -38,6 +38,7 @@ Variable compileExpression(
   CompilerContext ctx, [
   TypeRef? bound,
 ]) {
+  if (bound is UnknownTypeRef) bound = null;
   if (e is Literal) {
     return parseLiteral(e, ctx, bound);
   } else if (e is AssignmentExpression) {

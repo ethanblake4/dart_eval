@@ -36,7 +36,7 @@ void compileIrrefutablePattern(
     value = convertForAssignment(
       ctx,
       value,
-      patternTypeBound(ctx, pattern),
+      ctx.typeSystem.closeSchemaHoles(patternTypeBound(ctx, pattern)),
       representation: value.representation,
       source: pattern,
     );

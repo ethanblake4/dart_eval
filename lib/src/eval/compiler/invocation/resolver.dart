@@ -18,6 +18,7 @@ import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
+import '../helpers/constructor_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../member/call_signature.dart';
 import '../member/resolved_member.dart';
@@ -950,27 +951,21 @@ final class CallResolver {
             (staticType.arguments.isEmpty ||
                 staticType.arguments.any((arg) => arg.hasInferenceVariables))) {
           final owner = nominalDeclOf(staticType);
-          final view = owner == null
-              ? null
-              : ctx.typeSystem.asInstanceOf(
-                  owner.thisType,
-                  nominalDeclOf(bound),
-                );
-          if (view != null && owner!.typeParameters.isNotEmpty) {
-            final inferred = <TypeParameterDef, TypeRef>{};
-            ctx.typeSystem.unify(view, bound, inferred);
+          final inferred = constructorContextArguments(ctx, staticType, bound);
+          if (inferred.isNotEmpty) {
             instantiatedType = staticType.copyWith(
               arguments: [
-                for (var i = 0; i < owner.typeParameters.length; i++)
-                  inferred[owner.typeParameters[i]] ??
-                      owner.defaultTypeArguments[i],
+                for (final parameter in owner!.typeParameters)
+                  inferred[parameter] ?? TypeParameterTypeRef(parameter),
               ],
             );
           }
         }
         target = ConstructorCall(
           staticType: staticType,
-          instantiatedType: instantiatedType,
+          instantiatedType: interfaceArgumentsOf(instantiatedType).isEmpty
+              ? null
+              : instantiatedType,
           name: ctorNameOf(e.methodName.name),
           offset: DeferredOrOffset.lookupStatic(
             ctx,
@@ -989,7 +984,7 @@ final class CallResolver {
           source: e,
           returnContext: bound,
         );
-        mReturnType = instantiatedType;
+        mReturnType = argsPair.returnType;
       } else {
         if (!isStatic) throw StateError('Instance call has no resolved target');
         target = StaticCall(
@@ -1716,7 +1711,7 @@ final class CallResolver {
               );
             }
             if (bindings.isNotEmpty) {
-              _constrainAliasArguments(ctx, bindings);
+              constrainInferredTypeArguments(ctx, bindings);
               resolved = resolved.substituteTypeParameters(
                 Substitution.of(bindings),
               );
@@ -1918,39 +1913,6 @@ final class CallResolver {
         _ => null,
       };
       if (ctorClassParams != null) {
-        // Downward inference wins: a context type naming the constructed
-        // class pins its type arguments (`A<int> get g => A(1)`).
-        final boundChain = bound;
-        final ctorClassName = ctorDecl is Declaration
-            ? declarationName(ctorDecl)
-            : null;
-        if (boundChain != null && e.typeArguments == null) {
-          final owner = nominalDeclOf(aliasType ?? sigReturn!);
-          final view = owner == null
-              ? null
-              : ctx.typeSystem.asInstanceOf(
-                  owner.thisType,
-                  nominalDeclOf(boundChain),
-                );
-          if (view != null) {
-            final inferred = <TypeParameterDef, TypeRef>{};
-            ctx.typeSystem.unify(view, boundChain, inferred);
-            final contextArgs = [
-              for (final param in owner!.typeParameters)
-                inferred[param] ?? CoreTypes.dynamic.ref(ctx),
-            ];
-            if (contextArgs.isNotEmpty &&
-                !contextArgs.any((t) => t.hasInferenceVariables)) {
-              inferredCtorArgs = contextArgs;
-            }
-          } else if (boundChain.name == ctorClassName) {
-            final contextArgs = interfaceArgumentsOf(boundChain);
-            if (contextArgs.isNotEmpty &&
-                !contextArgs.any((t) => t.hasInferenceVariables)) {
-              inferredCtorArgs = contextArgs;
-            }
-          }
-        }
         inferredCtorArgs ??= [
           for (final param in ctorClassParams)
             result.typeArguments[param.name.lexeme] ??
@@ -1970,7 +1932,7 @@ final class CallResolver {
             ctx.typeSystem.unify(aliasArgs[i], inferredCtorArgs[i], bindings);
           }
           if (bindings.isNotEmpty) {
-            _constrainAliasArguments(ctx, bindings);
+            constrainInferredTypeArguments(ctx, bindings);
             aliasType = aliasType.substituteTypeParameters(
               Substitution.of(bindings),
             );
@@ -2016,43 +1978,6 @@ final class CallResolver {
       vectorOverride: callArgs,
     );
     return callTarget.emit(ctx, boundCall);
-  }
-}
-
-/// Contextual alias arguments must also satisfy their declared upper bounds.
-/// For `T<X extends int> = C<List<X>>`, a `C<Iterable<num>>` context permits
-/// `X = int`; it cannot widen the alias parameter to `num`.
-void _constrainAliasArguments(
-  CompilerContext ctx,
-  Map<TypeParameterDef, TypeRef> arguments,
-) {
-  // A bound may name a later parameter; propagate refinements back through
-  // that dependency chain, with at most one pass per parameter.
-  for (var pass = 0; pass < arguments.length; pass++) {
-    var changed = false;
-    for (final parameter in arguments.keys) {
-      final bound = parameter.bound;
-      if (bound == null) continue;
-      final resolvedBound = ctx.typeSystem.lowerTypeParameters(
-        bound.substituteTypeParameters(Substitution.of(arguments)),
-        only: const {},
-        kinds: const {TypeParameterOwnerKind.typeAlias},
-      );
-      final inferred = arguments[parameter]!;
-      if (inferred.isAssignableTo(
-        ctx,
-        resolvedBound,
-        forceAllowDynamic: false,
-      )) {
-        continue;
-      }
-      arguments[parameter] =
-          resolvedBound.isAssignableTo(ctx, inferred, forceAllowDynamic: false)
-          ? resolvedBound
-          : CoreTypes.never.ref(ctx);
-      changed = true;
-    }
-    if (!changed) break;
   }
 }
 

@@ -139,6 +139,7 @@ final class TypeSystem {
     TypeRef concrete,
     Map<TypeParameterDef, TypeRef> substitutions,
   ) {
+    if (pattern is UnknownTypeRef || concrete is UnknownTypeRef) return;
     if (pattern.isTypeParameter) {
       substitutions[(pattern as TypeParameterTypeRef).parameter] = concrete;
       return;
@@ -452,6 +453,8 @@ final class TypeSystem {
     final occurrences = <TypeParameterDef, int>{};
     void visit(TypeRef type, int variance) {
       switch (type) {
+        case UnknownTypeRef():
+          return;
         case TypeParameterTypeRef(:final parameter):
           occurrences[parameter] = (occurrences[parameter] ?? 0) | variance;
         case InterfaceTypeRef(:final arguments):
@@ -487,6 +490,7 @@ final class TypeSystem {
     if (upper.isEmpty) return type;
     TypeRef close(TypeRef type) => _closeBound(type, upper, lower);
     return switch (type) {
+      UnknownTypeRef() => type,
       TypeParameterTypeRef() => type.substituteTypeParameters(upper),
       InterfaceTypeRef(:final arguments) =>
         arguments.isEmpty
@@ -694,11 +698,48 @@ final class TypeSystem {
     return null;
   }
 
+  /// Completes omitted schema components after upward inference. Declared
+  /// type parameters retain their identity and runtime environment.
+  TypeRef closeSchemaHoles(TypeRef type) {
+    if (!type.hasSchemaHoles) return type;
+    return switch (type) {
+      UnknownTypeRef() => CoreTypes.dynamic.ref(_ctx),
+      InterfaceTypeRef(:final arguments) => type.copyWith(
+        arguments: arguments.map(closeSchemaHoles).toList(),
+      ),
+      RecordTypeRef(:final positional, :final named) => RecordTypeRef(
+        positional.map(closeSchemaHoles).toList(),
+        {
+          for (final field in named.entries)
+            field.key: closeSchemaHoles(field.value),
+        },
+        nullable: type.nullable,
+      ),
+      FunctionTypeRef(:final signature) => type.copyWith(
+        signature: FunctionSignature(
+          typeParameters: signature.typeParameters,
+          positional: signature.positional.map(closeSchemaHoles).toList(),
+          requiredPositional: signature.requiredPositional,
+          named: {
+            for (final entry in signature.named.entries)
+              entry.key: (
+                type: closeSchemaHoles(entry.value.type),
+                required: entry.value.required,
+              ),
+          },
+          returnType: closeSchemaHoles(signature.returnType),
+        ),
+      ),
+      TypeParameterTypeRef() => type,
+    };
+  }
+
   /// The greatest closure of a context type: every inference hole —
   /// represented as an unfilled type parameter — becomes `Object?`.
   /// `Iterable<_>` closes to `Iterable<Object?>`, the upper bound the
   /// conditional/`??=` rules test the joined type against.
   TypeRef greatestClosure(TypeRef type) => switch (type) {
+    UnknownTypeRef() => CoreTypes.object.ref(_ctx).withNullable(true),
     TypeParameterTypeRef() => CoreTypes.object.ref(_ctx).withNullable(true),
     InterfaceTypeRef(:final arguments) =>
       arguments.isEmpty
@@ -909,6 +950,39 @@ final class TypeSystem {
   /// The lower bound used by pattern context schemas and function parameters.
   /// Function parameters join upwards because their positions are contravariant.
   TypeRef greatestLowerBound(TypeRef a, TypeRef b) {
+    if (a is UnknownTypeRef) return b;
+    if (b is UnknownTypeRef) return a;
+    if (a.hasSchemaHoles || b.hasSchemaHoles) {
+      if (a is InterfaceTypeRef &&
+          b is InterfaceTypeRef &&
+          a.decl == b.decl &&
+          a.arguments.length == b.arguments.length) {
+        return a.copyWith(
+          nullable: a.nullable && b.nullable,
+          arguments: [
+            for (var i = 0; i < a.arguments.length; i++)
+              greatestLowerBound(a.arguments[i], b.arguments[i]),
+          ],
+        );
+      }
+      if (a is RecordTypeRef &&
+          b is RecordTypeRef &&
+          a.positional.length == b.positional.length &&
+          a.named.length == b.named.length &&
+          a.named.keys.every(b.named.containsKey)) {
+        return RecordTypeRef(
+          [
+            for (var i = 0; i < a.positional.length; i++)
+              greatestLowerBound(a.positional[i], b.positional[i]),
+          ],
+          {
+            for (final field in a.named.entries)
+              field.key: greatestLowerBound(field.value, b.named[field.key]!),
+          },
+          nullable: a.nullable && b.nullable,
+        );
+      }
+    }
     if (a.isSpec(CoreTypes.dynamic)) return b;
     if (b.isSpec(CoreTypes.dynamic)) return a;
     if (a.isAssignableTo(_ctx, b, forceAllowDynamic: false)) return a;
@@ -1063,6 +1137,7 @@ final class TypeSystem {
     // `is` fold and other strict callers leave this off.
     bool allowDynamicParameterDowncast = false,
   }) {
+    if (from is UnknownTypeRef || to is UnknownTypeRef) return true;
     if (to.isSpec(CoreTypes.dynamic) ||
         to.isSpec(CoreTypes.voidType) ||
         (forceAllowDynamic && from.isSpec(CoreTypes.dynamic))) {
@@ -1443,6 +1518,7 @@ final class TypeSystem {
   /// Classifies Dart assignment compatibility of a [from] value into a
   /// [to] slot without conflating `dynamic` with a subtype proof.
   AssignmentConversion assignmentConversion(TypeRef from, TypeRef to) {
+    if (to is UnknownTypeRef) return AssignmentConversion.none;
     if (to.isSpec(CoreTypes.dynamic) || to.isSpec(CoreTypes.voidType)) {
       return AssignmentConversion.none;
     }

@@ -48,7 +48,7 @@ Variable compileRecordLiteral(
                   f is! RecordLiteralNamedField ||
                   b.named.containsKey(f.name.lexeme),
             ) =>
-    b,
+      b,
     _ => null,
   };
   final inferredPositional = <TypeRef>[];
@@ -64,6 +64,7 @@ Variable compileRecordLiteral(
   // inserts an implicit `.call` tear-off coercion (e.g. `C() => int` under a
   // `_ Function()` context yields the `int Function()` tear-off).
   Variable compileField(Expression expression, TypeRef? fieldBound) {
+    if (fieldBound is UnknownTypeRef) fieldBound = null;
     final value = compileExpression(
       expression,
       ctx,

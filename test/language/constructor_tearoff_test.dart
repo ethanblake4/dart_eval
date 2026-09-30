@@ -65,6 +65,28 @@ void main() {
     }
   ''', 1);
 
+  check('global constructor tear-offs retain argument contexts', '''
+    class Box<T> {
+      final T value;
+      Box(this.value);
+      Box.named(this.value);
+      Type getT() => T;
+    }
+    final generic = Box.new;
+    final explicit = Box<double>.new;
+    final named = Box<double>.named;
+    class Holder { static final create = Box.new; }
+    bool main() {
+      final first = generic<double>(42);
+      final second = explicit(43);
+      final third = named(44);
+      final fourth = Holder.create<double>(45);
+      return first.value is double && first.getT() == double &&
+          second.value is double && third.value is double &&
+          fourth.value is double;
+    }
+  ''', true);
+
   check('constructor tear-off defaults use inherited and constant values', '''
     class Value {
       final int value;

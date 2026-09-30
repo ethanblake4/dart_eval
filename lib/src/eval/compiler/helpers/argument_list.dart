@@ -148,8 +148,11 @@ TypeRef resolveFieldFormalType(
     throw CompileError('Field formals can only occur in constructors');
   }
   final $class = parameterHost.parent!.parent as Declaration;
+  final owner = nominalDeclOf(
+    TypeRef.lookupDeclaration(ctx, decLibrary, $class),
+  )!;
   return ctx.memberLookup.fieldType(
-        TypeRef.lookupDeclaration(ctx, decLibrary, $class),
+        owner.thisType,
         param.name.lexeme,
         forFieldFormal: true,
         source: param,
@@ -177,12 +180,20 @@ TypeRef resolveSuperFormalType(
       return TypeRef.fromBridgeAnnotation(ctx, target.type);
     }
   } else if (target is FormalParameter) {
+    final owner = nominalDeclOf(
+      TypeRef.lookupDeclaration(
+        ctx,
+        decLibrary,
+        parameterHost.parent!.parent as Declaration,
+      ),
+    )!;
+    final superclass = ctx.typeSystem.superclassOf(owner.thisType)!;
     return getFormalParameterType(
           ctx,
           target,
           superCstr.sourceLib,
           superCstr.declaration as ConstructorDeclaration,
-        ).$1 ??
+        ).$1?.substituteTypeParameters(Substitution.forInterface(superclass)) ??
         CoreTypes.dynamic.ref(ctx);
   } else if (target != null) {
     throw CompileError('Unknown parameter type ${target.runtimeType}', param);

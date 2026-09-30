@@ -3,6 +3,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
+import '../helpers/constructor_type.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import '../member/call_signature.dart';
@@ -68,20 +69,12 @@ Variable compileInstanceCreation(
     // Infer a constructor's type arguments from the expected interface, even
     // when the constructed class implements that interface indirectly.
     final declaration = nominalDeclOf(staticType);
-    final view = declaration == null
-        ? null
-        : ctx.typeSystem.asInstanceOf(
-            declaration.thisType,
-            nominalDeclOf(bound),
-          );
-    if (view != null && declaration!.typeParameters.isNotEmpty) {
-      final inferred = <TypeParameterDef, TypeRef>{};
-      ctx.typeSystem.unify(view, bound, inferred);
+    final inferred = constructorContextArguments(ctx, staticType, bound);
+    if (inferred.isNotEmpty) {
       instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
         arguments: [
-          for (var i = 0; i < declaration.typeParameters.length; i++)
-            inferred[declaration.typeParameters[i]] ??
-                declaration.defaultTypeArguments[i],
+          for (final parameter in declaration!.typeParameters)
+            inferred[parameter] ?? TypeParameterTypeRef(parameter),
         ],
       );
     }
@@ -233,8 +226,8 @@ Variable compileInstanceOf(
 
     // Constructor signatures reference the declaring class's type parameters —
     // the callee's class (`B2` for `P1 = B2<int> with M`), not necessarily the
-    // invoked name. Seed them from the instantiated type's arguments (or the
-    // parameter bounds) so `T`-annotated parameters resolve.
+    // invoked name. Applied arguments constrain them; omitted arguments remain
+    // placeholders until the binder infers them from supplied values.
     final ctorDecl = dec.parent?.parent;
     final classTypeParams = ctorDecl is Declaration
         ? classLikeClauses(ctorDecl).$4?.typeParameters
@@ -250,23 +243,17 @@ Variable compileInstanceOf(
       );
       final appliedArgs = interfaceArgumentsOf(appliedType ?? instantiatedType);
       for (var i = 0; i < classTypeParams.length; i++) {
-        final bound = classTypeParams[i].bound;
-        seedGenerics[classTypeParams[i].name.lexeme] = i < appliedArgs.length
-            ? appliedArgs[i]
-            : bound == null
-            ? CoreTypes.dynamic.ref(ctx)
-            : TypeRef.fromAnnotation(
-                ctx,
-                resolved.library,
-                bound,
-                typeParameters: seedGenerics,
-              );
+        if (i < appliedArgs.length) {
+          seedGenerics[classTypeParams[i].name.lexeme] = appliedArgs[i];
+        }
       }
     }
 
     target = ConstructorCall(
       staticType: staticType,
-      instantiatedType: instantiatedType,
+      instantiatedType: interfaceArgumentsOf(instantiatedType).isEmpty
+          ? null
+          : instantiatedType,
       name: name,
       offset: DeferredOrOffset.lookupStatic(
         ctx,
@@ -291,7 +278,9 @@ Variable compileInstanceOf(
     BoundCall(
       positional: const [],
       named: const [],
-      returnType: instantiatedType,
+      returnType: resolved is SourceMember
+          ? arguments.returnType
+          : instantiatedType,
       vectorOverride: arguments.vector(),
     ),
   );

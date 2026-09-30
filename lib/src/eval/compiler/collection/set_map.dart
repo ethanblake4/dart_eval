@@ -32,12 +32,12 @@ Variable compileSetOrMapLiteral(
   TypeRef? boundKey, boundValue;
   if (resolvedBound != null) {
     final boundArgs = interfaceArgumentsOf(resolvedBound);
-    // `dynamic` and inference variables don't constrain the literal's own
+    // Schema holes and inference variables don't constrain the literal's own
     // shape — unification binds them afterwards. A bare type parameter is
     // likewise an inference target: `const {1: 10}` under `Map<K, V>`
     // produces `Map<int, int>` and binds `K`, `V`.
     TypeRef? constrains(TypeRef type) =>
-        type.isSpec(CoreTypes.dynamic) ||
+        type is UnknownTypeRef ||
             type.hasInferenceVariables ||
             type.isTypeParameter
         ? null
@@ -134,10 +134,11 @@ Variable compileSetOrMapLiteral(
     valueTypes.addAll(values);
   }
   TypeRef infer(TypeRef? explicit, Set<TypeRef> values) =>
-      explicit ??
-      (values.isEmpty
-          ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.commonBaseType(ctx, values));
+      explicit != null && !explicit.hasSchemaHoles
+      ? explicit
+      : values.isEmpty
+      ? ctx.typeSystem.closeSchemaHoles(explicit ?? CoreTypes.dynamic.ref(ctx))
+      : TypeRef.commonBaseType(ctx, values);
   final result = collection.copyWith(
     type: (collection.type as InterfaceTypeRef).copyWith(
       arguments: [
