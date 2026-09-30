@@ -468,39 +468,6 @@ final class ArgumentBinder {
     /// See [bindDeclaration.defaultsSignature].
     CallSignature? defaultsSignature,
   }) {
-    // A redirecting factory (`factory F(...) = T.g`) exposes the redirect
-    // target's signature to callers: argument binding, conversion, and omitted
-    // defaults all resolve against the target constructor's parameters.
-    if (parameterHost is ConstructorDeclaration &&
-        parameterHost.redirectedConstructor != null) {
-      final redirect = parameterHost.redirectedConstructor!;
-      final (typeName, ctorName) = splitConstructorTypeName(
-        ctx,
-        decLibrary,
-        redirect.type,
-        redirect.name?.name,
-      );
-      final targetRef = ctx.visibleTypes[decLibrary]![typeName];
-      final targetDecl = targetRef == null
-          ? null
-          : ctx
-                .topLevelDeclarationsMap[targetRef
-                    .file]!['${targetRef.name}.$ctorName']
-                ?.declaration;
-      if (targetDecl is ConstructorDeclaration) {
-        decLibrary = targetRef!.file;
-        final redirected = CallSignature.forDeclaration(
-          ctx,
-          decLibrary,
-          targetDecl,
-        );
-        signature = redirected.substitute(
-          redirected.substitutionFor(signature.typeParameterRefs),
-        );
-        parameterHost = targetDecl;
-      }
-    }
-
     final positional = signature.positional;
     final named = {for (final spec in signature.named) spec.name: spec};
 
@@ -664,14 +631,22 @@ final class ArgumentBinder {
         substitution: argumentSubstitution,
         source: source,
       ),
-      omitted: (spec) => fillOmitted
-          ? compileOmittedArgument(
-              ctx,
-              defaultsSignature == null ? spec : defaultsSpecFor(spec),
-              parameterHost,
-              spec.type.substituteTypeParameters(argumentSubstitution),
-            )
-          : null,
+      omitted: (spec) {
+        if (!fillOmitted) return null;
+        // Inherited factory defaults belong to the redirect target. Only
+        // supplied arguments are checked against the factory's own types.
+        final redirect = parameterHost is ConstructorDeclaration
+            ? redirectFactoryParameter(ctx, spec.node!, parameterHost)
+            : null;
+        return compileOmittedArgument(
+          ctx,
+          defaultsSignature == null ? spec : defaultsSpecFor(spec),
+          parameterHost,
+          (redirect?.type ?? spec.type).substituteTypeParameters(
+            argumentSubstitution,
+          ),
+        );
+      },
     );
 
     if (inferGenerics && candidates.isNotEmpty) {

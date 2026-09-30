@@ -38,9 +38,9 @@ Variable materializeTearOff(
     // map stores the raw `_x` — probe both spellings.
     final classMap =
         ctx.instanceDeclarationsMap[offset.file]![offset.className!]!;
-    declaration = (classMap[offset.name] ??
-            classMap[offset.name!.split('::').last])!
-        as MethodDeclaration;
+    declaration =
+        (classMap[offset.name] ?? classMap[offset.name!.split('::').last])!
+            as MethodDeclaration;
   } else {
     final declared = ctx.topLevelDeclarationsMap[offset.file]?[offset.name];
     if (declared == null) {
@@ -49,7 +49,13 @@ Variable materializeTearOff(
       );
     }
     if (declared.isBridge) {
-      return _bridgeTearOff(ctx, offset, declared, boundContext: boundContext, typeArguments: typeArguments);
+      return _bridgeTearOff(
+        ctx,
+        offset,
+        declared,
+        boundContext: boundContext,
+        typeArguments: typeArguments,
+      );
     }
     declaration = declared.declaration!;
   }
@@ -132,6 +138,7 @@ Variable materializeTearOff(
         : offset.name ?? '',
     declaration.offset,
   );
+  final declaringTypeParameters = Map<String, TypeRef>.of(memberParams);
   declareTypeParameters(ctx, callableOwner, ownTypeParams, memberParams);
 
   TypeRef parameterType(FormalParameter parameter) {
@@ -166,7 +173,7 @@ Variable materializeTearOff(
     MethodDeclaration() => ctx.typeFactory.declaredMethodType(
       offset.file ?? ctx.library,
       declaration,
-      memberTypeParameters: memberParams,
+      memberTypeParameters: declaringTypeParameters,
       ownTypeParameterOwner: callableOwner,
     ),
     FunctionDeclaration() => ctx.typeFactory.declaredFunctionType(
@@ -289,8 +296,7 @@ Variable materializeTearOff(
           for (final parameter
               in memberExt.declaration.typeParameters?.typeParameters ??
                   const <TypeParameter>[])
-            memberParams[parameter.name.lexeme] ??
-                CoreTypes.dynamic.ref(ctx),
+            memberParams[parameter.name.lexeme] ?? CoreTypes.dynamic.ref(ctx),
         ];
   return instantiateRuntimeCallable(
     ctx,
@@ -322,7 +328,9 @@ Variable _bridgeTearOff(
   final file = offset.file ?? ctx.library;
   final externalIndex = ctx.bridgeStaticFunctionIndices[file]?[offset.name];
   if (externalIndex == null) {
-    throw CompileError('Cannot tear off unregistered bridged function ${offset.name}');
+    throw CompileError(
+      'Cannot tear off unregistered bridged function ${offset.name}',
+    );
   }
   final functionType = CallSignature.bridge(
     ctx,
@@ -373,7 +381,10 @@ Variable _bridgeTearOff(
       requiredPositional: positional.where((p) => !p.optional).length,
       positionalCount: positional.length,
       namedNames: [for (final p in named) p.name],
-      requiredNamed: [for (final p in named) if (!p.optional) p.name],
+      requiredNamed: [
+        for (final p in named)
+          if (!p.optional) p.name,
+      ],
       runtimeTypeId: ctx.runtimeTypes.idOf(functionType),
     ),
     functionType,
@@ -503,62 +514,66 @@ Variable instantiateRuntimeCallable(
       );
       ctx.functionParameterTypes[functionId] = parameters;
       ctx.functionRuntimeTypes[functionId] = instantiated;
-    ctx.pushOp(ir.Parameter(SSA('arg_0'), 0));
-    final captured = ctx.svar('generic_function');
-    ctx.pushOp(LoadCapture(captured, 0));
-    final arguments = <SSA>[];
-    for (var i = 0; i < parameters.length; i++) {
-      final argument = SSA('arg_${i + 1}');
-      ctx.pushOp(ir.Parameter(argument, i + 1));
-      arguments.add(argument);
-    }
-    final result = ctx.svar('instantiated_result');
-    ctx.pushOp(
-      InvokeClosure(
-        result,
-        captured,
-        arguments.take(signature.positional.length).toList(),
-        {
-          for (var i = 0; i < named.length; i++)
-            named[i]: arguments[signature.positional.length + i],
-        },
-        typeArguments: argumentIds,
-      ),
-    );
-    ctx.pushOp(Return(result));
-    ctx.endScope();
-    ctx.finishMethod();
+      ctx.pushOp(ir.Parameter(SSA('arg_0'), 0));
+      final captured = ctx.svar('generic_function');
+      ctx.pushOp(LoadCapture(captured, 0));
+      final arguments = <SSA>[];
+      for (var i = 0; i < parameters.length; i++) {
+        final argument = SSA('arg_${i + 1}');
+        ctx.pushOp(ir.Parameter(argument, i + 1));
+        arguments.add(argument);
+      }
+      final result = ctx.svar('instantiated_result');
+      ctx.pushOp(
+        InvokeClosure(
+          result,
+          captured,
+          arguments.take(signature.positional.length).toList(),
+          {
+            for (var i = 0; i < named.length; i++)
+              named[i]: arguments[signature.positional.length + i],
+          },
+          typeArguments: argumentIds,
+        ),
+      );
+      ctx.pushOp(Return(result));
+      ctx.endScope();
+      ctx.finishMethod();
     } finally {
       outer.restore();
     }
   }
-  return internConst(ctx, Variable.ssa(
+  return internConst(
     ctx,
-    CreateClosure(
-      ctx.svar('instantiated_function'),
-      DeferredOrOffset(offset: functionId),
-      [value.ssa],
-      isInstantiationAdapter: true,
-      requiredPositional: signature.requiredPositional,
-      positionalCount: signature.positional.length,
-      namedNames: named,
-      positionalDefaults: [for (final d in positionalDefaults) d.$1],
-      namedDefaults: [for (final name in named) namedDefaults[name]?.$1],
-      defaultThunks: [
-        for (final d in positionalDefaults) d.$2,
-        for (final name in named) namedDefaults[name]?.$2 ?? -1,
-      ],
-      requiredNamed: [
-        for (final name in named)
-          if (instantiated.signature.named[name]!.required) name,
-      ],
-      runtimeTypeId: ctx.runtimeTypes.idOf(instantiated),
-    ),
-    instantiated,
-    facts: ValueFacts(
-      callableSignature: CallSignature.returnOnly(
-        instantiated.signature.returnType,
+    Variable.ssa(
+      ctx,
+      CreateClosure(
+        ctx.svar('instantiated_function'),
+        DeferredOrOffset(offset: functionId),
+        [value.ssa],
+        isInstantiationAdapter: true,
+        requiredPositional: signature.requiredPositional,
+        positionalCount: signature.positional.length,
+        namedNames: named,
+        positionalDefaults: [for (final d in positionalDefaults) d.$1],
+        namedDefaults: [for (final name in named) namedDefaults[name]?.$1],
+        defaultThunks: [
+          for (final d in positionalDefaults) d.$2,
+          for (final name in named) namedDefaults[name]?.$2 ?? -1,
+        ],
+        requiredNamed: [
+          for (final name in named)
+            if (instantiated.signature.named[name]!.required) name,
+        ],
+        runtimeTypeId: ctx.runtimeTypes.idOf(instantiated),
+      ),
+      instantiated,
+      facts: ValueFacts(
+        callableSignature: CallSignature.returnOnly(
+          instantiated.signature.returnType,
+        ),
       ),
     ),
-  ), instantiated);
+    instantiated,
+  );
 }

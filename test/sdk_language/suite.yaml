@@ -54,6 +54,8 @@ negative: skip
 # unconditionally. Entries are paths relative to tests/language; a trailing
 # '/' or a glob matches whole directories.
 exclude:
+  - path: 'async/return_throw_test.dart'
+    reason: 'Pinned expectation conflicts with Dart 3.13.4: return f() leaves try before the Future error arrives; return await f() catches it'
 #  - path: 'some/dir/'
 #    reason: 'requires dart:mirrors'
 # Tests expected to fail under dart_eval today (status-file convention,
@@ -284,7 +286,6 @@ expect_fail:
   - path: 'nnbd/resolution/null_assertion_null_type_test.dart'
   - path: 'nnbd/static_errors/nullable_supertype_test.dart'
   - path: 'nnbd/static_errors/super_equals_allows_null_test.dart'
-  - path: 'nnbd/syntax/class_member_declarations_test.dart'
   - path: 'nnbd/syntax/late_modifier_bug_39658_test.dart'
   - path: 'nnbd/syntax/late_modifier_edge_cases_test.dart'
   - path: 'nnbd/syntax/late_modifier_error_test.dart'
@@ -376,7 +377,6 @@ expect_fail:
   - path: 'private_named_parameters/parameter_scope_test.dart'
   - path: 'private_named_parameters/public_name_test.dart'
   - path: 'promotion_chain_intersection_join/join_test.dart'
-  - path: 'redirecting/constructor_initializer_test.dart'
   - path: 'regress/regress13179_test.dart'
   - path: 'regress/regress18435_test.dart'
   - path: 'regress/regress21795_test.dart'

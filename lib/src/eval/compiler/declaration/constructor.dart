@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../helpers/deferred_import.dart';
 import '../invocation/binder.dart';
+import '../invocation/call.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -107,32 +108,23 @@ void compileConstructorDeclaration(
   final fieldIdx = fieldIndexInfo.count;
 
   final fieldFormalNames = <String>[];
-  // A redirecting factory's call ABI is its redirect target's parameter
-  // list: callers bind arguments in the target's declaration order and pad
-  // omitted slots with the target's defaults, so bind incoming slots to the
-  // target's parameters.
+  // The factory's own signature is the checked boundary. Its target may
+  // accept wider types or extra optional parameters.
   final redirectTarget = _redirectTarget(ctx, d);
-  final redirectTargetDecl = redirectTarget?.$4?.declaration;
-
   final resolvedParams = resolveFPLDefaults(
     ctx,
-    redirectTargetDecl is ConstructorDeclaration
-        ? redirectTargetDecl.parameters
-        : d.parameters,
+    d.parameters,
     false,
     allowUnboxed: true,
     isEnum: parent is EnumDeclaration,
-    parameterHost: redirectTargetDecl is ConstructorDeclaration
-        ? redirectTargetDecl
-        : d,
-    decLibrary: redirectTarget?.$2.file,
+    parameterHost: d,
   );
   final parameterTypes = ctx.functionParameterTypes[ctx.currentFunctionId!]!;
   final clsType = TypeRef.lookupDeclaration(ctx, ctx.library, parent);
-  final abi = CallableAbi.fromParameterTypes(
+  final abi = CallableAbi.ofConstructor(
+    ctx,
+    d,
     parameterTypes,
-    clsType,
-    CallableKind.constructor,
     leadingBoxed: isEnum ? 2 : 0,
     hiddenTypeId: d.factoryKeyword == null,
   );
@@ -190,8 +182,7 @@ void compileConstructorDeclaration(
         ctx,
         d.redirectedConstructor!.type.importPrefix?.name.lexeme,
       );
-      // `factory C.f(...) = D.g;` forwards its parameters along the target's
-      // parameter layout; omitted slots use the target's defaults.
+      // Forward already-checked locals to the target's parameter layout.
       final (targetType, targetRef, ctorName, targetCtor) = redirectTarget;
       final result = ctx.svar('instance');
       if (targetCtor != null && targetCtor.isBridge) {
@@ -216,28 +207,43 @@ void compileConstructorDeclaration(
         ctx.pushOp(InvokeExternal(result, externalId, argSsa));
       } else {
         final ctorDecl = targetCtor?.declaration as ConstructorDeclaration?;
-        // The callee binds the target's parameter layout, so forwarding is
-        // a pass-through of each local in declaration order.
-        final argSsa = <SSA>[];
-        for (final p
-            in ctorDecl?.parameters.parameters ?? const <FormalParameter>[]) {
-          final (paramType, _) = getFormalParameterType(
-            ctx,
-            p,
-            targetRef.file,
-            ctorDecl ?? d,
-          );
-          argSsa.add(
-            coerceArgumentForParameter(
-              ctx,
-              ctx.lookupLocal(p.name!.lexeme)!,
-              paramType ?? CoreTypes.dynamic.ref(ctx),
-              p,
-              redirectTargetDecl ?? d,
-              source: d,
-            ).ssa,
-          );
-        }
+        final argSsa = ctorDecl == null
+            ? <SSA>[]
+            : ArgumentBinder(ctx)
+                  .bindParameterList(
+                    null,
+                    targetRef.file,
+                    CallSignature.forDeclaration(
+                      ctx,
+                      targetRef.file,
+                      ctorDecl,
+                    ).substitute(
+                      Substitution.of({
+                        for (
+                          var i = 0;
+                          i < interfaceArgumentsOf(targetType).length;
+                          i++
+                        )
+                          nominalDeclOf(targetRef)!.typeParameters[i]:
+                              interfaceArgumentsOf(targetType)[i],
+                      }),
+                    ),
+                    ctorDecl,
+                    suppliedShape: CallShape.values(
+                      [
+                        for (final p in d.parameters.parameters)
+                          if (p.isPositional) ctx.lookupLocal(p.name!.lexeme)!,
+                      ],
+                      {
+                        for (final p in d.parameters.parameters)
+                          if (p.isNamed)
+                            p.name!.lexeme: ctx.lookupLocal(p.name!.lexeme)!,
+                      },
+                    ),
+                    inferGenerics: false,
+                    source: d,
+                  )
+                  .vector();
         if (ctorDecl?.factoryKeyword == null) {
           argSsa.add(pushRuntimeTypeId(ctx, targetType));
         }
@@ -334,14 +340,21 @@ void compileConstructorDeclaration(
     return;
   }
 
-  // Initializer-list entries execute in source order before the
-  // superconstructor invocation: field-initializer expressions evaluate now
-  // and apply to the instance once it exists.
+  // Non-late declaration initializers precede initializer-list entries.
+  // Evaluate before the superconstructor call and apply once it exists.
   final usedNames = {
     ...fieldFormalNames,
     for (final init in otherInitializers)
       if (init is ConstructorFieldInitializer) init.fieldName.name,
   };
+  final evaluatedFieldInits = _evalUnusedFieldInitializers(
+    ctx,
+    fields,
+    usedNames,
+    memberLibraries,
+    parent,
+    isLate: false,
+  );
   final pendingFieldInits = <({int index, SSA ssa})>[];
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
@@ -377,14 +390,15 @@ void compileConstructorDeclaration(
     }
   }
 
-  // Field initializers run before the superconstructor invocation — evaluate
-  // them now and apply the values once the instance exists.
-  final evaluatedFieldInits = _evalUnusedFieldInitializers(
-    ctx,
-    fields,
-    usedNames,
-    memberLibraries,
-    parent,
+  evaluatedFieldInits.addAll(
+    _evalUnusedFieldInitializers(
+      ctx,
+      fields,
+      usedNames,
+      memberLibraries,
+      parent,
+      isLate: true,
+    ),
   );
 
   final $extends = parent is EnumDeclaration
@@ -742,10 +756,12 @@ Map<String, Variable> _evalUnusedFieldInitializers(
   List<FieldDeclaration> fields,
   Set<String> usedNames,
   Map<ClassMember, int> memberLibraries,
-  Declaration? parent,
-) {
+  Declaration? parent, {
+  bool? isLate,
+}) {
   final evaluated = <String, Variable>{};
   for (final fd in fields) {
+    if (isLate != null && fd.fields.isLate != isLate) continue;
     for (final field in fd.fields.variables) {
       if (usedNames.contains(field.name.lexeme) || field.initializer == null) {
         continue;

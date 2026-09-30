@@ -115,9 +115,12 @@ List<FormalParameter> resolveFPLDefaults(
           declaredType;
     }
     declaredTypes.add(declaredType);
-    final paramRep = Abi.parameter(
+    final paramRep = Abi.sourceParameter(
+      ctx,
       declaredType,
-      allowUnboxed ? CallableKind.function : CallableKind.method,
+      param,
+      parameterHost,
+      kind: allowUnboxed ? CallableKind.function : CallableKind.method,
     );
     ctx.pushOp(Parameter(argument, paramIndex, representation: paramRep.bank));
     // Callers bind omitted arguments before entering typed registers. Null is

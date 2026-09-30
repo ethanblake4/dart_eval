@@ -3,6 +3,57 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('static generic members do not require instance type bindings', () {
+    final program = Compiler().compile({
+      'override_inference': {
+        'main.dart': '''
+          mixin Matches<T> {
+            static int number(int value) => value;
+            bool accepts(Object? value) => value is T;
+          }
+          class Box<T> with Matches<T> {
+            static int number() => 7;
+          }
+          bool main() => Matches.number(3) == 3 && Box.number() == 7 &&
+              Box<int>().accepts(1) && !Box<int>().accepts('wrong');
+        ''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib('package:override_inference/main.dart', 'main'),
+        true,
+      );
+    }
+  });
+  test('method parameter names do not replace inherited class types', () {
+    final program = Compiler().compile({
+      'override_inference': {
+        'main.dart': '''
+          abstract class Contract<T> { T read<U>(); }
+          class Implementation<T> implements Contract<T> {
+            read<T>() => throw 'unused';
+          }
+          Function main() => Implementation<int>().read;
+        ''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      final closure =
+          runtime.executeLib('package:override_inference/main.dart', 'main')
+              as $Value;
+      expect(
+        runtime.runtimeTypeToString(closure.$getRuntimeType(runtime)),
+        '<T0>() => int',
+      );
+    }
+  });
   test('generic overrides rebind inherited return parameters', () {
     final program = Compiler().compile({
       'override_inference': {

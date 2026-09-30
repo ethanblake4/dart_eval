@@ -81,6 +81,19 @@ int compileMethodDeclaration(
                 }(),
         _ => null,
       };
+      // Folded mixin members are compiled under their applied class scope.
+      // Preserve that scope before a method parameter can shadow its names.
+      final declaringHost = d.parent?.parent;
+      final memberTypeParameters = {
+        if (!d.isStatic && declaringHost is Declaration)
+          for (final parameter
+              in classLikeClauses(declaringHost).$4?.typeParameters ??
+                  const <TypeParameter>[])
+            parameter.name.lexeme:
+                ctx.typeScopes[ctx.library]![parameter.name.lexeme]!,
+        for (var i = 0; i < extensionTypeParameters.length; i++)
+          extensionTypeParameters[i].name.lexeme: extensionRefs[i],
+      };
       return ctx.withTypeParameters(
         ctx.library,
         TypeParameterOwner(
@@ -91,161 +104,155 @@ int compileMethodDeclaration(
         ),
         methodTypeParameters,
         () {
-        ctx.functionTypeParameters[pos] = [
-          for (final ref in extensionRefs) ref.parameter,
-          for (final parameter in methodTypeParameters)
-            (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
-                    as TypeParameterTypeRef)
-                .parameter,
-        ];
-        ctx.functionRuntimeTypes[pos] = ctx.typeFactory.declaredMethodType(
-          ctx.library,
-          d,
-          memberTypeParameters: {
-            ...switch (ctx.currentClass) {
-              final host? => classTypeParameterRefs(
-                ctx,
-                ctx.library,
-                ctx.currentClassName!,
-                classLikeClauses(host).$4,
-              ),
-              _ => const <String, TypeRef>{},
-            },
-            for (var i = 0; i < extensionTypeParameters.length; i++)
-              extensionTypeParameters[i].name.lexeme: extensionRefs[i],
-          },
-          ownTypeParameterOwner: TypeParameterOwner(
-            TypeParameterOwnerKind.method,
+          ctx.functionTypeParameters[pos] = [
+            for (final ref in extensionRefs) ref.parameter,
+            for (final parameter in methodTypeParameters)
+              (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
+                      as TypeParameterTypeRef)
+                  .parameter,
+          ];
+          ctx.functionRuntimeTypes[pos] = ctx.typeFactory.declaredMethodType(
             ctx.library,
-            '$parentName.$methodName',
-            pos,
-          ),
-        );
-
-        ctx.beginScope();
-        final hasReceiver = !d.isStatic;
-        ctx.currentExtension = parent is ExtensionDeclaration ? parent : null;
-        if (hasReceiver) {
-          ctx.pushOp(Parameter(SSA('arg_0'), 0));
-          // `this` binds the method's declaring link only when the class has
-          // no subclasses — otherwise the receiver may be a subclass link
-          // whose field storage lives elsewhere in the chain.
-          final thisType =
-              receiverType ??
-              (isExtensionMember ? null : TypeRef.$this(ctx));
-          final concrete =
-              thisType != null &&
-                  !ctx.hasSubclasses(thisType.file, thisType.name)
-              ? thisType
-              : null;
-          ctx.setLocal(
-            '#this',
-            Variable.of(
-              ctx,
-              SSA('arg_0'),
-              thisType ?? CoreTypes.dynamic.ref(ctx),
-              rep: ValueRep.boxed,
-              facts: concrete != null
-                  ? ValueFacts(possibleClasses: [concrete])
-                  : null,
+            d,
+            memberTypeParameters: memberTypeParameters,
+            ownTypeParameterOwner: TypeParameterOwner(
+              TypeParameterOwnerKind.method,
+              ctx.library,
+              '$parentName.$methodName',
+              pos,
             ),
           );
-        }
-        final resolvedParams = d.parameters == null
-            ? <FormalParameter>[]
-            : resolveFPLDefaults(
-                ctx,
-                d.parameters,
-                hasReceiver,
-                allowUnboxed: false,
-                parameterHost: parent is ExtensionDeclaration ? null : parent,
-                decLibrary: ctx.library,
-              );
 
-        final expectedReturnType =
-            (ctx.functionRuntimeTypes[pos] as FunctionTypeRef)
-                .signature.returnType;
-        final parameterTypes = d.parameters == null
-            ? const <TypeRef>[]
-            : ctx.functionParameterTypes[pos]!;
-        final abi = CallableAbi.ofMethod(d, parameterTypes, expectedReturnType);
-
-        if (b.isGenerator) {
-          setupGenerator(
-            ctx,
-            asynchronous: b.isAsynchronous,
-            returnType: expectedReturnType,
-          );
-        } else if (b.isAsynchronous && !b.isGenerator) {
-          setupAsyncFunction(
-            ctx,
-            returnType: expectedReturnType,
-          );
-        }
-
-        var i = hasReceiver ? 1 : 0;
-
-        for (final p in resolvedParams) {
-          final type = parameterTypes[i - (hasReceiver ? 1 : 0)];
-
-          // `_` parameters are wildcards: non-binding and repeatable.
-          if (p.name!.lexeme != '_') {
-            ctx
-                .setLocal(
-                  p.name!.lexeme,
-                  Variable.of(ctx, SSA('arg_$i'), type, rep: abi.parameters[i]),
-                )
-                .captureBinding(ctx, p);
-          }
-
-          i++;
-        }
-
-        final returnType = expectedReturnType;
-        ctx.functionSignatures[pos] = abi.machine;
-
-        StatementInfo? stInfo;
-        if (b is BlockFunctionBody) {
-          stInfo = compileBlock(
-            b.block,
-            expectedReturnType,
-            ctx,
-            name: '$methodName()',
-          );
-        } else if (b is ExpressionFunctionBody) {
           ctx.beginScope();
-          // An async body's context type is the *flattened* return type: in
-          // `Future<List<int>> f() async => []` the literal sees `List<int>`.
-          final bound = b.isAsynchronous
-              ? ctx.typeSystem.flatten(returnType)
-              : returnType;
-          final V = compileExpression(b.expression, ctx, bound);
-          stInfo = doReturn(
-            ctx,
-            expectedReturnType,
-            V,
-            isAsync: b.isAsynchronous,
-            skipClassBoxing: abi.result?.isBoxed == false,
-          );
-          ctx.endScope();
-        } else if (b is EmptyFunctionBody) {
-          ctx.endScope();
-          return null;
-        } else {
-          throw CompileError('Unknown function body type ${b.runtimeType}');
-        }
-
-        if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
-          if (b.isAsynchronous && !b.isGenerator) {
-            asyncComplete(ctx, null);
-          } else {
-            ctx.pushOp(Return(null));
+          final hasReceiver = !d.isStatic;
+          ctx.currentExtension = parent is ExtensionDeclaration ? parent : null;
+          if (hasReceiver) {
+            ctx.pushOp(Parameter(SSA('arg_0'), 0));
+            // `this` binds the method's declaring link only when the class has
+            // no subclasses — otherwise the receiver may be a subclass link
+            // whose field storage lives elsewhere in the chain.
+            final thisType =
+                receiverType ?? (isExtensionMember ? null : TypeRef.$this(ctx));
+            final concrete =
+                thisType != null &&
+                    !ctx.hasSubclasses(thisType.file, thisType.name)
+                ? thisType
+                : null;
+            ctx.setLocal(
+              '#this',
+              Variable.of(
+                ctx,
+                SSA('arg_0'),
+                thisType ?? CoreTypes.dynamic.ref(ctx),
+                rep: ValueRep.boxed,
+                facts: concrete != null
+                    ? ValueFacts(possibleClasses: [concrete])
+                    : null,
+              ),
+            );
           }
-        }
+          final resolvedParams = d.parameters == null
+              ? <FormalParameter>[]
+              : resolveFPLDefaults(
+                  ctx,
+                  d.parameters,
+                  hasReceiver,
+                  allowUnboxed: false,
+                  parameterHost: parent is ExtensionDeclaration ? null : parent,
+                  decLibrary: ctx.library,
+                );
 
-        ctx.endScope();
-        return stInfo;
-      },
+          final expectedReturnType =
+              (ctx.functionRuntimeTypes[pos] as FunctionTypeRef)
+                  .signature
+                  .returnType;
+          final parameterTypes = d.parameters == null
+              ? const <TypeRef>[]
+              : ctx.functionParameterTypes[pos]!;
+          final abi = CallableAbi.ofMethod(
+            d,
+            parameterTypes,
+            expectedReturnType,
+          );
+
+          if (b.isGenerator) {
+            setupGenerator(
+              ctx,
+              asynchronous: b.isAsynchronous,
+              returnType: expectedReturnType,
+            );
+          } else if (b.isAsynchronous && !b.isGenerator) {
+            setupAsyncFunction(ctx, returnType: expectedReturnType);
+          }
+
+          var i = hasReceiver ? 1 : 0;
+
+          for (final p in resolvedParams) {
+            final type = parameterTypes[i - (hasReceiver ? 1 : 0)];
+
+            // `_` parameters are wildcards: non-binding and repeatable.
+            if (p.name!.lexeme != '_') {
+              ctx
+                  .setLocal(
+                    p.name!.lexeme,
+                    Variable.of(
+                      ctx,
+                      SSA('arg_$i'),
+                      type,
+                      rep: abi.parameters[i],
+                    ),
+                  )
+                  .captureBinding(ctx, p);
+            }
+
+            i++;
+          }
+
+          final returnType = expectedReturnType;
+          ctx.functionSignatures[pos] = abi.machine;
+
+          StatementInfo? stInfo;
+          if (b is BlockFunctionBody) {
+            stInfo = compileBlock(
+              b.block,
+              expectedReturnType,
+              ctx,
+              name: '$methodName()',
+            );
+          } else if (b is ExpressionFunctionBody) {
+            ctx.beginScope();
+            // An async body's context type is the *flattened* return type: in
+            // `Future<List<int>> f() async => []` the literal sees `List<int>`.
+            final bound = b.isAsynchronous
+                ? ctx.typeSystem.flatten(returnType)
+                : returnType;
+            final V = compileExpression(b.expression, ctx, bound);
+            stInfo = doReturn(
+              ctx,
+              expectedReturnType,
+              V,
+              isAsync: b.isAsynchronous,
+              skipClassBoxing: abi.result?.isBoxed == false,
+            );
+            ctx.endScope();
+          } else if (b is EmptyFunctionBody) {
+            ctx.endScope();
+            return null;
+          } else {
+            throw CompileError('Unknown function body type ${b.runtimeType}');
+          }
+
+          if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+            if (b.isAsynchronous && !b.isGenerator) {
+              asyncComplete(ctx, null);
+            } else {
+              ctx.pushOp(Return(null));
+            }
+          }
+
+          ctx.endScope();
+          return stInfo;
+        },
       );
     },
   );

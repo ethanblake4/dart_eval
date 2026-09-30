@@ -5,7 +5,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import '../context.dart';
 import '../errors.dart';
 import '../helpers/fpl.dart';
-import '../helpers/default_value.dart' show superFormalDefault;
+import '../helpers/default_value.dart'
+    show superFormalDefault, redirectFormalDefault;
 import '../type.dart';
 
 /// How a parameter's default is spelled at its declaration.
@@ -104,6 +105,64 @@ int _defaultLibrary(
     }
   }
   return fallback;
+}
+
+/// The corresponding redirect target parameter, independently of the
+/// factory's checked signature and argument names.
+ParameterSpec? redirectFactoryParameter(
+  CompilerContext ctx,
+  FormalParameter parameter,
+  ConstructorDeclaration factory,
+) {
+  final redirect = factory.redirectedConstructor;
+  if (redirect == null) return null;
+  final library = _defaultLibrary(ctx, ctx.library, factory);
+  final (typeName, constructorName) = splitConstructorTypeName(
+    ctx,
+    library,
+    redirect.type,
+    redirect.name?.name,
+  );
+  final target = ctx.visibleTypes[library]?[typeName];
+  final declaration = target == null
+      ? null
+      : ctx
+            .topLevelDeclarationsMap[target
+                .file]?['${target.name}.$constructorName']
+            ?.declaration;
+  if (declaration is! ConstructorDeclaration) return null;
+  final owner = factory.parent?.parent;
+  final ownerType = owner is Declaration
+      ? (ctx.visibleTypes[library]?[declarationName(owner)])
+      : null;
+  // The NamedType can include the constructor suffix (`C.named`). The
+  // class was resolved above; only its explicit arguments are annotations.
+  final arguments = [
+    for (final argument
+        in redirect.type.typeArguments?.arguments ?? const <TypeAnnotation>[])
+      TypeRef.fromAnnotation(
+        ctx,
+        library,
+        argument,
+        typeParameters: nominalDeclOf(ownerType)?.ownTypeParams ?? const {},
+      ),
+  ];
+  final signature = CallSignature.forDeclaration(ctx, target!.file, declaration)
+      .substitute(
+        Substitution.of({
+          for (var i = 0; i < arguments.length; i++)
+            nominalDeclOf(target)!.typeParameters[i]: arguments[i],
+        }),
+      );
+  if (parameter.isNamed) {
+    return signature.named.firstWhereOrNull(
+      (p) => p.name == parameter.name?.lexeme,
+    );
+  }
+  final positional = factory.parameters.parameters
+      .where((p) => p.isPositional)
+      .toList();
+  return signature.positional.elementAtOrNull(positional.indexOf(parameter));
 }
 
 /// The full calling shape of a member: its own type parameters, positional
@@ -251,7 +310,7 @@ final class CallSignature {
       );
       final resolved = type ?? CoreTypes.dynamic.ref(ctx);
       final explicitDefault = param.defaultClause?.value;
-      final (defaultExpr, defaultLibrary) = explicitDefault != null
+      var (defaultExpr, defaultLibrary) = explicitDefault != null
           ? (explicitDefault, libraryForDefault())
           : param is SuperFormalParameter &&
                 parameterHost is ConstructorDeclaration
@@ -263,6 +322,18 @@ final class CallSignature {
                 ) ??
                 (null, library)
           : (null, library);
+      if (defaultExpr == null &&
+          parameterHost is ConstructorDeclaration &&
+          parameterHost.redirectedConstructor != null) {
+        (defaultExpr, defaultLibrary) =
+            redirectFormalDefault(
+              ctx,
+              libraryForDefault(),
+              param,
+              parameterHost,
+            ) ??
+            (null, library);
+      }
       final spec = ParameterSpec(
         param.name?.lexeme ?? '',
         resolved,
@@ -525,4 +596,3 @@ Map<String, TypeParameterTypeRef> bridgeClassGenericParameters(
       ),
   };
 }
-

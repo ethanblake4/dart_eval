@@ -383,7 +383,7 @@ void _promoteSlot(
     // `if (x is! S) { x = valueOfS }` still promotes `x` to `S`.
     // A nullable tested type cannot promote a non-nullable local when
     // it is not a subtype of the local's current type.
-    local.binding?.typesOfInterest.add(tested);
+    local.binding?.typesOfInterest.add(tested.withNullable(false));
     final promotedTo = isPromotionSubtype(ctx, tested, local.type)
         ? tested
         : null;

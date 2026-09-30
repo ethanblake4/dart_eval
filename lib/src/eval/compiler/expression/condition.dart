@@ -38,8 +38,13 @@ import '../helpers/assigned_locals.dart';
     bool reachable = true,
   }) {
     if (expression is ParenthesizedExpression) {
-      return emit(expression.expression, yes, no, promotions,
-          reachable: reachable);
+      return emit(
+        expression.expression,
+        yes,
+        no,
+        promotions,
+        reachable: reachable,
+      );
     }
     if (expression is PrefixExpression && expression.operator.lexeme == '!') {
       final (yesReachable, noReachable) = emit(
@@ -60,10 +65,20 @@ import '../helpers/assigned_locals.dart';
       );
       final isAnd = expression.operator.lexeme == '&&';
       final (ly, ln) = isAnd
-          ? emit(expression.leftOperand, right, no, promotions,
-              reachable: reachable)
-          : emit(expression.leftOperand, yes, right, promotions,
-              reachable: reachable);
+          ? emit(
+              expression.leftOperand,
+              right,
+              no,
+              promotions,
+              reachable: reachable,
+            )
+          : emit(
+              expression.leftOperand,
+              yes,
+              right,
+              promotions,
+              reachable: reachable,
+            );
       ctx.builder = BasicBlockBuilder(ctx.activeGraph, [right], parent);
       final (ry, rn) = emit(expression.rightOperand, yes, no, [
         ...promotions,
@@ -119,9 +134,16 @@ import '../helpers/assigned_locals.dart';
     // flow state.
     // Before sound flow analysis, a type test's statically known result
     // still contributes both branches to the flow join. Keep the folded
-    // runtime value without applying the newer reachability rule.
+    // runtime value without applying the newer reachability rule. Tests
+    // against Never have always made the matching branch unreachable.
     final staticOutcome =
-        expression is IsExpression && !ctx.soundFlowAnalysis(expression)
+        expression is IsExpression &&
+            !ctx.soundFlowAnalysis(expression) &&
+            !TypeRef.fromAnnotation(
+              ctx,
+              ctx.library,
+              expression.type,
+            ).isSpec(CoreTypes.never)
         ? null
         : compiledValue.facts.constBool;
     return (

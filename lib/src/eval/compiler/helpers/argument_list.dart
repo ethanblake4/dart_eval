@@ -29,9 +29,12 @@ Variable coerceArgumentForParameter(
   bool genericParameter = false,
   AstNode? source,
 }) {
-  final paramRep = Abi.parameter(
+  final paramRep = Abi.sourceParameter(
+    ctx,
     paramType,
-    parameterHost is MethodDeclaration
+    param,
+    parameterHost,
+    kind: parameterHost is MethodDeclaration
         ? CallableKind.method
         : CallableKind.function,
     erased: genericParameter,

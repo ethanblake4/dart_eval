@@ -73,6 +73,17 @@ Variable compileFunctionExpression(
     final binding = ctx.lookupBinding(name);
     if (binding != null) captures[name] = binding;
   }
+  // By-value captures use the object bank. A final value initially boxed at
+  // its declaration may have been unboxed by a later expression.
+  final captureValues = {
+    for (final capture in captures.entries)
+      capture.key:
+          capture.value.captureCell == null &&
+              capture.value.current.representation !=
+                  MachineRepresentation.object
+          ? capture.value.current.boxIntoFreshSlot(ctx)
+          : capture.value.current,
+  };
   // Writes through the captured cells take flow effect when this closure
   // exists — deferred to the call's end when the closure is an argument.
   for (final name in analysis.writes[e] ?? const <String>{}) {
@@ -126,7 +137,7 @@ Variable compileFunctionExpression(
               ctx,
               loaded,
               capture.value.current.type,
-              rep: capture.value.current.rep,
+              rep: captureValues[capture.key]!.rep,
               // A captured slot carries the same value as the outer one —
               // facts like `isConst` and class narrowing still apply.
               facts: capture.value.current.facts,
@@ -458,7 +469,10 @@ Variable compileFunctionExpression(
       ctx.svar('closure'),
       target,
       captures.values
-          .map((binding) => binding.captureCell ?? binding.current.ssa)
+          .map(
+            (binding) =>
+                binding.captureCell ?? captureValues[binding.name]!.ssa,
+          )
           .toList(),
       requiredPositional: requiredPositionalArgCount,
       positionalCount: positional.length,

@@ -21,6 +21,28 @@ Future<void> _expectTrue(String source) async {
 
 void main() {
   test(
+    'throw supplies Object context through await and generic calls',
+    () async {
+      await _expectTrue('''
+      import 'dart:async';
+      typedef Exactly<T> = T Function(T);
+      extension StaticType<T> on T {
+        T expectStaticType<R extends Exactly<T>>() => this;
+      }
+      T id<T>(T value) => value;
+      Future<bool> main() async {
+        try {
+          throw await id(Future.value('caught'))
+            ..expectStaticType<Exactly<FutureOr<Object>>>();
+        } on String catch (value) {
+          return value == 'caught';
+        }
+        return false;
+      }
+    ''');
+    },
+  );
+  test(
     'await forwards numeric contexts to plain and Future literals',
     () async {
       await _expectTrue('''

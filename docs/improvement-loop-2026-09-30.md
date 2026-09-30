@@ -185,3 +185,66 @@ Three regressions cover runtime tear-off types, generic substitution and async
 payloads in fresh and serialized runtimes. All 58 focused tear-off, generic,
 extension and async tests pass. The complete SDK override_inference fixture
 passes, and targeted analysis is clean. Runtime code is unchanged.
+
+## Second cycle, correctness pass 4
+
+Redirecting factories retain their own checked signatures and argument shapes.
+Their physical slots accommodate the redirect target's inherited defaults;
+generic factory parameters retain their erased representation. The forwarder
+binds target arguments normally, including extra optional target parameters.
+Default expressions and thunks resolve in the declaring library across redirect
+chains. Field initializers run before initializer-list effects, matching Dart.
+
+A native-valid SDK fixture exposed an omitted null default inherited by a
+factory's int parameter. Supplied null still fails that factory's check; the
+omitted compiled default must reach the wider target. Dynamic closure invocation
+therefore checks supplied arguments rather than rechecking filled defaults.
+The interpreter dispatch and bytecode format are unchanged.
+
+Closure creation boxes by-value scalar captures once into their environment,
+preventing a const local's later scalar representation from conflicting with
+captured object storage. Broad validation also exposed two mixin regressions
+from pass 3. Method metadata now snapshots applied class parameters before a
+method parameter can shadow their names. Regressions cover both mixin tear-offs
+and class/method parameters sharing a name.
+
+The pinned async/return_throw_test.dart fixture expects an async error to be
+caught by a try around return f(). Its complete source fails identically under
+native Dart 3.13.4: the return leaves try before the Future error arrives. It is
+excluded with that explicit reason; the language regression preserves native
+return-versus-return-await behavior. Native evidence is retained in
+native_return_throw_fixture.dart and native_return_throw_fixture.log under the
+ignored improvement-loop directory.
+
+The ordinary suite passes all 1871 checks, with 62 SDK/harness skips. Named
+redirect regressions now cover both generic and non-generic targets; their
+resolution uses the existing class lookup instead of reparsing a constructor
+suffix as part of a type name. All 13 focused factory and constructor tear-off
+checks pass, as do 77 focused closure checks and the repaired mixin cases.
+
+The full scan exposed additional regressions, repaired before checkpointing:
+static generic members do not require instance type bindings; throw operands
+receive Object context through await; pre-3.9 Never tests remain unreachable;
+nullable tested types record non-null promotion interests. Native List writes
+preserve the boxed local when the same value supplies an integer index, avoiding
+an SSA representation conflict without adding instructions or runtime checks.
+Late field initializers retain their previous ordering after initializer-list
+effects; complete lazy late-field initialization remains a separate group.
+The newly passing nnbd/syntax/class_member_declarations status is removed.
+
+Final SDK-full validation has four unexpected outcomes, down from twenty
+before this cycle, and no stale statuses. The remaining paths are anonymous
+method break/continue, function-type least upper bound, recursive-bound greatest
+closure, and regress23408. Expected failures remain for later cycles.
+Analysis reports only the existing path-dependency warning and benchmark import
+info. Logs: cycle2-ordinary-verified.log, sdk-full-cycle2-verified.log,
+cycle2-final-analyze.log.
+
+The final isolated 22-driver AOT comparison matches all 21 execution checksums.
+Most medians stay near the saved pre-validation-change executable; omitted-
+default callbacks improve. Longer, order-reversed repeats reduce the initial
+polymorphic-call difference to about 1–3%; native-Future awaits remain about
+4–7% slower. Retain these measurements for the performance pass rather than
+claiming an across-the-board improvement. Evidence: cycle2-correctness-aot/
+summary.csv, cycle2-correctness-aot/median-changes.csv and
+cycle2-correctness-repeat.log.

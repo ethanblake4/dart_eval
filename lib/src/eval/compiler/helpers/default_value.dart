@@ -200,6 +200,60 @@ superFormalTarget(
   };
 }
 
+/// A redirecting factory inherits defaults from the corresponding target
+/// parameter, while retaining its own parameter types and calling shape.
+(Expression?, int)? redirectFormalDefault(
+  CompilerContext ctx,
+  int library,
+  FormalParameter parameter,
+  ConstructorDeclaration constructor, [
+  Set<ConstructorDeclaration>? visited,
+]) {
+  final redirect = constructor.redirectedConstructor;
+  if (redirect == null) return null;
+  final active = visited ?? <ConstructorDeclaration>{};
+  if (!active.add(constructor)) {
+    throw CompileError('Cyclic redirecting factory', constructor);
+  }
+  final (typeName, constructorName) = splitConstructorTypeName(
+    ctx,
+    library,
+    redirect.type,
+    redirect.name?.name,
+  );
+  final type = ctx.visibleTypes[library]?[typeName];
+  final target = type == null
+      ? null
+      : ctx
+            .topLevelDeclarationsMap[type
+                .file]?['${type.name}.$constructorName']
+            ?.declaration;
+  if (target is! ConstructorDeclaration) return null;
+  final positional = constructor.parameters.parameters
+      .where((p) => p.isPositional)
+      .toList();
+  final targetParameter = parameter.isNamed
+      ? target.parameters.parameters
+            .where((p) => p.isNamed && p.name?.lexeme == parameter.name?.lexeme)
+            .firstOrNull
+      : target.parameters.parameters
+            .where((p) => p.isPositional)
+            .elementAtOrNull(positional.indexOf(parameter));
+  if (targetParameter == null) return null;
+  final expression = targetParameter.defaultClause?.value;
+  if (expression != null) return (expression, type!.file);
+  if (targetParameter is SuperFormalParameter) {
+    return superFormalDefault(ctx, type!.file, targetParameter, target);
+  }
+  return redirectFormalDefault(
+    ctx,
+    type!.file,
+    targetParameter,
+    target,
+    active,
+  );
+}
+
 Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
     switch (value) {
       null => BuiltinValue(),
@@ -236,11 +290,18 @@ Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
       }
     }
   }
+  final host = parameter.parent?.parent;
+  if (expression == null &&
+      host is ConstructorDeclaration &&
+      host.redirectedConstructor != null) {
+    final inherited = redirectFormalDefault(ctx, library, parameter, host);
+    if (inherited != null) (expression, library) = inherited;
+  }
   if (expression == null) return (null, -1);
   try {
     return (evaluateDefaultValue(ctx, library, expression), -1);
   } on CompileError {
-    return (null, _compileDefaultThunk(ctx, expression, bound));
+    return (null, _compileDefaultThunk(ctx, library, expression, bound));
   }
 }
 
@@ -250,6 +311,7 @@ Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
 /// references enclosing locals.
 int _compileDefaultThunk(
   CompilerContext ctx,
+  int library,
   Expression expression, [
   TypeRef? bound,
 ]) {
@@ -257,11 +319,13 @@ int _compileDefaultThunk(
   if (cached != null) return cached;
 
   final outer = NestedFunctionState(ctx);
+  final previousLibrary = ctx.library;
   try {
     ctx.blockCode = [];
     ctx.labels.clear();
     ctx.caughtExceptionTargets.clear();
     ctx.finishMethod();
+    ctx.library = library;
     return ctx.withTypeParameters(ctx.library, null, null, () {
       final thunkId = ctx.beginFunction('<default>');
       ctx.locals = [];
@@ -278,6 +342,7 @@ int _compileDefaultThunk(
       return ctx.defaultThunkCache[expression] = thunkId;
     });
   } finally {
+    ctx.library = previousLibrary;
     outer.restore();
   }
 }

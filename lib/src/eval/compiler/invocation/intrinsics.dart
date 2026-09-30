@@ -126,7 +126,9 @@ final class Intrinsics {
           args[0].type.isAssignableTo(ctx, CoreTypes.int.ref(ctx)) &&
           storable(args[1], 0)) {
         final list = receiver.unboxIfNeeded(ctx);
-        final index = args[0].unboxIfNeeded(ctx);
+        // The value may share the index's local binding. Keep its boxed
+        // storage intact while materializing the integer index.
+        final index = args[0].unboxIfNeeded(ctx, false);
         final value = args[1].boxIfNeeded(ctx);
         ctx.pushOp(ListSet(list.ssa, index.ssa, value.ssa));
         return (

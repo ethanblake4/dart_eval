@@ -65,11 +65,15 @@ Variable materializeConstructorTearOff(
       : CallSignature.forDeclaration(ctx, type.file, constructor);
   final parameters = [...signature.positional, ...signature.named];
   final declaredParameters = [...declared.positional, ...declared.named];
-  final abi = CallableAbi.fromParameterTypes(
-    [for (final parameter in declaredParameters) parameter.type],
-    signature.returnType,
-    CallableKind.constructor,
-  );
+  final abi = constructor == null
+      ? CallableAbi.fromParameterTypes(
+          [for (final parameter in declaredParameters) parameter.type],
+          signature.returnType,
+          CallableKind.constructor,
+        )
+      : CallableAbi.ofConstructor(ctx, constructor, [
+          for (final parameter in declaredParameters) parameter.type,
+        ], hiddenTypeId: false);
   (Object?, int) parameterDefault(ParameterSpec parameter) {
     final (value, thunk) = compileParameterDefault(
       ctx,

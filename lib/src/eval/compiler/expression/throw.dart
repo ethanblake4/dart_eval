@@ -2,11 +2,12 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 
 Variable compileThrowExpression(CompilerContext ctx, ThrowExpression e) {
-  final V = compileExpression(e.expression, ctx);
+  final V = compileExpression(e.expression, ctx, CoreTypes.object.ref(ctx));
   // Give the Never-typed result a (dead) slot so argument lists and other
   // consumers that blindly read `.ssa` keep working; the throw dominates
   // so the value is never actually used.

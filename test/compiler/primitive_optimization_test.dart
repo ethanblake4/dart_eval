@@ -19,6 +19,20 @@ void checkBoth(Program program, Object? expected) {
 }
 
 void main() {
+  test('native List writes keep shared index and value representations', () {
+    final program = compile('''
+      int main() {
+        final values = List<int>.filled(4, 0);
+        for (var i = 0; i < values.length; i++) {
+          values[i] = i;
+          values[i] = i + values[i];
+        }
+        return values[1] + values[2] + values[3];
+      }
+    ''');
+    checkBoth(program, 12);
+    expect(opNames(program.typedProgram), contains('listSet'));
+  });
   test('known List constructor writes use the allocation element type', () {
     final program = compile('''
       int main() {

@@ -37,6 +37,26 @@ enum CallableKind {
 /// results, field storage, collection elements. The convention is a
 /// property of the boundary, not of the type.
 abstract final class Abi {
+  /// A redirecting factory checks its own types but stores arguments using
+  /// its target's representation, which also accommodates inherited defaults.
+  static ValueRep sourceParameter(
+    CompilerContext ctx,
+    TypeRef type,
+    FormalParameter parameter,
+    Declaration? host, {
+    CallableKind kind = CallableKind.function,
+    bool erased = false,
+  }) {
+    final target = host is ConstructorDeclaration
+        ? redirectFactoryParameter(ctx, parameter, host)
+        : null;
+    return Abi.parameter(
+      target?.type ?? type,
+      kind,
+      erased: erased || type.isTypeParameter || target?.erased == true,
+    );
+  }
+
   /// Native representations for non-nullable scalar and String values at
   /// direct call boundaries. Type parameters keep the erased boxed convention.
   static ValueRep unboxedAcrossCalls(TypeRef type) {
@@ -118,6 +138,25 @@ final class CallableAbi {
   final List<ValueRep> parameters;
   final ValueRep? result;
 
+  factory CallableAbi.ofConstructor(
+    CompilerContext ctx,
+    ConstructorDeclaration declaration,
+    List<TypeRef> types, {
+    int leadingBoxed = 0,
+    bool? hiddenTypeId,
+  }) {
+    final parameters = [
+      ...declaration.parameters.parameters.where((p) => p.isPositional),
+      ...declaration.parameters.parameters.where((p) => p.isNamed),
+    ];
+    return CallableAbi([
+      for (var i = 0; i < leadingBoxed; i++) ValueRep.boxed,
+      for (var i = 0; i < parameters.length; i++)
+        Abi.sourceParameter(ctx, types[i], parameters[i], declaration),
+      if (hiddenTypeId ?? declaration.factoryKeyword == null) ValueRep.int,
+    ], ValueRep.boxed);
+  }
+
   MachineFunctionSignature get machine => MachineFunctionSignature([
     for (final parameter in parameters) parameter.bank,
   ], result?.bank);
@@ -177,6 +216,14 @@ final class CallableAbi {
     ];
     if (node is MethodDeclaration) {
       return CallableAbi.ofMethod(node, parameterTypes, signature.returnType);
+    }
+    if (node is ConstructorDeclaration && member.owner is TypeDeclMemberOwner) {
+      return CallableAbi.ofConstructor(
+        (member.owner as TypeDeclMemberOwner).decl.ctx,
+        node,
+        parameterTypes,
+        leadingBoxed: node.parent?.parent is EnumDeclaration ? 2 : 0,
+      );
     }
     return CallableAbi.fromParameterTypes(
       parameterTypes,

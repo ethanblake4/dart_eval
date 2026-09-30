@@ -699,6 +699,17 @@ final class TypedClosure extends EvalFunction {
         ownerType,
       );
       for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
+        // Defaults are evaluated under the callee's contract. Redirecting
+        // factories can inherit a default outside their own checked type.
+        // Only supplied arguments cross the callable's checked boundary.
+        if (i >= positionalCount &&
+            (i < descriptor.positionalCount ||
+                !namesInOrder &&
+                    !namedNames.contains(
+                      declNames[i - descriptor.positionalCount],
+                    ))) {
+          continue;
+        }
         _checkArgument(
           values[hiddenCount + i],
           i,
