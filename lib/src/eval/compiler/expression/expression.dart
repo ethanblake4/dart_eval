@@ -71,7 +71,7 @@ Variable compileExpression(
   } else if (e is FunctionExpressionInvocation) {
     return compileFunctionExpressionInvocation(e, ctx, bound);
   } else if (e is AwaitExpression) {
-    return compileAwaitExpression(e, ctx);
+    return compileAwaitExpression(e, ctx, bound);
   } else if (e is InstanceCreationExpression) {
     return compileInstanceCreation(ctx, e, bound);
   } else if (e is ParenthesizedExpression) {

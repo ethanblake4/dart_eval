@@ -17,6 +17,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../member/call_signature.dart';
 import '../member/resolved_member.dart';
@@ -459,12 +460,13 @@ final class CallResolver {
         final viaSuper = e.target is SuperExpression;
         Variable readMember(CompilerContext ctx) {
           final value = GetTarget.read(ctx, L, e.methodName.name);
-          final factOwner =
-              viaSuper ? ctx.lookupLocal('#this') : L.binding?.current ?? L;
-          final recorded = factOwner?.facts
-                  .promotedMembers?[viaSuper
-                      ? 'super:${e.methodName.name}'
-                      : e.methodName.name];
+          final factOwner = viaSuper
+              ? ctx.lookupLocal('#this')
+              : L.binding?.current ?? L;
+          final recorded =
+              factOwner?.facts.promotedMembers?[viaSuper
+                  ? 'super:${e.methodName.name}'
+                  : e.methodName.name];
           return recorded == null ? value : value.withType(recorded);
         }
 
@@ -640,15 +642,20 @@ final class CallResolver {
             );
       if (isStatic && br is BridgeConstructorDef && bound != null) {
         final declaration = nominalDeclOf(staticType!);
+        final context = inferContextType(
+          ctx,
+          declaration?.thisType ?? staticType,
+          bound,
+        );
         final view = declaration == null
             ? null
             : ctx.typeSystem.asInstanceOf(
                 declaration.thisType,
-                nominalDeclOf(bound),
+                nominalDeclOf(context),
               );
         if (view != null) {
           final inferred = <TypeParameterDef, TypeRef>{};
-          ctx.typeSystem.unify(view, bound, inferred);
+          ctx.typeSystem.unify(view, context, inferred);
           for (final entry in receiverTypeParameters.entries) {
             final parameter = (entry.value as TypeParameterTypeRef).parameter;
             if (inferred[parameter] case final argument?) {
@@ -736,13 +743,25 @@ final class CallResolver {
         );
       }
       target = isStatic
-          ? StaticCall(
-              null,
-              externalIndex: externalIndex,
-              member: resolvedMember,
-              bridgeFunction: fd,
-              signature: signature,
-            )
+          ? br is BridgeConstructorDef
+                ? ConstructorCall(
+                    staticType: staticType!,
+                    name: ctorNameOf(e.methodName.name),
+                    externalIndex: externalIndex,
+                    classBridge: resolvedMember.ownerDecl is BridgeTypeDecl
+                        ? (resolvedMember.ownerDecl as BridgeTypeDecl).classDef
+                        : null,
+                    bridgeFunction: fd,
+                    signature: signature,
+                    isConst: e.inConstantContext,
+                  )
+                : StaticCall(
+                    null,
+                    externalIndex: externalIndex,
+                    member: resolvedMember,
+                    bridgeFunction: fd,
+                    signature: signature,
+                  )
           : BridgeCall(
               receiver: L,
               name: e.methodName.name,
@@ -774,34 +793,8 @@ final class CallResolver {
       // Static calls on generic bridge classes (e.g. `Stream.fromIterable`)
       // infer the class's own type parameters — `T` in `Iterable<T>` — from
       // the argument types, which then resolve `returns:` annotations.
-      if (isStatic &&
-          br is BridgeConstructorDef &&
-          ownerType.isSpec(CoreTypes.future) &&
-          e.methodName.name == 'value' &&
-          argsPair.positional.isNotEmpty) {
-        // Future.value accepts FutureOr<T>?, a union the bridge type format
-        // cannot express. Infer T from the value or one Future<T> layer.
-        final valueType = argsPair.positional.first.type;
-        final future = ctx.typeSystem.asInstanceOf(
-          valueType,
-          ctx.types.bySpec(CoreTypes.future),
-        );
-        final arguments = future == null
-            ? const <TypeRef>[]
-            : interfaceArgumentsOf(future);
-        final seeded = bridgeTypeParameters['T'];
-        if (seeded == null ||
-            (seeded is TypeParameterTypeRef &&
-                seeded.parameter.owner.kind ==
-                    TypeParameterOwnerKind.callSite)) {
-          bridgeTypeParameters['T'] = future == null
-              ? valueType
-              : arguments.isEmpty
-              ? CoreTypes.dynamic.ref(ctx)
-              : arguments.first;
-        }
-      }
       _inferBridgeTypeParameters(
+        ctx,
         fd,
         argsPair.positional,
         bridgeTypeParameters,
@@ -2077,12 +2070,30 @@ Map<String, TypeRef> _bridgeClassTypeArguments(
 }
 
 void _inferBridgeTypeParameters(
+  CompilerContext ctx,
   BridgeFunctionDef function,
   List<Variable> arguments,
   Map<String, TypeRef> inferred, {
   Set<String> inferableNames = const {},
 }) {
   void infer(BridgeTypeRef formal, TypeRef actual) {
+    final spec = formal.spec;
+    if (spec?.library == AsyncTypes.futureOr.library &&
+        spec?.name == AsyncTypes.futureOr.name &&
+        formal.typeArgs.isNotEmpty) {
+      final future = ctx.typeSystem.asInstanceOf(
+        actual,
+        ctx.types.bySpec(CoreTypes.future),
+      );
+      infer(
+        formal.typeArgs.first.type,
+        future == null
+            ? actual
+            : interfaceArgumentsOf(future).firstOrNull ??
+                  CoreTypes.dynamic.ref(ctx),
+      );
+      return;
+    }
     final reference = formal.ref;
     if (reference != null &&
         (function.generics.containsKey(reference) ||

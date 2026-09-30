@@ -95,6 +95,8 @@ Variable compileBinaryExpression(
             : boundType.isTypeParameter
             ? null
             : boundType.withNullable(true),
+      // Equality's bool result does not constrain either operand's type.
+      TokenType.EQ_EQ || TokenType.BANG_EQ => null,
       _ => boundType,
     },
   );

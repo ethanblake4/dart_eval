@@ -98,8 +98,9 @@ class $Future<T> implements Future<T>, $Instance {
             BridgeParameter(
               'value',
               BridgeTypeAnnotation(
-                // FutureOr<T> is a union; constructor inference resolves T.
-                BridgeTypeRef(CoreTypes.dynamic),
+                BridgeTypeRef(AsyncTypes.futureOr, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                ]),
                 nullable: true,
               ),
               true,

@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 
 import '../builtins.dart';
 import '../context.dart';
+import '../helpers/context_type.dart';
 import '../errors.dart';
 import '../variable.dart';
 
@@ -19,6 +20,9 @@ BuiltinValue parseConstLiteral(
   TypeRef? bound,
 ]) {
   if (l is IntegerLiteral) {
+    if (bound != null) {
+      bound = inferContextType(ctx, CoreTypes.int.ref(ctx), bound);
+    }
     if (bound != null && bound.isSpec(CoreTypes.double)) {
       return BuiltinValue(doubleval: l.value!.toDouble());
     }

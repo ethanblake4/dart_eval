@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -25,7 +26,9 @@ Variable compileSetOrMapLiteral(
   TypeRef? bound,
 ]) {
   final annotations = literal.typeArguments?.arguments;
-  final resolvedBound = bound;
+  final resolvedBound = bound == null
+      ? null
+      : inferContextType(ctx, CoreTypes.map.ref(ctx), bound);
   TypeRef? boundKey, boundValue;
   if (resolvedBound != null) {
     final boundArgs = interfaceArgumentsOf(resolvedBound);
@@ -35,8 +38,8 @@ Variable compileSetOrMapLiteral(
     // produces `Map<int, int>` and binds `K`, `V`.
     TypeRef? constrains(TypeRef type) =>
         type.isSpec(CoreTypes.dynamic) ||
-                type.hasInferenceVariables ||
-                type.isTypeParameter
+            type.hasInferenceVariables ||
+            type.isTypeParameter
         ? null
         : type;
     if (sameDeclaration(resolvedBound, CoreTypes.map.ref(ctx)) &&
@@ -121,9 +124,10 @@ Variable compileSetOrMapLiteral(
     );
     // A Never-typed element (a throw, or a call declared Never) ends the
     // literal's evaluation — the whole expression never produces a value.
-    if ([...keys, ...values].any(
-      (t) => t.isSpec(CoreTypes.never) && !t.nullable,
-    )) {
+    if ([
+      ...keys,
+      ...values,
+    ].any((t) => t.isSpec(CoreTypes.never) && !t.nullable)) {
       return Variable.never(ctx);
     }
     keyTypes.addAll(keys);

@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import '../builtins.dart';
@@ -251,7 +252,8 @@ final class ArgumentBinder {
       // context information (`f<T>(T x)` gives its argument context `_`, not
       // `T`), so the argument compiles context-free; coercion still uses
       // the erased boundary type.
-      final context = parameterType is TypeParameterTypeRef &&
+      final context =
+          parameterType is TypeParameterTypeRef &&
               ownParameters.contains(parameterType.parameter)
           ? null
           : parameterType;
@@ -548,7 +550,6 @@ final class ArgumentBinder {
         unifyPattern = spec.type;
       }
 
-
       // A formal that still holds an unbound type parameter erases to its
       // bound (or `dynamic`): the erased boundary accepts whatever the
       // inferred type argument becomes — e.g. `typedef T<X> = C<X>` invoked
@@ -762,9 +763,7 @@ final class ArgumentBinder {
       required bool named,
       int? position,
     }) {
-      final paramType = param.type.substituteTypeParameters(
-        bridgeSubstitution,
-      );
+      final paramType = param.type.substituteTypeParameters(bridgeSubstitution);
       final context = position != null && position < positionalContexts.length
           ? positionalContexts[position] ?? paramType
           : paramType;
@@ -1229,7 +1228,11 @@ final class ArgumentBinder {
         signature.substitutionFor(seedGenerics, includeOwn: false),
       );
       final bindings = <TypeParameterDef, TypeRef>{};
-      ctx.typeSystem.unify(pattern, returnContext, bindings);
+      ctx.typeSystem.unify(
+        pattern,
+        inferContextType(ctx, pattern, returnContext),
+        bindings,
+      );
       for (final parameter in typeParams) {
         if (bindings[parameter] case final inferred?) {
           resolveGenerics[parameter] = inferred;
@@ -1267,7 +1270,11 @@ final class ArgumentBinder {
         signature.substitutionFor(seedGenerics, includeOwn: false),
       );
       final bindings = <TypeParameterDef, TypeRef>{};
-      ctx.typeSystem.unify(pattern, returnContext, bindings);
+      ctx.typeSystem.unify(
+        pattern,
+        inferContextType(ctx, pattern, returnContext),
+        bindings,
+      );
       for (final parameter in typeParams) {
         if (constrainedParameters.contains(parameter)) continue;
         final bound = bindings[parameter];
@@ -1547,5 +1554,3 @@ TypeRef? memberCallResultType(
     namedArgTypes: namedArgTypes,
   );
 }
-
-

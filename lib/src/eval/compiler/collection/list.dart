@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -30,6 +31,9 @@ Variable compileListLiteral(
   TypeRef? bound,
 ]) {
   final elements = l.elements;
+  if (bound != null) {
+    bound = inferContextType(ctx, CoreTypes.list.ref(ctx), bound);
+  }
 
   TypeRef? boundType;
   if (bound != null && interfaceArgumentsOf(bound).isNotEmpty) {

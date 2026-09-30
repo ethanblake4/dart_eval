@@ -8,7 +8,11 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../values/value_rep.dart';
 
-Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
+Variable compileAwaitExpression(
+  AwaitExpression e,
+  CompilerContext ctx, [
+  TypeRef? bound,
+]) {
   AstNode? e0 = e;
   while (e0 != null) {
     if (e0 is FunctionBody) {
@@ -21,14 +25,29 @@ Variable compileAwaitExpression(AwaitExpression e, CompilerContext ctx) {
     e0 = e0.parent;
   }
 
-  // `await e` gives its operand a `FutureOr<K>` context — `FutureOr<_>`
-  // when no context imposes one (dart-lang/language#3648). `FutureOr`
-  // can't be represented and any plain `K`-typed operand is legal, so
-  // the closest permissive context is `dynamic`.
+  // An uninformative context leaves K unconstrained, rather than imposing
+  // dynamic on the operand and its nested context-sensitive expressions.
+  final valueContext =
+      bound == null ||
+          bound.isSpec(CoreTypes.dynamic) ||
+          bound.isSpec(CoreTypes.voidType)
+      ? TypeParameterTypeRef(
+          ctx.typeParameterDefs.key(
+            TypeParameterOwner(
+              TypeParameterOwnerKind.callSite,
+              ctx.library,
+              'await',
+              e.offset,
+            ),
+            0,
+            '_',
+          ),
+        )
+      : bound;
   final subject = compileExpression(
     e.expression,
     ctx,
-    CoreTypes.dynamic.ref(ctx),
+    ctx.types.futureOr.instantiate([valueContext]),
   ).boxIfNeeded(ctx);
   final type = subject.type;
 

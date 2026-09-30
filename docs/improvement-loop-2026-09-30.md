@@ -131,3 +131,23 @@ path-dependency warning and benchmark import info. The final 22-driver cleanup
 AOT sweep matches all 21 execution checksums. Logs: dart-test-cleanup.log,
 sdk-full-cleanup.log, cleanup-bindgen-final.log, cleanup-final-analyze.log,
 cleanup-aot/summary.csv.
+
+## Second cycle, correctness pass 1
+
+Await now supplies the specified FutureOr context instead of a dynamic
+surrogate. Collection and constructor inference select the matching union
+branch; an uninformative context retains upward inference. Equality no longer
+passes its bool result context to operands. The hand-maintained Future.value
+declaration now expresses FutureOr<T>?, allowing general bridge inference to
+replace its constructor-specific workaround.
+
+Bridge constructors written as method invocations now use constructor lowering.
+Previously a Future.value inside a native Future.sync callback inherited the
+outer constructor's type metadata, leaving collection Futures unawaited. Each
+constructor now carries its own inferred type through existing metadata.
+No runtime checks, adapters or extra bytecode instructions were introduced.
+
+All 18 focused async/context tests pass fresh and serialized, including a
+reentrant native callback regression with awaited list, map and set elements.
+Both SDK await-context cases and all three collection-await cases pass.
+Targeted analysis is clean. These five paths had no expect_fail entries.

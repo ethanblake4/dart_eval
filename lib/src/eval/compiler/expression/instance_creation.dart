@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import '../member/call_signature.dart';
@@ -34,6 +35,7 @@ Variable compileInstanceCreation(
   }
 
   var staticType = receiver.type;
+  if (bound != null) bound = inferContextType(ctx, staticType, bound);
   var instantiatedType = staticType.withNullable(type.question != null);
   // A typedef instantiation (`P1()` where `P1 = B2<int>`) constructs the
   // aliased type directly — typedefs register no constructors of their own.
@@ -189,6 +191,7 @@ Variable compileInstanceOf(
         ctx,
         fnDescriptor,
         returnFallback: CoreTypes.dynamic.ref(ctx),
+        owner: instantiatedType,
         typeParameters: argTypeParameters.cast<String, TypeRef>(),
       ),
     );
