@@ -32,6 +32,30 @@ Future<void> _expectAsyncTrue(String source) async {
 }
 
 void main() {
+  test('reused generic calls preserve earlier captured type bindings', () {
+    _expectTrue('''
+      dynamic make<T>() {
+        dynamic select<U extends T>(U value) {
+          bool accepts(Object? candidate) => candidate is U;
+          return accepts;
+        }
+        return select;
+      }
+
+      bool main() {
+        dynamic select = make<Object?>();
+        dynamic integer = select<int>(1);
+        dynamic sameInteger = select<int>(2);
+        var rejected = false;
+        try { select<int>('wrong'); } on TypeError { rejected = true; }
+        dynamic string = select<String>('s');
+        dynamic nullable = select<int?>(null);
+        return rejected && integer(3) && sameInteger(4) && !integer('s') &&
+            string('t') && !string(3) && nullable(null) && nullable(5) &&
+            !nullable('s') && !integer(null);
+      }
+    ''');
+  });
   test('escaping closure keeps three distinct generic environments', () {
     _expectValue('''
       dynamic make<T>() {

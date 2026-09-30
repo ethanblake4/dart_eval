@@ -84,3 +84,28 @@ with method/polymorphic/boxed calls close to baseline. This remains an explicit
 performance investigation for the next step; the hot dispatch source is
 unchanged. Evidence: step4-aot/summary.csv, calls-repeat2-*.log,
 calls-standalone.log, dart-test-step4.log, sdk-full-step4.log.
+
+## Runtime performance pass
+
+The real-world generic batch reducer repeated five equivalent immutable type
+environment allocations plus bound/parameter descriptor resolution on each
+checked dynamic invocation. Reuse the closure's most recent environment by
+type-argument values, and cache resolved parameter types and proven bounds
+for the runtime/environment/owner tuple. Every supplied value is still checked.
+The cache holds one instantiation, so memory use does not grow with call sites.
+Low-level closures without type-owner metadata retain the existing path.
+
+The longer 100000-batch AOT repeat improved from 834.360 ms to 219.133 ms,
+73.7%, with identical checksum 75012761700. The initial 50000-batch comparison
+was 384.328 ms to 171.296 ms. Captured environments survive later calls with
+different arguments; invalid values and bounds remain rejected. The 62 generic
+language/ownership tests and 59 closure/default tests pass.
+
+The final full 22-driver AOT sweep against correctness pass 4 matched all 21
+execution checksums. Most non-call cases remained within a few percent. Calls
+still show unstable AOT timings, so retain the earlier comparison as a separate
+investigation rather than claiming a general call improvement. An independent
+baseline worktree confirms identical primitive/mixed bytecode, function ABI,
+register/spill metadata and constant/side tables. The difference is outside
+compiler lowering. Logs: perf-aot/summary.csv, generic-checked-repeat.log,
+generic-before-repeat2.log, call-code-{baseline,candidate}.json.

@@ -40,6 +40,14 @@ final class TypedClosure extends EvalFunction {
   int? _resolvedRuntimeTypeId;
   List<int>? _resolvedDefaultTypeArguments;
   Runtime? _defaultTypeRuntime;
+  TypedTypeEnvironment? _lastCallTypeEnvironment;
+  ({
+    Runtime runtime,
+    TypedTypeEnvironment environment,
+    int? ownerType,
+    List<int> parameters,
+  })?
+  _checkedCallTypes;
 
   /// Exact calls have already resolved and checked omitted defaults.
   @pragma('vm:prefer-inline')
@@ -48,14 +56,25 @@ final class TypedClosure extends EvalFunction {
       : arguments;
 
   @pragma('vm:prefer-inline')
-  TypedTypeEnvironment? typeEnvironmentForCall(List<int> arguments) =>
-      arguments.isEmpty || function.typeParameterOwners.isEmpty
-      ? definingTypeEnvironment
-      : TypedTypeEnvironment(
-          function.typeParameterOwners,
-          arguments,
-          definingTypeEnvironment,
-        );
+  TypedTypeEnvironment? typeEnvironmentForCall(List<int> arguments) {
+    if (arguments.isEmpty || function.typeParameterOwners.isEmpty) {
+      return definingTypeEnvironment;
+    }
+    final cached = _lastCallTypeEnvironment;
+    if (cached != null && cached.arguments.length == arguments.length) {
+      var index = 0;
+      while (index < arguments.length &&
+          cached.arguments[index] == arguments[index]) {
+        index++;
+      }
+      if (index == arguments.length) return cached;
+    }
+    return _lastCallTypeEnvironment = TypedTypeEnvironment(
+      function.typeParameterOwners,
+      arguments,
+      definingTypeEnvironment,
+    );
+  }
 
   // Bound methods with a boxed ABI can use the closure entry path by supplying
   // their receiver in place of its hidden environment argument.
@@ -63,7 +82,9 @@ final class TypedClosure extends EvalFunction {
       !descriptor.hasEnvironment &&
       descriptor.boundReceiver &&
       function.argumentKinds.length == descriptor.argumentCount + 1 &&
-      function.argumentKinds.every((kind) => kind == TypedArgumentKind.object) &&
+      function.argumentKinds.every(
+        (kind) => kind == TypedArgumentKind.object,
+      ) &&
       (function.resultKind == null ||
           function.resultKind == TypedArgumentKind.object);
 
@@ -79,8 +100,7 @@ final class TypedClosure extends EvalFunction {
           descriptor.boundReceiver == other.descriptor.boundReceiver &&
           (!descriptor.boundReceiver ||
               identical(captures.single, other.captures.single)) ||
-      other is TypedClosure &&
-          _adapterEquals(other) ||
+      other is TypedClosure && _adapterEquals(other) ||
       other is TypedMember &&
           descriptor.boundReceiver &&
           descriptor.functionId == other.functionId &&
@@ -112,7 +132,10 @@ final class TypedClosure extends EvalFunction {
     // Match [TypedMember]: a bound tear-off produced by `x.m` and a bound
     // closure created directly must hash alike for canonicalization.
     if (descriptor.boundReceiver) {
-      return Object.hash(identityHashCode(captures.single), descriptor.functionId);
+      return Object.hash(
+        identityHashCode(captures.single),
+        descriptor.functionId,
+      );
     }
     return Object.hash(
       identityHashCode(program),
@@ -121,6 +144,7 @@ final class TypedClosure extends EvalFunction {
       null,
     );
   }
+
   static TypedClosure bind(
     TypedProgram program,
     TypedClosureDescriptor descriptor,
@@ -260,13 +284,25 @@ final class TypedClosure extends EvalFunction {
     typeArguments = typeArgumentsForCall(typeArguments, runtime);
     _checkTypeArguments(typeArguments, runtime);
     final ownerType = _checkedOwnerType(runtime);
+    final parameterTypes = _parameterTypesForCall(
+      runtime,
+      typeArguments,
+      ownerType,
+    );
     for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
       final value = i == 0
           ? first
           : count == 2
           ? rest
           : (rest as List<Object?>)[i - 1];
-      _checkArgument(value, i, runtime, typeArguments, ownerType);
+      _checkArgument(
+        value,
+        i,
+        runtime,
+        typeArguments,
+        ownerType,
+        parameterTypes,
+      );
     }
   }
 
@@ -328,11 +364,22 @@ final class TypedClosure extends EvalFunction {
 
   void _checkTypeArguments(List<int> typeArguments, Runtime? runtime) {
     if (typeArguments.isEmpty || runtime == null) return;
+    final environment = typeEnvironmentForCall(typeArguments);
+    final ownerType = _typeEnvironmentOwnerType(runtime);
+    final cached = _checkedCallTypes;
+    // Parameter descriptors are cached only after this bounds check succeeds.
+    if (function.typeParameterOwners.isNotEmpty &&
+        cached != null &&
+        identical(cached.runtime, runtime) &&
+        identical(cached.environment, environment) &&
+        cached.ownerType == ownerType) {
+      return;
+    }
     runtime.assertTypedTypeArguments(
       typeArguments,
       descriptor.typeParameterBounds,
-      actualOwnerType: _typeEnvironmentOwnerType(runtime),
-      typeEnvironment: typeEnvironmentForCall(typeArguments),
+      actualOwnerType: ownerType,
+      typeEnvironment: environment,
     );
   }
 
@@ -341,17 +388,24 @@ final class TypedClosure extends EvalFunction {
     int index,
     Runtime? runtime,
     List<int> typeArguments,
-    int? ownerType,
-  ) {
-    final typeId = descriptor.parameterTypeIds[index];
+    int? ownerType, [
+    List<int>? parameterTypes,
+  ]) {
+    final typeId = parameterTypes?[index] ?? descriptor.parameterTypeIds[index];
     if (typeId < 0) return;
     if (runtime != null) {
       if (!runtime.isTypedValueTypeInCallableEnvironment(
         value,
         typeId,
-        typeArguments.isEmpty ? definingTypeArguments : typeArguments,
+        parameterTypes != null
+            ? const []
+            : typeArguments.isEmpty
+            ? definingTypeArguments
+            : typeArguments,
         actualOwnerType: ownerType,
-        typeEnvironment: typeEnvironmentForCall(typeArguments),
+        typeEnvironment: parameterTypes == null
+            ? typeEnvironmentForCall(typeArguments)
+            : null,
       )) {
         throw TypeError();
       }
@@ -366,6 +420,45 @@ final class TypedClosure extends EvalFunction {
     // Direct TypedProgram execution has no Runtime metadata. Preserve that
     // low-level API's existing behavior; Runtime entrypoints always provide
     // the descriptor service used for language-level checked invocation.
+  }
+
+  List<int>? _parameterTypesForCall(
+    Runtime? runtime,
+    List<int> arguments,
+    int? ownerType,
+  ) {
+    if (runtime == null) return null;
+    if (arguments.isNotEmpty && function.typeParameterOwners.isEmpty)
+      return null;
+    final environment = typeEnvironmentForCall(arguments);
+    if (environment == null) return null;
+    final cached = _checkedCallTypes;
+    if (cached != null &&
+        identical(cached.runtime, runtime) &&
+        identical(cached.environment, environment) &&
+        cached.ownerType == ownerType) {
+      return cached.parameters;
+    }
+    final parameters = [
+      for (final type in descriptor.parameterTypeIds)
+        type < 0
+            ? type
+            : runtime.resolveTypedEnvironmentType(
+                type,
+                actualOwnerType: ownerType,
+                callableTypeArguments: arguments.isEmpty
+                    ? definingTypeArguments
+                    : arguments,
+                typeEnvironment: environment,
+              ),
+    ];
+    _checkedCallTypes = (
+      runtime: runtime,
+      environment: environment,
+      ownerType: ownerType,
+      parameters: parameters,
+    );
+    return parameters;
   }
 
   @pragma('vm:never-inline')
@@ -597,6 +690,11 @@ final class TypedClosure extends EvalFunction {
     if (!trusted ||
         (context != null && descriptor.needsCovariantParameterChecks)) {
       final ownerType = _checkedOwnerType(context);
+      final parameterTypes = _parameterTypesForCall(
+        context,
+        effectiveTypeArguments,
+        ownerType,
+      );
       for (var i = 0; i < descriptor.parameterTypeIds.length; i++) {
         _checkArgument(
           values[hiddenCount + i],
@@ -604,6 +702,7 @@ final class TypedClosure extends EvalFunction {
           context,
           effectiveTypeArguments,
           ownerType,
+          parameterTypes,
         );
       }
     }
@@ -699,16 +798,11 @@ final class TypedClosure extends EvalFunction {
       );
     }
     Object? run(List<Object?> args) => TypedInterop.exportExternal(
-      invoke(
-        args.length,
-        args.isEmpty ? null : args[0],
-        switch (args.length) {
-          0 || 1 => null,
-          2 => args[1],
-          _ => args.sublist(1),
-        },
-        runtime: runtime,
-      ),
+      invoke(args.length, args.isEmpty ? null : args[0], switch (args.length) {
+        0 || 1 => null,
+        2 => args[1],
+        _ => args.sublist(1),
+      }, runtime: runtime),
       runtime: runtime,
     );
     return switch (descriptor.positionalCount) {
@@ -717,12 +811,17 @@ final class TypedClosure extends EvalFunction {
       2 => (Object? a, Object? b) => run([a, b]),
       3 => (Object? a, Object? b, Object? c) => run([a, b, c]),
       4 => (Object? a, Object? b, Object? c, Object? d) => run([a, b, c, d]),
-      5 => (Object? a, Object? b, Object? c, Object? d, Object? e) =>
-        run([a, b, c, d, e]),
+      5 => (Object? a, Object? b, Object? c, Object? d, Object? e) => run([
+        a,
+        b,
+        c,
+        d,
+        e,
+      ]),
       _ => throw UnimplementedError(
-          'dart_eval cannot reify a closure with '
-          '${descriptor.positionalCount} positional parameters',
-        ),
+        'dart_eval cannot reify a closure with '
+        '${descriptor.positionalCount} positional parameters',
+      ),
     };
   }
 }
