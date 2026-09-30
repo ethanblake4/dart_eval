@@ -219,6 +219,8 @@ String? wrapType(
   List<String>? unionTypeNames,
   String? runtimeTypeOwner,
 }) {
+  String? wrapNested(DartType nestedType, String nestedExpr) =>
+      wrapVar(ctx, nestedType, nestedExpr, runtimeTypeOwner: runtimeTypeOwner);
   final union = metadata?.firstWhereOrNull(
     (e) => e.element?.displayName == 'UnionOf',
   );
@@ -235,7 +237,7 @@ String? wrapType(
           continue;
         }
         ctx.imports.add(type0.element!.library!.uri.toString());
-        final wrapper = wrapVar(ctx, type0, expr);
+        final wrapper = wrapNested(type0, expr);
 
         unionStr += '$expr is ${type0.element!.name} ? $wrapper : ';
       }
@@ -251,7 +253,7 @@ String? wrapType(
       ctx.imports.add(element.library!.uri.toString());
       final dartType = _dartTypeFromName(ctx, typeName);
       if (dartType == null) continue;
-      final wrapper = wrapVar(ctx, dartType, expr);
+      final wrapper = wrapNested(dartType, expr);
       unionStr += '$expr is ${element.name} ? $wrapper : ';
     }
   }
@@ -276,7 +278,8 @@ String? wrapType(
   }
 
   if (type is FunctionType) {
-    return unionStr + wrapFunctionType(ctx, type, expr);
+    return unionStr +
+        wrapFunctionType(ctx, type, expr, runtimeTypeOwner: runtimeTypeOwner);
   }
 
   if (type.isDartCoreFunction) {
@@ -294,7 +297,7 @@ String? wrapType(
     final arg = type.typeArguments.first;
     return '$unionStr($expr is Future ? '
         '${_wrapFuture(ctx, arg, '($expr as Future)', runtimeTypeOwner, wrapPayload: arg is! VoidType)} : '
-        '${arg is VoidType ? 'const \$null()' : wrapVar(ctx, arg, expr)})';
+        '${arg is VoidType ? 'const \$null()' : wrapNested(arg, expr)})';
   }
 
   final element =
@@ -375,30 +378,30 @@ String? wrapType(
       }
       final generic = type as ParameterizedType;
       final arg = generic.typeArguments.first;
-      return '$unionStr\$List.view($expr, (e) => ${wrapVar(ctx, arg, 'e')})';
+      return '$unionStr\$List.view($expr, (e) => ${wrapNested(arg, 'e')})';
     }
     if (boundName == 'Iterable' && type is ParameterizedType) {
       final arg = type.typeArguments.first;
       return '$unionStr\$Iterable.wrap('
-          '($expr).map((e) => ${wrapVar(ctx, arg, 'e')}))';
+          '($expr).map((e) => ${wrapNested(arg, 'e')}))';
     }
     if (boundName == 'Set' && type is ParameterizedType) {
       final arg = type.typeArguments.first;
       return '$unionStr\$Set.wrap('
-          '($expr).map((e) => ${wrapVar(ctx, arg, 'e')}).toSet())';
+          '($expr).map((e) => ${wrapNested(arg, 'e')}).toSet())';
     }
     if (boundName == 'Map' && type is ParameterizedType) {
       ctx.imports.add('package:dart_eval/src/eval/utils/wrap_helper.dart');
       final key = type.typeArguments[0];
       final value = type.typeArguments[1];
       return '${unionStr}wrapMap($expr, (key, value) => MapEntry('
-          '${wrapVar(ctx, key, 'key')}, ${wrapVar(ctx, value, 'value')}))';
+          '${wrapNested(key, 'key')}, ${wrapNested(value, 'value')}))';
     }
     if (boundName == 'Stream') {
       final generic = type as ParameterizedType;
       final arg = generic.typeArguments.first;
       final metadata = _asyncTypeMetadata(ctx, 'stream', arg, runtimeTypeOwner);
-      return '$unionStr\$Stream.wrap($expr.map((e) => ${wrapVar(ctx, arg, 'e')})$metadata)';
+      return '$unionStr\$Stream.wrap($expr.map((e) => ${wrapNested(arg, 'e')})$metadata)';
     }
     if (boundName == 'Future') {
       final generic = type as ParameterizedType;
@@ -447,7 +450,7 @@ String? wrapType(
   if (type is TypeParameterType) {
     final bound = type.bound;
     if (bound is! DynamicType) {
-      final b = wrapVar(ctx, bound, expr);
+      final b = wrapNested(bound, expr);
       if (b != null) {
         return '$unionStr\$$b';
       }
@@ -482,7 +485,7 @@ String _wrapFuture(
 }) {
   final metadata = _asyncTypeMetadata(ctx, 'future', payload, owner);
   final value = wrapPayload
-      ? '$expr.then((e) => ${wrapVar(ctx, payload, 'e')})'
+      ? '$expr.then((e) => ${wrapVar(ctx, payload, 'e', runtimeTypeOwner: owner)})'
       : expr;
   return '\$Future.wrap($value$metadata)';
 }
@@ -729,7 +732,12 @@ String _callableArgSource(int slot) => switch (slot) {
   _ => '((c as List<Object?>)[${slot - 2}] as \$Value?)',
 };
 
-String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
+String wrapFunctionType(
+  BindgenContext ctx,
+  FunctionType type,
+  String expr, {
+  String? runtimeTypeOwner,
+}) {
   var buffer = StringBuffer('\$Function((runtime, target, r, s, c) { ');
   if (type.returnType is! VoidType && !type.returnType.isDartCoreNull) {
     buffer.write('final funcResult = ');
@@ -788,7 +796,7 @@ String wrapFunctionType(BindgenContext ctx, FunctionType type, String expr) {
     });
   }
   buffer.write(
-    '); return ${wrapVar(ctx, type.returnType, 'funcResult', func: true)}; })',
+    '); return ${wrapVar(ctx, type.returnType, 'funcResult', func: true, runtimeTypeOwner: runtimeTypeOwner)}; })',
   );
   return buffer.toString();
 }

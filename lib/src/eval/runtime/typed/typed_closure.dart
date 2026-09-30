@@ -10,6 +10,13 @@ import 'typed_instance.dart';
 import 'typed_machine.g.dart';
 import 'typed_program.dart';
 
+typedef _CheckedCallTypes = ({
+  Runtime runtime,
+  TypedTypeEnvironment environment,
+  int? ownerType,
+  List<int> parameters,
+});
+
 /// A captured binding stores its compiler-selected native representation.
 final class TypedCaptureCell {
   TypedCaptureCell(this.value);
@@ -41,13 +48,7 @@ final class TypedClosure extends EvalFunction {
   List<int>? _resolvedDefaultTypeArguments;
   Runtime? _defaultTypeRuntime;
   TypedTypeEnvironment? _lastCallTypeEnvironment;
-  ({
-    Runtime runtime,
-    TypedTypeEnvironment environment,
-    int? ownerType,
-    List<int> parameters,
-  })?
-  _checkedCallTypes;
+  _CheckedCallTypes? _checkedCallTypes;
 
   /// Exact calls have already resolved and checked omitted defaults.
   @pragma('vm:prefer-inline')
@@ -61,6 +62,7 @@ final class TypedClosure extends EvalFunction {
       return definingTypeEnvironment;
     }
     final cached = _lastCallTypeEnvironment;
+    // Incoming lists can be rebuilt or mutated; compare the immutable snapshot.
     if (cached != null && cached.arguments.length == arguments.length) {
       var index = 0;
       while (index < arguments.length &&
@@ -428,8 +430,9 @@ final class TypedClosure extends EvalFunction {
     int? ownerType,
   ) {
     if (runtime == null) return null;
-    if (arguments.isNotEmpty && function.typeParameterOwners.isEmpty)
+    if (arguments.isNotEmpty && function.typeParameterOwners.isEmpty) {
       return null;
+    }
     final environment = typeEnvironmentForCall(arguments);
     if (environment == null) return null;
     final cached = _checkedCallTypes;

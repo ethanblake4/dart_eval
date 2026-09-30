@@ -4,6 +4,62 @@ import 'package:dart_eval/src/eval/bindgen/bindgen.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('nested async wrappers retain their generic receiver type', () async {
+    final directory = Directory(
+      'test',
+    ).absolute.createTempSync('bindgen_async_');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final source = File(p.join(directory.path, 'native.dart'))
+      ..writeAsStringSync('''
+class AsyncBox<T> {
+  AsyncBox(this.value);
+  final T value;
+  Stream<Future<T>> get stream => Stream.value(Future.value(value));
+  Future<Stream<T>> get future => Future.value(Stream.value(value));
+  List<Future<T>> get list => [Future.value(value)];
+}
+''');
+    final generated = (await Bindgen().parse(
+      source,
+      'native.dart',
+      'package:bindgen/native.dart',
+      true,
+    ))!;
+    File(p.join(directory.path, 'native.eval.dart')).writeAsStringSync('''
+import 'native.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/stdlib/core.dart';
+$generated
+''');
+    File(p.join(directory.path, 'run.dart')).writeAsStringSync(r"""
+import 'native.eval.dart';
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/stdlib/core.dart';
+Future<void> main() async {
+  final compiler = Compiler()..defineBridgeClass($AsyncBox.$declaration);
+  final program = compiler.compile({'main': {'main.dart': '''
+    import 'package:bindgen/native.dart';
+    Future<bool> main() async {
+      final box = AsyncBox<int>(3);
+      final inner = await box.stream.first;
+      final stream = await box.future;
+      return await inner == 3 && await stream.first == 3 &&
+          await box.list.first == 3;
+    }
+  '''}});
+  for (final runtime in [Runtime.ofProgram(program), Runtime(program.write().buffer)]) {
+    $AsyncBox.configureForRuntime(runtime);
+    final result = await runtime.executeLib('package:main/main.dart', 'main');
+    if (result != $bool(true)) throw StateError('Nested async metadata was erased: $result');
+  }
+}
+""");
+    final result = await Process.run(Platform.resolvedExecutable, [
+      'run',
+      p.join(directory.path, 'run.dart'),
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+  }, timeout: const Timeout(Duration(minutes: 2)));
   test(
     'generated register bridges execute scalars and retain overflow callbacks',
     () async {

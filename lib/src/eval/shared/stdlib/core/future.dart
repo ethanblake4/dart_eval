@@ -562,8 +562,11 @@ class $Future<T> implements Future<T>, $Instance {
 
 $Value? _futureDelayed(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = s as EvalFunction?;
-  final resultType = runtime.bridgeConstructorTypeId ??
-      (computation == null ? null : runtime.typedFutureTypeForCallback(computation));
+  final resultType =
+      runtime.bridgeConstructorTypeId ??
+      (computation == null
+          ? null
+          : runtime.typedFutureTypeForCallback(computation));
   return $Future.wrap(
     Future.delayed(
       (r as $Value).$value,
@@ -588,7 +591,8 @@ Object? _futureArg(Runtime runtime, Object? arg) => arg is TypedInstance
 
 Object? _futureCompletionArg(Runtime runtime, Object? arg, int? resultType) {
   // A nested Future payload must survive the erased host Future boundary.
-  if (arg is $Future && resultType != null &&
+  if (arg is $Future &&
+      resultType != null &&
       !runtime.isTypedValueType(arg, resultType)) {
     return GuestFuturePayload(arg);
   }
@@ -652,11 +656,16 @@ final class _GuestStackTrace implements StackTrace {
 // must not reuse the microtask/sync paths.
 $Value? _futureNew(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = r as EvalFunction;
-  final resultType = runtime.bridgeConstructorTypeId ??
+  final resultType =
+      runtime.bridgeConstructorTypeId ??
       runtime.typedFutureTypeForCallback(computation);
   return $Future.wrap(
     Future(
-      () => _futureCompletionArg(runtime, computation.call(runtime, null, null, null, 0), resultType),
+      () => _futureCompletionArg(
+        runtime,
+        computation.call(runtime, null, null, null, 0),
+        resultType,
+      ),
     ),
     runtime: runtime,
     runtimeTypeId: resultType,
@@ -665,11 +674,16 @@ $Value? _futureNew(Runtime runtime, Object? r, Object? s, Object? c) {
 
 $Value? _futureSync(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = r as EvalFunction;
-  final resultType = runtime.bridgeConstructorTypeId ??
+  final resultType =
+      runtime.bridgeConstructorTypeId ??
       runtime.typedFutureTypeForCallback(computation);
   return $Future.wrap(
     Future.sync(
-      () => _futureCompletionArg(runtime, computation.call(runtime, null, null, null, 0), resultType),
+      () => _futureCompletionArg(
+        runtime,
+        computation.call(runtime, null, null, null, 0),
+        resultType,
+      ),
     ),
     runtime: runtime,
     runtimeTypeId: resultType,
@@ -678,11 +692,16 @@ $Value? _futureSync(Runtime runtime, Object? r, Object? s, Object? c) {
 
 $Value? _futureMicrotask(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = r as EvalFunction;
-  final resultType = runtime.bridgeConstructorTypeId ??
+  final resultType =
+      runtime.bridgeConstructorTypeId ??
       runtime.typedFutureTypeForCallback(computation);
   return $Future.wrap(
     Future.microtask(
-      () => _futureCompletionArg(runtime, computation.call(runtime, null, null, null, 0), resultType),
+      () => _futureCompletionArg(
+        runtime,
+        computation.call(runtime, null, null, null, 0),
+        resultType,
+      ),
     ),
     runtime: runtime,
     runtimeTypeId: resultType,

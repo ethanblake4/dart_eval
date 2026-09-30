@@ -109,3 +109,25 @@ baseline worktree confirms identical primitive/mixed bytecode, function ABI,
 register/spill metadata and constant/side tables. The difference is outside
 compiler lowering. Logs: perf-aot/summary.csv, generic-checked-repeat.log,
 generic-before-repeat2.log, call-code-{baseline,candidate}.json.
+
+## Cleanup and Astra review
+
+An Astra medium review found recursive binding wrapping discarded the receiver
+type owner, erasing nested async payloads. Forward that owner through a shared
+recursive wrapping helper, Future payloads and returned callbacks. A generated
+AsyncBox<T> execution regression exercises Stream<Future<T>>, Future<Stream<T>>
+and List<Future<T>> with fresh and serialized runtimes. It passes along with
+the existing generated bridge execution test.
+
+Named the checked-call record, documented snapshot comparison, fixed the new
+brace lint and formatted the Future factory helpers. Kept the two short cache
+key comparisons rather than introducing another abstraction. Astra found no
+other concrete cache, constructor or codec issue.
+
+Two complete stdlib regenerations were idempotent across 89 tracked files.
+The ordinary suite passes all 1840 checks; SDK full has the same 20 unexpected
+cases and no stale expected failures. Analysis contains only the pre-existing
+path-dependency warning and benchmark import info. The final 22-driver cleanup
+AOT sweep matches all 21 execution checksums. Logs: dart-test-cleanup.log,
+sdk-full-cleanup.log, cleanup-bindgen-final.log, cleanup-final-analyze.log,
+cleanup-aot/summary.csv.
