@@ -42,6 +42,8 @@ import 'package:dart_eval/stdlib/async.dart'
         $StreamView,
         $StreamController;
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+
 import 'stream_sink.dart';
 
 /// dart_eval wrapper binding for [StreamController]
@@ -544,7 +546,26 @@ class $StreamController<T> implements $Instance {
   $StreamController.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    // Instances created inside the VM carry their instantiated type
+    // (`StreamController<int>`) in bridgeData — the wrapper is erased.
+    final data = Runtime.bridgeData[this];
+    if (data != null) {
+      return runtime.importRuntimeType(data.runtime, data.$runtimeType);
+    }
+    return runtime.lookupType($spec);
+  }
+
+  /// This controller's `T`, viewed as `spec<T>` — the controller's
+  /// instantiated runtime type rides in `bridgeData` (attached by
+  /// `BridgeInstantiate`); null when no instantiation was attached.
+  int? _elementRuntimeType(Runtime runtime, BridgeTypeSpec spec) {
+    final data = Runtime.bridgeData[this];
+    if (data == null) return null;
+    final owner = runtime.importRuntimeType(data.runtime, data.$runtimeType);
+    final t = runtime.runtimeTypeArgumentAt(owner, 0);
+    return t == null ? null : runtime.internParameterizedType(spec, [t]);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -558,6 +579,8 @@ class $StreamController<T> implements $Instance {
         final _stream = $value.stream;
         return $Stream.wrap(
           _stream.map((e) => runtime.wrapAlways(e, recursive: true)),
+          runtime: runtime,
+          runtimeTypeId: _elementRuntimeType(runtime, CoreTypes.stream),
         );
       case 'onListen':
         final _onListen = $value.onListen;

@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/expression/method_invocation.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -28,13 +29,51 @@ Variable compileCascadeExpression(
   TypeRef? bound,
 ) {
   // A cascade evaluates to its target, so the context type flows into it.
-  final target = compileExpression(e.target, ctx, bound).boxIfNeeded(ctx);
+  final receiverValue = compileExpression(e.target, ctx, bound).boxIfNeeded(ctx);
+  // The cascade target is an implicit temp — a detached view of the same
+  // SSA value — so member promotions recorded inside sections survive a
+  // write to the source local (`..f([c = C()])`).
+  var target = Variable.of(
+    ctx,
+    receiverValue.ssa,
+    receiverValue.type,
+    rep: receiverValue.rep,
+    facts: receiverValue.facts,
+  );
+  // The source binding's epoch before the sections ran — a write inside
+  // the cascade keeps the temp's promotions from flowing back to `c`.
+  final sourceBinding = receiverValue.binding;
+  final sourceEpoch = sourceBinding?.current.writeEpoch;
 
-  void compileSections() {
+  // The cascade evaluates to its target. Sections may attach
+  // member-promotion facts to the target variable, so the value handed
+  // back is the variable the sections actually saw.
+  Variable result = target;
+
+  /// Copies the temp's member promotions back onto the source local's
+  /// binding when it could not have been reassigned — `c.._f!` leaves
+  /// `c._f` promoted, but `c = ...` inside the sections or a write
+  /// capture makes the temp's facts unsound for `c`.
+  void transferMemberFacts() {
+    final members = result.facts.promotedMembers;
+    if (sourceBinding == null ||
+        sourceBinding.writeCaptured ||
+        sourceBinding.current.writeEpoch != sourceEpoch ||
+        members == null) {
+      return;
+    }
+    sourceBinding.rebind(
+      sourceBinding.current.withFacts(
+        sourceBinding.current.facts.copyWith(promotedMembers: members),
+      ),
+    );
+  }
+
+  void compileSections(Variable cascadeTarget) {
     // Cascaded selectors (`..x` anywhere inside a section) read the target
     // from the ambient context. Nested cascades save/restore it.
     final previousCascadeTarget = ctx.cascadeTarget;
-    ctx.cascadeTarget = target;
+    ctx.cascadeTarget = cascadeTarget;
     try {
       for (final s in e.cascadeSections) {
         if (s is MethodInvocation) {
@@ -43,6 +82,7 @@ Variable compileCascadeExpression(
           compileExpressionAndDiscardResult(s, ctx);
         }
       }
+      result = ctx.cascadeTarget ?? cascadeTarget;
     } finally {
       ctx.cascadeTarget = previousCascadeTarget;
     }
@@ -58,13 +98,23 @@ Variable compileCascadeExpression(
           !target.type.nullable && !target.type.isSpec(CoreTypes.dynamic),
       condition: (ctx) => compileNonNullCondition(ctx, target),
       thenBranch: (ctx, _) {
-        compileSections();
+        // Inside `?..` the target is non-null: sections read members off
+        // the narrowed view, and member promotions of an ephemeral target
+        // ride on that variable.
+        promoteNonNull(ctx, e.target);
+        compileSections(
+          target.withType(target.type.withNullable(false)),
+        );
+        transferMemberFacts();
         return StatementInfo();
       },
       source: e,
     );
   } else {
-    compileSections();
+    compileSections(target);
+    transferMemberFacts();
   }
-  return target;
+  // `o?..sections` still evaluates to `o` when `o` is null — the result
+  // keeps the target's declared type even if sections narrowed it.
+  return result.withType(target.type);
 }

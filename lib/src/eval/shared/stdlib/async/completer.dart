@@ -14,6 +14,7 @@
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'dart:async';
 
@@ -191,15 +192,30 @@ class $Completer<T> implements $Instance {
   $Completer.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    // Instances created inside the VM carry their instantiated type
+    // (`Completer<int>`) in bridgeData — the wrapper itself is erased.
+    final data = Runtime.bridgeData[this];
+    if (data != null) {
+      return runtime.importRuntimeType(data.runtime, data.$runtimeType);
+    }
+    return runtime.lookupType($spec);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'future':
         final _future = $value.future;
+        // Stamp `Future<T>` so guest `await`/`is` gates see the instantiated
+        // result type; `T` rides in `bridgeData` on constructed instances.
+        final t = runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0);
         return $Future.wrap(
           _future.then((e) => runtime.wrapAlways(e, recursive: true)),
+          runtime: runtime,
+          runtimeTypeId: t == null
+              ? null
+              : runtime.internParameterizedType(CoreTypes.future, [t]),
         );
       case 'isCompleted':
         final _isCompleted = $value.isCompleted;

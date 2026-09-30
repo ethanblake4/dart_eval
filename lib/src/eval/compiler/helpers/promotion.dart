@@ -39,32 +39,54 @@ void applyConditionPromotions(
   bool value, {
   Set<String> excluded = const {},
 }) {
-  _visitPromotions(ctx, expression, value, _apply, excluded: excluded);
+  _visitPromotions(
+    ctx,
+    expression,
+    value,
+    (local, type, member) => _apply(ctx, local, type, member),
+    excluded: excluded,
+  );
 }
 
 /// The promotion action for live branches: rebind the local / attach the
 /// member fact onto the receiver's binding.
-void _apply(Variable local, TypeRef type, String? member) {
+void _apply(CompilerContext ctx, Variable local, TypeRef type, String? member) {
   if (member == null) {
     local.binding?.typesOfInterest.add(type);
     final promoted = local.withType(type);
     promoted.binding?.rebind(promoted);
   } else {
-    promoteMember(local, member, type);
+    promoteMember(ctx, local, member, type);
   }
 }
 
 /// Promotes a local or promotable member (`c._f!`, `this._f!`) to its
 /// non-null type — `e!` is a checked assertion, not a branch condition.
 void promoteNonNull(CompilerContext ctx, Expression expression) =>
-    _promoteSlot(ctx, expression, null, _apply, const {});
+    _promoteSlot(ctx, expression, null, (local, type, member) {
+      _apply(ctx, local, type, member);
+    }, const {});
 
 /// Attaches member [member]'s promotion on [local]'s binding — the fact
 /// rides on the receiver's value so it clears when `c` is reassigned and
-/// joins at flow merges through [ValueFacts.join].
-void promoteMember(Variable local, String member, TypeRef type) {
+/// joins at flow merges through [ValueFacts.join]. An unbound [local] is
+/// an ephemeral cascade target (`getC().._f`): the fact is written onto
+/// the ambient cascade variable itself.
+void promoteMember(
+  CompilerContext ctx,
+  Variable local,
+  String member,
+  TypeRef type,
+) {
   final binding = local.binding;
-  if (binding == null) return;
+  if (binding == null) {
+    if (identical(local, ctx.cascadeTarget)) {
+      ctx.cascadeTarget = local.withFacts(
+        local.facts.withPromotedMember(member, type),
+      );
+    }
+    return;
+  }
   binding.rebind(
     binding.current.withFacts(
       binding.current.facts.withPromotedMember(member, type),
@@ -127,7 +149,8 @@ void _visitPromotions(
   // A bool local carries the condition it was assigned: `if (b)` applies
   // the recorded true-promotions, `if (!b)` the false ones.
   if (expression is SimpleIdentifier &&
-      !excluded.contains(expression.name)) {
+      !excluded.contains(expression.name) &&
+      ctx.lateInitializerDepth == 0) {
     final binding = ctx.lookupBinding(expression.name);
     if (binding != null && !binding.writeCaptured) {
       final recorded = value
@@ -215,6 +238,110 @@ void _applyRecorded(
   promote(binding.current, recorded.$1, dot < 0 ? null : key.substring(dot + 1));
 }
 
+/// The promotion slot [target] addresses — the local itself when
+/// [member] is null, else a promotable member of a local/`this`/`super`
+/// receiver. [member] is the plain member name; [viaSuper] distinguishes
+/// `super._f` (its facts key is `super:`-prefixed at use sites).
+typedef PromotionSlot = ({Variable local, String? member, bool viaSuper});
+
+/// Resolves [target] to its promotion slot: a local variable, or a
+/// promotable member of a local/`this`/`super` receiver (`c._f`,
+/// `this._f`, bare `_f` in a class body, `super._f`). Returns null when
+/// the target isn't a promotable slot.
+///
+/// Promotion applies through the binding — a cell/slot-backed local's
+/// reads are materialized unbound copies, so `lookupLocal` would lose the
+/// name and write epoch the record/apply logic relies on.
+PromotionSlot? promotableMemberSlot(
+  CompilerContext ctx,
+  Expression target, {
+  Set<String> excluded = const {},
+}) {
+  Expression? receiver;
+  String? member;
+  var viaSuper = false;
+  if (target is PropertyAccess &&
+      (target.operator.type == TokenType.PERIOD ||
+          target.isCascaded)) {
+    // A cascaded `.._f` has a null target — the receiver is the ambient
+    // cascade variable.
+    receiver = target.realTarget;
+    member = target.propertyName.name;
+  } else if (target is PrefixedIdentifier) {
+    receiver = target.prefix;
+    member = target.identifier.name;
+  }
+
+  LocalBinding? binding;
+  if (member == null) {
+    if (target is! SimpleIdentifier || excluded.contains(target.name)) {
+      return null;
+    }
+    final name = target.name;
+    binding = ctx.lookupBinding(name);
+    // A write-captured local can be reassigned by any closure invocation,
+    // so conditions never promote it.
+    if (binding != null && binding.writeCaptured) {
+      return null;
+    }
+    if (binding == null) {
+      // A bare identifier that isn't a local can be an implicit-this
+      // member (`_f` inside a class body) — it promotes like `this._f`.
+      binding = ctx.lookupBinding('#this');
+      if (binding == null ||
+          binding.writeCaptured ||
+          !isPromotableMember(ctx, binding.current.type, name, target)) {
+        return null;
+      }
+      member = name;
+    } else {
+      return (local: binding.current, member: null, viaSuper: false);
+    }
+  } else {
+    if (!member.startsWith('_')) return null;
+    // `(c)._f` — parens don't change the receiver.
+    while (receiver is ParenthesizedExpression) {
+      receiver = receiver.expression;
+    }
+    if (receiver == null ||
+        (target is PropertyAccess && target.isCascaded)) {
+      // Cascaded `.._f` — promote the ambient cascade target. A bound
+      // target stores facts on its binding; an ephemeral target
+      // (`getC().._f`) carries them on the variable itself.
+      final cascade = ctx.cascadeTarget;
+      if (cascade == null) return null;
+      final bindingName = cascade.binding?.name;
+      if (bindingName != null && excluded.contains(bindingName)) {
+        return null;
+      }
+      if (!isPromotableMember(ctx, cascade.type, member, target)) {
+        return null;
+      }
+      return (local: cascade, member: member, viaSuper: false);
+    }
+    switch (receiver) {
+      case SimpleIdentifier(:final name):
+        binding = ctx.lookupBinding(name);
+      case ThisExpression():
+        binding = ctx.lookupBinding('#this');
+      case SuperExpression():
+        binding = ctx.lookupBinding('#this');
+        viaSuper = true;
+      default:
+        return null;
+    }
+    if (binding == null ||
+        binding.writeCaptured ||
+        excluded.contains(binding.name)) {
+      return null;
+    }
+    if (!isPromotableMember(ctx, binding.current.type, member, target)) {
+      return null;
+    }
+  }
+  return (local: binding.current, member: member, viaSuper: viaSuper);
+}
+
 /// A slot a condition can promote: a local variable, or a promotable
 /// member of a local/`this`/`super` receiver (`c._f`, `this._f`, bare
 /// `_f` in a class body, `super._f`).
@@ -225,75 +352,12 @@ void _promoteSlot(
   PromotionApply promote,
   Set<String> excluded,
 ) {
-  Expression? receiver;
-  String? member;
-  var viaSuper = false;
-  if (target is PropertyAccess && target.operator.type == TokenType.PERIOD) {
-    receiver = target.realTarget;
-    member = target.propertyName.name;
-  } else if (target is PrefixedIdentifier) {
-    receiver = target.prefix;
-    member = target.identifier.name;
-  }
+  final slot = promotableMemberSlot(ctx, target, excluded: excluded);
+  if (slot == null) return;
+  final local = slot.local;
+  final member = slot.member;
 
-  // Promotion applies through the binding — a cell/slot-backed local's
-  // reads are materialized unbound copies, so `lookupLocal` would lose the
-  // name and write epoch the record/apply logic relies on.
-  LocalBinding? binding;
-  String? memberKey;
   if (member == null) {
-    if (target is! SimpleIdentifier || excluded.contains(target.name)) {
-      return;
-    }
-    final name = target.name;
-    binding = ctx.lookupBinding(name);
-    // A write-captured local can be reassigned by any closure invocation,
-    // so conditions never promote it.
-    if (binding != null && binding.writeCaptured) {
-      return;
-    }
-    if (binding == null) {
-      // A bare identifier that isn't a local can be an implicit-this
-      // member (`_f` inside a class body) — it promotes like `this._f`.
-      binding = ctx.lookupBinding('#this');
-      if (binding == null ||
-          binding.writeCaptured ||
-          !isPromotableMember(ctx, binding.current.type, name)) {
-        return;
-      }
-      member = name;
-      memberKey = name;
-    }
-  } else {
-    if (!member.startsWith('_')) return;
-    // `(c)._f` — parens don't change the receiver.
-    while (receiver is ParenthesizedExpression) {
-      receiver = receiver.expression;
-    }
-    switch (receiver) {
-      case SimpleIdentifier(:final name):
-        binding = ctx.lookupBinding(name);
-        memberKey = member;
-      case ThisExpression():
-        binding = ctx.lookupBinding('#this');
-        memberKey = member;
-      case SuperExpression():
-        binding = ctx.lookupBinding('#this');
-        memberKey = 'super:$member';
-        viaSuper = true;
-      default:
-        return;
-    }
-    if (binding == null ||
-        binding.writeCaptured ||
-        excluded.contains(binding.name)) {
-      return;
-    }
-    if (!isPromotableMember(ctx, binding.current.type, member)) return;
-  }
-  final local = binding.current;
-
-  if (memberKey == null) {
     // Local promotion.
     if (tested == null) {
       if (local.type.nullable) {
@@ -303,32 +367,71 @@ void _promoteSlot(
     }
     // `x is S` narrows only when `S` is a subtype of the declared type —
     // an `is` check never widens a local to a type it can't represent.
-    if (isPromotionSubtype(ctx, tested, local.type)) {
-      // The tested type joins the types of interest in *both* branches —
-      // `if (x is! S) { x = valueOfS }` still promotes `x` to `S`.
-      local.binding?.typesOfInterest.add(tested);
-      promote(local, tested, null);
+    // The tested type joins the types of interest in *both* branches —
+    // `if (x is! S) { x = valueOfS }` still promotes `x` to `S`. A
+    // nullable `S` against a non-nullable local proves its non-null
+    // part — `x is int?` on `Object x` promotes to `int`.
+    local.binding?.typesOfInterest.add(tested);
+    var promotedTo = isPromotionSubtype(ctx, tested, local.type)
+        ? tested
+        : null;
+    if (promotedTo == null && tested.nullable) {
+      final nonNull = tested.withNullable(false);
+      if (isPromotionSubtype(ctx, nonNull, local.type)) {
+        promotedTo = nonNull;
+      }
+    }
+    if (promotedTo != null) {
+      local.binding?.typesOfInterest.add(promotedTo);
+      promote(local, promotionView(local.type, promotedTo), null);
     }
     return;
   }
 
   // Member promotion — the fact key distinguishes `super._f`.
-  final memberType = promotedMemberReadType(ctx, local, member!, viaSuper);
+  final memberKey = slot.viaSuper ? 'super:$member' : member;
+  final memberType = promotedMemberReadType(ctx, local, member, slot.viaSuper);
   if (tested == null) {
     if (!memberType.nullable) return;
     promote(local, memberType.withNullable(false), memberKey);
     return;
   }
   if (isPromotionSubtype(ctx, tested, memberType)) {
-    promote(local, tested, memberKey);
+    promote(local, promotionView(memberType, tested), memberKey);
   }
+}
+
+/// The `X & S` promotion view for a type-parameter slot: `x is S` narrows a
+/// `X`-typed local to the intersection, which keeps `X`'s identity for
+/// binding and equality while bound-aware consumers (flatten, member
+/// lookup, subtype checks) see [promoted]. Non-parameter slots promote to
+/// [promoted] directly.
+TypeRef promotionView(TypeRef declared, TypeRef promoted) {
+  if (declared is TypeParameterTypeRef &&
+      !(promoted is TypeParameterTypeRef &&
+          promoted.parameter == declared.parameter)) {
+    return TypeParameterTypeRef(
+      declared.parameter,
+      nullable: promoted.nullable,
+      promotedBound: promoted,
+    );
+  }
+  return promoted;
 }
 
 /// Whether [type] declares member [name] as a promotable slot: a private,
 /// non-static, `final` non-`late` non-external field, or an abstract
 /// getter (no implementation — it can't run user code that invalidates).
-bool isPromotableMember(CompilerContext ctx, TypeRef type, String name) {
+/// Field promotion ships with `inference-update-2` (Dart 3.2) — files
+/// pinned below via `// @dart=` never promote members.
+bool isPromotableMember(
+  CompilerContext ctx,
+  TypeRef type,
+  String name,
+  AstNode source,
+) {
   if (!name.startsWith('_')) return false;
+  if (!ctx.languageVersionAtLeast(source, 3, 2)) return false;
   // Field promotion is library-wide: any non-final field, concrete getter,
   // or method named `name` in the library disables it everywhere.
   if (ctx.promotionBlockers(ctx.library).contains(name)) return false;
@@ -361,7 +464,11 @@ TypeRef promotedMemberReadType(
   bool viaSuper = false,
 ]) {
   final key = viaSuper ? 'super:$member' : member;
-  final recorded = local.binding?.current.facts.promotedMembers?[key];
+  // The binding's current value is authoritative when bound; an unbound
+  // ephemeral (cascade target) carries facts on itself.
+  final recorded = (local.binding?.current ?? local)
+      .facts
+      .promotedMembers?[key];
   if (recorded != null) return recorded;
   final resolved = ctx.memberLookup.tryInterfaceMember(
     local.type,

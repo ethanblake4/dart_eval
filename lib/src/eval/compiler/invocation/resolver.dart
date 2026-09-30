@@ -453,20 +453,30 @@ final class CallResolver {
           memberNode is FieldDeclaration ||
           (memberNode is MethodDeclaration && memberNode.isGetter);
       if (isFieldOrGetter) {
-        if (e.target is SuperExpression) {
+        // A recorded member promotion narrows the read — after
+        // `if (_f is T Function())`, `_f()` yields `T`, not `T?`.
+        // `super._f`'s facts live on `#this` under a `super:` key.
+        final viaSuper = e.target is SuperExpression;
+        Variable readMember(CompilerContext ctx) {
+          final value = GetTarget.read(ctx, L, e.methodName.name);
+          final factOwner =
+              viaSuper ? ctx.lookupLocal('#this') : L.binding?.current ?? L;
+          final recorded = factOwner?.facts
+                  .promotedMembers?[viaSuper
+                      ? 'super:${e.methodName.name}'
+                      : e.methodName.name];
+          return recorded == null ? value : value.withType(recorded);
+        }
+
+        if (viaSuper) {
           // `super.m(args)` is a function-expression invocation: the member
           // value is read before the arguments evaluate.
-          return invokeValue(
-            callSite(),
-            callee: GetTarget.read(ctx, L, e.methodName.name),
-          );
+          return invokeValue(callSite(), callee: readMember(ctx));
         }
         // `receiver.field(...)` / `receiver.getter(...)`: the member's
         // *value* is invoked, not a method — property read then implicit
         // `.call`. The arguments evaluate before the member read.
-        final target = MemberValueCall(
-          read: (ctx) => GetTarget.read(ctx, L, e.methodName.name),
-        );
+        final target = MemberValueCall(read: readMember);
         final bound = ArgumentBinder(
           ctx,
         ).bindSuppliedOnly(target, callSite(), callee: null);
@@ -663,7 +673,7 @@ final class CallResolver {
             explicitArguments[index],
           );
         }
-      } else if (bound != null && fd.generics.isNotEmpty) {
+      } else if (fd.generics.isNotEmpty) {
         final names = fd.generics.keys.toList();
         final placeholders = <String, TypeParameterTypeRef>{
           for (var index = 0; index < names.length; index++)
@@ -680,17 +690,25 @@ final class CallResolver {
               ),
             ),
         };
-        final returnPattern = TypeRef.fromBridgeAnnotation(
-          ctx,
-          fd.returns,
-          specifiedType: ownerType,
-          typeParameters: {...receiverTypeParameters, ...placeholders},
-        );
-        final inferred = <TypeParameterDef, TypeRef>{};
-        ctx.typeSystem.unify(returnPattern, bound, inferred);
+        // Every unresolved method generic is a call-site inference
+        // placeholder — arguments constrain it during binding even when the
+        // return context (`bound`) contributes nothing.
         for (final entry in placeholders.entries) {
-          if (inferred[entry.value.parameter] case final argument?) {
-            bridgeTypeParameters[entry.key] = argument;
+          bridgeTypeParameters.putIfAbsent(entry.key, () => entry.value);
+        }
+        if (bound != null) {
+          final returnPattern = TypeRef.fromBridgeAnnotation(
+            ctx,
+            fd.returns,
+            specifiedType: ownerType,
+            typeParameters: {...receiverTypeParameters, ...placeholders},
+          );
+          final inferred = <TypeParameterDef, TypeRef>{};
+          ctx.typeSystem.unify(returnPattern, bound, inferred);
+          for (final entry in placeholders.entries) {
+            if (inferred[entry.value.parameter] case final argument?) {
+              bridgeTypeParameters[entry.key] = argument;
+            }
           }
         }
       }
@@ -771,14 +789,17 @@ final class CallResolver {
         final arguments = future == null
             ? const <TypeRef>[]
             : interfaceArgumentsOf(future);
-        bridgeTypeParameters.putIfAbsent(
-          'T',
-          () => future == null
+        final seeded = bridgeTypeParameters['T'];
+        if (seeded == null ||
+            (seeded is TypeParameterTypeRef &&
+                seeded.parameter.owner.kind ==
+                    TypeParameterOwnerKind.callSite)) {
+          bridgeTypeParameters['T'] = future == null
               ? valueType
               : arguments.isEmpty
               ? CoreTypes.dynamic.ref(ctx)
-              : arguments.first,
-        );
+              : arguments.first;
+        }
       }
       _inferBridgeTypeParameters(
         fd,
@@ -805,6 +826,37 @@ final class CallResolver {
         argTypes: argsPair.positional.map((a) => a.type).toList(),
         namedArgTypes: argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
       );
+      if (!isStatic &&
+          e.methodName.name == 'then' &&
+          ownerType.isSpec(CoreTypes.future) &&
+          argsPair.positional.isNotEmpty) {
+        // The bridge `then` signature declares a raw `Future` return and a
+        // raw `Function` callback — recover `Future<S>` from the callback's
+        // return type `R` as `Future<flatten(R)>` (onValue returns
+        // `FutureOr<S>`).
+        final callback = argsPair.positional.first.type;
+        final returnType = switch (callback) {
+          FunctionTypeRef(:final signature) => signature.returnType,
+          _ => null,
+        };
+        if (returnType != null) {
+          var flattened = ctx.typeSystem.flatten(returnType);
+          if (flattened.isSpec(CoreTypes.dynamic) && bound != null) {
+            // The callback's `FutureOr<S>` surface degrades to `dynamic`
+            // (no union types) — recover `S` from the assignment context.
+            final viewed = ctx.typeSystem.asInstanceOf(
+              bound,
+              ctx.types.bySpec(CoreTypes.future),
+            );
+            if (viewed != null && interfaceArgumentsOf(viewed).isNotEmpty) {
+              flattened = interfaceArgumentsOf(viewed).first;
+            }
+          }
+          mReturnType = ctx.types.bySpec(CoreTypes.future).instantiate([
+            flattened,
+          ]);
+        }
+      }
       if (isStatic &&
           br is BridgeConstructorDef &&
           staticType is InterfaceTypeRef &&
@@ -1702,9 +1754,33 @@ final class CallResolver {
         offset = DeferredOrOffset(file: type.file, name: constructorKey);
         sigReturn = type;
         if (sourceDecl == null) {
-          // Call to an implicit default constructor.
+          // Call to an implicit default constructor. Downward inference
+          // fills the class's arguments from the context, as for a declared
+          // constructor (`A<num> a = A()` instantiates A<num>).
           mReturnType = type;
-          final instantiatedType = instantiateConstructorType(ctx, e, type);
+          var instantiatedType = instantiateConstructorType(ctx, e, type);
+          if (bound != null && e.typeArguments == null) {
+            final owner = nominalDeclOf(instantiatedType);
+            final view = owner == null
+                ? null
+                : ctx.typeSystem.asInstanceOf(
+                    owner.thisType,
+                    nominalDeclOf(bound),
+                  );
+            if (view != null && owner!.typeParameters.isNotEmpty) {
+              final inferred = <TypeParameterDef, TypeRef>{};
+              ctx.typeSystem.unify(view, bound, inferred);
+              final contextArgs = [
+                for (var i = 0; i < owner.typeParameters.length; i++)
+                  inferred[owner.typeParameters[i]] ??
+                      owner.defaultTypeArguments[i],
+              ];
+              if (!contextArgs.any((t) => t.hasInferenceVariables)) {
+                instantiatedType = (instantiatedType as InterfaceTypeRef)
+                    .copyWith(arguments: contextArgs);
+              }
+            }
+          }
           return ConstructorCall(
             staticType: type,
             instantiatedType: instantiatedType,
@@ -2011,7 +2087,15 @@ void _inferBridgeTypeParameters(
     if (reference != null &&
         (function.generics.containsKey(reference) ||
             inferableNames.contains(reference))) {
-      inferred.putIfAbsent(reference, () => actual);
+      final existing = inferred[reference];
+      // A seeded call-site placeholder yields to the argument's binding —
+      // it marks "to be inferred", not a committed solution.
+      if (existing == null ||
+          (existing is TypeParameterTypeRef &&
+              existing.parameter.owner.kind ==
+                  TypeParameterOwnerKind.callSite)) {
+        inferred[reference] = actual;
+      }
       return;
     }
     final genericFunction = formal.gft;

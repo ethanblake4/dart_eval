@@ -513,12 +513,27 @@ bool _listEquals<T>(List<T> a, List<T> b) {
 /// The shared [TypeParameterDef] is the identity; [typeParameterBound]
 /// reads the def's bound so copies stay live as bounds resolve.
 final class TypeParameterTypeRef extends TypeRef {
-  TypeParameterTypeRef(this.parameter, {super.nullable = false, int? file})
-    : _file = file;
+  TypeParameterTypeRef(
+    this.parameter, {
+    super.nullable = false,
+    int? file,
+    this.promotedBound,
+  }) : _file = file;
 
   /// The declared parameter — its owner and index are the identity, its
   /// bound resolves on the def after seeding.
   final TypeParameterDef parameter;
+
+  /// The promotion intersection: `x is S` on a `X`-typed local narrows the
+  /// value to `X & S` — the declared parameter keeps its identity (so `X &
+  /// A` still binds and compares as `X`) while bound-aware consumers
+  /// (flatten, member lookup, subtype checks) see [promotedBound]. Always
+  /// null on refs manufactured from declarations — only promotion sets it.
+  final TypeRef? promotedBound;
+
+  /// The bound the value is known to satisfy — the promotion when present,
+  /// else the declared bound.
+  TypeRef? get effectiveBound => promotedBound ?? parameter.bound;
 
   /// An explicit library override — the owner library otherwise.
   final int? _file;
@@ -529,10 +544,14 @@ final class TypeParameterTypeRef extends TypeRef {
   /// The parameter's declared name.
   String get name => parameter.name;
 
-  TypeParameterTypeRef copyWith({bool? nullable}) => TypeParameterTypeRef(
+  TypeParameterTypeRef copyWith({
+    bool? nullable,
+    TypeRef? promotedBound,
+  }) => TypeParameterTypeRef(
     parameter,
     nullable: nullable ?? this.nullable,
     file: _file,
+    promotedBound: promotedBound ?? this.promotedBound,
   );
 
   @override
@@ -551,10 +570,11 @@ final class TypeParameterTypeRef extends TypeRef {
       identical(this, other) ||
       other is TypeParameterTypeRef &&
           nullable == other.nullable &&
-          parameter == other.parameter;
+          parameter == other.parameter &&
+          promotedBound == other.promotedBound;
 
   @override
-  late final int hashCode = Object.hash(parameter, nullable);
+  late final int hashCode = Object.hash(parameter, nullable, promotedBound);
 }
 
 /// A record type — `(<T...>, {name: T...})`. The canonical `@record`

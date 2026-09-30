@@ -9,6 +9,20 @@ import 'typed_instance.dart';
 import 'typed_interop.dart';
 import 'typed_program.dart';
 
+/// A `Future` that is itself the completion payload (returned from a
+/// `Future<Future<X>>` async body). Host `Completer<Object?>` flattens any
+/// `Future` passed to `complete`, so a future-as-value travels boxed in a
+/// plain holder until it crosses back into guest code.
+final class GuestFuturePayload {
+  const GuestFuturePayload(this.value);
+  final $Value? value;
+}
+
+/// Unwraps a [GuestFuturePayload] delivered through a host future, leaving
+/// ordinary payloads untouched.
+Object? unwrapGuestFuturePayload(Object? value) =>
+    value is GuestFuturePayload ? value.value : value;
+
 /// One invocation's result, independent of the frame's cached caller chain.
 final class TypedAsyncState {
   TypedAsyncState(this.runtimeTypeId, this.runtime);
@@ -26,7 +40,10 @@ final class TypedAsyncState {
   );
 
   $Value? _checkedPayload(Object? payload) {
-    final boxed = TypedInterop.boxExternal(payload, runtime: runtime);
+    final boxed = TypedInterop.boxExternal(
+      unwrapGuestFuturePayload(payload),
+      runtime: runtime,
+    );
     if (runtimeTypeId >= 0) {
       runtime?.assertTypedFuturePayload(boxed, runtimeTypeId);
     }
@@ -35,9 +52,35 @@ final class TypedAsyncState {
 
   FutureOr<Object?> _checked(Object? value) {
     final subject = value is $Future ? value.$value : value;
-    return subject is Future
-        ? subject.then(_checkedPayload)
-        : _checkedPayload(subject);
+    if (subject is! Future) return _checkedPayload(subject);
+    final runtime = this.runtime;
+    // `Completer<T>.complete` chains the value only when it is a
+    // `Future<T>` — `Future<int>` completing `Future<Future<int>>` is the
+    // payload itself, not a future to flatten.
+    if (runtime != null &&
+        runtimeTypeId >= 0 &&
+        value is $Value) {
+      final chain = runtime.isTypedValueType(
+        value,
+        _futureChainTarget(runtime, runtimeTypeId),
+      );
+      if (!chain) return GuestFuturePayload(_checkedPayload(value));
+    }
+    return subject.then(_checkedPayload);
+  }
+
+  /// `Future<T>` descriptor for [futureType] (a `Future<T>` descriptor
+  /// itself), or [futureType] when it can't be decomposed — in which case
+  /// the subtype check can't disprove chaining anyway.
+  static int _futureChainTarget(Runtime runtime, int futureType) {
+    final descriptor = runtime.descriptorFor(futureType);
+    if (descriptor.length < 3 ||
+        descriptor[0] != runtime.lookupType(CoreTypes.future)) {
+      return futureType;
+    }
+    return runtime.internParameterizedType(CoreTypes.future, [
+      descriptor[2],
+    ]);
   }
 
   void _completeError(
@@ -161,17 +204,25 @@ abstract final class TypedAsync {
     int pc,
     Object? subject,
     Runtime? runtime,
+    int awaitTypeId,
     TypedAsyncResume resume,
   ) {
     final state = frame.asyncState;
     final future = state?.future;
     frame.detachAsync();
-    // A guest class may implement `Future` directly — `Future.value` cannot
-    // adopt it, so call its `then` and forward the completion ourselves.
-    if (runtime != null && _isGuestFuture(subject, runtime)) {
+    // `await` only suspends on `subject is Future<flatten(S)>` where `S` is
+    // the static type — a `Future` implementation under a plain
+    // type-variable or non-future static type returns unawaited.
+    final awaitable =
+        runtime != null &&
+        subject is $Value &&
+        runtime.isTypedValueType(subject, awaitTypeId);
+    if (awaitable && subject is TypedInstance) {
+      // A guest class may implement `Future` directly — `Future.value`
+      // cannot adopt it, so call its `then` and forward the completion.
       try {
         _attachGuestThen(
-          subject as TypedInstance,
+          subject,
           runtime,
           (value) {
             try {
@@ -204,13 +255,27 @@ abstract final class TypedAsync {
       state?._deferErrors = false;
       return future;
     }
+    if (subject is $Value && !awaitable) {
+      // A guest value or `$Future` that failed the `Future<flatten(S)>`
+      // check returns unawaited — `Future.value` would adopt a `$Future`
+      // (it implements `Future`). Await always defers, so deliver it in a
+      // microtask.
+      scheduleMicrotask(
+        () => resume(program, frame, pc, subject, null, null, runtime),
+      );
+      state?._deferErrors = false;
+      return future;
+    }
     // Future.value also schedules a non-Future await and adopts returned
-    // Futures. Values enter the boxed guest ABI only at this host boundary.
+    // Futures (including a matching `$Future`). Values enter the boxed
+    // guest ABI only at this host boundary.
     Future<Object?>.value(subject).then<void>(
       (value) {
         $Value? boxed;
         try {
-          boxed = TypedInterop.boxExternal(value, runtime: runtime);
+          boxed = value is GuestFuturePayload
+              ? value.value
+              : TypedInterop.boxExternal(value, runtime: runtime);
         } catch (error, trace) {
           resume(program, frame, pc, null, error, trace, runtime);
           return;

@@ -115,11 +115,18 @@ final class TypeFactory {
           callerTypeParameters: typeParameters,
         );
       }
-      // `FutureOr<T>` is a union type (`Future<T> | T`), which this compiler
-      // cannot represent; it degrades to `dynamic` so `is`/`as` and
-      // assignability checks remain permissive in both directions.
+      // `FutureOr<T>` is a union type (`Future<T> | T`) backed by a
+      // synthetic declaration — subtype checks and `flatten` special-case
+      // it instead of degrading the whole type to `dynamic`.
       if (n == 'FutureOr') {
-        return CoreTypes.dynamic.ref(_ctx);
+        final resolved = <TypeRef>[
+          for (final arg in typeAnnotation.typeArguments?.arguments ??
+              const <TypeAnnotation>[])
+            fromAnnotation(library, arg, typeParameters: typeParameters),
+        ];
+        return _ctx.types.futureOr
+            .instantiate(resolved)
+            .withNullable(typeAnnotation.question != null);
       }
       throw CompileError(
         'Unknown type $n',
@@ -161,12 +168,21 @@ final class TypeFactory {
     TypeRef? specifiedType,
     Map<String, TypeRef> typeParameters = const {},
   }) {
-    return fromBridgeTypeRef(
+    final resolved = fromBridgeTypeRef(
       typeAnnotation.type,
       specifyingType: specifyingType,
       specifiedType: specifiedType,
       typeParameters: typeParameters,
-    ).withNullable(typeAnnotation.nullable);
+    );
+    if (typeAnnotation.type.ref != null) {
+      // A type-parameter reference keeps its binding's own nullability —
+      // `T` bound to `int?` stays `int?`; the annotation's flag only adds
+      // `?` (`T?`), matching substituteTypeParameters' OR semantics.
+      return resolved.withNullable(
+        resolved.nullable || typeAnnotation.nullable,
+      );
+    }
+    return resolved.withNullable(typeAnnotation.nullable);
   }
 
   /// A serialized [BridgeTypeRef]: cached ids resolve through the runtime
@@ -187,6 +203,21 @@ final class TypeFactory {
     final spec = typeReference.spec;
     if (spec != null) {
       final arguments = <TypeRef>[];
+      if (spec.library == AsyncTypes.futureOr.library &&
+          spec.name == AsyncTypes.futureOr.name) {
+        // `FutureOr` is synthetic — not present in visibleTypes; resolve it
+        // through the synthetic union declaration directly.
+        for (final arg in typeReference.typeArgs) {
+          arguments.add(
+            fromBridgeAnnotation(
+              arg,
+              specifiedType: specifiedType,
+              typeParameters: typeParameters,
+            ),
+          );
+        }
+        return _ctx.types.futureOr.instantiate(arguments);
+      }
       for (final arg in typeReference.typeArgs) {
         arguments.add(
           fromBridgeAnnotation(
@@ -538,7 +569,11 @@ final class TypeFactory {
       if (type.ref != null) {
         final resolved = scope[type.ref];
         if (resolved != null) {
-          return resolved.withNullable(annotation.nullable);
+          // Same OR semantics as substituteTypeParameters — the binding's
+          // own `?` survives; the annotation only adds `?` (`T?`).
+          return resolved.withNullable(
+            resolved.nullable || annotation.nullable,
+          );
         }
         return TypeParameterTypeRef(extraDef(type.ref!));
       }
@@ -792,3 +827,4 @@ final class TypeFactory {
     );
   }
 }
+

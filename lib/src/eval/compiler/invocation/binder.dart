@@ -200,7 +200,7 @@ final class ArgumentBinder {
         site.source,
       );
     }
-    final substitutions =
+    var substitutions =
         declaredSignature == null || site.shape.typeArguments == null
         ? Substitution.empty
         : Substitution.of({
@@ -247,7 +247,15 @@ final class ArgumentBinder {
       final parameterType = declaredType == null
           ? null
           : formalType(declaredType);
-      var argument = _compileArg(ctx, source, parameterType);
+      // A formal that is itself an unbound inference variable carries no
+      // context information (`f<T>(T x)` gives its argument context `_`, not
+      // `T`), so the argument compiles context-free; coercion still uses
+      // the erased boundary type.
+      final context = parameterType is TypeParameterTypeRef &&
+              ownParameters.contains(parameterType.parameter)
+          ? null
+          : parameterType;
+      var argument = _compileArg(ctx, source, context);
       if (declaredType != null &&
           site.shape.typeArguments == null &&
           ownParameters.isNotEmpty) {
@@ -257,6 +265,13 @@ final class ArgumentBinder {
           ownParameters,
           inferredArguments,
         );
+        // Constraints this argument solves feed the context of later
+        // arguments — `fold(base, (next, mw) => ...)` types the lambda's
+        // `next` with `T`'s binding from `base`.
+        final solved = _solveArguments(inferredArguments);
+        if (solved.isNotEmpty) {
+          substitutions = Substitution.of(solved);
+        }
       }
       if (parameterType != null) {
         argument = convertForAssignment(
@@ -498,7 +513,7 @@ final class ArgumentBinder {
                     inferParameterNames.contains(entry.key)))
           parameter,
     };
-    final argumentSubstitution = Substitution.of(resolveGenerics);
+    var argumentSubstitution = Substitution.of(resolveGenerics);
     final candidates = <TypeParameterDef, Set<TypeRef>>{};
 
     // The parameter in the dispatch implementation's own signature —
@@ -533,6 +548,7 @@ final class ArgumentBinder {
         unifyPattern = spec.type;
       }
 
+
       // A formal that still holds an unbound type parameter erases to its
       // bound (or `dynamic`): the erased boundary accepts whatever the
       // inferred type argument becomes — e.g. `typedef T<X> = C<X>` invoked
@@ -566,12 +582,14 @@ final class ArgumentBinder {
         // `T -> dynamic` instead of the actual constraint.
         _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
         if (candidates.isNotEmpty) {
+          final solved = {...resolveGenerics, ..._solveArguments(candidates)};
           coercionType = spec.type.substituteTypeParameters(
-            Substitution.of({
-              ...resolveGenerics,
-              ..._solveArguments(candidates),
-            }),
+            Substitution.of(solved),
           );
+          // Solutions from this argument propagate into the context of
+          // later ones — a lambda parameter typed `R` sees `R`'s binding
+          // from an earlier argument (`fold(base, (next, mw) => ...)`).
+          argumentSubstitution = Substitution.of(solved);
         }
       }
       arg0 = coerceArgumentForParameter(
@@ -708,6 +726,16 @@ final class ArgumentBinder {
     final namedParamByName = {
       for (final spec in signature.named) spec.name: spec,
     };
+    // Unresolved inference placeholders (`callSite` type parameters) in the
+    // bridge signature act like a generic call's own parameters: each
+    // argument can constrain them, and solved bindings flow into later
+    // argument contexts.
+    final bridgePlaceholders = {
+      for (final spec in [...signature.positional, ...signature.named])
+        ..._callSiteParameters(spec.type),
+    };
+    var bridgeSubstitution = Substitution.empty;
+    final bridgeCandidates = <TypeParameterDef, Set<TypeRef>>{};
     final shape = argumentList == null
         ? CallShape.values(const [])
         : CallShape.fromArgumentList(argumentList);
@@ -734,11 +762,25 @@ final class ArgumentBinder {
       required bool named,
       int? position,
     }) {
-      final paramType = param.type;
+      final paramType = param.type.substituteTypeParameters(
+        bridgeSubstitution,
+      );
       final context = position != null && position < positionalContexts.length
           ? positionalContexts[position] ?? paramType
           : paramType;
       var arg0 = _compileArg(ctx, argument, context).boxIfNeeded(ctx);
+      if (bridgePlaceholders.isNotEmpty) {
+        _inferArgument(
+          param.type,
+          arg0.type,
+          bridgePlaceholders,
+          bridgeCandidates,
+        );
+        final solved = _solveArguments(bridgeCandidates);
+        if (solved.isNotEmpty) {
+          bridgeSubstitution = Substitution.of(solved);
+        }
+      }
       if (named) {
         final nominalFunction =
             paramType.isSpec(CoreTypes.function) && arg0.type.isFunctionLike;
@@ -820,6 +862,30 @@ final class ArgumentBinder {
     );
   }
 
+  /// Every `callSite` type parameter occurring inside [type] — bridge
+  /// signatures embed them directly in parameter types rather than a
+  /// `typeParameterRefs` map.
+  Set<TypeParameterDef> _callSiteParameters(TypeRef type) => switch (type) {
+    TypeParameterTypeRef(:final parameter) =>
+      parameter.owner.kind == TypeParameterOwnerKind.callSite
+          ? {parameter}
+          : const {},
+    InterfaceTypeRef(:final arguments) => {
+      for (final argument in arguments) ..._callSiteParameters(argument),
+    },
+    RecordTypeRef(:final positional, :final named) => {
+      for (final field in positional) ..._callSiteParameters(field),
+      for (final field in named.values) ..._callSiteParameters(field),
+    },
+    FunctionTypeRef(:final signature) => {
+      for (final parameter in signature.positional)
+        ..._callSiteParameters(parameter),
+      for (final parameter in signature.named.values)
+        ..._callSiteParameters(parameter.type),
+      ..._callSiteParameters(signature.returnType),
+    },
+  };
+
   void _inferArgument(
     TypeRef formal,
     TypeRef actual,
@@ -878,9 +944,29 @@ final class ArgumentBinder {
     for (final parameter in parameters) {
       resolved[parameter] = TypeParameterTypeRef(parameter);
     }
+    if (explicitArguments == null) {
+      // Inference starts from the placeholder seeded above, not the
+      // bound: substituting the bound here would erase the parameter in
+      // parameter types (e.g. `List<T>` -> `List<dynamic>`), so context
+      // and argument constraints would never reach it. A parameter
+      // nothing constrains is finalized to its bound after inference.
+      return;
+    }
+    final arguments = [
+      for (final annotation in explicitArguments)
+        TypeRef.fromAnnotation(ctx, ctx.library, annotation),
+    ];
+    // Bind every argument before checking bounds: a bound may mention a
+    // later parameter (`X extends A1<X, Y>`), and its check needs Y's
+    // explicit argument, not Y's placeholder.
+    for (var index = 0; index < parameters.length; index++) {
+      resolved[parameters[index]] = arguments[index];
+    }
     for (var index = 0; index < parameters.length; index++) {
       final parameter = parameters[index];
-      final name = parameter.name;
+      final argument = arguments[index];
+      // The bound may self-reference (`T extends Generator<T>`); substitute
+      // the actual arguments before checking assignability.
       final bound = (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
           .substituteTypeParameters(
             Substitution.of({
@@ -888,23 +974,8 @@ final class ArgumentBinder {
                 if (!parameters.contains(entry.key)) entry.key: entry.value,
             }),
           );
-      if (explicitArguments == null) {
-        // Inference starts from the placeholder seeded above, not the
-        // bound: substituting the bound here would erase the parameter in
-        // parameter types (e.g. `List<T>` -> `List<dynamic>`), so context
-        // and argument constraints would never reach it. A parameter
-        // nothing constrains is finalized to its bound after inference.
-        continue;
-      }
-      final argument = TypeRef.fromAnnotation(
-        ctx,
-        ctx.library,
-        explicitArguments[index],
-      );
-      // The bound may self-reference (`T extends Generator<T>`); substitute
-      // the actual argument before checking assignability.
       final substitutedBound = bound.substituteTypeParameters(
-        Substitution.of({...resolved, parameter: argument}),
+        Substitution.of(resolved),
       );
 
       // Bounds are checked with assignability: a `dynamic` bound parameter
@@ -919,11 +990,10 @@ final class ArgumentBinder {
             allowDynamicParameterDowncast: true,
           )) {
         throw CompileError(
-          'Type argument $argument does not satisfy the bound $bound of $name',
+          'Type argument $argument does not satisfy the bound $bound of ${parameter.name}',
           source,
         );
       }
-      resolved[parameter] = argument;
     }
   }
 
@@ -1219,6 +1289,49 @@ final class ArgumentBinder {
       }
     }
 
+    // F-bounded inference (`X extends A<X>`): a direct binding like `X := C`
+    // needn't satisfy `C <: A<C>` — the solution lives one view away, at the
+    // candidate's instantiation of the bound's class (`C <: A<B>` gives
+    // `X := B`). Mutually recursive bounds (`X extends A1<X, Y>`,
+    // `Y extends A2<X, Y>`) solve together: tentative solutions are
+    // collected first, then each is verified with all of them applied.
+    final fBounded = <TypeParameterDef, TypeRef>{};
+    for (final parameter in typeParams) {
+      final declaredBound = parameter.bound;
+      if (declaredBound == null ||
+          !_usesParameter(declaredBound, {parameter})) {
+        continue;
+      }
+      final candidate = resolveGenerics[parameter];
+      if (candidate == null || candidate is TypeParameterTypeRef) continue;
+      final boundSubst = declaredBound.substituteTypeParameters(
+        Substitution.of(resolveGenerics),
+      );
+      if (candidate.isAssignableTo(ctx, boundSubst)) continue;
+      final boundPattern = declaredBound.substituteTypeParameters(
+        Substitution.of({...resolveGenerics}..remove(parameter)),
+      );
+      final bindings = <TypeParameterDef, TypeRef>{};
+      ctx.typeSystem.unify(boundPattern, candidate, bindings);
+      final throughView = bindings[parameter];
+      if (throughView != null && throughView is! TypeParameterTypeRef) {
+        fBounded[parameter] = throughView;
+      }
+    }
+    for (final entry in fBounded.entries) {
+      final recheck = entry.key.bound!.substituteTypeParameters(
+        Substitution.of({...resolveGenerics, ...fBounded}),
+      );
+      if (ctx.typeSystem.isAssignable(
+        entry.value,
+        recheck,
+        forceAllowDynamic: false,
+        allowDynamicParameterDowncast: true,
+      )) {
+        resolveGenerics[entry.key] = entry.value;
+      }
+    }
+
     TypeRef? returnType;
     if (signature.returnAnnotated && resolveGenerics.isNotEmpty) {
       returnType = signature.returnType.substituteTypeParameters(
@@ -1434,3 +1547,5 @@ TypeRef? memberCallResultType(
     namedArgTypes: namedArgTypes,
   );
 }
+
+

@@ -1054,9 +1054,26 @@ abstract final class TypedMachine {
         case TypedOp.ext:
           switch (256 + code[pc++]) {
             case 263:
-             final caller = frame.parent;
+             final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+             final awaitTypeId = runtime == null
+            ? index
+            : runtime.resolveTypedEnvironmentType(
+                index,
+                actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                callableTypeArguments: frame.effectiveTypeArguments,
+                typeEnvironment: frame.typeEnvironment,
+              );
+          final caller = frame.parent;
           final returnPc = frame.returnPc;
-          final future = TypedAsync.suspend(program, frame, pc, r, runtime, _resumeAsync);
+          final future = TypedAsync.suspend(
+            program,
+            frame,
+            pc,
+            r,
+            runtime,
+            awaitTypeId,
+            _resumeAsync,
+          );
           if (caller == null) return future;
           frame = caller; pc = returnPc;
           r = future; s = null; c = null;

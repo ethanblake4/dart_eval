@@ -441,10 +441,13 @@ final class InstanceMemberDenotation extends Denotation {
     CompilerContext ctx,
     Variable object, [
     bool viaSuper = false,
-  ]) => (viaSuper ? ctx.lookupBinding('#this') : object.binding)
-      ?.current
-      .facts
-      .promotedMembers?[viaSuper ? 'super:$name' : name];
+  ]) =>
+      // A bound receiver's current value is authoritative; an unbound
+      // value (ephemeral cascade target) carries facts on itself.
+      ((viaSuper ? ctx.lookupBinding('#this') : object.binding)?.current ??
+              object)
+          .facts
+          .promotedMembers?[viaSuper ? 'super:$name' : name];
 
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) =>

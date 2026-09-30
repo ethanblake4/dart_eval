@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
+import 'package:dart_eval/dart_eval_bridge.dart' show AsyncTypes, CoreTypes;
 
 import '../context.dart';
 import '../type.dart';
@@ -99,7 +99,7 @@ final class TypeSystem {
     var current0 = type;
     if (current0.isTypeParameter) {
       current0 =
-          (current0 as TypeParameterTypeRef).parameter.bound ??
+          (current0 as TypeParameterTypeRef).effectiveBound ??
           CoreTypes.dynamic.ref(_ctx);
     }
     if (current0.isRecord) {
@@ -137,6 +137,28 @@ final class TypeSystem {
   ) {
     if (pattern.isTypeParameter) {
       substitutions[(pattern as TypeParameterTypeRef).parameter] = concrete;
+      return;
+    }
+    // `FutureOr<S>` unifies through whichever branch matches the concrete's
+    // shape — a `Future<int>` argument binds S through `Future<S>`, a plain
+    // `int` binds it directly.
+    if (pattern is InterfaceTypeRef && pattern.decl.isSpec(AsyncTypes.futureOr)) {
+      final s = interfaceArgumentsOf(pattern).isEmpty
+          ? CoreTypes.dynamic.ref(_ctx)
+          : interfaceArgumentsOf(pattern).first;
+      final instantiation = asInstanceOf(
+        concrete,
+        _ctx.types.bySpec(CoreTypes.future),
+      );
+      if (instantiation != null) {
+        unify(
+          _ctx.types.bySpec(CoreTypes.future).instantiate([s]),
+          instantiation,
+          substitutions,
+        );
+      } else {
+        unify(s, concrete, substitutions);
+      }
       return;
     }
     if (pattern is FunctionTypeRef && concrete is FunctionTypeRef) {
@@ -569,7 +591,7 @@ final class TypeSystem {
     var t = type;
     final seen = <TypeRef>{};
     while (t.isTypeParameter && seen.add(t)) {
-      final bound = (t as TypeParameterTypeRef).parameter.bound;
+      final bound = (t as TypeParameterTypeRef).effectiveBound;
       if (bound == null) {
         return CoreTypes.dynamic.ref(_ctx);
       }
@@ -587,6 +609,30 @@ final class TypeSystem {
   TypeRef flatten(TypeRef type) {
     var t = type;
     var nullable = type.nullable;
+    // A type parameter keeps its shape unless the bound itself is a
+    // future — `X extends Future<S>` awaits to `S`, `X extends
+    // FutureOr<S>` awaits to `S`, otherwise `await x` stays `X`.
+    if (t is TypeParameterTypeRef) {
+      final bound = t.effectiveBound;
+      if (bound == null) return t;
+      if (bound is InterfaceTypeRef &&
+          bound.decl.isSpec(AsyncTypes.futureOr)) {
+        return flatten(bound).withNullable(
+          bound.nullable || nullable,
+        );
+      }
+      final instantiation = asInstanceOf(
+        bound,
+        _ctx.types.bySpec(CoreTypes.future),
+      );
+      if (instantiation == null) return t;
+      // `X extends Future<A>?` awaits to `A?` — the bound's own
+      // nullability distributes onto the flattened result.
+      return (interfaceArgumentsOf(instantiation).isEmpty
+              ? CoreTypes.dynamic.ref(_ctx)
+              : interfaceArgumentsOf(instantiation).first)
+          .withNullable(bound.nullable || nullable);
+    }
     if (t.name == 'FutureOr' && interfaceArgumentsOf(t).isNotEmpty) {
       // `FutureOr<S>` unwraps once — `flatten(FutureOr<S>)` is `S`, not
       // `flatten(S)` — so `FutureOr<Future<int>>` awaits to `Future<int>`.
@@ -599,11 +645,6 @@ final class TypeSystem {
       t = interfaceArgumentsOf(instantiation).isEmpty
           ? CoreTypes.dynamic.ref(_ctx)
           : interfaceArgumentsOf(instantiation).first;
-    }
-    while (t.isSpec(CoreTypes.future)) {
-      if (interfaceArgumentsOf(t).isEmpty) break;
-      nullable = nullable || t.nullable;
-      t = interfaceArgumentsOf(t).first;
     }
     return t.withNullable(t.nullable || nullable);
   }
@@ -717,14 +758,14 @@ final class TypeSystem {
     if (b.isAssignableTo(_ctx, a, forceAllowDynamic: false)) return a;
     if (a is TypeParameterTypeRef) {
       return _pairwiseUpperBound(
-        a.parameter.bound?.withNullable(false) ?? CoreTypes.dynamic.ref(_ctx),
+        a.effectiveBound?.withNullable(false) ?? CoreTypes.dynamic.ref(_ctx),
         b,
       );
     }
     if (b is TypeParameterTypeRef) {
       return _pairwiseUpperBound(
         a,
-        b.parameter.bound?.withNullable(false) ?? CoreTypes.dynamic.ref(_ctx),
+        b.effectiveBound?.withNullable(false) ?? CoreTypes.dynamic.ref(_ctx),
       );
     }
     // Identically-shaped signatures meet pointwise: the return type joins
@@ -915,15 +956,53 @@ final class TypeSystem {
         (forceAllowDynamic && from.isSpec(CoreTypes.dynamic))) {
       return true;
     }
+    // `dynamic <: T` whenever `T` is a top type (`dynamic`, `void`, or a
+    // nullable `Object`) — a genuine subtype fact, not the `dynamic`
+    // downcast leniency [forceAllowDynamic] controls.
+    if (from.isSpec(CoreTypes.dynamic)) {
+      // `dynamic <: FutureOr<S>` reduces to `dynamic <: S` — the `Future`
+      // member is never a strict supertype of `dynamic`.
+      if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
+        final s = interfaceArgumentsOf(to);
+        final inner = s.isEmpty
+            ? CoreTypes.dynamic.ref(_ctx)
+            : s.first.withNullable(to.nullable || s.first.nullable);
+        return isAssignable(
+          from,
+          inner,
+          forceAllowDynamic: forceAllowDynamic,
+        );
+      }
+      return to.isSpec(CoreTypes.object) && to.nullable;
+    }
 
     if (from.isSpec(CoreTypes.never)) {
       // `Never` is the bottom type: assignable to every type.
       return true;
     }
     if (from.isSpec(CoreTypes.nullType)) {
-      return to.nullable || to.isSpec(CoreTypes.nullType);
+      if (to.nullable || to.isSpec(CoreTypes.nullType)) return true;
+      // `Null <: FutureOr<S>` reduces to `Null <: S` — `Null` is never a
+      // `Future`. `FutureOr<void>` accepts it because `void` is a top type.
+      if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
+        final s = interfaceArgumentsOf(to);
+        return s.isNotEmpty &&
+            isAssignable(
+              from,
+              s.first,
+              forceAllowDynamic: forceAllowDynamic,
+            );
+      }
+      return false;
     }
-    if (from.nullable && !to.nullable) return false;
+    // A `FutureOr` target defers the nullability check to its members —
+    // `Object? <: FutureOr<Object?>` holds through the `Object?` member
+    // even though the union itself is not marked nullable.
+    if (from.nullable &&
+        !to.nullable &&
+        !(to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr))) {
+      return false;
+    }
 
     if (from.isTypeParameter) {
       // Same parameter — the nullability gate above already handled the
@@ -933,17 +1012,85 @@ final class TypeSystem {
           from.parameter == to.parameter) {
         return true;
       }
-      // A type parameter is assignable to [to] iff its declared bound is.
+      // A union target decomposes before the bound fallback — `S` is a
+      // member of `FutureOr<S>` even though the bound `Object?` is not
+      // assignable to it.
+      if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
+        final s = interfaceArgumentsOf(to).isEmpty
+            ? CoreTypes.dynamic.ref(_ctx)
+            : interfaceArgumentsOf(to).first;
+        final future = _ctx.types
+            .bySpec(CoreTypes.future)
+            .instantiate([s], nullable: to.nullable);
+        return isAssignable(
+              from,
+              future,
+              forceAllowDynamic: forceAllowDynamic,
+              allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+            ) ||
+            isAssignable(
+              from,
+              s.withNullable(to.nullable || s.nullable),
+              forceAllowDynamic: forceAllowDynamic,
+              allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+            );
+      }
+      // A type parameter is assignable to [to] iff its declared bound is
+      // (or the promoted bound, `X & S`, when flow analysis narrowed it).
       // An unbounded parameter (`<T>`) has the implicit bound `Object?`.
       return isAssignable(
-        (from as TypeParameterTypeRef).parameter.bound ??
+        (from as TypeParameterTypeRef).effectiveBound ??
             CoreTypes.object.ref(_ctx).withNullable(true),
         to,
         forceAllowDynamic: forceAllowDynamic,
       );
     }
 
-    final generics = overrideGenerics ?? _effectiveTypeArguments(from);
+    // `FutureOr<S>` is the union `Future<S> | S`: a target accepts a value
+    // when either branch does; a union source is assignable only when BOTH
+    // branches are. Nullability of the union distributes to each branch.
+    if (from is InterfaceTypeRef && from.decl.isSpec(AsyncTypes.futureOr)) {
+      final s = interfaceArgumentsOf(from).isEmpty
+          ? CoreTypes.dynamic.ref(_ctx)
+          : interfaceArgumentsOf(from).first;
+      final future = _ctx.types
+          .bySpec(CoreTypes.future)
+          .instantiate([s], nullable: from.nullable);
+      return isAssignable(
+            future,
+            to,
+            forceAllowDynamic: forceAllowDynamic,
+            allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+          ) &&
+          isAssignable(
+            s.withNullable(from.nullable || s.nullable),
+            to,
+            forceAllowDynamic: forceAllowDynamic,
+            allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+          );
+    }
+
+if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
+      final s = interfaceArgumentsOf(to).isEmpty
+          ? CoreTypes.dynamic.ref(_ctx)
+          : interfaceArgumentsOf(to).first;
+      final future = _ctx.types
+          .bySpec(CoreTypes.future)
+          .instantiate([s], nullable: to.nullable);
+      return isAssignable(
+            from,
+            future,
+            forceAllowDynamic: forceAllowDynamic,
+            allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+          ) ||
+          isAssignable(
+            from,
+            s.withNullable(to.nullable || s.nullable),
+            forceAllowDynamic: forceAllowDynamic,
+            allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+          );
+    }
+        final generics = overrideGenerics ?? _effectiveTypeArguments(from);
     final targetGenerics = _effectiveTypeArguments(to);
 
     // Records are structural: `hasSameDeclarationAs` alone would require
@@ -1019,26 +1166,25 @@ final class TypeSystem {
     }
 
     // Declaration-space supertypes carry the declaring class's parameter
-    // refs (`List<E> extends Iterable<E>`); `inheritedGenerics` rebinds them
-    // to [from]'s applied arguments for the recursion.
+    // refs — including nested ones (`Divergent<T> implements
+    // Future<Divergent<Divergent<T>>>`) — so substitute [from]'s applied
+    // arguments throughout each supertype before the recursion.
+    final decl = nominalDeclOf(from);
     final supertypes = from.isRecord
         ? const <TypeRef>[]
-        : nominalDeclOf(from)?.supertypes.all.toList() ?? const <TypeRef>[];
+        : decl?.supertypes.all.toList() ?? const <TypeRef>[];
+    final parameters = decl?.typeParameters ?? const <TypeParameterDef>[];
+    final substitution = Substitution.of({
+      for (var i = 0; i < parameters.length && i < generics.length; i++)
+        parameters[i]: generics[i],
+    });
     for (final type in supertypes) {
-      final inheritedGenerics = [
-        for (final argument in _effectiveTypeArguments(type))
-          if (argument is TypeParameterTypeRef &&
-              argument.parameter.index < generics.length)
-            generics[argument.parameter.index].withNullable(
-              argument.nullable || generics[argument.parameter.index].nullable,
-            )
-          else
-            argument,
-      ];
+      final instantiated = substitution.isEmpty
+          ? type
+          : type.substituteTypeParameters(substitution);
       if (isAssignable(
-        type,
+        instantiated,
         to,
-        overrideGenerics: inheritedGenerics,
         forceAllowDynamic: false,
       )) {
         return true;

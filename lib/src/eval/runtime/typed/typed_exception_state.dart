@@ -119,6 +119,14 @@ final class TypedExceptionState {
     Error.throwWithStackTrace(handler.error!, handler.trace!);
   }
 
+  /// Box a host error surfacing through an async boundary (future error,
+  /// stream error) for delivery into guest `catch`/`onError` handlers.
+  static $Value? boxException(Object error, Runtime? runtime) =>
+      _boxException(
+        error is WrappedException ? error.exception : error,
+        runtime,
+      );
+
   static $Value? _boxException(Object error, Runtime? runtime) {
     if (error is $Value) return error;
     return switch (error) {

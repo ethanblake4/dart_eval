@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -54,7 +55,8 @@ Variable compileMethodInvocation(
     final compiledReceiver = receiver!;
     // `a?.m()` and calls continuing a null-shorted chain (`a?.b.m()`): a
     // null receiver nulls the whole expression — argument evaluation is
-    // skipped.
+    // skipped. Only the `?.`-carrying selector narrows; `.m()` sees the
+    // declared type of `a.b`.
     if (isNullShortedSelector(e)) {
       return emitNullGuard(
         ctx,
@@ -66,6 +68,7 @@ Variable compileMethodInvocation(
           receiver: compiledReceiver.withValue(t),
         ),
         source: e,
+        narrow: e.operator?.type == TokenType.QUESTION_PERIOD,
       );
     }
     return CallResolver(

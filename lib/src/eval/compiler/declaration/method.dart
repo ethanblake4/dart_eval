@@ -51,21 +51,49 @@ int compileMethodDeclaration(
     ctx,
     parent,
     extensionTypeParameters,
-    () => ctx.withTypeParameters(
-      ctx.library,
-      TypeParameterOwner(
-        TypeParameterOwnerKind.method,
+    () {
+      // Capture the extension parameter refs before the method scope
+      // opens — a method parameter may shadow an extension parameter's
+      // name, and the callable env must carry the extension's defs in
+      // their declared positions.
+      final extensionRefs = [
+        for (final parameter in extensionTypeParameters)
+          ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
+              as TypeParameterTypeRef,
+      ];
+      // The `on` clause likewise resolves in the extension parameter
+      // scope so `#this` and the body's `T` references use the same
+      // parameter.
+      final receiverType = switch (parent) {
+        ExtensionDeclaration(:final onClause) =>
+          onClause == null
+              ? null
+              : () {
+                  try {
+                    return TypeRef.fromAnnotation(
+                      ctx,
+                      ctx.library,
+                      onClause.extendedType,
+                    );
+                  } catch (_) {
+                    return null;
+                  }
+                }(),
+        _ => null,
+      };
+      return ctx.withTypeParameters(
         ctx.library,
-        '$parentName.$methodName',
-        pos,
-      ),
-      methodTypeParameters,
-      () {
+        TypeParameterOwner(
+          TypeParameterOwnerKind.method,
+          ctx.library,
+          '$parentName.$methodName',
+          pos,
+        ),
+        methodTypeParameters,
+        () {
         ctx.functionTypeParameters[pos] = [
-          for (final parameter in [
-            ...extensionTypeParameters,
-            ...methodTypeParameters,
-          ])
+          for (final ref in extensionRefs) ref.parameter,
+          for (final parameter in methodTypeParameters)
             (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
                     as TypeParameterTypeRef)
                 .parameter,
@@ -86,10 +114,7 @@ int compileMethodDeclaration(
               _ => const <String, TypeRef>{},
             },
             for (var i = 0; i < extensionTypeParameters.length; i++)
-              extensionTypeParameters[i].name.lexeme:
-                  ctx.typeScopes[ctx.library]![extensionTypeParameters[i]
-                      .name
-                      .lexeme]!,
+              extensionTypeParameters[i].name.lexeme: extensionRefs[i],
           },
           ownTypeParameterOwner: TypeParameterOwner(
             TypeParameterOwnerKind.method,
@@ -103,25 +128,6 @@ int compileMethodDeclaration(
         final hasReceiver = !d.isStatic;
         ctx.currentExtension = parent is ExtensionDeclaration ? parent : null;
         if (hasReceiver) {
-          // Resolve the `on` clause inside the extension parameter scope, so
-          // `#this` and the body's `T` references use the same parameter.
-          final receiverType = switch (parent) {
-            ExtensionDeclaration(:final onClause) =>
-              onClause == null
-                  ? null
-                  : () {
-                      try {
-                        return TypeRef.fromAnnotation(
-                          ctx,
-                          ctx.library,
-                          onClause.extendedType,
-                        );
-                      } catch (_) {
-                        return null;
-                      }
-                    }(),
-            _ => null,
-          };
           ctx.pushOp(Parameter(SSA('arg_0'), 0));
           // `this` binds the method's declaring link only when the class has
           // no subclasses — otherwise the receiver may be a subclass link
@@ -244,7 +250,8 @@ int compileMethodDeclaration(
         ctx.endScope();
         return stInfo;
       },
-    ),
+      );
+    },
   );
   if (stInfo == null) return -1;
 

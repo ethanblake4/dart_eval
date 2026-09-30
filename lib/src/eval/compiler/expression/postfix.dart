@@ -30,10 +30,60 @@ Variable compilePostfixExpression(
   }
 
   if (e.operator.type == TokenType.BANG) {
-    // Null assertion (!). On a null-shorted operand (`a?.b!`) the `!` runs
-    // only when the receiver is non-null — the whole expression is null
-    // otherwise.
+    // Null assertion (!). On a null-shorted operand (`a?.b!`) the `!`
+    // participates in shorting: `a?.b!` is `a == null ? null : (a.b)!` —
+    // the assertion applies to `a.b` inside the non-null branch, not to the
+    // chain's result (a null `a.b` throws, it does not yield null).
     final operand = e.operand;
+    switch (operand) {
+      case PropertyAccess pa when isNullShortedSelector(pa):
+        final receiver = pa.isCascaded
+            ? ValueReceiver(ctx.cascadeTarget!)
+            : compileReceiver(ctx, pa.realTarget);
+        return emitNullGuard(
+          ctx,
+          receiver.value!,
+          (t) => assertNonNull(
+            IdentifierReference.receiver(
+              receiver.withValue(t),
+              pa.propertyName.name,
+            ).getValue(ctx, pa, bound),
+          ),
+          source: e,
+          narrow: pa.operator.type == TokenType.QUESTION_PERIOD,
+        );
+      case IndexExpression ie when isNullShortedSelector(ie):
+        final target = ie.isCascaded
+            ? ctx.cascadeTarget!
+            : compileExpression(ie.realTarget, ctx);
+        return emitNullGuard(
+          ctx,
+          target,
+          (t) => assertNonNull(
+            compileIndexReference(ie, ctx, t).getValue(ctx, ie),
+          ),
+          source: e,
+        );
+      case MethodInvocation mi
+          when isNullShortedSelector(mi) && mi.target != null:
+        final receiver = compileReceiver(ctx, mi.target!);
+        if (receiver.value case final target?) {
+          return emitNullGuard(
+            ctx,
+            target,
+            (t) => assertNonNull(
+              CallResolver(ctx).invokeMethod(
+                t,
+                mi,
+                bound: bound,
+                receiver: receiver.withValue(t),
+              ),
+            ),
+            source: e,
+            narrow: mi.operator?.type == TokenType.QUESTION_PERIOD,
+          );
+        }
+    }
     final L = compileExpression(operand, ctx, bound);
     if (isNullShorted(operand)) {
       return emitNullGuard(ctx, L, assertNonNull, source: e);

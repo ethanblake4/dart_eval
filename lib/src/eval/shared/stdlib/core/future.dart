@@ -5,7 +5,9 @@ import 'dart:async';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart'
     show TypedRuntimeInterop, WrappedException;
+import 'package:dart_eval/src/eval/runtime/typed/typed_async.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_closure.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_exception_state.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
@@ -161,11 +163,32 @@ class $Future<T> implements Future<T>, $Instance {
     methods: {
       'then': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+            ]),
+          ),
           params: [
             BridgeParameter(
               'onValue',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(AsyncTypes.futureOr, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+                      ]),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               false,
             ),
           ],
@@ -179,6 +202,7 @@ class $Future<T> implements Future<T>, $Instance {
               true,
             ),
           ],
+          generics: {'S': BridgeGenericParam()},
         ),
       ),
       'asStream': BridgeMethodDef(
@@ -194,7 +218,11 @@ class $Future<T> implements Future<T>, $Instance {
       ),
       'timeout': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
           params: [
             BridgeParameter(
               'timeLimit',
@@ -206,7 +234,16 @@ class $Future<T> implements Future<T>, $Instance {
             BridgeParameter(
               'onTimeout',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.function),
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(AsyncTypes.futureOr, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                      ]),
+                    ),
+                    params: [],
+                  ),
+                ),
                 nullable: true,
               ),
               true,
@@ -216,11 +253,26 @@ class $Future<T> implements Future<T>, $Instance {
       ),
       'whenComplete': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
           params: [
             BridgeParameter(
               'action',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(AsyncTypes.futureOr, [
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+                      ]),
+                    ),
+                    params: [],
+                  ),
+                ),
+              ),
               false,
             ),
           ],
@@ -229,7 +281,11 @@ class $Future<T> implements Future<T>, $Instance {
       ),
       'catchError': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
           params: [
             BridgeParameter(
               'onError',
@@ -241,7 +297,20 @@ class $Future<T> implements Future<T>, $Instance {
             BridgeParameter(
               'test',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.function),
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'error',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
                 nullable: true,
               ),
               true,
@@ -292,9 +361,20 @@ class $Future<T> implements Future<T>, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {}
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtimeTypeId == null
-      ? runtime.lookupType(CoreTypes.future)
-      : runtime.importRuntimeType(this.runtime ?? runtime, runtimeTypeId!);
+  int $getRuntimeType(Runtime runtime) {
+    // Instances created inside the VM carry their instantiated type
+    // (`Future<int>`) in bridgeData — the wrapper itself is erased.
+    final data = Runtime.bridgeData[this];
+    if (data != null) {
+      return runtime.importRuntimeType(data.runtime, data.$runtimeType);
+    }
+    return runtimeTypeId == null
+        ? runtime.lookupType(CoreTypes.future)
+        : runtime.importRuntimeType(
+            this.runtime ?? runtime,
+            runtimeTypeId!,
+          );
+  }
 
   @override
   Stream<T> asStream() => $value.asStream();
@@ -323,7 +403,7 @@ class $Future<T> implements Future<T>, $Instance {
       return handler.call(
         runtime,
         target,
-        runtime.wrap(error),
+        TypedExceptionState.boxException(error, runtime),
         twoArgs ? $StackTrace.wrap(stackTrace) : null,
         twoArgs ? 2 : 1,
       );
@@ -334,7 +414,14 @@ class $Future<T> implements Future<T>, $Instance {
     // instead of adopting it, because it is not a Future<$Value?>.
     final $result = ($t.$value).then<Object?>((value) {
       try {
-        return $then.call(runtime, target, runtime.wrap(value), null, 1);
+        final unwrapped = unwrapGuestFuturePayload(value);
+        return $then.call(
+          runtime,
+          target,
+          unwrapped is $Value ? unwrapped : runtime.wrap(unwrapped),
+          null,
+          1,
+        );
       } on WrappedException catch (error, trace) {
         Error.throwWithStackTrace(error.exception, trace);
       }
@@ -355,7 +442,18 @@ class $Future<T> implements Future<T>, $Instance {
     Object? s,
     Object? c,
   ) {
-    return $Stream.wrap((target as $Future).$value.asStream());
+    final $t = target as $Future;
+    final t = runtime.runtimeTypeArgumentAt(
+      $t.$getRuntimeType(runtime),
+      0,
+    );
+    return $Stream.wrap(
+      $t.$value.asStream(),
+      runtime: runtime,
+      runtimeTypeId: t == null
+          ? null
+          : runtime.internParameterizedType(CoreTypes.stream, [t]),
+    );
   }
 
   static const $Function __timeout = $Function(_timeout);
@@ -381,6 +479,8 @@ class $Future<T> implements Future<T>, $Instance {
             timeLimit,
             onTimeout: onTimeout == null ? null : onTimeoutCb,
           ),
+      runtime: runtime,
+      runtimeTypeId: $t.$getRuntimeType(runtime),
     );
   }
 
@@ -395,8 +495,11 @@ class $Future<T> implements Future<T>, $Instance {
   ) {
     final action = r as EvalFunction;
     FutureOr<Object?> complete() => action.call(runtime, target, null, null, 0);
+    final $t = target as $Future;
     return $Future<Object?>.wrap(
-      (target as $Future).$value.whenComplete(complete),
+      $t.$value.whenComplete(complete),
+      runtime: runtime,
+      runtimeTypeId: $t.$getRuntimeType(runtime),
     );
   }
 
@@ -420,7 +523,7 @@ class $Future<T> implements Future<T>, $Instance {
         onError.call(
           runtime,
           target,
-          runtime.wrap(error),
+          TypedExceptionState.boxException(error, runtime),
           twoArgs ? $StackTrace.wrap(stackTrace) : null,
           twoArgs ? 2 : 1,
         ),
@@ -428,13 +531,15 @@ class $Future<T> implements Future<T>, $Instance {
     }
 
     bool testCb(Object error) =>
-        test!.call(runtime, target, runtime.wrap(error), null, 1)?.$value
+        test!.call(runtime, target, TypedExceptionState.boxException(error, runtime), null, 1)?.$value
             as bool? ??
         false;
     return $Future.wrap(
       $t.$value
           .then<Object?>((value) => value)
           .catchError(onErrorCb, test: test == null ? null : testCb),
+      runtime: runtime,
+      runtimeTypeId: $t.$getRuntimeType(runtime),
     );
   }
 
@@ -465,6 +570,10 @@ $Value? _futureDelayed(Runtime runtime, Object? r, Object? s, Object? c) {
               computation.call(runtime, null, null, null, 0),
             ),
     ),
+    runtime: runtime,
+    runtimeTypeId: computation == null
+        ? null
+        : runtime.typedFutureTypeForCallback(computation),
   );
 }
 
@@ -475,15 +584,70 @@ Object? _futureArg(Runtime runtime, Object? arg) => arg is TypedInstance
     : TypedInterop.exportExternal(arg, runtime: runtime);
 
 $Value? _futureValue(Runtime runtime, Object? r, Object? s, Object? c) {
-  return $Future.wrap(Future.value(_futureArg(runtime, r)));
+  // Stamp `Future<V>` from the value's own type — `Future<Null>` for a null
+  // literal — so `await` gates typed `Future<T>` still adopt it when
+  // `V <: T` (Null lands inside every nullable T).
+  final argType = r is $Value
+      ? r.$getRuntimeType(runtime)
+      : runtime.lookupType(CoreTypes.nullType);
+  if (r is $Future) {
+    // `Future<T>.value(v)` adopts `v` only when `v is Future<T>`. `T` never
+    // reaches a bridge impl, and inference picks `Future<X>` for a future
+    // argument anyway — hold the value so `Future<X>` lands as the payload
+    // instead of `Future<dynamic>` chaining it away.
+    final completer = Completer<Object?>.sync();
+    completer.complete(GuestFuturePayload(r));
+    return $Future.wrap(
+      completer.future,
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        argType,
+      ]),
+    );
+  }
+  return $Future.wrap(
+    Future.value(_futureArg(runtime, r)),
+    runtime: runtime,
+    runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+      argType,
+    ]),
+  );
 }
 
 $Value? _futureError(Runtime runtime, Object? r, Object? s, Object? c) {
-  final error = _futureArg(runtime, r);
+  // Keep guest error values boxed — a reified `$Exception` loses its
+  // wrapper in the host future and can never be wrapped again on surfacing.
+  final error = r is $Value ? r : _futureArg(runtime, r);
   final stackTrace = _futureArg(runtime, s);
   return $Future.wrap(
-    Future.error(error ?? Object(), stackTrace as StackTrace?),
+    Future.error(
+      error ?? Object(),
+      stackTrace is StackTrace
+          ? stackTrace
+          : stackTrace is TypedInstance
+          ? _GuestStackTrace(stackTrace, runtime)
+          : null,
+    ),
+    runtime: runtime,
+    // An error future never completes with a value — `Future<Never>` passes
+    // every `Future<T>` await gate (Never <: T) so `await` still throws it.
+    runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+      runtime.lookupType(CoreTypes.never),
+    ]),
   );
+}
+
+/// A guest `implements StackTrace` cannot cross the host `Future.error`
+/// boundary — carry it inside a host adapter that reports the guest's own
+/// `toString` when the trace is printed.
+final class _GuestStackTrace implements StackTrace {
+  const _GuestStackTrace(this.guest, this.runtime);
+
+  final TypedInstance guest;
+  final Runtime runtime;
+
+  @override
+  String toString() => runtime.valueToString(guest);
 }
 
 // `Future(computation)` queues on the event loop (after microtasks), so it
@@ -494,6 +658,8 @@ $Value? _futureNew(Runtime runtime, Object? r, Object? s, Object? c) {
     Future(
       () => _futureArg(runtime, computation.call(runtime, null, null, null, 0)),
     ),
+    runtime: runtime,
+    runtimeTypeId: runtime.typedFutureTypeForCallback(computation),
   );
 }
 
@@ -503,6 +669,8 @@ $Value? _futureSync(Runtime runtime, Object? r, Object? s, Object? c) {
     Future.sync(
       () => _futureArg(runtime, computation.call(runtime, null, null, null, 0)),
     ),
+    runtime: runtime,
+    runtimeTypeId: runtime.typedFutureTypeForCallback(computation),
   );
 }
 
@@ -512,5 +680,7 @@ $Value? _futureMicrotask(Runtime runtime, Object? r, Object? s, Object? c) {
     Future.microtask(
       () => _futureArg(runtime, computation.call(runtime, null, null, null, 0)),
     ),
+    runtime: runtime,
+    runtimeTypeId: runtime.typedFutureTypeForCallback(computation),
   );
 }

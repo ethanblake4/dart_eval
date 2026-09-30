@@ -35,7 +35,14 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   V = V.boxIfNeeded(ctx);
   // `x as T` promotes x's flow type to T only when T refines x's current
   // type — casting to a wider or unrelated type (dynamic, Object) leaves
-  // the variable's type unchanged.
+  // the variable's type unchanged. The operand must be a local/`this`
+  // itself — `(o..f()) as T` evaluates to `o`'s bound variable but must
+  // never rebind `o`.
+  Expression operand = e.expression;
+  while (operand is ParenthesizedExpression) {
+    operand = operand.expression;
+  }
+  final promotesLocal = operand is SimpleIdentifier || operand is ThisExpression;
   final promotes = isPromotionSubtype(ctx, slot, V.type);
   // A cast whose operand can never be `slot` throws unconditionally. Only
   // the leaf-`Null` cases are provable: a statically-`Null` operand against
@@ -52,7 +59,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
           slot.isSpec(CoreTypes.never);
   Variable update(Variable v, TypeRef type) {
     final result = v.withType(type);
-    if (promotes) {
+    if (promotes && promotesLocal) {
       result.binding?.typesOfInterest.add(type);
       // A write-captured local can be clobbered by a closure at any
       // time — `x as T` can't promote it.
@@ -90,6 +97,20 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
     if (guaranteedThrow) markNeverTerminates(ctx);
   }
   V = update(V, slot);
+
+  // `c._f as T` also records a member promotion on `c`'s binding —
+  // later `c._f` reads then see the narrowed type.
+  if (promotes) {
+    final memberSlot = promotableMemberSlot(ctx, e.expression);
+    if (memberSlot != null && memberSlot.member != null) {
+      promoteMember(
+        ctx,
+        memberSlot.local,
+        memberSlot.viaSuper ? 'super:${memberSlot.member}' : memberSlot.member!,
+        slot,
+      );
+    }
+  }
 
   // If the type changes between num and int/double, unbox/box
   if (slot.isSpec(CoreTypes.num)) {

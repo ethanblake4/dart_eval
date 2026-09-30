@@ -226,9 +226,9 @@ Variable compileFunctionExpression(
         // closure's return type can be inferred (`asyncClosureReturnTypes` serves
         // sync closures too despite the name).
         final collectsReturns = b.isAsynchronous || b is BlockFunctionBody;
-        if (b.isAsynchronous && !b.isGenerator) {
-          setupAsyncFunction(ctx, returnType: boundReturnType);
-        }
+        final beginAsync = b.isAsynchronous && !b.isGenerator
+            ? setupAsyncFunction(ctx, returnType: boundReturnType)
+            : null;
         if (collectsReturns) {
           ctx.asyncClosureReturnTypes.add(<TypeRef>[]);
         }
@@ -290,18 +290,31 @@ Variable compileFunctionExpression(
                   : returns.every((t) => t == returns.first)
                   ? returns.first
                   : TypeRef.commonBaseType(ctx, returns.toSet()));
+          // A context return still carrying call-site inference
+          // placeholders is not a usable result — prefer the inferred type.
+          final boundResolved =
+              boundReturnType != null && !boundReturnType.hasInferenceVariables
+              ? boundReturnType
+              : null;
           inferredClosureReturnType = b.isGenerator
-              ? boundReturnType ??
+              ? boundResolved ??
                     (b.isAsynchronous ? CoreTypes.stream : CoreTypes.iterable)
                         .ref(ctx)
                         .copyWith(arguments: [inferred])
               : b.isAsynchronous
               ? CoreTypes.future
                     .ref(ctx)
-                    .copyWith(arguments: [ctx.typeSystem.flatten(inferred)])
+                    .copyWith(arguments: [
+                      ctx.typeSystem.flatten(inferred),
+                    ])
               : inferred;
-          if (generator != null && boundReturnType == null) {
+          if (generator != null && boundResolved == null) {
             generator.runtimeTypeId = ctx.runtimeTypes.idOf(
+              inferredClosureReturnType!,
+            );
+          }
+          if (beginAsync != null && boundResolved == null) {
+            beginAsync.runtimeTypeId = ctx.runtimeTypes.idOf(
               inferredClosureReturnType!,
             );
           }
@@ -408,15 +421,21 @@ Variable compileFunctionExpression(
     // bridge `S Function(E)` gives the closure a param-typed return) —
     // with the inferred type.
     final signature = closureType.signature;
+    final declaredReturn = signature.returnType;
     final shouldInfer =
-        signature.returnType.isSpec(CoreTypes.dynamic) ||
-        signature.returnType.isTypeParameter ||
+        declaredReturn.isSpec(CoreTypes.dynamic) ||
+        declaredReturn.isTypeParameter ||
+        // A `FutureOr<X>` context return degrades to `Object?` in the
+        // runtime descriptor — the inferred return is strictly more precise
+        // and is always a subtype of the union when inference succeeded.
+        (declaredReturn is InterfaceTypeRef &&
+            declaredReturn.decl.isSpec(AsyncTypes.futureOr)) ||
         (interfaceArgumentsOf(
-              signature.returnType,
+              declaredReturn,
             ).any((arg) => arg.isSpec(CoreTypes.dynamic)) &&
             ctx.typeSystem.asInstanceOf(
                   inferredClosureReturnType!,
-                  nominalDeclOf(signature.returnType),
+                  nominalDeclOf(declaredReturn),
                 ) !=
                 null);
     if (shouldInfer) {
@@ -466,3 +485,4 @@ Variable compileFunctionExpression(
     ),
   );
 }
+

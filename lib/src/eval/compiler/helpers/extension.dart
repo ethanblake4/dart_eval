@@ -399,9 +399,11 @@ BoundExtension boundExtensionFor(
     ];
   } else {
     // `E(c)?.m` applies `on C` to a nullable `C?` receiver; the `?.` guard
-    // (or a later runtime null check) makes that legal.
+    // (or a later runtime null check) makes that legal. Match the receiver
+    // as written first so `on T` binds `T` to `A?`, not `A`.
     final nonNull = receiverType.withNullable(false);
     bindings =
+        matchExtensionOn(ctx, receiverType, ext) ??
         matchExtensionOn(ctx, nonNull, ext) ??
         (throw CompileError(
           'Extension ${ext.name} does not apply to $receiverType',

@@ -14,6 +14,7 @@
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'dart:async';
@@ -179,7 +180,13 @@ class $StreamIterator<T> implements $Instance {
   ) {
     final self = target! as $StreamIterator;
     final result = self.$value.moveNext();
-    return $Future.wrap(result.then((e) => $bool(e)));
+    return $Future.wrap(
+      result.then((e) => $bool(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.bool),
+      ]),
+    );
   }
 
   static const $Function __cancel = $Function(_cancel);

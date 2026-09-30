@@ -404,9 +404,37 @@ final class TypeDeclRegistry {
   final CompilerContext _ctx;
   final _decls = <int, Map<String, TypeDecl>>{};
   final _inProgress = <TypeDecl>{};
+  BridgeTypeDecl? _futureOrDecl;
 
   void register(TypeDecl decl) =>
       _decls.putIfAbsent(decl.library, () => {})[decl.name] = decl;
+
+  /// The synthetic declaration behind `FutureOr<T>` annotations — a union
+  /// `Future<T> | T` that has no real class. Type semantics special-case it;
+  /// the nominal keeps arguments (`FutureOr<S>`) flowing through `TypeRef`
+  /// machinery instead of degrading to `dynamic`.
+  BridgeTypeDecl get futureOr => _futureOrDecl ??= () {
+        final decl = BridgeTypeDecl(
+          _ctx,
+          _ctx.libraryMap['dart:async'] ?? _ctx.library,
+          'dart:async',
+          'FutureOr',
+          classDef: const BridgeClassDef(
+            BridgeClassType(
+              BridgeTypeRef(AsyncTypes.futureOr),
+              generics: {'T': BridgeGenericParam()},
+            ),
+            constructors: {},
+            methods: {},
+            getters: {},
+            setters: {},
+            fields: {},
+            wrap: true,
+          ),
+        );
+        register(decl);
+        return decl;
+      }();
 
   /// The declaration declared in [library] under [name] — the declaring
   /// library only, no visibility. On first use the decl is materialized

@@ -1311,6 +1311,7 @@ class _LoweringSession {
               b._named(['rAwait']),
               value(op.result),
               [value(op.subject)],
+              immediate: op.awaitTypeId,
               clobbers: {0, 1, 2, 3, 4, 6, 7, 8},
             ),
           );

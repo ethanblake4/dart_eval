@@ -747,6 +747,13 @@ class CompilerContext with ScopeContext {
   /// are dynamically callable, so their results must be boxed at the
   /// boundary even when the return type is unboxable for named functions.
   int closureDepth = 0;
+
+  /// Nonzero while compiling a `late` local initializer. The initializer
+  /// runs after the declaration point, so boolean-condition promotions
+  /// recorded earlier (`bool b = x != null; if (b)`) cannot be trusted
+  /// inside it — the condition variable may be reassigned before the
+  /// first read.
+  int lateInitializerDepth = 0;
   int globalIndex = 0;
   String? version;
   String? funcLabel;

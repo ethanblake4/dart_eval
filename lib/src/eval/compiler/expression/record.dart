@@ -35,18 +35,24 @@ Variable compileRecordLiteral(
 
   var positionalFields = 1;
 
-  final boundRecord = bound is RecordTypeRef ? bound : null;
+  // A bound only supplies field contexts when its shape matches the
+  // literal's — `(1, 2)` under a `(int,)` context (e.g. a promoted
+  // variable's type) ignores the context and infers `(int, int)`.
+  final namedCount = l.fields.whereType<RecordLiteralNamedField>().length;
+  final boundRecord = switch (bound) {
+    RecordTypeRef b
+        when b.positional.length == l.fields.length - namedCount &&
+            b.named.length == namedCount &&
+            l.fields.every(
+              (f) =>
+                  f is! RecordLiteralNamedField ||
+                  b.named.containsKey(f.name.lexeme),
+            ) =>
+    b,
+    _ => null,
+  };
   final inferredPositional = <TypeRef>[];
   final inferredNamed = <String, TypeRef>{};
-
-  if (boundRecord != null &&
-      l.fields.length !=
-          boundRecord.positional.length + boundRecord.named.length) {
-    throw CompileError(
-      'Record literal has ${l.fields.length} fields, expected ${boundRecord.positional.length + boundRecord.named.length} from type bound',
-      l,
-    );
-  }
   // Bound record fields list positionals first, then named — while the
   // literal lists them in source order. Named fields match by name;
   // positional fields match by their ordinal among positionals.

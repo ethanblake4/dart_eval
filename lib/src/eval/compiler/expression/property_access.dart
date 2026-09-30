@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/dot_shorthand.dart';
 import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
@@ -24,7 +25,8 @@ Variable compilePropertyAccess(
         );
 
   // `a?.b` and selectors continuing a null-shorted chain (`a?.b.c`): a null
-  // receiver nulls the whole expression.
+  // receiver nulls the whole expression. Only the selector carrying the
+  // `?.` narrows its receiver — continuations see the declared member type.
   if (isNullShortedSelector(pa)) {
     return emitNullGuard(
       ctx,
@@ -34,6 +36,7 @@ Variable compilePropertyAccess(
         pa.propertyName.name,
       ).getValue(ctx, pa, bound),
       source: pa,
+      narrow: pa.operator.type == TokenType.QUESTION_PERIOD,
     );
   }
 

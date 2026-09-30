@@ -108,6 +108,10 @@ enum TestKind {
   /// (`// [cfe]`, `// [analyzer]`, `// [error line N]`, `// ^^^` markers).
   negative,
 
+  /// A runtime test whose expected outcome is an uncaught exception —
+  /// the source carries `//# NN: runtime error` multitest markers.
+  runtimeError,
+
   /// Can't run under dart_eval (unsupported import, missing file, harness
   /// flags). `unsupportedReason` says why.
   unsupported,
@@ -242,6 +246,9 @@ class SdkSuite {
     if (_negativePattern.hasMatch(source)) {
       return SdkTest(relPath, TestKind.negative);
     }
+    if (_runtimeErrorPattern.hasMatch(source)) {
+      return SdkTest(relPath, TestKind.runtimeError);
+    }
     final unsupported = _unsupportedImport(source);
     if (unsupported != null) {
       return SdkTest(relPath, TestKind.unsupported, unsupported);
@@ -253,6 +260,13 @@ class SdkSuite {
   /// `//# NN: compile-time error` annotations.
   static final _negativePattern = RegExp(
     r'//\s*(\[cfe\]|\[analyzer\]|\[error line|\^|#\s*\d+.*compile-time error)',
+  );
+
+  /// Multitest `//# NN: runtime error` annotations — the annotated line is
+  /// ordinary code that still runs in every variant, so the run is expected
+  /// to terminate with an uncaught exception.
+  static final _runtimeErrorPattern = RegExp(
+    r'//\s*#\s*\d+\s*:\s*runtime error',
   );
 
   /// SDK test-harness options dart_eval can't honor.
@@ -461,13 +475,17 @@ Future<TestOutcome> runSdkTestSources(
     }
     final runtime = Runtime(program.write().buffer);
     await executeSdkMain(runtime, test, sources);
-    return TestOutcome.passed;
+    return test.kind == TestKind.runtimeError
+        ? TestOutcome.failed // returned normally but expected to throw
+        : TestOutcome.passed;
   } on CompileError {
     return test.kind == TestKind.negative
         ? TestOutcome.passed
         : TestOutcome.compileError;
   } catch (_) {
-    return TestOutcome.failed;
+    return test.kind == TestKind.runtimeError
+        ? TestOutcome.passed
+        : TestOutcome.failed;
   }
 }
 

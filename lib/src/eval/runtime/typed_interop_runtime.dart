@@ -278,6 +278,12 @@ extension TypedRuntimeInterop on Runtime {
     }
   }
 
+  /// The descriptor row for [type] — `[]` when the id is out of range.
+  List<int> descriptorFor(int type) =>
+      type < 0 || type >= _typeDescriptors.length
+      ? const []
+      : _typeDescriptors[type];
+
   @pragma('vm:never-inline')
   void assertTypedFuturePayload(Object? value, int futureType) {
     if (futureType < 0 || futureType >= _typeDescriptors.length) return;
@@ -293,7 +299,9 @@ extension TypedRuntimeInterop on Runtime {
         payloadNominal == lookupType(CoreTypes.voidType)) {
       return;
     }
-    if (!isTypedValueType(value, payloadType)) throw TypeError();
+    if (!isTypedValueType(value, payloadType)) {
+      throw TypeError();
+    }
   }
 
   /// Returns an already-compiled `Future<R>` descriptor for a typed callback.
@@ -313,16 +321,34 @@ extension TypedRuntimeInterop on Runtime {
     if (returned[0] == lookupType(CoreTypes.future) && returned.length > 2) {
       payloadType = returned[2];
     }
-    final futureNominal = lookupType(CoreTypes.future);
-    for (var index = 0; index < _typeDescriptors.length; index++) {
-      final descriptor = _typeDescriptors[index];
-      if (descriptor.length == 3 &&
-          descriptor[0] == futureNominal &&
-          descriptor[2] == payloadType) {
-        return index;
-      }
+    // Intern rather than scan — `Future<R>` may have no existing descriptor
+    // when the program never spelled it.
+    return internParameterizedType(CoreTypes.future, [payloadType]);
+  }
+
+  /// The declared return-type descriptor of a typed callback, or null for
+  /// raw/dynamic signatures. When [unwrap] names a nominal (e.g. `Iterable`
+  /// for `expand`), its first type argument is returned instead.
+  int? typedCallbackReturnType(Object? callback, {BridgeTypeSpec? unwrap}) {
+    if (callback is! $Value) return null;
+    final callbackType = callback.$getRuntimeType(this);
+    if (callbackType < 0 || callbackType >= _typeDescriptors.length) {
+      return null;
     }
-    return null;
+    final function = _typeDescriptors[callbackType];
+    if (function.length < 4 ||
+        function[2] != RuntimeTypeDescriptorTag.function) {
+      return null;
+    }
+    var result = function[3];
+    if (unwrap != null) {
+      final descriptor = _typeDescriptors[result];
+      if (descriptor.length < 3 || descriptor[0] != lookupType(unwrap)) {
+        return null;
+      }
+      result = descriptor[2];
+    }
+    return result;
   }
 
   /// A record's runtime type is determined by the *runtime* types of its
@@ -407,6 +433,29 @@ extension TypedRuntimeInterop on Runtime {
       (field as $Value?)?.$getRuntimeType(this) ??
       lookupType(CoreTypes.nullType);
 
+  /// The [index]-th argument of a nominal instantiation descriptor, or null
+  /// when [typeId] carries no such argument (raw nominals, params, records).
+  int? runtimeTypeArgumentAt(int typeId, int index) {
+    final descriptor = _typeDescriptors[typeId];
+    final offset = index + 2;
+    return offset < descriptor.length ? descriptor[offset] : null;
+  }
+
+  /// Interns the nominal instantiation `[spec]<[arguments]>` from resolved
+  /// runtime type-ids — for stamping bridged wrappers whose element type is
+  /// recovered from the producing receiver's runtime type.
+  int internParameterizedType(BridgeTypeSpec spec, List<int> arguments) {
+    final nominal = lookupType(spec);
+    return _internResolvedType(
+      [nominal, 0, ...arguments],
+      nominal,
+      null,
+      const [],
+      _TypeResolution(null),
+      const {},
+    );
+  }
+
   @pragma('vm:never-inline')
   bool isTypedValueTypeInClassEnvironment(
     Object? value,
@@ -485,6 +534,12 @@ extension TypedRuntimeInterop on Runtime {
         expectedDescriptor[0] == _objectTypeId) {
       return true;
     }
+    // VM-built host-function adapters carry no signature — accept them
+    // wherever a function type is expected (the host side enforces itself).
+    if (value is TypedHostFunction &&
+        isTypedFunctionTypeDescriptor(expected)) {
+      return true;
+    }
     final actual = (value as $Value).$getRuntimeType(this);
     if (typeArguments.isEmpty) {
       return _isSubtypeMemoized(actual, expected, actualOwnerType);
@@ -506,15 +561,16 @@ extension TypedRuntimeInterop on Runtime {
   }) {
     if (typeArguments.length != bounds.length) throw TypeError();
     for (var index = 0; index < typeArguments.length; index++) {
+      final resolvedBound = typeEnvironment == null
+          ? bounds[index]
+          : resolveTypedEnvironmentType(
+              bounds[index],
+              actualOwnerType: actualOwnerType,
+              typeEnvironment: typeEnvironment,
+            );
       if (!_isTypedDescriptorSubtypeInEnvironment(
         typeArguments[index],
-        typeEnvironment == null
-            ? bounds[index]
-            : resolveTypedEnvironmentType(
-                bounds[index],
-                actualOwnerType: actualOwnerType,
-                typeEnvironment: typeEnvironment,
-              ),
+        resolvedBound,
         actualOwnerType,
         typeArguments,
       )) {
@@ -1042,6 +1098,7 @@ extension TypedRuntimeInterop on Runtime {
     // Object? is a top type even for dynamic and abstract signature bounds,
     // which do not necessarily have an Object entry in their supertype table.
     if (targetNominal == _dynamicTypeId ||
+        targetNominal == _voidTypeId ||
         (targetNominal == _objectTypeId &&
             (target[1] == 1 || nullableExpected))) {
       return true;
@@ -1240,9 +1297,10 @@ extension TypedRuntimeInterop on Runtime {
     final targetOffset = 9 + targetParameters;
     final targetReturnId = resolveSignatureReturn(target[3]);
     final targetReturn = _typeDescriptors[targetReturnId];
-    // In component positions a `void` target accepts any return, and a
-    // `dynamic` return satisfies any target return type. A `void` source
-    // return is NOT permissive: `void Function() <: int Function()` fails.
+    // In component positions a `void` target accepts any return. A `dynamic`
+    // source return satisfies only top-type targets — `dynamic <: MyView`
+    // fails at runtime (`(dynamic) => dynamic is MyView Function(Object)`),
+    // and a `void` source return is likewise not permissive.
     final sourceReturnId = resolveSignatureReturn(source[3]);
     final sourceReturn = _typeDescriptors[sourceReturnId];
     // A type-parameter descriptor carries `dynamic` as its nominal type, but
@@ -1251,14 +1309,16 @@ extension TypedRuntimeInterop on Runtime {
         sourceReturn.length == 6 &&
         sourceReturn[2] == RuntimeTypeDescriptorTag.typeParameter;
     if (targetReturn[0] != _voidTypeId &&
-        (sourceReturn[0] != _dynamicTypeId || sourceIsParameter) &&
-        !_isTypedDescriptorSubtypeInEnvironment(
-          source[3],
-          target[3],
-          actualOwnerType,
-          callableTypeArguments,
-          signatureParameterRenames: renames,
-        )) {
+        (sourceReturn[0] == _dynamicTypeId && !sourceIsParameter
+            ? targetReturn[0] != _dynamicTypeId &&
+                  !(targetReturn[0] == _objectTypeId && targetReturn[1] == 1)
+            : !_isTypedDescriptorSubtypeInEnvironment(
+                source[3],
+                target[3],
+                actualOwnerType,
+                callableTypeArguments,
+                signatureParameterRenames: renames,
+              ))) {
       return false;
     }
     for (var i = 0; i < targetPositional; i++) {

@@ -264,7 +264,7 @@ final class MemberLookup {
     chain = [...chain, marker];
     if (type.isTypeParameter) {
       final bound =
-          (type as TypeParameterTypeRef).parameter.bound ??
+          (type as TypeParameterTypeRef).effectiveBound ??
           CoreTypes.dynamic.ref(ctx);
       return _interfaceMember(
         bound,
@@ -692,7 +692,7 @@ final class MemberLookup {
   }) {
     if (type.isSpec(CoreTypes.dynamic)) return null;
     if (type.isTypeParameter) {
-      final bound = (type as TypeParameterTypeRef).parameter.bound;
+      final bound = (type as TypeParameterTypeRef).effectiveBound;
       if (bound == null) return null;
       return fieldType(
         bound,

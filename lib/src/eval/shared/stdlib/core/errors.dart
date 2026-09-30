@@ -1116,9 +1116,17 @@ class $AssertionError implements AssertionError, $Instance {
 
   /// Wrapper for the [AssertionError.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $AssertionError.wrap(
-      AssertionError((r is $Value ? r : null)?.$reified),
-    );
+    Object? message;
+    if (r is $Value) {
+      // Typed instances may not have a reifiable host value — fall back
+      // to their runtime `toString` for the error message.
+      try {
+        message = r.$reified;
+      } catch (_) {
+        message = r.toString();
+      }
+    }
+    return $AssertionError.wrap(AssertionError(message));
   }
 
   final $Instance _superclass;

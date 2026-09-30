@@ -56,7 +56,11 @@ Variable compileListLiteral(
       ctx.library,
       typeArgs.arguments[0],
     );
+    // An inference-variable bound isn't a constraint — `<int>[]` under
+    // `Iterable<T>` binds `T` to `int` rather than failing the check.
     if (boundType != null &&
+        !boundType.hasInferenceVariables &&
+        !boundType.isTypeParameter &&
         !listSpecifiedType.isAssignableTo(ctx, boundType)) {
       throw CompileError(
         'List of type $listSpecifiedType is not assignable to List of type $boundType',

@@ -90,6 +90,10 @@ Variable compileBinaryExpression(
       TokenType.QUESTION_QUESTION =>
         boundType == null || boundType.isSpec(CoreTypes.voidType)
             ? boundType
+            // A bare type-parameter context is an unbound inference
+            // variable — `_` — which gives the operand no context.
+            : boundType.isTypeParameter
+            ? null
             : boundType.withNullable(true),
       _ => boundType,
     },
@@ -243,15 +247,19 @@ Variable _compileShortCircuit(
         applyConditionPromotions(ctx, left, operator == '&&');
       }
       // `x ?? .y` gives the RHS the join context: the outer bound when it
-      // is informative, else the non-nullable LHS type (a `dynamic` context
-      // defers to the LHS — dart-lang/language#3650). `x && .y`/`||` give
-      // it `bool`.
+      // is informative, else the LHS type T1 itself — an uninformative `_`
+      // context makes J = T1 (dart-lang/language#3650), nullability
+      // included. `dynamic` is a real context — only `_` (null/absent),
+      // `void`, and bare type parameters are uninformative.
+      // `x && .y`/`||` give it `bool`.
       final rightBound = operator == '??'
           ? (boundType != null &&
-                    !boundType.isSpec(CoreTypes.dynamic) &&
-                    !boundType.isSpec(CoreTypes.voidType)
+                    !boundType.isSpec(CoreTypes.voidType) &&
+                    !boundType.isTypeParameter
                 ? boundType
-                : L.type.withNullable(false))
+                : L.type.isSpec(CoreTypes.nullType)
+                ? null
+                : L.type)
           : CoreTypes.bool.ref(ctx);
       var R = compileExpression(right, ctx, rightBound);
       rightType = R.type;

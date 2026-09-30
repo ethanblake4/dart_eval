@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart' show LoadNull;
 
 import 'errors.dart';
+import 'helpers/promotion.dart' show promotionView;
 import 'member/call_signature.dart';
 import 'values/abi.dart';
 
@@ -372,7 +373,7 @@ class Variable {
       final locals = ctx.typeInferenceSaveStates.last.locals;
       final saved = locals[b.frameIndex][b.name];
       if (member == null) {
-        saved?.promote(type);
+        saved?.promote(promotionView(this.type, type));
       } else {
         saved?.promoteMember(member, type);
       }

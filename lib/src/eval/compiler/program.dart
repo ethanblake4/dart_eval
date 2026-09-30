@@ -188,8 +188,14 @@ class Program {
       if (state[id] == 1) return true;
       if (state[id] == 2) return false;
       state[id] = 1;
-      for (final argument in referencedTypes(typeDescriptors[id])) {
-        if (cyclic(argument)) return true;
+      final descriptor = typeDescriptors[id];
+      for (final argument in referencedTypes(descriptor)) {
+        if (cyclic(argument) &&
+            (descriptor.length < 3 ||
+                descriptor[2] !=
+                    RuntimeTypeDescriptorTag.typeParameter)) {
+          return true;
+        }
       }
       state[id] = 2;
       return false;

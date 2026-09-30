@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/assigned_locals.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/break.dart';
@@ -60,6 +61,20 @@ StatementInfo compileSwitchStatement(
       names: ctx.takePendingLabelNames(),
     ),
   );
+  // A `continue L` from a later case re-enters `L:`'s body — writes along
+  // that back edge defeat promotions and recorded conditions at the case
+  // entry, so collect the locals each continuing body assigns.
+  final continueDefeats = <SwitchMember, Set<String>>{};
+  for (final member in s.members) {
+    final targets = continueTargetNames(member.statements);
+    if (targets.isEmpty) continue;
+    final writes = assignedLocalNames(member.statements);
+    for (final labeled in caseLabels.keys) {
+      if (labeled.labels.any((l) => targets.contains(l.name.lexeme))) {
+        continueDefeats.putIfAbsent(labeled, () => {}).addAll(writes);
+      }
+    }
+  }
   final result = _compileSwitchCases(
     ctx,
     switchExpr,
@@ -67,6 +82,7 @@ StatementInfo compileSwitchStatement(
     0,
     expectedReturnType,
     caseLabels,
+    continueDefeats,
     source: s,
   );
 
@@ -98,7 +114,8 @@ StatementInfo _compileSwitchCases(
   int index,
   TypeRef? expectedReturnType,
   Map<SwitchMember, (BasicBlock<Operation>, List<ContextSaveState>,
-      CompilerLabel)> caseLabels, {
+      CompilerLabel)> caseLabels,
+  Map<SwitchMember, Set<String>> continueDefeats, {
   AstNode? source,
 }) {
   if (index >= cases.length) {
@@ -110,7 +127,7 @@ StatementInfo _compileSwitchCases(
 
   // Handle default case
   if (currentCase is SwitchDefault) {
-    _enterLabeledCase(ctx, currentCase, caseLabels);
+    _enterLabeledCase(ctx, currentCase, caseLabels, continueDefeats);
     return _executeSwitchBlock(ctx, currentCase.statements, expectedReturnType);
   }
 
@@ -152,7 +169,7 @@ StatementInfo _compileSwitchCases(
       }
     },
     thenBranch: (ctx, expectedReturnType) {
-      _enterLabeledCase(ctx, currentCase, caseLabels);
+      _enterLabeledCase(ctx, currentCase, caseLabels, continueDefeats);
       // Execute this case and following empty cases (Dart fall-through)
       return _executeMatchingCases(ctx, cases, index, expectedReturnType);
     },
@@ -165,6 +182,7 @@ StatementInfo _compileSwitchCases(
         index + 1,
         expectedReturnType,
         caseLabels,
+        continueDefeats,
       );
     },
     source: source,
@@ -180,6 +198,7 @@ void _enterLabeledCase(
   SwitchMember member,
   Map<SwitchMember, (BasicBlock<Operation>, List<ContextSaveState>,
       CompilerLabel)> caseLabels,
+  Map<SwitchMember, Set<String>> continueDefeats,
 ) {
   final entry = caseLabels[member];
   if (entry == null) return;
@@ -190,6 +209,10 @@ void _enterLabeledCase(
   ctx.builder.link(tail, block);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [block], ctx.builder);
   ctx.mergeBranchState(states);
+  // `continue` edges are compiled after this entry merges — drop
+  // promotions they could have clobbered.
+  final defeated = continueDefeats[member];
+  if (defeated != null) ctx.widenAssignedLocals(defeated);
 }
 
 StatementInfo _executeMatchingCases(

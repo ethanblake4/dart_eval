@@ -525,3 +525,4 @@ Map<String, TypeParameterTypeRef> bridgeClassGenericParameters(
       ),
   };
 }
+

@@ -24,26 +24,15 @@ StatementInfo doAsyncReturn(
     final expected = arguments.isEmpty
         ? CoreTypes.dynamic.ref(ctx)
         : arguments.first;
-    var compatible = boxed.type.isAssignableTo(ctx, expected);
-    if (!compatible &&
-        boxed.type.isAssignableTo(ctx, CoreTypes.future.ref(ctx))) {
-      // A Future payload comes from the `Future` superinterface's argument —
-      // not the class's own type parameters (a `FixedPoint<T>` implements
-      // `Future<FixedPoint<T>>`).
-      final instantiation = ctx.typeSystem.asInstanceOf(
-        boxed.type,
-        ctx.types.bySpec(CoreTypes.future),
+    // Async `return e` accepts `FutureOr<T>` — a `T`, a `Future<T>`, or the
+    // union itself. The FutureOr target decomposes in the assignability
+    // relation, covering the `Future<S>`-payload case the manual
+    // `asInstanceOf` fallback used to handle.
+    final futureOrExpected = ctx.types.futureOr.instantiate([expected]);
+    if (!boxed.type.isAssignableTo(ctx, futureOrExpected)) {
+      throw CompileError(
+        'Cannot return ${boxed.type} (expected: $futureOrExpected)',
       );
-      final arguments = instantiation == null
-          ? const <TypeRef>[]
-          : interfaceArgumentsOf(instantiation);
-      final payload = arguments.isEmpty
-          ? CoreTypes.dynamic.ref(ctx)
-          : arguments.first;
-      compatible = payload.isAssignableTo(ctx, expected);
-    }
-    if (!compatible) {
-      throw CompileError('Cannot return ${boxed.type} (expected: $expected)');
     }
   }
   if (ctx.exceptionDepth == 0) {
@@ -71,23 +60,27 @@ StatementInfo doAsyncReturn(
 
 /// Builds the preamble for an `async` function body: creates the completer,
 /// wraps the body in a catch handler that completes with error, and completes
-/// with `null` if the body falls off the end.
-void setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
+/// with `null` if the body falls off the end. Returns the emitted [BeginAsync]
+/// so callers can backpatch [BeginAsync.runtimeTypeId] once the function's
+/// inferred return type is known.
+BeginAsync setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
   final future = CoreTypes.future.ref(ctx);
   final runtimeType = returnType != null && sameDeclaration(returnType, future)
       ? returnType
       : future.copyWith(arguments: [CoreTypes.dynamic.ref(ctx)]);
+  final begin = BeginAsync(
+    ctx.svar('#completer'),
+    runtimeTypeId: ctx.runtimeTypes.idOf(runtimeType),
+  );
   ctx.setLocal(
     '#completer',
     Variable.ssa(
       ctx,
-      BeginAsync(
-        ctx.svar('#completer'),
-        runtimeTypeId: ctx.runtimeTypes.idOf(runtimeType),
-      ),
+      begin,
       AsyncTypes.completer.ref(ctx),
     ),
   );
+  return begin;
 }
 
 /// Call `Completer.complete` for an async function at the end of its body.

@@ -30,7 +30,10 @@ Future<void> main(List<String> args) {
 
 Future<void> _run(List<String> args) async {
   final suite = await SdkSuite.load();
-  var tests = suite.allTests().where((t) => t.kind == TestKind.runnable);
+  var tests = suite.allTests().where(
+    (t) =>
+        t.kind == TestKind.runnable || t.kind == TestKind.runtimeError,
+  );
   if (args.isNotEmpty) {
     tests = tests.where((t) => args.any((a) => t.relPath.startsWith(a)));
   }
@@ -54,6 +57,17 @@ Future<void> _run(List<String> args) async {
   final details = <String, String>{}; // signature -> one example error
   var passed = 0, skipped = 0;
 
+  final out = File(Platform.environment['DIAG_OUT'] ?? '/tmp/failures.tsv');
+  void writeTsv() {
+    final buf = StringBuffer();
+    for (final e in failures.entries) {
+      for (final p in e.value) {
+        buf.writeln('${e.key}\t$p');
+      }
+    }
+    out.writeAsStringSync(buf.toString());
+  }
+
   for (final t in list) {
     i++;
     if (trace) stderr.writeln('#$i ${t.relPath}');
@@ -73,22 +87,35 @@ Future<void> _run(List<String> args) async {
       final program = compiler.compileSources(sources);
       final runtime = Runtime(program.write().buffer);
       await executeSdkMain(runtime, t, sources);
-      passed++;
+      if (t.kind == TestKind.runtimeError) {
+        throw StateError('returned normally; expected a runtime error');
+      }
+      // An expected failure that passes is itself a suite failure — the
+      // stale entry has to be removed from suite.yaml.
+      if (suite.config.expectedFailure(t.relPath) != null) {
+        failures.putIfAbsent('EXPECT_FAIL_PASSED', () => []).add(t.relPath);
+        details['EXPECT_FAIL_PASSED'] =
+            'listed in expect_fail but now passes';
+        writeTsv();
+      } else {
+        passed++;
+      }
     } catch (e, st) {
+      if (t.kind == TestKind.runtimeError ||
+          suite.config.expectedFailure(t.relPath) != null) {
+        skipped++;
+        continue;
+      }
       final sig = _signature(e, st);
       failures.putIfAbsent(sig, () => []).add(t.relPath);
       details[sig] = '$e\n${st.toString().split('\n').take(4).join('\n')}';
+      // Write incrementally — a guest test can kill the isolate via an
+      // unawaited async error, which would otherwise lose the inventory.
+      writeTsv();
     }
   }
 
-  final out = File(Platform.environment['DIAG_OUT'] ?? '/tmp/failures.tsv');
-  final buf = StringBuffer();
-  for (final e in failures.entries) {
-    for (final p in e.value) {
-      buf.writeln('${e.key}\t$p');
-    }
-  }
-  out.writeAsStringSync(buf.toString());
+  writeTsv();
 
   stdout.writeln(
     'passed=$passed skipped=$skipped failed=${list.length - passed - skipped}',

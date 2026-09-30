@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 
 import '../errors.dart';
 import '../type.dart';
+import '../variable.dart';
 import 'statement.dart';
 import '../values/abi.dart';
 
@@ -42,7 +43,15 @@ void compileVariableDeclarationList(
     final init = li.initializer;
 
     if (init != null) {
-      var res = compileExpression(init, ctx, type);
+      // A `late` initializer evaluates after the declaration — recorded
+      // condition promotions can't apply inside it.
+      if (l.lateKeyword != null) ctx.lateInitializerDepth++;
+      Variable res;
+      try {
+        res = compileExpression(init, ctx, type);
+      } finally {
+        if (l.lateKeyword != null) ctx.lateInitializerDepth--;
+      }
       // The initializer's own type — conversion may widen it to the declared
       // type, but promotion uses the value's type.
       final initType = res.type;

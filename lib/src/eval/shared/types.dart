@@ -163,6 +163,11 @@ class AsyncTypes {
   /// Bridge spec for [Completer].
   static const completer = BridgeTypeSpec('dart:async', 'Completer');
 
+  /// Spec for the `FutureOr<T>` union type. Not a real class — the compiler
+  /// models it with a synthetic declaration so `FutureOr<S>` can flow
+  /// through type machinery while keeping union semantics.
+  static const futureOr = BridgeTypeSpec('dart:async', 'FutureOr');
+
   /// Bridge spec for [EventSink].
   static const eventSink = BridgeTypeSpec('dart:async', 'EventSink');
 

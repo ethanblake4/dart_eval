@@ -4,18 +4,54 @@ import 'dart:async';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_closure.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_host_collections.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'stream_subscription.dart';
 
 /// dart_eval wrapper for [Stream]
 class $Stream implements $Instance {
-  /// Wrap a [Stream] in a [$Stream]
-  $Stream.wrap(this.$value);
+  /// Wrap a [Stream] in a [$Stream]. [runtimeTypeId] (in [runtime]'s table)
+  /// stamps the wrapper's instantiated type — `Stream<int>` from a
+  /// `StreamController<int>.stream` getter, for example.
+  $Stream.wrap(this.$value, {this.runtimeTypeId, this.runtime});
 
   /// Compile-time bridged type reference for [$Stream]
   static const $type = BridgeTypeRef(CoreTypes.stream);
+
+  /// `bool Function(T)` — the predicate annotation shared by `where`,
+  /// `every`, `skipWhile`, `takeWhile`, and the `*Where` members.
+  static const _predicate = BridgeTypeAnnotation(
+    BridgeTypeRef.genericFunction(
+      BridgeFunctionDef(
+        returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        params: [
+          BridgeParameter(
+            'element',
+            BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            false,
+          ),
+        ],
+      ),
+    ),
+  );
+
+  /// `FutureOr<T> Function()` — the `orElse` annotation shared by the
+  /// `*Where` members.
+  static const _orElse = BridgeTypeAnnotation(
+    BridgeTypeRef.genericFunction(
+      BridgeFunctionDef(
+        returns: BridgeTypeAnnotation(
+          BridgeTypeRef(AsyncTypes.futureOr, [
+            BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+          ]),
+        ),
+        params: [],
+      ),
+    ),
+  );
 
   /// Compile-time bridged class declaration for [$Stream]
   static const $declaration = BridgeClassDef(
@@ -152,6 +188,16 @@ class $Stream implements $Instance {
       ),
     },
     methods: {
+      'any': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+            ]),
+          ),
+          params: [BridgeParameter('test', _predicate, false)],
+        ),
+      ),
       'asBroadcastStream': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -177,32 +223,80 @@ class $Stream implements $Instance {
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.stream, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
             ]),
           ),
           params: [
             BridgeParameter(
               'convert',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.stream, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+                      ]),
+                      nullable: true,
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'event',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               false,
             ),
           ],
+          generics: {'S': BridgeGenericParam()},
         ),
       ),
       'asyncMap': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.stream, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
             ]),
           ),
           params: [
             BridgeParameter(
               'convert',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(AsyncTypes.futureOr, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+                      ]),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'event',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               false,
             ),
           ],
+          generics: {'S': BridgeGenericParam()},
+        ),
+      ),
+      'cast': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stream, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
+            ]),
+          ),
+          params: [],
+          generics: {'R': BridgeGenericParam()},
         ),
       ),
       'contains': BridgeMethodDef(
@@ -232,12 +326,50 @@ class $Stream implements $Instance {
             BridgeParameter(
               'equals',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.function),
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'a',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+                      BridgeParameter(
+                        'b',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
                 nullable: true,
               ),
               true,
             ),
           ],
+        ),
+      ),
+      'drain': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'futureValue',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.ref('S'),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          generics: {'S': BridgeGenericParam()},
         ),
       ),
       'elementAt': BridgeMethodDef(
@@ -264,11 +396,7 @@ class $Stream implements $Instance {
             ]),
           ),
           params: [
-            BridgeParameter(
-              'test',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              false,
-            ),
+            BridgeParameter('test', _predicate, false),
           ],
         ),
       ),
@@ -276,16 +404,34 @@ class $Stream implements $Instance {
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.stream, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
             ]),
           ),
           params: [
             BridgeParameter(
               'convert',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.iterable, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+                      ]),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               false,
             ),
           ],
+          generics: {'S': BridgeGenericParam()},
         ),
       ),
       'first': BridgeMethodDef(
@@ -312,16 +458,8 @@ class $Stream implements $Instance {
             ]),
           ),
           params: [
-            BridgeParameter(
-              'test',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              false,
-            ),
-            BridgeParameter(
-              'orElse',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              true,
-            ),
+            BridgeParameter('test', _predicate, false),
+            BridgeParameter('orElse', _orElse, true),
           ],
         ),
       ),
@@ -329,21 +467,40 @@ class $Stream implements $Instance {
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.future, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
             ]),
           ),
           params: [
             BridgeParameter(
               'initialValue',
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
               false,
             ),
             BridgeParameter(
               'combine',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+                    params: [
+                      BridgeParameter(
+                        'previous',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+                        false,
+                      ),
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               false,
             ),
           ],
+          generics: {'S': BridgeGenericParam()},
         ),
       ),
       'forEach': BridgeMethodDef(
@@ -407,16 +564,8 @@ class $Stream implements $Instance {
             ]),
           ),
           params: [
-            BridgeParameter(
-              'test',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              false,
-            ),
-            BridgeParameter(
-              'orElse',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              true,
-            ),
+            BridgeParameter('test', _predicate, false),
+            BridgeParameter('orElse', _orElse, true),
           ],
         ),
       ),
@@ -469,16 +618,30 @@ class $Stream implements $Instance {
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.stream, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
             ]),
           ),
           params: [
             BridgeParameter(
               'convert',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+                    params: [
+                      BridgeParameter(
+                        'event',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               false,
             ),
           ],
+          generics: {'S': BridgeGenericParam()},
         ),
       ),
       'pipe': BridgeMethodDef(
@@ -521,16 +684,8 @@ class $Stream implements $Instance {
             ]),
           ),
           params: [
-            BridgeParameter(
-              'test',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              false,
-            ),
-            BridgeParameter(
-              'orElse',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              true,
-            ),
+            BridgeParameter('test', _predicate, false),
+            BridgeParameter('orElse', _orElse, true),
           ],
         ),
       ),
@@ -558,11 +713,7 @@ class $Stream implements $Instance {
             ]),
           ),
           params: [
-            BridgeParameter(
-              'test',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              false,
-            ),
+            BridgeParameter('test', _predicate, false),
           ],
         ),
       ),
@@ -590,11 +741,7 @@ class $Stream implements $Instance {
             ]),
           ),
           params: [
-            BridgeParameter(
-              'test',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              false,
-            ),
+            BridgeParameter('test', _predicate, false),
           ],
         ),
       ),
@@ -639,6 +786,20 @@ class $Stream implements $Instance {
           ],
         ),
       ),
+      'toSet': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.set, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                ]),
+              ),
+            ]),
+          ),
+          params: [],
+        ),
+      ),
       'transform': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -663,11 +824,7 @@ class $Stream implements $Instance {
             ]),
           ),
           params: [
-            BridgeParameter(
-              'test',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
-              false,
-            ),
+            BridgeParameter('test', _predicate, false),
           ],
         ),
       ),
@@ -779,15 +936,33 @@ class $Stream implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'first':
-        return $Future.wrap($value.first);
+        return $Future.wrap(
+          $value.first,
+          runtime: runtime,
+          runtimeTypeId: _typedFutureId(runtime),
+        );
       case 'last':
-        return $Future.wrap($value.last);
+        return $Future.wrap(
+          $value.last,
+          runtime: runtime,
+          runtimeTypeId: _typedFutureId(runtime),
+        );
       case 'length':
-        return $Future.wrap((() async => $int(await $value.length))());
+        return $Future.wrap(
+          (() async => $int(await $value.length))(),
+          runtime: runtime,
+          runtimeTypeId: _fixedFutureId(runtime, CoreTypes.int),
+        );
       case 'single':
-        return $Future.wrap($value.single);
+        return $Future.wrap(
+          $value.single,
+          runtime: runtime,
+          runtimeTypeId: _typedFutureId(runtime),
+        );
       case 'isBroadcast':
         return $bool($value.isBroadcast);
+      case 'any':
+        return $Closure(__any.func, this);
       case 'asBroadcastStream':
         return $Closure(__asBroadcastStream.func, this);
       case 'asyncExpand':
@@ -831,6 +1006,8 @@ class $Stream implements $Instance {
         return $Closure(__map.func, this);
       case 'toList':
         return $Closure(__toList.func, this);
+      case 'toSet':
+        return $Closure(__toSet.func, this);
       case 'take':
         return $Closure(__take.func, this);
       /*case 'pipe':
@@ -841,11 +1018,44 @@ class $Stream implements $Instance {
         return $Closure(__singleWhere.func, this);
       case 'skip':
         return $Closure(__skip.func, this);
+      case 'skipWhile':
+        return $Closure(__skipWhile.func, this);
+      case 'takeWhile':
+        return $Closure(__takeWhile.func, this);
+      case 'timeout':
+        return $Closure(__timeout.func, this);
       case 'transform':
         return $Closure(__transform.func, this);
+      case 'where':
+        return $Closure(__where.func, this);
+
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
+  }
+
+  static const $Function __any = $Function(_any);
+
+  static $Value _any(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final $Stream $target = target as $Stream;
+    final test = (r as $Value?) as EvalCallable;
+    return $Future.wrap(
+      (() async => $bool(
+        await $target.$value.any(
+          (event) =>
+              test.call(runtime, null, runtime.wrap(event), null, 1)!.$value
+                  as bool,
+        ),
+      ))(),
+      runtime: runtime,
+      runtimeTypeId: $target._fixedFutureId(runtime, CoreTypes.bool),
+    );
   }
 
   static const $Function __asBroadcastStream = $Function(_asBroadcastStream);
@@ -881,6 +1091,8 @@ class $Stream implements $Instance {
               )
             : null,
       ),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(runtime),
     );
   }
 
@@ -908,6 +1120,11 @@ class $Stream implements $Instance {
             ? null
             : TypedInterop.stream(stream, runtime);
       }),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(
+        runtime,
+        runtime.typedCallbackReturnType(convert, unwrap: CoreTypes.stream),
+      ),
     );
   }
 
@@ -926,6 +1143,11 @@ class $Stream implements $Instance {
       $target.$value.asyncMap(
         (event) => convert.call(runtime, null, event, null, 1),
       ),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(
+        runtime,
+        runtime.typedCallbackReturnType(convert, unwrap: CoreTypes.future),
+      ),
     );
   }
 
@@ -939,7 +1161,7 @@ class $Stream implements $Instance {
     Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    return $Stream.wrap($target.$value.cast());
+    return $Stream.wrap($target.$value.cast(), runtime: runtime);
   }
 
   static const $Function __contains = $Function(_contains);
@@ -955,6 +1177,8 @@ class $Stream implements $Instance {
     final needle = (r as $Value?);
     return $Future.wrap(
       (() async => $bool(await $target.$value.contains(needle)))(),
+      runtime: runtime,
+      runtimeTypeId: $target._fixedFutureId(runtime, CoreTypes.bool),
     );
   }
 
@@ -968,7 +1192,11 @@ class $Stream implements $Instance {
     Object? c,
   ) {
     final $Stream $target = target as $Stream;
-    return $Stream.wrap($target.$value.distinct());
+    return $Stream.wrap(
+      $target.$value.distinct(),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(runtime),
+    );
   }
 
   static const $Function __drain = $Function(_drain);
@@ -998,6 +1226,8 @@ class $Stream implements $Instance {
     return $Future.wrap(
       (() async =>
           runtime.wrap(await $target.$value.elementAt(index.$value)))(),
+      runtime: runtime,
+      runtimeTypeId: $target._typedFutureId(runtime),
     );
   }
 
@@ -1016,9 +1246,11 @@ class $Stream implements $Instance {
       (() async => $bool(
         await $target.$value.every(
           (event) =>
-              test.call(runtime, null, runtime.wrap(event), null, 1) as bool,
+              test.call(runtime, null, runtime.wrap(event), null, 1)!.$value as bool,
         ),
       ))(),
+      runtime: runtime,
+      runtimeTypeId: $target._fixedFutureId(runtime, CoreTypes.bool),
     );
   }
 
@@ -1039,6 +1271,11 @@ class $Stream implements $Instance {
             convert.call(runtime, null, runtime.wrap(event), null, 1)
                 as Iterable,
       ),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(
+        runtime,
+        runtime.typedCallbackReturnType(convert, unwrap: CoreTypes.iterable),
+      ),
     );
   }
 
@@ -1055,8 +1292,10 @@ class $Stream implements $Instance {
     final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.firstWhere(
-        (event) => test.call(runtime, null, event, null, 1) as bool,
+        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
       ))(),
+      runtime: runtime,
+      runtimeTypeId: $target._typedFutureId(runtime),
     );
   }
 
@@ -1078,6 +1317,8 @@ class $Stream implements $Instance {
         (previous, element) =>
             combine.call(runtime, null, previous as dynamic, element, 2),
       ))(),
+      runtime: runtime,
+      runtimeTypeId: $target._typedFutureId(runtime),
     );
   }
 
@@ -1114,6 +1355,8 @@ class $Stream implements $Instance {
       $target.$value.handleError((Object error, StackTrace trace) {
         $callError(runtime, onError, error, trace);
       }),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(runtime),
     );
   }
 
@@ -1126,9 +1369,13 @@ class $Stream implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final $target = target!.$value as Stream;
+    final $target = target! as $Stream;
     final separator = (r as $Value?)?.$value ?? "";
-    return $Future.wrap((() async => $String(await $target.join(separator)))());
+    return $Future.wrap(
+      (() async => $String(await $target.$value.join(separator)))(),
+      runtime: runtime,
+      runtimeTypeId: $target._fixedFutureId(runtime, CoreTypes.string),
+    );
   }
 
   static const $Function __lastWhere = $Function(_lastWhere);
@@ -1144,8 +1391,10 @@ class $Stream implements $Instance {
     final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.lastWhere(
-        (event) => test.call(runtime, null, event, null, 1) as bool,
+        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
       ))(),
+      runtime: runtime,
+      runtimeTypeId: $target._typedFutureId(runtime),
     );
   }
 
@@ -1219,11 +1468,57 @@ class $Stream implements $Instance {
     Object? r,
     Object? s,
     Object? c,
-  ) => $Future.wrap(
-    (target as $Stream).$value.toList().then(
-      (values) => runtime.wrap(values, recursive: true),
-    ),
-  );
+  ) {
+    final $target = target as $Stream;
+    final elementT = $target._elementType(runtime);
+    final listId = elementT == null
+        ? null
+        : runtime.internParameterizedType(CoreTypes.list, [elementT]);
+    return $Future.wrap(
+      $target.$value.toList().then(
+        // The host list is List<Object?> — stamp it `List<T>` so a typed
+        // `Future<List<T>>` receiver sees the declared element type.
+        (values) => listId == null
+            ? runtime.wrap(values, recursive: true)
+            : TypedHostCollections.box(
+                values,
+                runtime,
+                runtimeTypeId: listId,
+              ),
+      ),
+      runtime: runtime,
+      runtimeTypeId: $target._typedFutureId(runtime, [CoreTypes.list]),
+    );
+  }
+
+  static const $Function __toSet = $Function(_toSet);
+
+  static $Value _toSet(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final $target = target as $Stream;
+    final elementT = $target._elementType(runtime);
+    final setId = elementT == null
+        ? null
+        : runtime.internParameterizedType(CoreTypes.set, [elementT]);
+    return $Future.wrap(
+      $target.$value.toSet().then(
+        (values) => setId == null
+            ? runtime.wrap(values, recursive: true)
+            : TypedHostCollections.box(
+                values,
+                runtime,
+                runtimeTypeId: setId,
+              ),
+      ),
+      runtime: runtime,
+      runtimeTypeId: $target._typedFutureId(runtime, [CoreTypes.set]),
+    );
+  }
 
   static const $Function __take = $Function(_take);
 
@@ -1233,7 +1528,14 @@ class $Stream implements $Instance {
     Object? r,
     Object? s,
     Object? c,
-  ) => $Stream.wrap((target as $Stream).$value.take((r as $int).$value));
+  ) {
+    final $target = target as $Stream;
+    return $Stream.wrap(
+      $target.$value.take((r as $int).$value),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(runtime),
+    );
+  }
 
   static $Value _map(
     Runtime runtime,
@@ -1248,6 +1550,11 @@ class $Stream implements $Instance {
       $target.$value.map(
         (event) =>
             convert.call(runtime, null, runtime.wrap(event), null, 1) as $Value,
+      ),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(
+        runtime,
+        runtime.typedCallbackReturnType(convert),
       ),
     );
   }
@@ -1276,6 +1583,8 @@ class $Stream implements $Instance {
         (previous, element) =>
             combine.call(runtime, null, previous, element, 2),
       ))(),
+      runtime: runtime,
+      runtimeTypeId: $target._typedFutureId(runtime),
     );
   }
 
@@ -1292,8 +1601,10 @@ class $Stream implements $Instance {
     final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.singleWhere(
-        (event) => test.call(runtime, null, event, null, 1) as bool,
+        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
       ))(),
+      runtime: runtime,
+      runtimeTypeId: $target._typedFutureId(runtime),
     );
   }
 
@@ -1308,7 +1619,89 @@ class $Stream implements $Instance {
   ) {
     final $Stream $target = target as $Stream;
     final count = (r as $Value?) as $int;
-    return $Stream.wrap($target.$value.skip(count.$value));
+    return $Stream.wrap(
+      $target.$value.skip(count.$value),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(runtime),
+    );
+  }
+
+  static const $Function __skipWhile = $Function(_skipWhile);
+
+  static $Value _skipWhile(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final $target = target as $Stream;
+    final test = (r as $Value?) as EvalCallable;
+    return $Stream.wrap(
+      $target.$value.skipWhile(
+        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
+      ),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(runtime),
+    );
+  }
+
+  static const $Function __takeWhile = $Function(_takeWhile);
+
+  static $Value _takeWhile(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final $target = target as $Stream;
+    final test = (r as $Value?) as EvalCallable;
+    return $Stream.wrap(
+      $target.$value.takeWhile(
+        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
+      ),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(runtime),
+    );
+  }
+
+  static const $Function __timeout = $Function(_timeout);
+
+  static $Value _timeout(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final $target = target as $Stream;
+    final timeLimit = (r as $Value).$value as Duration;
+    return $Stream.wrap(
+      $target.$value.timeout(timeLimit),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(runtime),
+    );
+  }
+
+  static const $Function __where = $Function(_where);
+
+  static $Value _where(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final $target = target as $Stream;
+    final test = (r as $Value?) as EvalCallable;
+    return $Stream.wrap(
+      $target.$value.where(
+        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
+      ),
+      runtime: runtime,
+      runtimeTypeId: $target._typedStreamId(runtime),
+    );
   }
 
   static const $Function __transform = $Function(_transform);
@@ -1325,11 +1718,59 @@ class $Stream implements $Instance {
     return $Stream.wrap($target.transform($transformer));
   }
 
+  /// The instantiated type id (in [runtime]'s descriptor table), when the
+  /// producing site knew the stream's element type.
+  final int? runtimeTypeId;
+  final Runtime? runtime;
+
   @override
   get $reified => $value;
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    if (data != null) {
+      return runtime.importRuntimeType(data.runtime, data.$runtimeType);
+    }
+    return runtimeTypeId == null
+        ? runtime.lookupType($type.spec!)
+        : runtime.importRuntimeType(
+            this.runtime ?? runtime,
+            runtimeTypeId!,
+          );
+  }
+
+  /// This stream's `T` viewed through [runtime]'s descriptor table, or null
+  /// when the instantiation is unknown.
+  int? _elementType(Runtime runtime) =>
+      runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0);
+
+  /// The `Future<...>` descriptor for member results built from `T`: an
+  /// empty [wrap] gives `Future<T>`; `[CoreTypes.list]` gives
+  /// `Future<List<T>>`. Null when `T` is unknown — the wrapper then reports
+  /// the erased `Future<dynamic>` type as before.
+  int? _typedFutureId(Runtime runtime, [List<BridgeTypeSpec> wrap = const []]) {
+    var inner = _elementType(runtime);
+    if (inner == null) return null;
+    var resolved = inner;
+    for (final spec in wrap) {
+      resolved = runtime.internParameterizedType(spec, [resolved]);
+    }
+    return runtime.internParameterizedType(CoreTypes.future, [resolved]);
+  }
+
+  /// The `Future<[arg]>` descriptor for fixed-type member results.
+  int _fixedFutureId(Runtime runtime, BridgeTypeSpec arg) => runtime
+      .internParameterizedType(CoreTypes.future, [runtime.lookupType(arg)]);
+
+  /// The `Stream<...>` descriptor for member results: preserves this
+  /// stream's `T`, or uses [elementTypeId] for transforming members.
+  int? _typedStreamId(Runtime runtime, [int? elementTypeId]) {
+    final t = elementTypeId ?? _elementType(runtime);
+    return t == null
+        ? null
+        : runtime.internParameterizedType(CoreTypes.stream, [t]);
+  }
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {}

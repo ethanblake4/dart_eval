@@ -111,6 +111,34 @@ class _LoopAssignedLocalNames extends _AssignedLocalNames {
   });
 }
 
+/// The labels `continue` statements under [nodes] target — a `continue L`
+/// back edge re-enters `L:`'s body, so writes along it defeat the entry's
+/// promotions and recorded conditions.
+Set<String> continueTargetNames(Iterable<AstNode> nodes) {
+  final collector = _ContinueTargetNames();
+  for (final node in nodes) {
+    node.accept(collector);
+  }
+  return collector.names;
+}
+
+class _ContinueTargetNames extends GeneralizingAstVisitor<void> {
+  final Set<String> names = {};
+
+  @override
+  void visitFunctionExpression(FunctionExpression node) {}
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {}
+
+  @override
+  void visitContinueStatement(ContinueStatement node) {
+    final label = node.label;
+    if (label != null) names.add(label.name.lexeme);
+    super.visitContinueStatement(node);
+  }
+}
+
 /// Collects the names of locals an AST subtree assigns to (assignments,
 /// `++`/`--`, `for (x in ...)` on an existing variable). Function bodies are
 /// skipped — they assign through capture cells, not the local binding.

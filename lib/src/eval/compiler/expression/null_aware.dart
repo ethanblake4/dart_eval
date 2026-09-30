@@ -63,6 +63,10 @@ Variable emitNullGuard(
   Variable target,
   Variable Function(Variable target) body, {
   AstNode? source,
+  // `x?.m()` narrows `x` itself inside the guard; a chain continuation
+  // (`x?.y.m()`) instead guards on the *result* of `x?.y`, whose declared
+  // member type (`x.y`'s, which may be nullable) the selector still sees.
+  bool narrow = true,
 }) {
   var out = BuiltinValue().push(ctx).boxIfNeeded(ctx);
   // A `Null`-typed target is statically always null — the branch is dead.
@@ -84,7 +88,9 @@ Variable emitNullGuard(
       // extension resolution (`c1n?.ext` on `extension on C1`) see the
       // non-nullable view.
       final V = body(
-        target.copyWith(type: target.type.withNullable(false)),
+        narrow
+            ? target.copyWith(type: target.type.withNullable(false))
+            : target,
       ).boxIfNeeded(ctx);
       // `x?.m` can yield null only when `x` itself can be null — on a
       // statically non-nullable receiver the result is `m`'s own type, which

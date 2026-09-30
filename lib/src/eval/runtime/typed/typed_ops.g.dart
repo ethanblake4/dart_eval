@@ -684,7 +684,7 @@ abstract final class TypedOp {
     TypedInstruction('rRuntimeType', [6], [6], TypedImmediate.none, true, false, false, 'RuntimeType'),
     TypedInstruction('rCreateClosure', [], [6], TypedImmediate.closureIndex, true, false, false, 'CreateClosure'),
     TypedInstruction('rBeginAsync', [], [6], TypedImmediate.typeId, false, false, false, 'BeginAsync'),
-    TypedInstruction('rAwait', [6], [6], TypedImmediate.none, true, false, false, 'Await'),
+    TypedInstruction('rAwait', [6], [6], TypedImmediate.typeId, true, false, false, 'Await'),
     TypedInstruction('rReturnAsync', [6], [], TypedImmediate.none, false, true, false, 'ReturnAsync'),
     TypedInstruction('returnAsyncNull', [], [], TypedImmediate.none, false, true, false, 'returnAsyncNull'),
     TypedInstruction('eAssertR', [4, 6], [], TypedImmediate.none, true, false, false, 'Assert'),

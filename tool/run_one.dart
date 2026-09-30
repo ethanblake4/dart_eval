@@ -17,8 +17,16 @@ void main(List<String> args) async {
     final program = compiler.compileSources(sources);
     final runtime = Runtime(program.write().buffer);
     await executeSdkMain(runtime, t, sources);
-    print('PASSED');
+    print(
+      t.kind == TestKind.runtimeError
+          ? 'FAILED: expected a runtime error but main returned normally'
+          : 'PASSED',
+    );
   } catch (e, st) {
+    if (t.kind == TestKind.runtimeError) {
+      print('PASSED (expected runtime error: $e)');
+      return;
+    }
     print('ERROR: $e');
     if (e is TypedInstance) {
       // Eval-land exceptions carry their receiver's field values inline —

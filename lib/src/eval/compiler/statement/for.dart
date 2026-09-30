@@ -366,12 +366,18 @@ StatementInfo compileAwaitForLoop(
         final moveNext = CallResolver(
           ctx,
         ).invokeOperator(ctx.lookupLocal(iteratorName)!, 'moveNext', []).result;
+        final awaited = moveNext.boxIfNeeded(ctx);
         return Variable.ssa(
           ctx,
           Await(
             ctx.svar('awaitfor_next'),
             completer.ssa,
-            moveNext.boxIfNeeded(ctx).ssa,
+            awaited.ssa,
+            ctx.runtimeTypes.idOf(
+              ctx.types.bySpec(CoreTypes.future).instantiate([
+                ctx.typeSystem.flatten(awaited.type),
+              ]),
+            ),
           ),
           CoreTypes.bool.ref(ctx),
         );
@@ -401,6 +407,11 @@ StatementInfo compileAwaitForLoop(
           ctx.svar('awaitfor_cancel'),
           ctx.lookupLocal('#completer')!.ssa,
           cancelled.ssa,
+          ctx.runtimeTypes.idOf(
+            ctx.types.bySpec(CoreTypes.future).instantiate([
+              ctx.typeSystem.flatten(cancelled.type),
+            ]),
+          ),
         ),
       );
       return StatementInfo();

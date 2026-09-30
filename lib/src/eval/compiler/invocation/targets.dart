@@ -278,7 +278,7 @@ final class ConstructorCall extends CallTarget {
     }
     var result = ctx.svar('instance');
     if (externalIndex != null) {
-      if (classBridge is BridgeClassDef && !classBridge!.wrap) {
+      if (classBridge is BridgeClassDef) {
         final subclass = BuiltinValue().push(ctx);
         ctx.pushOp(
           BridgeInstantiate(
@@ -286,7 +286,14 @@ final class ConstructorCall extends CallTarget {
             externalIndex!,
             subclass.ssa,
             call.vector(),
-            runtimeTypeId: ctx.runtimeTypes.idOf(staticType),
+            // Wrapped bridge instances (`$Future`, `$Stream`, ...) carry no
+            // type parameters themselves — the attached type-id lets `is`
+            // and argument checks see `Future<int>` over the bare nominal.
+            runtimeTypeId: ctx.runtimeTypes.idOf(
+              classBridge!.wrap && instantiatedType is InterfaceTypeRef
+                  ? instantiatedType
+                  : staticType,
+            ),
           ),
         );
       } else {

@@ -141,15 +141,35 @@ final class LocalBinding {
     // store instead demotes to the declared type; failing both, retain the
     // most specific promotion the new value still conforms to (`x as B;
     // x = C()` keeps `B`, and `x = D()` demotes to the declared type).
+    // Candidates are supertypes of the stored value that stay within the
+    // declared type (a `List<int>` store can't promote through
+    // `List<int?>` when the declared type is `List<Object>`). An exact
+    // match for the stored type wins outright; otherwise the unique
+    // candidate that is a subtype of every other candidate is chosen —
+    // when several qualify (mutual subtypes such as `List<dynamic>` and
+    // `List<Object?>`) or none do, no type-of-interest promotion occurs.
+    final candidates = [
+      for (final type in typesOfInterest)
+        if (stored.type.isAssignableTo(ctx, type, forceAllowDynamic: false) &&
+            type.isAssignableTo(ctx, declaredType, forceAllowDynamic: false))
+          type,
+    ];
     TypeRef? retained;
-    for (final type in typesOfInterest) {
-      if (!stored.type.isAssignableTo(ctx, type, forceAllowDynamic: false)) {
-        continue;
+    for (final type in candidates) {
+      if (type == stored.type) retained = type;
+    }
+    if (retained == null) {
+      var minimalCount = 0;
+      for (final type in candidates) {
+        if (candidates.every(
+          (other) => identical(other, type) ||
+              type.isAssignableTo(ctx, other, forceAllowDynamic: false),
+        )) {
+          minimalCount++;
+          retained = type;
+        }
       }
-      if (retained == null ||
-          type.isAssignableTo(ctx, retained, forceAllowDynamic: false)) {
-        retained = type;
-      }
+      if (minimalCount > 1) retained = null;
     }
     final localType =
         declaredType.isSpec(CoreTypes.dynamic) ||
@@ -287,3 +307,4 @@ final class LocalBinding {
     _current = _current.copyWith(type: type);
   }
 }
+

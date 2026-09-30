@@ -102,10 +102,19 @@ Variable? _implicitCallTearOff(
   if (value.type.nullable) return null;
   // Type parameters coerce against their bound (`context<void Function()>(x)`
   // passes `T` as the target).
-  final effectiveTarget = target.isTypeParameter
+  var effectiveTarget = target.isTypeParameter
       ? ((target as TypeParameterTypeRef).parameter.bound ??
             CoreTypes.dynamic.ref(ctx))
       : target;
+  // A `FutureOr<S>` slot accepts the non-Future member by `.call` tear-off —
+  // `S` is the function-typed branch when the union names one.
+  if (effectiveTarget is InterfaceTypeRef &&
+      effectiveTarget.decl.isSpec(AsyncTypes.futureOr)) {
+    final s = interfaceArgumentsOf(effectiveTarget).isEmpty
+        ? CoreTypes.dynamic.ref(ctx)
+        : interfaceArgumentsOf(effectiveTarget).first;
+    effectiveTarget = s;
+  }
   if (!effectiveTarget.isFunctionLike) {
     return null;
   }
@@ -136,6 +145,13 @@ Variable convertForAssignment(
   String? description,
 }) {
   final conversion = value.type.assignmentConversionTo(ctx, target);
+  // A target still carrying call-site inference placeholders can't reject
+  // the value — the value constrains the placeholder instead (e.g. a
+  // `yield` inside an `expand` callback whose `S` hasn't bound yet).
+  if (conversion == AssignmentConversion.invalid &&
+      target.hasInferenceVariables) {
+    return value;
+  }
   // int → double only applies to integer literals and compile-time constant
   // int expressions — never to an int-typed variable (which is a CE in Dart).
   if (conversion == AssignmentConversion.invalid ||
@@ -220,3 +236,4 @@ Variable convertForAssignment(
     source: source,
   );
 }
+
