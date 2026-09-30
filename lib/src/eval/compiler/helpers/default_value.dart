@@ -11,7 +11,62 @@ import 'package:dart_eval/src/eval/ir/representation.dart';
 import '../builtins.dart';
 import '../context.dart';
 import '../errors.dart';
+import '../member/member.dart' show SourceMember;
 import '../variable.dart';
+import 'redirect_constructor.dart';
+
+/// Compiles a constant default in its lexical scope, including class statics.
+T withDefaultExpressionScope<T>(
+  CompilerContext ctx,
+  int library,
+  Expression expression,
+  T Function() body,
+) {
+  Declaration? owner;
+  for (AstNode? node = expression.parent; node != null; node = node.parent) {
+    if (node is ClassDeclaration ||
+        node is MixinDeclaration ||
+        node is EnumDeclaration ||
+        node is ExtensionDeclaration ||
+        node is ExtensionTypeDeclaration) {
+      owner = node as Declaration;
+      break;
+    }
+  }
+  final previousLibrary = ctx.library;
+  final previousClass = ctx.currentClass;
+  final previousEnclosingLibrary = ctx.enclosingLibrary;
+  final previousExtension = ctx.currentExtension;
+  final previousAnonymousReceiver = ctx.anonymousThisReceiver;
+  final previousDeclaringClass = ctx.memberDeclaringClass;
+  final previousLocals = ctx.locals;
+  final previousTypeScope = ctx.typeScopes.remove(library);
+  ctx
+    ..library = library
+    ..currentClass = owner
+    ..enclosingLibrary = library
+    ..currentExtension = owner is ExtensionDeclaration ? owner : null
+    ..anonymousThisReceiver = null
+    ..memberDeclaringClass = null
+    ..locals = [{}];
+  try {
+    return body();
+  } finally {
+    if (previousTypeScope == null) {
+      ctx.typeScopes.remove(library);
+    } else {
+      ctx.typeScopes[library] = previousTypeScope;
+    }
+    ctx
+      ..library = previousLibrary
+      ..currentClass = previousClass
+      ..enclosingLibrary = previousEnclosingLibrary
+      ..currentExtension = previousExtension
+      ..anonymousThisReceiver = previousAnonymousReceiver
+      ..memberDeclaringClass = previousDeclaringClass
+      ..locals = previousLocals;
+  }
+}
 
 /// Defaults are bound before entering a typed function, including host exports.
 /// Keep their native values separate from language wrappers and register banks.
@@ -83,6 +138,25 @@ Object? evaluateDefaultValue(
           evaluate(condition) as bool ? thenExpression : elseExpression,
         );
       case SimpleIdentifier(:final name):
+        final staticMember = withDefaultExpressionScope(
+          ctx,
+          library,
+          expression,
+          () => ctx.memberLookup.scopedStaticMember(name, forSet: false),
+        );
+        if (staticMember?.$1 case SourceMember member) {
+          final variable = member.sourceDeclaration;
+          if (variable is VariableDeclaration &&
+              variable.isConst &&
+              variable.initializer != null) {
+            return evaluateDefaultValue(
+              ctx,
+              staticMember!.$2,
+              variable.initializer,
+              active,
+            );
+          }
+        }
         final declaration =
             ctx.visibleDeclarations[library]?[name]?.declaration;
         final variable = declaration?.declaration;
@@ -215,43 +289,22 @@ superFormalTarget(
   if (!active.add(constructor)) {
     throw CompileError('Cyclic redirecting factory', constructor);
   }
-  final (typeName, constructorName) = splitConstructorTypeName(
+  final resolved = redirectParameterTarget(
     ctx,
     library,
-    redirect.type,
-    redirect.name?.name,
+    parameter,
+    constructor,
   );
-  final type = ctx.visibleTypes[library]?[typeName];
-  final target = type == null
-      ? null
-      : ctx
-            .topLevelDeclarationsMap[type
-                .file]?['${type.name}.$constructorName']
-            ?.declaration;
-  if (target is! ConstructorDeclaration) return null;
-  final positional = constructor.parameters.parameters
-      .where((p) => p.isPositional)
-      .toList();
-  final targetParameter = parameter.isNamed
-      ? target.parameters.parameters
-            .where((p) => p.isNamed && p.name?.lexeme == parameter.name?.lexeme)
-            .firstOrNull
-      : target.parameters.parameters
-            .where((p) => p.isPositional)
-            .elementAtOrNull(positional.indexOf(parameter));
-  if (targetParameter == null) return null;
+  if (resolved == null) return null;
+  final type = resolved.type;
+  final target = resolved.constructor;
+  final targetParameter = resolved.parameter;
   final expression = targetParameter.defaultClause?.value;
-  if (expression != null) return (expression, type!.file);
+  if (expression != null) return (expression, type.file);
   if (targetParameter is SuperFormalParameter) {
-    return superFormalDefault(ctx, type!.file, targetParameter, target);
+    return superFormalDefault(ctx, type.file, targetParameter, target);
   }
-  return redirectFormalDefault(
-    ctx,
-    type!.file,
-    targetParameter,
-    target,
-    active,
-  );
+  return redirectFormalDefault(ctx, type.file, targetParameter, target, active);
 }
 
 Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
@@ -335,7 +388,12 @@ int _compileDefaultThunk(
         [],
         MachineRepresentation.object,
       );
-      final value = compileExpression(expression, ctx, bound).boxIfNeeded(ctx);
+      final value = withDefaultExpressionScope(
+        ctx,
+        library,
+        expression,
+        () => compileExpression(expression, ctx, bound).boxIfNeeded(ctx),
+      );
       ctx.pushOp(Return(value.ssa));
       ctx.endScope();
       ctx.finishMethod();

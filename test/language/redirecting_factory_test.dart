@@ -123,6 +123,53 @@ int main() {
 ''', 6);
   });
 
+  test('redirect chains use terminal storage for inherited null defaults', () {
+    _run('''
+abstract class First {
+  factory First([int value]) = Second;
+  Object? get value;
+}
+abstract class Second implements First {
+  factory Second([int value]) = Last;
+}
+class Last implements Second {
+  final dynamic value;
+  Last([this.value]);
+}
+int main() {
+  final make = First.new;
+  dynamic dynamicMake = make;
+  var total = 0;
+  if (First().value == null) total++;
+  if (make().value == null) total++;
+  if ((dynamicMake() as First).value == null) total++;
+  return total + First(4).value as int;
+}
+''', 7);
+  });
+
+  test('redirect chains preserve erased intermediate generic slots', () {
+    _run('''
+abstract class First {
+  factory First([int value]) = Second<int>;
+  int get value;
+}
+abstract class Second<T extends int> implements First {
+  factory Second([T value]) = Last<T>;
+}
+class Last<T extends int> implements Second<T> {
+  final int value;
+  Last([this.value = 1]);
+}
+int main() {
+  final make = First.new;
+  dynamic dynamicMake = make;
+  return First().value + make().value +
+      (dynamicMake() as First).value + First(4).value;
+}
+''', 7);
+  });
+
   test('redirected constructors preserve field initializer effect order', () {
     _run('''
 String trace = '';

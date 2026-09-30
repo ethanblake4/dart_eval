@@ -275,3 +275,46 @@ repeats; native-Future awaits and callbacks improve in those longer repeats.
 No material regression is reproduced. Logs: cycle2-frame-final-tests.log,
 cycle2-frame-leaf-repeat.log, cycle2-frame-async-repeat.log,
 cycle2-frame-aot/summary.csv and cycle2-frame-aot/median-changes.csv.
+
+## Second cycle, cleanup pass
+
+Astra medium reviewed the second cycle. Its three findings covered chained
+factory storage, omitted generic defaults, and inherited defaults resolving in
+the caller's class. Redirect parameter lookup is now shared by defaults and
+physical ABI resolution. Storage resolution follows the entire chain, composing
+generic substitutions and preserving erasure at every hop. Omitted arguments
+use the same ABI calculation as supplied arguments.
+
+Default expressions compile in their declaring lexical class and library.
+Scalar evaluation resolves class constants before top-level constants, and
+caller locals, extension/anonymous receiver context, and type parameters are
+isolated and restored. Astra's follow-up identified the generic caller scope
+leak; a concrete class and a caller type parameter with the same name now remain
+separate. Native, fresh-program, and serialized regressions cover each finding.
+No runtime helpers, dispatch instructions, or generated stdlib files change
+in this cleanup. The newly passing method/as_constants_test status is removed.
+
+Final ordinary validation passes 1877 tests with 62 skips. SDK-full has the
+same four unexpected outcomes as before cleanup; the scalar static-default
+regression regress4515170 now passes too, and its stale status is removed and
+verified directly. SDK aggregate: 2266 passed, 139 failed, 295 compile errors.
+The 15 focused factory/default checks pass fresh and serialized. Analysis has
+only the existing path-dependency warning and benchmark import info. Evidence:
+cycle2-cleanup-ordinary-final.log, sdk-full-cycle2-cleanup.log,
+cycle2-cleanup-stale-verified.log and cycle2-cleanup-analyze.log.
+
+A separate native-valid nested-local-constant default remains a pre-existing
+limitation, confirmed against the HEAD thunk implementation and preserved in
+native_default_scope/nested.dart for a later correctness pass.
+
+The final isolated 22-driver AOT sweep matches all 21 execution checksums.
+Longer order-reversed repeats do not reproduce the initial shared-capture
+slowdown; boxed-call results vary by order. Mixed-object calls remain about
+10–28% slower across the two longer comparisons. Their full serialized
+programs are byte-identical before/after cleanup, as are boxed-call and captured
+closure programs, and runtime source is unchanged. An AOT code-generation or
+layout effect is a hypothesis, not an established cause; retain this unresolved
+measurement for the next performance pass. Compiler repeats span 12.5–13.4 ms
+on both hosts with equal bytecode size. Evidence: cycle2-cleanup-aot/summary.csv,
+cycle2-cleanup-aot/median-changes.csv, cycle2-cleanup-repeat-*.log,
+and cycle2-cleanup-bytecode-comparison.log.

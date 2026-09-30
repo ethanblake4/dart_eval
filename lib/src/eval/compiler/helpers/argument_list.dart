@@ -106,22 +106,29 @@ Variable compileOmittedArgument(
   }
   Variable variable;
   if (useExpression) {
-    // The default expression resolves in the declaring library — its private
-    // names aren't visible in the caller's library.
-    final previousLibrary = ctx.library;
-    ctx.library = library;
-    try {
-      variable = compileExpression(defaultExpr!, ctx, type);
-    } finally {
-      ctx.library = previousLibrary;
-    }
+    variable = withDefaultExpressionScope(
+      ctx,
+      library,
+      defaultExpr!,
+      () => compileExpression(defaultExpr, ctx, type),
+    );
   } else {
     if (value is int && type.isSpec(CoreTypes.double)) {
       value = value.toDouble();
     }
     variable = pushDefaultValue(ctx, value);
   }
-  return host is MethodDeclaration || Abi.unboxedAcrossCalls(type).isBoxed
+  final representation = Abi.sourceParameter(
+    ctx,
+    type,
+    parameter.node!,
+    host,
+    kind: host is MethodDeclaration
+        ? CallableKind.method
+        : CallableKind.function,
+    erased: parameter.erased,
+  );
+  return representation.isBoxed
       ? variable.boxIfNeeded(ctx)
       : variable.unboxIfNeeded(ctx);
 }
