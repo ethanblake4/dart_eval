@@ -376,9 +376,13 @@ final class TypeSystem {
 
   /// Default arguments expand acyclic bounds and erase references within a
   /// bound cycle: `X extends Comparable<X>` defaults to `Comparable<dynamic>`.
+  /// Inferred arguments remain fixed; pattern inference closes bound cycles
+  /// with [recursiveDefault] instead of the usual variance-dependent defaults.
   Map<TypeParameterDef, TypeRef> instantiateToBounds(
     List<TypeParameterDef> parameters, {
     TypeRef? aliasType,
+    Map<TypeParameterDef, TypeRef> knownTypes = const {},
+    TypeRef? recursiveDefault,
   }) {
     if (parameters.isEmpty) return const {};
     final variances = aliasType == null
@@ -398,12 +402,13 @@ final class TypeSystem {
       TypeParameterDef target,
       Set<TypeParameterDef> visited,
     ) {
+      if (knownTypes.containsKey(from)) return false;
       if (from == target) return true;
       if (!visited.add(from)) return false;
       return dependencies[from]!.any((next) => reaches(next, target, visited));
     }
 
-    final defaults = <TypeParameterDef, TypeRef>{};
+    final defaults = <TypeParameterDef, TypeRef>{...knownTypes};
     TypeRef resolve(TypeParameterDef parameter) => defaults.putIfAbsent(
       parameter,
       () {
@@ -416,8 +421,10 @@ final class TypeSystem {
           if (reaches(dependency, parameter, {})) {
             final variance = variances[parameter] ?? 1;
             upper[dependency] =
+                recursiveDefault ??
                 (variance == 2 ? CoreTypes.never : CoreTypes.dynamic).ref(_ctx);
             lower[dependency] =
+                recursiveDefault ??
                 (variance == 1 ? CoreTypes.never : CoreTypes.dynamic).ref(_ctx);
           } else {
             upper[dependency] = resolve(dependency);
@@ -815,13 +822,13 @@ final class TypeSystem {
             typeParameters: sa.typeParameters,
             positional: [
               for (var i = 0; i < sa.positional.length; i++)
-                _greatestLowerBound(sa.positional[i], sb.positional[i]),
+                greatestLowerBound(sa.positional[i], sb.positional[i]),
             ],
             requiredPositional: sa.requiredPositional,
             named: {
               for (final entry in sa.named.entries)
                 entry.key: (
-                  type: _greatestLowerBound(
+                  type: greatestLowerBound(
                     entry.value.type,
                     sb.named[entry.key]!.type,
                   ),
@@ -899,11 +906,46 @@ final class TypeSystem {
     return true;
   }
 
-  /// The subtype-either-way greatest lower bound used for function
-  /// parameters; unrelated types fall to `Never`.
-  TypeRef _greatestLowerBound(TypeRef a, TypeRef b) {
+  /// The lower bound used by pattern context schemas and function parameters.
+  /// Function parameters join upwards because their positions are contravariant.
+  TypeRef greatestLowerBound(TypeRef a, TypeRef b) {
+    if (a.isSpec(CoreTypes.dynamic)) return b;
+    if (b.isSpec(CoreTypes.dynamic)) return a;
     if (a.isAssignableTo(_ctx, b, forceAllowDynamic: false)) return a;
     if (b.isAssignableTo(_ctx, a, forceAllowDynamic: false)) return b;
+    if (a is FunctionTypeRef && b is FunctionTypeRef) {
+      final sa = a.signature;
+      final sb = b.signature;
+      if (sa.typeParameters.isEmpty &&
+          sb.typeParameters.isEmpty &&
+          sa.positional.length == sb.positional.length &&
+          sa.requiredPositional == sb.requiredPositional &&
+          sa.named.length == sb.named.length &&
+          sa.named.keys.every(sb.named.containsKey)) {
+        return a.copyWith(
+          nullable: a.nullable && b.nullable,
+          signature: FunctionSignature(
+            positional: [
+              for (var i = 0; i < sa.positional.length; i++)
+                leastUpperBound({sa.positional[i], sb.positional[i]}),
+            ],
+            requiredPositional: sa.requiredPositional,
+            named: {
+              for (final entry in sa.named.entries)
+                entry.key: (
+                  type: leastUpperBound({
+                    entry.value.type,
+                    sb.named[entry.key]!.type,
+                  }),
+                  required:
+                      entry.value.required && sb.named[entry.key]!.required,
+                ),
+            },
+            returnType: greatestLowerBound(sa.returnType, sb.returnType),
+          ),
+        );
+      }
+    }
     return CoreTypes.never.ref(_ctx);
   }
 

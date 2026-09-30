@@ -2,11 +2,13 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import 'package:dart_eval/src/eval/ir/flow.dart';
+import 'package:dart_eval/src/eval/ir/bridge.dart';
 import '../backend/representation.dart';
 import '../builtins.dart';
 import '../context.dart';
 import '../expression/condition.dart';
 import '../expression/expression.dart';
+import '../reference.dart';
 import '../variable.dart';
 import '../type.dart';
 import '../values/abi.dart';
@@ -16,6 +18,64 @@ import 'pattern.dart';
 import 'pattern_bindings.dart';
 import 'pattern_type.dart';
 import 'promotion.dart';
+
+/// Destructuring uses the same short-circuit graph as a case, but a failed
+/// shape or missing key throws instead of selecting another alternative.
+void compileIrrefutablePattern(
+  CompilerContext ctx,
+  DartPattern pattern,
+  Variable subject, {
+  required PatternBindContext patternContext,
+}) {
+  final parent = ctx.builder;
+  final state = ctx.saveState();
+  final failure = BasicBlock<Operation>([], label: ctx.label('pattern_failed'));
+  final matching = _PatternCondition(ctx, state, failure);
+  var value = subject.copyIntoFreshSlot(ctx, 'pattern_value');
+  if (value.type.isSpec(CoreTypes.dynamic)) {
+    value = convertForAssignment(
+      ctx,
+      value,
+      patternTypeBound(ctx, pattern),
+      representation: value.representation,
+      source: pattern,
+    );
+  }
+  patternMatchAndBind(
+    ctx,
+    pattern,
+    value,
+    patternContext: patternContext,
+    continuation: matching,
+  );
+  for (final (pattern, value) in matching.assignments) {
+    IdentifierReference(
+      null,
+      pattern.name.lexeme,
+    ).setValue(ctx, value, pattern);
+  }
+  if (!matching.canFail) return;
+  final success = ctx.saveState();
+  final tail = ctx.flushBlock();
+  ctx.builder = BasicBlockBuilder(ctx.activeGraph, [failure], parent);
+  final message = BuiltinValue(
+    stringval: 'Pattern did not match',
+  ).push(ctx).boxIfNeeded(ctx);
+  final error = Variable.ssa(
+    ctx,
+    InvokeExternal(
+      ctx.svar('pattern_error'),
+      ctx.bridgeStaticFunctionIndices[ctx
+          .libraryMap['dart:core']]!['StateError.']!,
+      [message.ssa],
+    ),
+    CoreTypes.stateError.ref(ctx),
+  );
+  ctx.pushOp(Throw(error.ssa));
+  ctx.flushBlock();
+  ctx.restoreState(success);
+  ctx.builder = BasicBlockBuilder(ctx.activeGraph, [tail], parent);
+}
 
 /// Each failed test goes directly to the next case. Getters, indexes and
 /// guards are emitted only along the edge where earlier tests succeeded.
@@ -103,10 +163,27 @@ final class _PatternCondition implements PatternMatchContinuation {
   final BasicBlock<Operation> whenFalse;
   final BasicBlockBuilder parent;
   final failedStates = <ContextSaveState>[];
+  final assignments = <(AssignedVariablePattern, Variable)>[];
   var canMatch = true;
   var canFail = false;
   @override
   final bool deferCaptures;
+
+  @override
+  void assignVariable(AssignedVariablePattern pattern, Variable value) {
+    final reference = IdentifierReference(null, pattern.name.lexeme);
+    final snapshot = value.copyIntoFreshSlot(ctx, 'pattern_assignment');
+    assignments.add((
+      pattern,
+      convertForAssignment(
+        ctx,
+        snapshot,
+        reference.resolveType(ctx, forSet: true, source: pattern),
+        representation: snapshot.representation,
+        source: pattern,
+      ),
+    ));
+  }
 
   @override
   void requireMatch(Variable condition) {

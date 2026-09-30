@@ -195,6 +195,10 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       _declare(node.name.lexeme, node);
 
   @override
+  void visitAssignedVariablePattern(AssignedVariablePattern node) =>
+      _use(node.name.lexeme, setter: true);
+
+  @override
   void visitGuardedPattern(GuardedPattern node) {
     _pattern(node.pattern);
     node.whenClause?.expression.accept(this);

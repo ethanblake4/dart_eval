@@ -15,7 +15,10 @@ import '../values/abi.dart';
 import '../invocation/accessors.dart';
 import '../invocation/resolver.dart';
 import 'pattern_type.dart';
-import '../macros/branch.dart' show compileNonNullCondition;
+import 'object_pattern_type.dart';
+import '../macros/branch.dart' show compileNonNullCondition, macroBranch;
+import '../statement/statement.dart';
+import 'conversion.dart';
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
@@ -28,6 +31,7 @@ abstract interface class PatternMatchContinuation {
     PatternBindContext patternContext,
   );
   bool get deferCaptures;
+  void assignVariable(AssignedVariablePattern pattern, Variable value);
 }
 
 /// The names a pattern binds — [declared] selects declared variables (fresh
@@ -49,6 +53,14 @@ Iterable<String> patternBoundNames(
     case ListPattern pat:
       yield* pat.elements.expand(
         (e) => patternBoundNames(e, declared: declared),
+      );
+    case RestPatternElement(:final pattern):
+      if (pattern != null) {
+        yield* patternBoundNames(pattern, declared: declared);
+      }
+    case MapPattern pat:
+      yield* pat.elements.whereType<MapPatternEntry>().expand(
+        (entry) => patternBoundNames(entry.value, declared: declared),
       );
     case ParenthesizedPattern pat:
       yield* patternBoundNames(pat.pattern, declared: declared);
@@ -95,25 +107,37 @@ TypeRef patternTypeBound(
         );
       }
 
-      for (final element in pat.elements) {
-        final elementType = patternTypeBound(
-          ctx,
-          element,
-          source: source,
-          bound: specifiedTypeArg,
-        );
-        if (specifiedTypeArg != null &&
-            !elementType.isAssignableTo(ctx, specifiedTypeArg)) {
-          throw CompileError(
-            'List pattern element type $elementType is not assignable to $specifiedTypeArg',
-            source,
+      var elementType = specifiedTypeArg ?? CoreTypes.dynamic.ref(ctx);
+      if (specifiedTypeArg == null) {
+        for (final element in pat.elements) {
+          TypeRef? constraint;
+          if (element is RestPatternElement) {
+            if (element.pattern != null) {
+              final rest = patternTypeBound(
+                ctx,
+                element.pattern!,
+                source: source,
+              );
+              final iterable = ctx.typeSystem.asInstanceOf(
+                rest,
+                ctx.types.bySpec(CoreTypes.iterable),
+              );
+              if (iterable != null &&
+                  interfaceArgumentsOf(iterable).isNotEmpty) {
+                constraint = interfaceArgumentsOf(iterable).first;
+              }
+            }
+          } else {
+            constraint = patternTypeBound(ctx, element, source: source);
+          }
+          if (constraint == null) continue;
+          elementType = ctx.typeSystem.greatestLowerBound(
+            elementType,
+            constraint,
           );
         }
       }
-
-      final result = CoreTypes.list
-          .ref(ctx)
-          .copyWith(arguments: [?specifiedTypeArg]);
+      final result = CoreTypes.list.ref(ctx).copyWith(arguments: [elementType]);
       if (bound != null && !result.isAssignableTo(ctx, bound)) {
         throw CompileError(
           'List pattern type $result is not assignable to bound type $bound',
@@ -121,6 +145,28 @@ TypeRef patternTypeBound(
         );
       }
       return result;
+    case RestPatternElement(:final pattern):
+      return pattern == null
+          ? bound ?? CoreTypes.dynamic.ref(ctx)
+          : patternTypeBound(ctx, pattern, source: source, bound: bound);
+    case MapPattern pat:
+      if (pat.typeArguments != null &&
+          pat.typeArguments!.arguments.length != 2) {
+        throw CompileError('Map patterns require two type arguments', source);
+      }
+      final explicit = mapPatternType(ctx, pat);
+      var valueType = interfaceArgumentsOf(explicit)[1];
+      if (pat.typeArguments == null) {
+        for (final entry in pat.elements.whereType<MapPatternEntry>()) {
+          valueType = ctx.typeSystem.greatestLowerBound(
+            valueType,
+            patternTypeBound(ctx, entry.value, source: source),
+          );
+        }
+      }
+      return explicit.copyWith(
+        arguments: [interfaceArgumentsOf(explicit)[0], valueType],
+      );
     case RecordPattern pat:
       final positional = <TypeRef>[];
       final named = <String, TypeRef>{};
@@ -154,8 +200,23 @@ TypeRef patternTypeBound(
       ).resolveType(ctx, forSet: true, source: source);
     case ParenthesizedPattern pat:
       return patternTypeBound(ctx, pat.pattern, source: source, bound: bound);
+    case LogicalAndPattern pat:
+      return ctx.typeSystem.greatestLowerBound(
+        patternTypeBound(ctx, pat.leftOperand, source: source),
+        patternTypeBound(ctx, pat.rightOperand, source: source),
+      );
+    case NullAssertPattern pat:
+      return patternTypeBound(
+        ctx,
+        pat.pattern,
+        source: source,
+      ).withNullable(true);
+    case CastPattern():
+      return CoreTypes.dynamic.ref(ctx);
     case ObjectPattern pat:
-      final type = TypeRef.fromAnnotation(ctx, ctx.library, pat.type);
+      final type = bound == null
+          ? objectPatternContextType(ctx, pat.type)
+          : objectPatternType(ctx, pat.type, bound);
       if (bound != null && !type.isAssignableTo(ctx, bound)) {
         throw CompileError(
           'Object pattern type $type is not assignable to bound type $bound',
@@ -221,7 +282,9 @@ Variable _matchPattern(
     case RecordPattern pat:
       if (requireMatch != null) {
         final shape = recordPatternShape(ctx, pat);
-        requireMatch(_typeTestType(ctx, shape, V));
+        requireMatch(
+          _typeTestType(ctx, shape, V, patternContext: patternContext),
+        );
         V = V.withType(
           V.type is RecordTypeRef &&
                   V.type
@@ -252,55 +315,16 @@ Variable _matchPattern(
       }
       return result ?? BuiltinValue(boolval: true).push(ctx);
     case ListPattern pat:
-      if (requireMatch != null) {
-        final listType = listPatternType(ctx, pat);
-        requireMatch(_typeTestType(ctx, listType, V));
-        final matchedType = matchedPatternType(ctx, pat, V.type);
-        V = V.withType(
-          matchedType.isAssignableTo(ctx, listType, forceAllowDynamic: false)
-              ? matchedType
-              : listType,
-        );
-        if (pat.elements.any((element) => element is RestPatternElement)) {
-          throw CompileError('Rest list patterns are not supported', pat);
-        }
-        final length = GetTarget.read(ctx, V, 'length');
-        requireMatch(
-          CallResolver(ctx).invokeOperator(length, '==', [
-            BuiltinValue(intval: pat.elements.length).push(ctx),
-          ]).result,
-        );
+      return _matchListPattern(ctx, pat, V, patternContext, continuation);
+    case MapPattern pat:
+      return _matchMapPattern(ctx, pat, V, patternContext, continuation);
+    case AssignedVariablePattern pat:
+      if (continuation != null) {
+        continuation.assignVariable(pat, V);
+      } else {
+        IdentifierReference(null, pat.name.lexeme).setValue(ctx, V, pat);
       }
-      if (pat.elements.isEmpty) {
-        return BuiltinValue(boolval: true).push(ctx);
-      }
-      Variable? result;
-      for (var i = 0; i < pat.elements.length; i++) {
-        final element = pat.elements[i];
-        final listEl = IndexedReference(
-          V,
-          BuiltinValue(intval: i).push(ctx),
-        ).getValue(ctx);
-        final elementResult = patternMatchAndBind(
-          ctx,
-          element,
-          listEl,
-          patternContext: patternContext,
-          continuation: continuation,
-        );
-        if (result == null || requireMatch != null) {
-          result = elementResult;
-        } else {
-          result = CallResolver(
-            ctx,
-          ).invokeOperator(result, '&&', [elementResult]).result;
-        }
-      }
-      return result ??
-          (throw CompileError(
-            'List pattern matching failed, no elements matched',
-            pattern,
-          ));
+      return BuiltinValue(boolval: true).push(ctx);
     case VariablePattern pat:
       final variableName = pat.name.lexeme;
       final declare =
@@ -329,6 +353,21 @@ Variable _matchPattern(
       final bindingType = pat is DeclaredVariablePattern && pat.type != null
           ? TypeRef.fromAnnotation(ctx, ctx.library, pat.type!)
           : V.type;
+      if (pat is DeclaredVariablePattern &&
+          pat.type != null &&
+          requireMatch != null) {
+        requireMatch(_typeTest(ctx, pat.type, V));
+        V = V.withType(matchedPatternType(ctx, pat, V.type));
+      }
+      if (patternContext != PatternBindContext.matching) {
+        V = convertForAssignment(
+          ctx,
+          V,
+          bindingType,
+          representation: Abi.storageSlot(bindingType).bank,
+          source: pat,
+        );
+      }
       final currentType =
           bindingType.nullable &&
               !V.type.nullable &&
@@ -399,11 +438,16 @@ Variable _matchPattern(
       if (requireMatch != null) return right;
       return CallResolver(ctx).invokeOperator(left, '&&', [right]).result;
     case ObjectPattern pat:
-      var result = _typeTest(ctx, pat.type, V);
+      final matchedType = objectPatternType(ctx, pat.type, V.type);
+      var result = _typeTestType(
+        ctx,
+        matchedType,
+        V,
+        patternContext: patternContext,
+      );
       requireMatch?.call(result);
       // A tested interface can expose getters absent from the original
       // static class, even when neither type is a subtype of the other.
-      final matchedType = TypeRef.fromAnnotation(ctx, ctx.library, pat.type);
       final matchedValue = V.copyWith(type: matchedType);
       for (final field in pat.fields) {
         // `(:var x)` shorthand: the getter name is the pattern's own name.
@@ -491,6 +535,210 @@ Variable _matchPattern(
   }
 }
 
+Variable _matchListPattern(
+  CompilerContext ctx,
+  ListPattern pattern,
+  Variable value,
+  PatternBindContext patternContext,
+  PatternMatchContinuation? continuation,
+) {
+  final requiredContext =
+      patternContext != PatternBindContext.matching &&
+          value.type.isSpec(CoreTypes.dynamic)
+      ? patternTypeBound(ctx, pattern)
+      : value.type;
+  final listType = listPatternType(ctx, pattern, requiredContext);
+  final typeTest = _typeTestType(
+    ctx,
+    listType,
+    value,
+    patternContext: patternContext,
+  );
+  continuation?.requireMatch(typeTest);
+  final matchedType = matchedPatternType(ctx, pattern, value.type);
+  value = value.withType(
+    matchedType.isAssignableTo(ctx, listType, forceAllowDynamic: false)
+        ? matchedType
+        : listType,
+  );
+  final restIndex = pattern.elements.indexWhere((e) => e is RestPatternElement);
+  if (restIndex >= 0 &&
+      pattern.elements
+          .skip(restIndex + 1)
+          .any((e) => e is RestPatternElement)) {
+    throw CompileError(
+      'List patterns may contain only one rest element',
+      pattern,
+    );
+  }
+  final fixedCount = pattern.elements.length - (restIndex < 0 ? 0 : 1);
+  final tailCount = restIndex < 0 ? 0 : fixedCount - restIndex;
+  Variable? length;
+  if (restIndex < 0 || fixedCount > 0) {
+    length = GetTarget.read(ctx, value, 'length');
+    continuation?.requireMatch(
+      CallResolver(ctx).invokeOperator(length, restIndex < 0 ? '==' : '>=', [
+        BuiltinValue(intval: fixedCount).push(ctx),
+      ]).result,
+    );
+  }
+  Variable? result;
+  for (var i = 0; i < pattern.elements.length; i++) {
+    final element = pattern.elements[i];
+    ListPatternElement inner = element;
+    Variable input;
+    if (element is RestPatternElement) {
+      final rest = element.pattern;
+      if (rest == null || rest is WildcardPattern && rest.type == null) {
+        continue;
+      }
+      inner = rest;
+      input = CallResolver(ctx).invokeOperator(value, 'sublist', [
+        BuiltinValue(intval: restIndex).push(ctx),
+        if (tailCount > 0)
+          CallResolver(ctx).invokeOperator(length!, '-', [
+            BuiltinValue(intval: tailCount).push(ctx),
+          ]).result,
+      ]).result;
+    } else {
+      if (element is WildcardPattern && element.type == null) continue;
+      final index = restIndex >= 0 && i > restIndex
+          ? CallResolver(ctx).invokeOperator(length!, '-', [
+              BuiltinValue(intval: pattern.elements.length - i).push(ctx),
+            ]).result
+          : BuiltinValue(intval: i).push(ctx);
+      input = nominalDeclOf(value.type) is SourceTypeDecl
+          ? CallResolver(ctx).invokeOperator(value, '[]', [index]).result
+          : IndexedReference(value, index).getValue(ctx);
+    }
+    final matched = patternMatchAndBind(
+      ctx,
+      inner,
+      input,
+      patternContext: patternContext,
+      continuation: continuation,
+    );
+    result = result == null || continuation != null
+        ? matched
+        : CallResolver(ctx).invokeOperator(result, '&&', [matched]).result;
+  }
+  return result ?? BuiltinValue(boolval: true).push(ctx);
+}
+
+Variable _matchMapPattern(
+  CompilerContext ctx,
+  MapPattern pattern,
+  Variable subject,
+  PatternBindContext patternContext,
+  PatternMatchContinuation? continuation,
+) {
+  if (pattern.elements.isEmpty ||
+      pattern.elements.any((entry) => entry is! MapPatternEntry)) {
+    throw CompileError('Map patterns require key/value entries', pattern);
+  }
+  final requiredContext =
+      patternContext != PatternBindContext.matching &&
+          subject.type.isSpec(CoreTypes.dynamic)
+      ? patternTypeBound(ctx, pattern)
+      : subject.type;
+  final mapType = mapPatternType(ctx, pattern, requiredContext);
+  var result = _typeTestType(
+    ctx,
+    mapType,
+    subject,
+    patternContext: patternContext,
+  );
+  continuation?.requireMatch(result);
+  final map = subject.withType(mapType);
+  final arguments = interfaceArgumentsOf(mapType);
+  final valueType = arguments[1];
+  final knownNullable =
+      valueType.nullable ||
+      valueType.isSpec(CoreTypes.dynamic) ||
+      valueType.isSpec(CoreTypes.nullType) ||
+      valueType.isSpec(CoreTypes.voidType);
+  final nonNullable =
+      !knownNullable &&
+      valueType.isAssignableTo(
+        ctx,
+        CoreTypes.object.ref(ctx),
+        forceAllowDynamic: false,
+      );
+  // A free type parameter can be nullable at runtime. Share its test across
+  // entries; ordinary nullable and nonnullable values need no such test.
+  final nullAllowed = knownNullable || nonNullable
+      ? null
+      : _typeTestType(ctx, valueType, BuiltinValue().push(ctx));
+  for (final entry in pattern.elements.cast<MapPatternEntry>()) {
+    final key = compileExpression(entry.key, ctx, arguments[0]);
+    final value = IndexedReference(map, key).getValue(ctx);
+    final present = _mapEntryPresent(
+      ctx,
+      map,
+      key,
+      value,
+      nonNullable,
+      nullAllowed,
+    );
+    continuation?.requireMatch(present);
+    final matched = patternMatchAndBind(
+      ctx,
+      entry.value,
+      value.withType(valueType),
+      patternContext: patternContext,
+      continuation: continuation,
+    );
+    result = continuation != null
+        ? matched
+        : CallResolver(ctx).invokeOperator(present, '&&', [matched]).result;
+  }
+  return result;
+}
+
+Variable _mapEntryPresent(
+  CompilerContext ctx,
+  Variable map,
+  Variable key,
+  Variable value,
+  bool nonNullable,
+  Variable? nullAllowed,
+) {
+  final nonNull = compileNonNullCondition(ctx, value);
+  if (nonNullable) return nonNull;
+  final result = ctx.svar('map_key_present');
+  StatementInfo contains(CompilerContext ctx, TypeRef? _) {
+    CallResolver(ctx)
+        .invokeOperator(map, 'containsKey', [key])
+        .result
+        .toRep(ctx, ValueRep.bool, into: result);
+    return StatementInfo();
+  }
+
+  macroBranch(
+    ctx,
+    null,
+    condition: (_) => nonNull,
+    thenBranch: (ctx, _) {
+      BuiltinValue(boolval: true).push(ctx, result);
+      return StatementInfo();
+    },
+    elseBranch: (ctx, _) {
+      if (nullAllowed == null) return contains(ctx, null);
+      return macroBranch(
+        ctx,
+        null,
+        condition: (_) => nullAllowed,
+        thenBranch: contains,
+        elseBranch: (ctx, _) {
+          BuiltinValue(boolval: false).push(ctx, result);
+          return StatementInfo();
+        },
+      );
+    },
+  );
+  return Variable.of(ctx, result, CoreTypes.bool.ref(ctx), rep: ValueRep.bool);
+}
+
 String? _shorthandPatternName(DartPattern pattern) => switch (pattern) {
   VariablePattern(:final name) => name.lexeme,
   NullCheckPattern(:final pattern) ||
@@ -499,14 +747,24 @@ String? _shorthandPatternName(DartPattern pattern) => switch (pattern) {
   _ => null,
 };
 
-Variable _typeTest(CompilerContext ctx, TypeAnnotation? patType, Variable V) {
+Variable _typeTest(
+  CompilerContext ctx,
+  TypeAnnotation? patType,
+  Variable V, {
+  PatternBindContext patternContext = PatternBindContext.matching,
+}) {
   if (patType == null) return BuiltinValue(boolval: true).push(ctx);
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, patType);
   V.inferType(ctx, slot);
-  return _typeTestType(ctx, slot, V);
+  return _typeTestType(ctx, slot, V, patternContext: patternContext);
 }
 
-Variable _typeTestType(CompilerContext ctx, TypeRef slot, Variable V) {
+Variable _typeTestType(
+  CompilerContext ctx,
+  TypeRef slot,
+  Variable V, {
+  PatternBindContext patternContext = PatternBindContext.matching,
+}) {
   if (V.type.isAssignableTo(ctx, slot, forceAllowDynamic: false)) {
     return BuiltinValue(boolval: true).push(ctx);
   }
@@ -514,6 +772,10 @@ Variable _typeTestType(CompilerContext ctx, TypeRef slot, Variable V) {
   // IsType takes an object operand; box into a fresh slot so V's own SSA
   // keeps its (possibly unboxed) representation for other uses.
   final operand = V.boxed ? V : V.boxIntoFreshSlot(ctx);
+  if (patternContext != PatternBindContext.matching) {
+    ctx.pushOp(AssertType(operand.ssa, ctx.runtimeTypes.idOf(slot)));
+    return BuiltinValue(boolval: true).push(ctx);
+  }
   return Variable.ssa(
     ctx,
     IsType(

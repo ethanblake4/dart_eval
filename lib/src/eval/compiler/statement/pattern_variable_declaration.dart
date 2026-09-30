@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
@@ -22,7 +23,7 @@ void compilePatternVariableDeclaration(
 ) {
   final bound = patternTypeBound(ctx, dec.pattern, source: dec);
   final result = compileExpression(dec.expression, ctx, bound);
-  patternMatchAndBind(
+  compileIrrefutablePattern(
     ctx,
     dec.pattern,
     result,

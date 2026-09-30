@@ -643,3 +643,53 @@ cycle3-cleanup-sdk-full.log, cycle3-cleanup-final-aot-build.log,
 cycle3-cleanup-final-aot-run.log, cycle3-cleanup-final-aot/summary.csv and
 cycle3-cleanup-outlier-abba.log. The sibling control_flow_graph remains clean
 at a0c339a.
+
+## Fourth cycle, first correctness pass
+
+Map patterns now test their required Map type, then evaluate entries in source
+order. A lookup precedes the nullable-value presence check; missing keys refute
+the pattern, present nulls remain valid for nullable value types, and extra
+keys are accepted. Nonnullable values need only the lookup. A free generic
+value parameter shares its nullability test across entries. Failed earlier
+subpatterns skip later key lookups, and map patterns never read length.
+
+List patterns support prefix, matching rest and suffix elements. Plain rest
+and untyped wildcards avoid unnecessary member calls. Only-rest patterns skip
+length; other rest patterns check minimum length and calculate suffix indexes
+from that length. Statically known source List implementations use their own
+index operator. Pattern context schemas combine element constraints, including
+Iterable rest bindings and contravariant function parameters.
+
+Omitted object-pattern arguments use the existing unifier followed by seeded
+instantiate-to-bounds. The inference keeps lexical parameter identities,
+dependent bounds and aliases, and closes unfilled recursive bounds with
+Object?. Explicit arguments determine getter types independently of whether
+the tested interface can promote the subject.
+
+Irrefutable declarations and assignments reuse the existing short-circuit
+pattern graph. Shape and presence failures throw StateError. Assignments check
+all extracted values before storing any target, including captured locals.
+The former whole-pattern assignment check confused a context schema with the
+required subject type and rejected valid statically typed dynamic collections;
+validation now happens during destructuring. Dynamic subjects retain contextual
+collection checks. These changes use existing runtime instructions and bindings.
+
+All ten new witnesses pass natively with assertions enabled and in fresh
+and serialized evaluated runtimes. Eleven focused checks, including the existing
+nullable OR regression, pass. Focused analysis reports no issues. Native
+comparisons cover failed-assignment atomicity and distinguish contextual dynamic
+casts from element pattern failures. A typed-variable check retains the earlier
+non-null proof when the declaration annotation is nullable.
+
+Final ordinary validation passes 1928 tests with 62 skips. Full analysis retains
+only the existing dependency warning and benchmark import info; diff checks
+pass. Nine stale SDK expectations are removed after assertion-enabled fresh
+and serialized checks. SDK-full then passes all 2700 harness checks with 362
+skips and no unexpected outcomes. Actual outcomes improve from 2297 passed,
+270 compile errors and 133 failures to 2306 passed, 259 compile errors and 135
+failures. Eleven fixtures move beyond their previous compiler error, nine of
+them passing completely. Logs: cycle4-pass1-focused-final.log,
+cycle4-pass1-final-ordinary.log, cycle4-pass1-final-analyze.log,
+cycle4-pass1-final-sdk-full-verified.log and
+cycle4-pass1-dual-sdk-stale-probes.log. MapBase inheritance, switch-statement
+subject promotion and unknown guest List indexing remain separate follow-ups.
