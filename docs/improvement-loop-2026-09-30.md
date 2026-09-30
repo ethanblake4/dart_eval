@@ -611,3 +611,35 @@ The large slowdown flags do not reproduce. Final evidence is in
 cycle3-final-ordinary.log, cycle3-final-sdk-full.log, cycle3-final-analyze.log,
 cycle3-performance-final-aot/summary.csv and cycle3-aot-outlier-abba.log.
 The final member-environment witness also passes natively with assertions enabled.
+
+## Third cycle, cleanup pass
+
+The requested Astra medium review identified a list-pattern refutation bug:
+matching a subject of an unrelated static class could reuse that static type
+as the runtime test and accept a zero-valued length getter. List patterns now
+test their actual List type before any access. Successful accesses retain a
+more specific subject type only when it is assignable to the tested List type.
+The regression verifies rejection and that the unrelated getter is never read;
+native and fresh/serialized witnesses all return zero. No runtime instructions
+change in this fix.
+
+Capture analysis and OR joins now share one small AST-only pattern-declaration
+traversal. The join helper retains its BasicBlock<Operation> type, and the plain
+call comment describes owner metadata precisely. Astra's follow-up source review
+finds no remaining concerns in the cleanup patch. The focused group passes 85
+checks; full ordinary validation passes 1918 tests with 62 skips. Full analysis
+retains the two existing non-error diagnostics; generator and diff checks pass.
+Evidence: cycle3-cleanup-focused.log, cycle3-cleanup-ordinary.log,
+cycle3-cleanup-analyze.log, zero_length_native.log and zero_length_eval.log.
+
+SDK-full remains harness-clean at 2700 checks and 362 skips, with actual
+outcomes 2297 passed, 133 failed and 270 compile errors; no expectations become
+stale. The final cleanup AOT sweep completes all 22 drivers and matches all 21
+execution checksums against the preceding performance checkpoint. Compile code
+size is unchanged at 1224 bytes. Larger reverse-order repeats resolve the
+bound-callback timing spike: about 1% faster; alternating dynamic calls differ
+by about 1.4%. The runtime edit is a documentation-only clarification. Logs:
+cycle3-cleanup-sdk-full.log, cycle3-cleanup-final-aot-build.log,
+cycle3-cleanup-final-aot-run.log, cycle3-cleanup-final-aot/summary.csv and
+cycle3-cleanup-outlier-abba.log. The sibling control_flow_graph remains clean
+at a0c339a.

@@ -13,6 +13,7 @@ import '../values/abi.dart';
 import 'assigned_locals.dart';
 import 'conversion.dart';
 import 'pattern.dart';
+import 'pattern_bindings.dart';
 import 'pattern_type.dart';
 import 'promotion.dart';
 
@@ -175,9 +176,8 @@ final class _PatternCondition implements PatternMatchContinuation {
     final rightState = ctx.saveState();
     final rightTail = ctx.flushBlock();
     final declarations = {
-      for (final declaration in _declarations(pattern.leftOperand))
-        if (declaration.name.lexeme != '_')
-          declaration.name.lexeme: declaration,
+      for (final declaration in patternDeclarations(pattern.leftOperand))
+        declaration.name.lexeme: declaration,
     };
     final outputs = <String, Variable>{};
     for (final name in declarations.keys) {
@@ -196,7 +196,7 @@ final class _PatternCondition implements PatternMatchContinuation {
       );
     }
 
-    void finishArm(BasicBlock tail, ContextSaveState state) {
+    void finishArm(BasicBlock<Operation> tail, ContextSaveState state) {
       ctx.restoreState(state);
       ctx.builder = BasicBlockBuilder(ctx.activeGraph, [tail], parent);
       for (final entry in outputs.entries) {
@@ -238,12 +238,5 @@ final class _PatternCondition implements PatternMatchContinuation {
     canFail |= canMatch && left.canFail && right.canFail;
     canMatch &= left.canMatch || (left.canFail && right.canMatch);
     return BuiltinValue(boolval: true).push(ctx);
-  }
-}
-
-Iterable<DeclaredVariablePattern> _declarations(AstNode pattern) sync* {
-  if (pattern is DeclaredVariablePattern) yield pattern;
-  for (final child in pattern.childEntities.whereType<AstNode>()) {
-    yield* _declarations(child);
   }
 }

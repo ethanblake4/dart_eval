@@ -73,25 +73,24 @@ TypeRef matchedPatternType(
       }
       return narrow(RecordTypeRef(positional, named));
     case ListPattern():
-      final arguments = pattern.typeArguments?.arguments;
-      return narrow(
-        CoreTypes.list
-            .ref(ctx)
-            .copyWith(
-              arguments: [
-                arguments == null
-                    ? CoreTypes.dynamic.ref(ctx)
-                    : TypeRef.fromAnnotation(
-                        ctx,
-                        ctx.library,
-                        arguments.single,
-                      ),
-              ],
-            ),
-      );
+      return narrow(listPatternType(ctx, pattern));
     default:
       return bound;
   }
+}
+
+/// The type tested by a list pattern, independent of the subject's promotion.
+TypeRef listPatternType(CompilerContext ctx, ListPattern pattern) {
+  final arguments = pattern.typeArguments?.arguments;
+  return CoreTypes.list
+      .ref(ctx)
+      .copyWith(
+        arguments: [
+          arguments == null
+              ? CoreTypes.dynamic.ref(ctx)
+              : TypeRef.fromAnnotation(ctx, ctx.library, arguments.single),
+        ],
+      );
 }
 
 /// A join retains proofs reached by both alternatives, including intermediate

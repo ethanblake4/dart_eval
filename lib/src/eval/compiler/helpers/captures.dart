@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'pattern_bindings.dart';
 import 'primary_constructor.dart';
 
 final _analyses = Expando<CaptureAnalysis>();
@@ -175,9 +176,13 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   }
 
   void _pattern(DartPattern pattern) {
-    final declarations = _PatternDeclarations();
-    pattern.accept(declarations);
-    for (final entries in declarations.names.values) {
+    final declarations = <String, List<DeclaredVariablePattern>>{};
+    for (final declaration in patternDeclarations(pattern)) {
+      declarations
+          .putIfAbsent(declaration.name.lexeme, () => [])
+          .add(declaration);
+    }
+    for (final entries in declarations.values) {
       for (final declaration in entries) {
         _patternBindings[declaration] = entries;
       }
@@ -259,9 +264,11 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
           _scope(() {
             if (member is SwitchPatternCase) {
               member.guardedPattern.accept(this);
-              final declarations = _PatternDeclarations();
-              member.guardedPattern.pattern.accept(declarations);
-              names.addAll(declarations.names.keys);
+              names.addAll(
+                patternDeclarations(
+                  member.guardedPattern.pattern,
+                ).map((declaration) => declaration.name.lexeme),
+              );
             } else if (member is SwitchCase) {
               member.expression.accept(this);
             }
@@ -310,16 +317,5 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       return;
     }
     _use(node.name, setter: setter);
-  }
-}
-
-class _PatternDeclarations extends RecursiveAstVisitor<void> {
-  final names = <String, List<DeclaredVariablePattern>>{};
-
-  @override
-  void visitDeclaredVariablePattern(DeclaredVariablePattern node) {
-    if (node.name.lexeme != '_') {
-      names.putIfAbsent(node.name.lexeme, () => []).add(node);
-    }
   }
 }

@@ -253,9 +253,14 @@ Variable _matchPattern(
       return result ?? BuiltinValue(boolval: true).push(ctx);
     case ListPattern pat:
       if (requireMatch != null) {
-        final listType = matchedPatternType(ctx, pat, V.type);
+        final listType = listPatternType(ctx, pat);
         requireMatch(_typeTestType(ctx, listType, V));
-        V = V.withType(listType);
+        final matchedType = matchedPatternType(ctx, pat, V.type);
+        V = V.withType(
+          matchedType.isAssignableTo(ctx, listType, forceAllowDynamic: false)
+              ? matchedType
+              : listType,
+        );
         if (pat.elements.any((element) => element is RestPatternElement)) {
           throw CompileError('Rest list patterns are not supported', pat);
         }

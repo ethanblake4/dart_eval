@@ -111,7 +111,35 @@ int main() {
 }
 ''';
 
+const _nonListSource = r'''
+int reads = 0;
+class HasLength {
+  int get length { reads++; return 0; }
+}
+bool matches(HasLength value) => switch (value) {
+  [] => true,
+  _ => false,
+};
+int main() {
+  if (matches(HasLength()) || reads != 0) {
+    throw StateError('list pattern accepted a non-list or read its length');
+  }
+  return 0;
+}
+''';
+
 void main() {
+  test('list patterns reject unrelated static types before reading length', () {
+    final program = Compiler().compile({
+      'pattern_flow': {'main.dart': _nonListSource},
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(runtime.executeLib('package:pattern_flow/main.dart', 'main'), 0);
+    }
+  });
   test(
     'object interfaces expose getters and typed patterns can shadow subjects',
     () {

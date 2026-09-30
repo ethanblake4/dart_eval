@@ -293,7 +293,7 @@ class TypedFrame {
     return child;
   }
 
-  /// The compiler proved this call has no receiver or callable type metadata.
+  /// The compiler proved this call has no owner or callable type metadata.
   /// Cached children have already cleared their context on return.
   @pragma('vm:prefer-inline')
   TypedFrame enterStaticPlain(TypedProgram program, int index, int pc) {
