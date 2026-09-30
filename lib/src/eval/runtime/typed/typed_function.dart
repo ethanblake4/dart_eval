@@ -68,7 +68,12 @@ class TypedFunction {
     this.typeParameterOwners = const [],
     this.objectOutgoingCount = 0,
     this.resultKind = TypedArgumentKind.object,
-  });
+  }) : needsFrameStorage =
+           intSpillCount != 0 ||
+           doubleSpillCount != 0 ||
+           boolSpillCount != 0 ||
+           objectSpillCount != 0 ||
+           objectOutgoingCount != 0;
 
   final int entry;
   final int intSpillCount, doubleSpillCount, boolSpillCount, objectSpillCount;
@@ -82,6 +87,9 @@ class TypedFunction {
 
   /// Capacity of the single list used to stage overflow and host arguments.
   final int objectOutgoingCount;
+
+  /// Leaf callees without private storage can reuse any cleared frame.
+  final bool needsFrameStorage;
 
   TypedCallLayout get callLayout => TypedCallLayout(argumentKinds);
 

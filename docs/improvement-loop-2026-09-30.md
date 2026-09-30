@@ -248,3 +248,30 @@ polymorphic-call difference to about 1–3%; native-Future awaits remain about
 claiming an across-the-board improvement. Evidence: cycle2-correctness-aot/
 summary.csv, cycle2-correctness-aot/median-changes.csv and
 cycle2-correctness-repeat.log.
+
+## Second cycle, runtime performance pass
+
+Allow the AOT compiler to inline frame entry/return helpers. Inactive cached
+frames already have cleared metadata, so entry only installs current bindings.
+A function's precomputed storage flag lets a storage-free leaf reuse any
+cleared leaf frame without invoking the capacity-growth helper. Spill-heavy
+callees retain existing growth checks; suspended frames still detach, and
+returns still release references. No opcode or serialized format changes.
+
+Removing repeated resets alone showed no consistent gain. The combined change
+improves primitive and polymorphic calls about 8% in the longer order-reversed
+500000-iteration repeats. Rendering 50000 invoices improves from 419.937 to
+397.107 ms and from 415.830 to 391.300 ms, about 5–6%, with identical checksum
+1840803250. The retained patch stays within frame helpers and one derived flag
+per function.
+
+All 150 runtime, nested ownership, async and generator checks pass, including
+fresh/serialized calls alternating spill-heavy and storage-free leaves.
+Targeted analysis is clean. The final isolated 22-driver AOT sweep matches all
+21 execution checksums: primitive calls improve 7.3%, polymorphic calls 11.6%,
+noncapturing closure calls 7.6%, and invoice rendering 2.3% in that shorter run.
+The tiny sync benchmark's one-microsecond difference disappears in 50000-call
+repeats; native-Future awaits and callbacks improve in those longer repeats.
+No material regression is reproduced. Logs: cycle2-frame-final-tests.log,
+cycle2-frame-leaf-repeat.log, cycle2-frame-async-repeat.log,
+cycle2-frame-aot/summary.csv and cycle2-frame-aot/median-changes.csv.

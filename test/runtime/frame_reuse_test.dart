@@ -14,6 +14,21 @@ Iterable<(String, Runtime)> _runtimes(String source) sync* {
 }
 
 void main() {
+  test('storage-free leaf calls reuse spill-heavy sibling frames', () {
+    const source = '''
+      int large(int a, int b, int c, int d, int e, int f) =>
+          (a * b + c * d) * (e + f) + (a - c) * (b - d);
+      int small(int value) => value + 1;
+      int main() {
+        final first = small(large(1, 2, 3, 4, 5, 6));
+        final second = small(large(6, 5, 4, 3, 2, 1));
+        return first + second;
+      }
+    ''';
+    for (final (kind, runtime) in _runtimes(source)) {
+      expect(runtime.executeLib(_library, 'main'), 290, reason: kind);
+    }
+  });
   test('inactive leaf storage grows, clears, and survives retargeting', () {
     const small = TypedFunction(
       0,

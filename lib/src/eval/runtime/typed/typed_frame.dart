@@ -254,6 +254,8 @@ class TypedFrame {
 
   /// Reuse a frame for repeated calls at the same depth. Recursive invocations
   /// still have distinct storage, and every run owns its entire frame chain.
+  /// Cached children were cleared by [leave]; suspended frames detach instead.
+  @pragma('vm:prefer-inline')
   TypedFrame _childFor(TypedFunction callee) {
     if (depth >= maxCallDepth) throw StackOverflowError();
     var child = _child;
@@ -261,7 +263,11 @@ class TypedFrame {
       child = _child = TypedFrame(callee, this);
     } else if (!identical(child.function, callee)) {
       if (child._child == null) {
-        child._retarget(callee);
+        if (callee.needsFrameStorage) {
+          child._retarget(callee);
+        } else {
+          child.function = callee;
+        }
       } else {
         child = _child = TypedFrame(callee, this);
       }
@@ -272,7 +278,7 @@ class TypedFrame {
   final int depth;
   final int maxCallDepth;
 
-  @pragma('vm:never-inline')
+  @pragma('vm:prefer-inline')
   TypedFrame enterStatic(
     TypedProgram program,
     int index,
@@ -282,19 +288,12 @@ class TypedFrame {
   }) {
     final child = _childFor(program.functions[index]);
     child.returnPc = pc;
-    child.environment = const [];
     child.typeEnvironmentReceiver = typeEnvironmentReceiver;
     child.typeArguments = typeArguments;
-    child.lexicalTypeEnvironmentReceiver = null;
-    child.lexicalTypeArguments = const [];
-    child.lexicalTypeEnvironment = null;
-    child._typeEnvironment = null;
-    child.pendingTypeEnvironmentReceiver = null;
-    child.pendingTypeArguments = const [];
     return child;
   }
 
-  @pragma('vm:never-inline')
+  @pragma('vm:prefer-inline')
   TypedFrame enter(
     TypedFunction callee,
     int pc, {
@@ -303,19 +302,12 @@ class TypedFrame {
   }) {
     final child = _childFor(callee);
     child.returnPc = pc;
-    child.environment = const [];
     child.typeEnvironmentReceiver = typeEnvironmentReceiver;
     child.typeArguments = typeArguments;
-    child.lexicalTypeEnvironmentReceiver = null;
-    child.lexicalTypeArguments = const [];
-    child.lexicalTypeEnvironment = null;
-    child._typeEnvironment = null;
-    child.pendingTypeEnvironmentReceiver = null;
-    child.pendingTypeArguments = const [];
     return child;
   }
 
-  @pragma('vm:never-inline')
+  @pragma('vm:prefer-inline')
   TypedFrame enterClosure(
     TypedFunction callee,
     int pc,
@@ -335,16 +327,13 @@ class TypedFrame {
     child.lexicalTypeEnvironmentReceiver = lexicalTypeEnvironmentReceiver;
     child.lexicalTypeArguments = lexicalTypeArguments;
     child.lexicalTypeEnvironment = lexicalTypeEnvironment;
-    child._typeEnvironment = null;
-    child.pendingTypeEnvironmentReceiver = null;
-    child.pendingTypeArguments = const [];
     return child;
   }
 
   @pragma('vm:never-inline')
   Object? captureAt(int index) => environment[index];
 
-  @pragma('vm:never-inline')
+  @pragma('vm:prefer-inline')
   TypedFrame leave() {
     returnPc = -1;
     // Compiler continuations and exception unwinding have already popped this
