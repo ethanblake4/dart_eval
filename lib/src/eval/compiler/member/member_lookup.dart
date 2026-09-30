@@ -189,24 +189,23 @@ final class MemberLookup {
     final mixins = classLikeClauses(host).$2;
     var stop = mixins.length;
     final declaring = ctx.memberDeclaringClass;
+    final library = methodCall
+        ? ctx.enclosingLibrary ?? ctx.library
+        : ctx.library;
     if (methodCall && declaring != null) {
-      final declaringName = switch (declaring) {
-        ClassDeclaration() ||
-        MixinDeclaration() ||
-        ClassTypeAlias() ||
-        EnumDeclaration() => declarationName(declaring),
-        _ => null,
-      };
       for (var i = 0; i < mixins.length; i++) {
-        if (mixins[i].name.lexeme == declaringName) {
+        final mixin = clauseNamedType(ctx, library, mixins[i]);
+        if (mixin == null) continue;
+        final declaration =
+            ctx.topLevelDeclarationsMap[mixin.file]?[mixin.name]?.declaration;
+        // A public typedef may name a private mixin. Its declaration,
+        // rather than the clause's spelling, identifies the current layer.
+        if (identical(declaration, declaring)) {
           stop = i;
           break;
         }
       }
     }
-    final library = methodCall
-        ? ctx.enclosingLibrary ?? ctx.library
-        : ctx.library;
     for (var i = stop - 1; i >= 0; i--) {
       final mixin = clauseNamedType(ctx, library, mixins[i]);
       if (mixin == null) continue;

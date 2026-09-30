@@ -135,20 +135,20 @@ void main() {
         import 'dart:async';
 
         Future<int> main() async {
-          func1();
-          func2();
+          final second = func2();
+          final first = func1(second);
           func3();
-          await Future.delayed(Duration(microseconds: 9500));
+          await first;
           print("complete");
           return func4();
         }
 
-        void func1() async {
-          await Future.delayed(Duration(microseconds: 6500));
+        Future<void> func1(Future<void> previous) async {
+          await previous;
           print("func1");
         }
 
-        void func2() async {
+        Future<void> func2() async {
           await Future.delayed(Duration(microseconds: 200));
           print("func2");
         }

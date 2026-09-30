@@ -27,6 +27,7 @@ import 'package:test/test.dart';
 import 'package:yaml/yaml.dart';
 
 import 'shims.dart';
+import 'sdk_multitest.dart';
 
 String _normalizeRelPath(String relPath) => relPath.replaceAll('\\', '/');
 
@@ -119,15 +120,57 @@ enum TestKind {
 
 class SdkTest {
   SdkTest(String relPath, this.kind, [this.unsupportedReason])
-    : relPath = _normalizeRelPath(relPath);
+    : relPath = _normalizeRelPath(relPath),
+      variantKey = null,
+      source = null;
+
+  SdkTest.variant(
+    String relPath,
+    this.kind, {
+    required this.variantKey,
+    required this.source,
+    this.unsupportedReason,
+  }) : relPath = _normalizeRelPath(relPath);
 
   /// Path relative to `tests/language`, e.g. `closure/nested_test.dart`.
   final String relPath;
   final TestKind kind;
   final String? unsupportedReason;
+  final String? variantKey;
+  final String? source;
 
   /// `package:` URI under which the test is compiled.
   String get uri => 'package:sdk_language/$relPath';
+}
+
+/// Selects SDK outcomes per case, including the untagged `none` baseline.
+/// Error comments left behind by discarded code do not reclassify a case.
+List<SdkTest> materializeSdkTests(SdkTest test, String source) {
+  if (test.variantKey != null) return [test];
+  return [
+    for (final variant in splitSdkMultitest(source))
+      if (variant.key == null)
+        test
+      else
+        SdkTest.variant(
+          test.relPath,
+          variant.isNegative
+              ? TestKind.negative
+              : variant.isRuntimeError
+              ? TestKind.runtimeError
+              : variant.hasStaticWarning
+              ? TestKind.unsupported
+              : TestKind.runnable,
+          variantKey: variant.key,
+          source: variant.source,
+          unsupportedReason:
+              variant.hasStaticWarning &&
+                  !variant.isNegative &&
+                  !variant.isRuntimeError
+              ? 'requires static type warning checking'
+              : null,
+        ),
+  ];
 }
 
 enum TestOutcome { passed, failed, compileError, skipped, timedOut }
@@ -224,7 +267,52 @@ class SdkSuite {
     if (!file.existsSync()) {
       return SdkTest(relPath, TestKind.unsupported, 'missing file');
     }
-    final source = file.readAsStringSync();
+    final cases = variants(SdkTest(relPath, TestKind.runnable));
+    if (cases.length == 1 && cases.single.variantKey == null) {
+      return cases.single;
+    }
+    if (cases.any(
+      (test) =>
+          test.kind == TestKind.runnable || test.kind == TestKind.runtimeError,
+    )) {
+      return SdkTest(relPath, TestKind.runnable);
+    }
+    if (cases.any((test) => test.kind == TestKind.negative)) {
+      return SdkTest(relPath, TestKind.negative);
+    }
+    return SdkTest(
+      relPath,
+      TestKind.unsupported,
+      cases.first.unsupportedReason,
+    );
+  }
+
+  /// Each variant retains the fixture path and URI for imports and status
+  /// matching. Only its root source and expected outcome differ.
+  List<SdkTest> variants(SdkTest test) {
+    if (test.kind == TestKind.unsupported || test.variantKey != null) {
+      return [test];
+    }
+    final source = File(p.join(languageRoot, test.relPath)).readAsStringSync();
+    return [
+      for (final candidate in materializeSdkTests(test, source))
+        _classifySource(candidate, candidate.source ?? source),
+    ];
+  }
+
+  SdkTest _classifySource(SdkTest candidate, String source) {
+    final relPath = candidate.relPath;
+    final file = File(p.join(languageRoot, relPath));
+    SdkTest classified(TestKind kind, [String? reason]) =>
+        candidate.variantKey == null
+        ? SdkTest(relPath, kind, reason)
+        : SdkTest.variant(
+            relPath,
+            kind,
+            variantKey: candidate.variantKey,
+            source: source,
+            unsupportedReason: reason,
+          );
     // Helpers imported by tests (no main) aren't tests themselves. A part
     // file may define main() — scan `part` targets relative to the test.
     var hasMain = RegExp(r'\bmain\s*\(').hasMatch(source);
@@ -241,19 +329,26 @@ class SdkSuite {
       }
     }
     if (!hasMain) {
-      return SdkTest(relPath, TestKind.unsupported, 'no main()');
+      return classified(TestKind.unsupported, 'no main()');
     }
-    if (_negativePattern.hasMatch(source)) {
-      return SdkTest(relPath, TestKind.negative);
+    if (candidate.variantKey != null) {
+      if (candidate.kind == TestKind.negative ||
+          candidate.kind == TestKind.unsupported) {
+        return candidate;
+      }
+    } else if (_negativePattern.hasMatch(source)) {
+      return classified(TestKind.negative);
     }
-    if (_runtimeErrorPattern.hasMatch(source)) {
-      return SdkTest(relPath, TestKind.runtimeError);
+    if (candidate.variantKey == null && _runtimeErrorPattern.hasMatch(source)) {
+      return classified(TestKind.runtimeError);
     }
     final unsupported = _unsupportedImport(source);
     if (unsupported != null) {
-      return SdkTest(relPath, TestKind.unsupported, unsupported);
+      return classified(TestKind.unsupported, unsupported);
     }
-    return SdkTest(relPath, TestKind.runnable);
+    return classified(
+      candidate.variantKey == null ? TestKind.runnable : candidate.kind,
+    );
   }
 
   /// Static-error markers used by the SDK test runner, including multitest
@@ -262,9 +357,7 @@ class SdkSuite {
     r'//\s*(\[cfe\]|\[analyzer\]|\[error line|\^|#\s*\d+.*compile-time error)',
   );
 
-  /// Multitest `//# NN: runtime error` annotations — the annotated line is
-  /// ordinary code that still runs in every variant, so the run is expected
-  /// to terminate with an uncaught exception.
+  /// Legacy runtime-error markers on ordinary, non-materialized sources.
   static final _runtimeErrorPattern = RegExp(
     r'//\s*#\s*\d+\s*:\s*runtime error',
   );
@@ -355,7 +448,17 @@ class SdkSuite {
       if (!file.existsSync()) {
         throw UnsupportedError('missing dependency $rel');
       }
-      final source = file.readAsStringSync();
+      final source = rel == test.relPath && test.source != null
+          ? test.source!
+          : file.readAsStringSync();
+      if (rel == test.relPath &&
+          test.variantKey == null &&
+          splitSdkMultitest(source).first.key != null) {
+        throw StateError(
+          'SDK multitest ${test.relPath} requires '
+          'suite.variants(test) before collecting sources',
+        );
+      }
       sources['sdk_language/$rel'] = DartSource(
         'package:sdk_language/$rel',
         source,
@@ -433,28 +536,106 @@ Future<void> executeSdkMain(
   SdkTest test,
   List<DartSource> sources,
 ) async {
-  await runtime.executeLib(test.uri, 'main');
+  await runtime.executeLib(
+    test.uri,
+    'main',
+    arguments: _sdkMainArguments(test, sources),
+  );
   if (_usesAsyncHelper(sources)) {
     await runtime.executeLib(_asyncHelperUri, 'drainAsyncTests');
   }
 }
 
+/// The VM launcher prefers two positional arguments, then one, then zero.
+/// Named parameters keep their defaults; only this library's parts share main.
+Map<String, Object?> _sdkMainArguments(SdkTest test, List<DartSource> sources) {
+  final byUri = {for (final source in sources) source.uri: source};
+  final visited = <Uri>{};
+  FormalParameterList? findParameters(Uri uri) {
+    if (!visited.add(uri)) return null;
+    final source = byUri[uri];
+    if (source == null) return null;
+    final unit = parseString(
+      content: source.toString(),
+      throwIfDiagnostics: false,
+    ).unit;
+    for (final declaration
+        in unit.declarations.whereType<FunctionDeclaration>()) {
+      if (declaration.name.lexeme == 'main') {
+        return declaration.functionExpression.parameters;
+      }
+    }
+    for (final part in unit.directives.whereType<PartDirective>()) {
+      final path = part.uri.stringValue;
+      if (path == null) continue;
+      final parameters = findParameters(uri.resolve(path));
+      if (parameters != null) return parameters;
+    }
+    return null;
+  }
+
+  final parameters = findParameters(Uri.parse(test.uri))?.parameters;
+  if (parameters == null || parameters.any((p) => p.isRequiredNamed)) return {};
+  final positional = parameters.where((p) => p.isPositional).toList();
+  final requiredCount = positional.where((p) => p.isRequiredPositional).length;
+  final count = requiredCount <= 2 && positional.length >= 2
+      ? 2
+      : requiredCount <= 1 && positional.isNotEmpty
+      ? 1
+      : 0;
+  return {
+    if (count > 0) positional[0].name!.lexeme: <String>[],
+    if (count > 1) positional[1].name!.lexeme: null,
+  };
+}
+
 /// Compiles and runs [test], returning its outcome. A shared [compiler] is
 /// reused across calls so shim sources stay cached in its parse cache.
+/// Multitests execute every selected variant and aggregate at the fixture path.
 Future<TestOutcome> runSdkTest(
   SdkSuite suite,
   SdkTest test,
   Compiler compiler,
-) async {
-  if (test.kind == TestKind.unsupported) return TestOutcome.skipped;
-  final List<DartSource> sources;
+) async => (await runSdkTestCases(suite.variants(test), (variant) async {
   try {
-    sources = suite.collectSources(test);
+    return await runSdkTestSources(
+      variant,
+      compiler,
+      suite.collectSources(variant),
+    );
   } on UnsupportedError {
     return TestOutcome.skipped;
   }
+}, negativeMode: suite.config.negativeMode)).outcome;
 
-  return runSdkTestSources(test, compiler, sources);
+/// Executes every selected case and aggregates under the original fixture.
+/// A skipped runnable case prevents a partially checked fixture going stale.
+Future<({TestOutcome outcome, Map<String, TestOutcome> cases})> runSdkTestCases(
+  List<SdkTest> variants,
+  Future<TestOutcome> Function(SdkTest) run, {
+  required String negativeMode,
+}) async {
+  final outcomes = <String, TestOutcome>{};
+  final checked = <TestOutcome>[];
+  for (final variant in variants) {
+    final skipNegative =
+        variant.kind == TestKind.negative && negativeMode == 'skip';
+    final outcome = skipNegative || variant.kind == TestKind.unsupported
+        ? TestOutcome.skipped
+        : await run(variant);
+    outcomes[variant.variantKey ?? 'main'] = outcome;
+    if (!skipNegative) checked.add(outcome);
+  }
+  final outcome = checked.isEmpty
+      ? TestOutcome.skipped
+      : [
+          TestOutcome.timedOut,
+          TestOutcome.compileError,
+          TestOutcome.failed,
+          TestOutcome.skipped,
+          TestOutcome.passed,
+        ].firstWhere(checked.contains);
+  return (outcome: outcome, cases: outcomes);
 }
 
 /// Compiles [sources] for [test] and waits for its `main` result.
@@ -467,21 +648,34 @@ Future<TestOutcome> runSdkTestSources(
   List<DartSource> sources,
 ) async {
   setSdkEntrypoints(compiler, test, sources);
+  final Program program;
   try {
-    final program = compiler.compileSources(sources);
-    if (test.kind == TestKind.negative) {
-      // Compiled but the SDK expected a static error.
-      return TestOutcome.failed;
-    }
-    final runtime = Runtime(program.write().buffer);
-    await executeSdkMain(runtime, test, sources);
-    return test.kind == TestKind.runtimeError
-        ? TestOutcome.failed // returned normally but expected to throw
-        : TestOutcome.passed;
+    program = compiler.compileSources(sources);
   } on CompileError {
     return test.kind == TestKind.negative
         ? TestOutcome.passed
         : TestOutcome.compileError;
+  } catch (_) {
+    return test.kind == TestKind.negative
+        ? TestOutcome.failed
+        : TestOutcome.compileError;
+  }
+  if (test.kind == TestKind.negative) {
+    // Compiled but the SDK expected a static error.
+    return TestOutcome.failed;
+  }
+  final Runtime runtime;
+  try {
+    runtime = Runtime(program.write().buffer);
+  } catch (_) {
+    return TestOutcome.compileError;
+  }
+  try {
+    await executeSdkMain(runtime, test, sources);
+    return test.kind == TestKind.runtimeError
+        ? TestOutcome
+              .failed // returned normally but expected to throw
+        : TestOutcome.passed;
   } catch (_) {
     return test.kind == TestKind.runtimeError
         ? TestOutcome.passed
@@ -513,7 +707,11 @@ Future<TestOutcome> runSdkTestSourcesIsolated(
       // Pending timers can fail after main returns. Accept its outcome only
       // after a clean worker exit; uncaught errors override that outcome.
       result.complete(
-        message == null ? reported ?? TestOutcome.failed : TestOutcome.failed,
+        message == null
+            ? reported ?? TestOutcome.failed
+            : test.kind == TestKind.runtimeError
+            ? TestOutcome.passed
+            : TestOutcome.failed,
       );
     }
   });
@@ -565,38 +763,54 @@ void registerSdkSuite(
         test(sdkTest.relPath, () {}, skip: sdkTest.unsupportedReason);
         continue;
       }
-      test(sdkTest.relPath, () async {
-        if (++sinceReset >= 300) {
-          compiler = Compiler();
-          sinceReset = 0;
-        }
-        late TestOutcome outcome;
-        if (isolateTests) {
-          try {
-            outcome = await runSdkTestSourcesIsolated(
-              sdkTest,
-              suite.collectSources(sdkTest),
-            );
-          } on UnsupportedError {
-            outcome = TestOutcome.skipped;
+      test(
+        sdkTest.relPath,
+        () async {
+          if (++sinceReset >= 300) {
+            compiler = Compiler();
+            sinceReset = 0;
           }
-        } else {
-          outcome = await runSdkTest(suite, sdkTest, compiler);
-        }
-        results[outcome] = (results[outcome] ?? 0) + 1;
-        final expectedFail = suite.config.expectedFailure(sdkTest.relPath);
-        if (expectedFail != null) {
-          expect(
-            outcome,
-            isNot(TestOutcome.passed),
-            reason:
-                'expected to fail ($expectedFail) but passed — '
-                'remove the expect_fail entry in suite.yaml',
-          );
-        } else {
-          expect(outcome, TestOutcome.passed);
-        }
-      }, timeout: Timeout(Duration(seconds: isolateTests ? 70 : 30)));
+          final variants = suite.variants(sdkTest);
+          final result = await runSdkTestCases(variants, (variant) async {
+            try {
+              final sources = suite.collectSources(variant);
+              return isolateTests
+                  ? await runSdkTestSourcesIsolated(variant, sources)
+                  : await runSdkTestSources(variant, compiler, sources);
+            } on UnsupportedError {
+              return TestOutcome.skipped;
+            }
+          }, negativeMode: suite.config.negativeMode);
+          final outcome = result.outcome;
+          if (variants.any((variant) => variant.variantKey != null)) {
+            print(
+              '${sdkTest.relPath}: ${result.cases.entries.map((entry) => '${entry.key}=${entry.value.name}').join(', ')}',
+            );
+          }
+          results[outcome] = (results[outcome] ?? 0) + 1;
+          final expectedFail = suite.config.expectedFailure(sdkTest.relPath);
+          if (expectedFail != null) {
+            expect(
+              outcome,
+              isNot(TestOutcome.passed),
+              reason:
+                  'expected to fail ($expectedFail) but passed — '
+                  'remove the expect_fail entry in suite.yaml',
+            );
+          } else {
+            if (outcome == TestOutcome.skipped) {
+              markTestSkipped('one or more runnable cases are unsupported');
+              return;
+            }
+            expect(outcome, TestOutcome.passed);
+          }
+        },
+        timeout: Timeout(
+          Duration(
+            seconds: (isolateTests ? 70 : 30) * suite.variants(sdkTest).length,
+          ),
+        ),
+      );
     }
 
     tearDownAll(() {

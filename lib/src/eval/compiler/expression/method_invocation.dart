@@ -39,7 +39,12 @@ Variable compileMethodInvocation(
       bound: containsLeadingShorthand(e.target!) ? bound : null,
     );
     if (receiver case SuperReceiver(:final self)) {
-      final (owner, dispatched) = resolveSuperReceiver(ctx, e, self);
+      final (owner, dispatched) = resolveSuperReceiver(
+        ctx,
+        e,
+        self,
+        bound: bound,
+      );
       if (dispatched != null) return dispatched;
       receiver = SuperReceiver(owner);
     }

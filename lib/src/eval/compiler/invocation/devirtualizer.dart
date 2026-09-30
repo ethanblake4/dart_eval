@@ -39,7 +39,9 @@ final class Devirtualizer {
   CallTarget _refine(VirtualCall target, {required bool lexicalSuper}) {
     final L = target.receiver;
     final exact = L.exactType ?? declaredLeafClass(ctx, L.type);
-    if (!lexicalSuper && hasBridgeSuperclass(ctx, exact ?? L.type)) return target;
+    if (!lexicalSuper && hasBridgeSuperclass(ctx, exact ?? L.type)) {
+      return target;
+    }
     // A nullable receiver may be null — a direct call would skip the
     // runtime's null dispatch (e.g. interpolated toString on null).
     final linkType = switch ((lexicalSuper, exact)) {
@@ -87,7 +89,18 @@ final class Devirtualizer {
           file: directOwner.file,
           className: directOwner.name,
           methodType: MemberKind.method,
-          name: memberName.nameKey,
+          // Compiled positions qualify a private name only when its body
+          // was folded into an owner in another library. The caller's
+          // folded-body scope can use a different spelling for this key.
+          name: MemberName(
+            memberName.name,
+            MemberKind.method,
+            privateLibraryUri:
+                memberName.name.startsWith('_') &&
+                    member.library != directOwner.file
+                ? ctx.libraryUri(member.library)
+                : null,
+          ).nameKey,
         ),
         receiver: L,
         ownerLink: linkType != null && needsLink

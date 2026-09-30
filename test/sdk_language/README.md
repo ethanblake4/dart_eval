@@ -37,6 +37,18 @@ killed after 60 seconds, including when synchronous code prevents timers from
 running inside it. Uncaught asynchronous errors stay within that case, and
 compiler graphs and runtime state are released before the next case.
 
+SDK multitests (`//# key: outcome`) are materialized before compilation. Each
+named case includes its own tagged lines and `continued` lines; the SDK's
+`none` baseline includes only untagged lines. Discarded lines stay blank so
+source locations remain unchanged. Relative imports and parts keep the
+original fixture URI and are collected from the selected source.
+
+Every runnable variant executes, including cases expected to throw at runtime.
+Negative variants follow `negative:`. Results are printed per variant and
+aggregated under the original fixture path: an `expect_fail` entry becomes
+stale only when every runnable variant passes. Unsupported runnable variants
+prevent reporting the fixture as fully passing.
+
 ## Status lists
 
 The suite follows the SDK's status-file convention: every runnable test is

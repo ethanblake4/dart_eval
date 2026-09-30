@@ -2227,8 +2227,9 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
 (Variable, Variable?) resolveSuperReceiver(
   CompilerContext ctx,
   MethodInvocation e,
-  Variable receiver,
-) {
+  Variable receiver, {
+  TypeRef? bound,
+}) {
   final name = e.methodName.name;
   final target = ctx.memberLookup.superMemberTarget(
     receiver.type,
@@ -2239,10 +2240,14 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
   if (!target.found) {
     // A getter-shaped call reads before evaluating the arguments.
     if (target.abstractGetter ?? false) {
-      final getterValue = NoSuchMethodCall(
-        name: name,
-        getterShaped: true,
-      ).emitGetterValue(ctx);
+      final getterValue = GetTarget.readSuper(
+        ctx,
+        receiver,
+        name,
+        fieldType: () =>
+            ctx.memberLookup.fieldType(receiver.type, name, source: e) ??
+            CoreTypes.dynamic.ref(ctx),
+      );
       return (
         receiver,
         CallResolver(ctx).invokeValue(
@@ -2252,13 +2257,14 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
               e.typeArguments?.arguments,
             ),
             source: e,
+            context: bound,
           ),
           callee: getterValue,
         ),
       );
     }
     final fallback = NoSuchMethodCall(name: name);
-    final bound = ArgumentBinder(ctx).bindSuppliedOnly(
+    final arguments = ArgumentBinder(ctx).bindSuppliedOnly(
       fallback,
       CallSite(
         shape: CallShape.fromArgumentList(
@@ -2266,10 +2272,11 @@ List<int> runtimeTypeArguments(CompilerContext ctx, MethodInvocation call) =>
           e.typeArguments?.arguments,
         ),
         source: e,
+        context: bound,
       ),
       callee: null,
     );
-    return (receiver, fallback.emit(ctx, bound));
+    return (receiver, fallback.emit(ctx, arguments));
   }
 
   if (target.hops.isEmpty && target.owner != receiver.type) {

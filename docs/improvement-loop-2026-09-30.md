@@ -785,3 +785,80 @@ The Object-typed list-rest metadata failure is isolated in an ignored probe.
 It comes from the existing hand-maintained List.sublist wrapper losing generic
 metadata. The schema witness checks static inference and returned contents;
 the separate runtime binding issue remains pending alongside AOT validation.
+
+## Fourth cycle, fourth correctness pass
+
+Abstract superclass getters now use the existing getter-shaped noSuchMethod
+call and convert its result to the getter's declared type on the real receiver.
+Callable getters share that read path, retaining the function signature for
+argument inference and checking an invalid getter result before evaluating
+arguments. Native Dart, fresh evaluation and serialized evaluation agree on
+integer-literal widening and getter/check/argument order. The superclass
+noSuchMethod SDK fixture passes in both loading modes. The final focused
+scope passes 74 cases, and scoped analysis is clean.
+
+Private direct calls now use the compiled member body's library when forming
+the lookup key. Super calls inside a typedef-named mixin locate the current
+layer by its resolved declaration. The original private-name mixin SDK test
+passes in both loading modes, as do 44 focused compatibility cases and the
+native witness. No interpreter changes are involved.
+
+SDK multitests now compile each named case and the untagged baseline as
+separate programs. Tagged lines from other cases stay blank, preserving line
+numbers and import URIs. The selected root determines dependencies and expected
+outcomes. Results aggregate under the original fixture path only after every
+eligible case runs; an unsupported runnable case prevents a partially checked
+fixture being reported as passing. Raw combined-source collection is rejected
+with guidance to materialize variants first. The focused harness and async
+scope passes 16 tests with clean analysis.
+
+The expanded inventory also caught a launcher omission: SDK main functions
+with required arguments were called with none. Selected-source ASTs now supply
+the VM's empty argument list and null message using its two/one/zero positional
+argument preference. Root and part declarations determine the signature;
+imported libraries' main functions do not participate. Named defaults remain
+unsupplied. All 24 launcher, multitest and async checks pass with clean analysis.
+The original main/main fixture passes in both evaluated loading modes.
+
+Compiler failures and runtime failures now have separate outcome boundaries.
+A compiler StateError can no longer satisfy an expected runtime error. This
+exposed main/no_main as a real missing-entrypoint limitation, so its expectation
+remains. A focused test covers both synchronous and isolated execution.
+
+All eligible variants of 29 stale fixtures pass in fresh and serialized
+evaluation. Their expectation entries are removed. Expanding multitests exposed
+21 additional failing fixture paths, recorded with the observed variant and
+failure reason. These are existing correctness gaps, not passing tests. Native
+execution with the pinned SDK's real expect package confirms all 13 runtime
+failures and 13 compiler failures pass natively. The missing-main variant alone
+fails native launch as expected. Logs: pass4-native-runtime-summary-final.log,
+pass4-native-compile-summary.log and
+cycle4-pass4-stale-and-new-variant-probes.log.
+
+The existing await-chain regression relied on timers started within a few
+milliseconds of one another. It now orders completion through the futures
+themselves. All 11 regression cases pass, and native execution prints the same
+sequence. No async runtime code changed.
+
+The compiler-only snapshot passes all 1993 ordinary tests with 63 skips and
+has clean scoped analysis. Its 29 stale fixtures pass 153 eligible variants
+in each loading mode; 357 negative or unsupported variants are skipped, with
+no failures or compile errors. Logs: pass4-snapshot-ordinary.log,
+pass4-snapshot-analyze.log and pass4-snapshot-stale-dual.log.
+
+The final primary SDK-full run reports 2511 actual passes, 243 compile errors,
+126 runtime failures and one unsupported aggregate. Its only two harness
+failures are additional stale expectations, metadata/metadata_builtin_test.dart
+and unsorted/local_var_in_annotation_test.dart. Both pass in each loading mode
+against both primary and previous bindings. Their rows are removed, bringing
+this pass to 31 stale removals. Logs: pass4-primary-sdk-full-final.log,
+pass4-primary-new-stales-dual.log and pass4-snapshot-new-stales-dual.log.
+The 369 genuinely failing fixture paths remain work for later cycles.
+
+Final primary ordinary validation passes all 2000 tests with 63 skips. Both
+targeted SDK harness checks pass after their stale rows are removed. Logs:
+pass4-primary-ordinary-final.log and pass4-primary-final-*.out.
+
+The user has resumed performance experiments and AOT sweeps. Generated
+bindings and coupled indexing changes remain uncommitted until their final
+AOT validation.

@@ -163,6 +163,17 @@ sealed class GetTarget {
         ctx.lookupLocal('#this')!,
       ).emit(ctx);
     }
+    if (!ctx.memberLookup
+        .superMemberTarget(self.type, name, kind: MemberKind.getter)
+        .found) {
+      final value = NoSuchMethodCall(name: name).emitGetterValue(ctx);
+      return convertForAssignment(
+        ctx,
+        value.copyWith(type: CoreTypes.dynamic.ref(ctx)),
+        fieldType(),
+        representation: MachineRepresentation.object,
+      );
+    }
     final owner = _superOwner(ctx, self, name, MemberKind.getter);
     final member = ctx.types
         .find(owner.type.file, owner.type.name)
