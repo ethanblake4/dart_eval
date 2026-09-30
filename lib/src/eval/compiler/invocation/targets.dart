@@ -141,6 +141,8 @@ final class StaticCall extends CallTarget {
     }
     _checkImplementationArguments(ctx, call);
     final link = ownerLink;
+    final ownerNeedsTypeEnvironment =
+        member?.declaringDecl?.typeParameters.isNotEmpty ?? true;
     ctx.pushOp(
       Call(
         offset!,
@@ -153,7 +155,9 @@ final class StaticCall extends CallTarget {
         ],
         result: s,
         typeArguments: call.runtimeTypeArguments,
-        typeEnvironmentReceiver: typeEnvironmentReceiver?.boxIfNeeded(ctx).ssa,
+        typeEnvironmentReceiver: ownerNeedsTypeEnvironment
+            ? typeEnvironmentReceiver?.boxIfNeeded(ctx).ssa
+            : null,
       ),
     );
     return Variable.of(ctx, s, call.returnType, rep: resultRep);

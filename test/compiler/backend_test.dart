@@ -10,7 +10,7 @@ List<String> callSetup(TypedProgram program) {
   final result = <String>[];
   for (final (pc, instruction) in program.instructions) {
     if (pc < entry) continue;
-    if (instruction.name == 'call') return result;
+    if (instruction.immediate == TypedImmediate.function) return result;
     result.add(instruction.name);
   }
   throw StateError('Expected a direct call');

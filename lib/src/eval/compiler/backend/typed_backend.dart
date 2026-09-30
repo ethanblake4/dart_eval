@@ -1622,7 +1622,11 @@ class _LoweringSession {
           final result = value(op.writesTo!);
           lowered.add(
             TypedOperation(
-              b._named(['call']),
+              b._named([
+                op.typeEnvironmentReceiver == null && op.typeArguments.isEmpty
+                    ? 'callPlain'
+                    : 'call',
+              ]),
               result,
               registerArguments,
               fixedVariant: cfg.Variant(

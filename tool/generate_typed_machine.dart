@@ -1776,6 +1776,14 @@ String familyOf(String name) {
     mayThrow: true,
     extended: true,
   );
+  // Append new hot handlers here so existing numeric opcode IDs stay stable.
+  add(
+    'callPlain',
+    '''frame = frame.enterStaticPlain(program, index, pc);
+          pc = frame.function.entry;''',
+    immediate: 'function',
+    mayThrow: true,
+  );
   // AOT allocation follows the numeric case order. Keep simple register-only
   // operations ahead of handlers with decoding, calls and exceptional edges.
   final originalOrder = {for (var i = 0; i < ops.length; i++) ops[i]: i};

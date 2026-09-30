@@ -554,3 +554,60 @@ The final OR regression also checks a third nested alternative, captures of
 preceding AND bindings and getter writes to captured outer locals; native and
 both evaluated runtimes agree. Full analysis retains only the existing
 dependency warning and benchmark import info. Diff checks pass.
+
+## Third cycle, runtime performance pass
+
+The retained frame-leaf and cleanup executables were measured in A-B-B-A order
+under CPU affinity mask 4, using 500000 call iterations and fifteen samples.
+Mixed-call medians differ by about 0.17%, and primitive medians by about 0.25%.
+The earlier cleanup slowdown does not reproduce in this control. Evidence:
+cycle3-perf-control.log and its timestamped raw output.
+
+A frame-context dirty flag with a cold cleanup helper was tested and removed.
+It made method calls and the log-record workload somewhat faster but slowed
+primitive calls and closures by roughly 4-8%. The selected implementation uses
+a compiler-selected plain static-call opcode instead: no pending receiver or
+type-argument metadata is loaded, cleared or installed for those calls.
+Frame reuse, depth checks and cleanup continue through their existing paths.
+The opcode is generated from the authoritative machine specification. All 386
+previous opcode constants retain their IDs; the new hot opcode is 220.
+
+Known nongeneric declaring owners also omit receiver type metadata, allowing
+ordinary class methods to use that path. Method-owned generic arguments still
+travel independently. Generic declaring classes and mixins retain the receiver;
+extensions and unknown owners remain conservative. A regression covers methods
+inherited by a generic descendant, actual receiver-type tests, escaped method
+type arguments and generic mixin/super calls. Both evaluated modes agree on
+the preliminary witness, and forty-four focused generic checks pass.
+
+Preliminary fifteen-sample AOT comparisons show roughly 8% faster primitive
+calls for the plain-call candidate and 9% faster method calls after owner
+metadata elision. The log-record workload improves about 4%. Initial closure
+regressions of 18% and 5-7% do not reproduce in longer, reverse-order A-B-B-A
+runs at 500000 iterations. All five complete serialized closure programs are
+byte-identical between the plain-call and owner-elision candidates. Their
+direct-call timing differs by about 5%, leaving the selected candidate still
+faster than the original baseline but showing the limit of small timing deltas.
+Evidence: cycle3-candidate-a-preliminary.log, cycle3-plain-call-comparison.log,
+cycle3-member-metadata-comparison.log, cycle3-closure-abba.log and
+cycle3-closure-bytecode-b.log/cycle3-closure-bytecode-c.log.
+
+Final ordinary validation passes 1917 tests with 62 skips. SDK-full passes
+2700 harness checks with 362 skips, no unexpected outcomes and no stale
+expectations; actual outcomes remain 2297 passed, 133 failed and 270 compile
+errors. Full analysis reports only the existing dependency warning and benchmark
+import info. The machine generator check passes, and regenerating all 55 stdlib
+files produces no changes.
+
+The final full AOT sweep compares cycle3-performance-baseline.exe with
+cycle3-member-metadata.exe using fifteen samples, alternating execution order
+and CPU affinity mask 4. All 22 drivers complete and all 21 execution checksums
+match. Log records improve about 5%, template rendering about 13%, and virtual
+calls about 14-16%. The sweep initially flags double-object dispatch and bound
+member callbacks amid timing spikes. Longer C-B-B-C repeats use 2500000 dispatch
+iterations and 50000 callback iterations: double-object dispatch improves about
+4.6%, bound member callbacks about 1.1%, and the other cases are flat or faster.
+The large slowdown flags do not reproduce. Final evidence is in
+cycle3-final-ordinary.log, cycle3-final-sdk-full.log, cycle3-final-analyze.log,
+cycle3-performance-final-aot/summary.csv and cycle3-aot-outlier-abba.log.
+The final member-environment witness also passes natively with assertions enabled.

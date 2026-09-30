@@ -1154,6 +1154,11 @@ abstract final class TypedMachine {
               c = cold.c;
               continue dispatch;
           }
+        case TypedOp.callPlain:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           frame = frame.enterStaticPlain(program, index, pc);
+          pc = frame.function.entry;
+           continue dispatch;
         default: throw StateError('Invalid typed opcode at byte ${pc - 1}');
       }
     }
