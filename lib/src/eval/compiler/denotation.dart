@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
 import 'helpers/return.dart';
 import 'helpers/tearoff.dart';
+import 'helpers/constructor_tearoff.dart';
 import 'member/call_signature.dart';
 import 'member/member.dart';
 import 'member/member_name.dart';
@@ -1533,7 +1534,7 @@ final class _StaticBridgeDenotation extends Denotation {
 
 /// A static member or constructor of a non-bridge type (`C.name`) — covers
 /// getters, methods (tear-offs), static fields, and constructor
-/// tear-off errors.
+/// tear-offs.
 final class _TypeMemberDenotation extends Denotation {
   const _TypeMemberDenotation(this.type, this.fqName, this.name);
 
@@ -1552,6 +1553,13 @@ final class _TypeMemberDenotation extends Denotation {
           : CoreTypes.dynamic.ref(ctx);
     }
     final member = ctx.topLevelDeclarationsMap[type.file]?[fqName]?.declaration;
+    if (member is ConstructorDeclaration || member == null && name == 'new') {
+      return constructorTearOffSignature(
+        ctx,
+        type,
+        member as ConstructorDeclaration?,
+      ).toFunctionType(ctx);
+    }
     if (member is MethodDeclaration && !member.isGetter && !member.isSetter) {
       return CallSignature.forDeclaration(
         ctx,
@@ -1588,15 +1596,18 @@ final class _TypeMemberDenotation extends Denotation {
     final member =
         getterMember ?? ctx.topLevelDeclarationsMap[type.file]![fqName];
     final memberDecl = member?.declaration;
+    if (memberDecl is ConstructorDeclaration || member == null && name == 'new') {
+      return materializeConstructorTearOff(
+        ctx,
+        type,
+        fqName,
+        memberDecl as ConstructorDeclaration?,
+        boundContext: boundContext,
+      );
+    }
     if (member != null &&
         !member.isBridge &&
         memberDecl is! VariableDeclaration) {
-      if (memberDecl is ConstructorDeclaration) {
-        throw CompileError(
-          'Constructor tear-off "$fqName" is not supported',
-          source,
-        );
-      }
       final memberOffset = DeferredOrOffset(
         file: type.file,
         name: memberDecl is MethodDeclaration && memberDecl.isGetter

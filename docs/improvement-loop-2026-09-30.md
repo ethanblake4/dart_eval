@@ -35,3 +35,16 @@ This uses existing AssertType instructions; runtime and dispatch are unchanged.
 Fresh and serialized regressions and related virtual-call suites pass all 17
 tests; targeted analysis is clean. The three override_covariant SDK tests pass.
 Removed their stale expected-failure entries.
+
+## Correctness pass 3
+
+Constructor references were rejected outright. Cached compiler wrappers now
+expose their callable signatures and supply the hidden class type argument to
+generative constructors. Factories receive their class type environment through
+the existing callable channel. Parameters retain their declared native ABI.
+
+Four regressions cover fresh and serialized generative/factory/redirecting
+constructors, defaults, generic instantiation, implicit constructors and identity.
+The constructor entrypoint suite and targeted analysis pass. The SDK tear_off
+and unnamed_new tests pass; removed both stale expected-failure entries.
+Runtime and stdlib are unchanged by this pass.
