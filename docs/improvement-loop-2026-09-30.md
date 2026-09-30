@@ -318,3 +318,41 @@ measurement for the next performance pass. Compiler repeats span 12.5–13.4 ms
 on both hosts with equal bytecode size. Evidence: cycle2-cleanup-aot/summary.csv,
 cycle2-cleanup-aot/median-changes.csv, cycle2-cleanup-repeat-*.log,
 and cycle2-cleanup-bytecode-comparison.log.
+
+## Third cycle, correctness pass 1
+
+Factory results need an exact receiver layout before direct field-slot access.
+A factory returning a subclass can inherit the same field while storing it on
+another superclass link. Getter and setter lowering now require an exact type
+or a declared leaf class for that shortcut. Owner-independent method dispatch
+keeps its previous devirtualization. Direct, deferred, native, and serialized
+regressions cover base and subclass storage; regress23408 now passes.
+
+An anonymous block with only external jumps has no result-producing exit.
+Lowering preserves its terminated builder instead of selecting a detached exit
+block. A do-loop only propagates body divergence when its exit has no incoming
+edges. The SDK break/continue fixture and fresh/serialized nested-label and
+finally regressions pass. The installed native compiler does not support that
+experimental syntax; an equivalent explicit-block program returns the same
+result, 428.
+
+Type-parameter subtype expansion now detects active recursive relations and
+can use the whole bound when neither FutureOr member proves the relation.
+Least upper bounds close only the parameter's own recursive occurrences,
+respect variance, retain bound nullability, and apply function/interface rules
+before general subtyping. Both previously unexpected least-upper-bound and
+greatest-closure fixtures pass. Another greatest-closure fixture remains an
+expected compile error. Native Dart agrees on the function/union regression;
+its compiler crashes on the recursive-bound probe. The latter's static
+expectations follow the SDK fixture and installed analyzer rules.
+
+Ordinary validation passes 1882 tests with 62 skips. SDK-full passes all 2700
+harness checks with 362 skips and no unexpected outcomes or stale statuses.
+Actual SDK outcomes are 2270 passed, 136 failed, and 294 compile errors; those
+remaining nonpassing outcomes still require later cycles. Focused checks cover
+48 type-system cases, 26 anonymous-block cases, 11 anonymous SDK fixtures, and
+46 factory/layout cases. No runtime or generated stdlib changes occur in this
+pass. Logs: cycle3-pass1-ordinary.log, sdk-full-cycle3-pass1.log,
+cycle3-lub-before.log, cycle3-lub-after.log, and cycle3-lub-sdk.log. Full analysis
+has only the existing dependency warning and benchmark import info after
+fixing two new brace-style infos; focused type-system analysis is clean.

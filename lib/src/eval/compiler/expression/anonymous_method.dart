@@ -145,12 +145,18 @@ Variable _runBody(
     } else if (ctx.blockCode.isNotEmpty) {
       ctx.flushBlock();
     }
-    ctx.builder.float(exit);
-    ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
     final merged = ctx.lookupLocal(resultName)!;
-    result = merged.copyWith(
-      type: TypeRef.commonBaseType(ctx, returnTarget.types),
-    );
+    if (returnTarget.types.isEmpty) {
+      // Every path jumps out of the invocation. Keep the enclosing jump's
+      // terminated flow instead of selecting an unreachable result block.
+      result = merged.copyWith(type: CoreTypes.never.ref(ctx));
+    } else {
+      ctx.builder.float(exit);
+      ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
+      result = merged.copyWith(
+        type: TypeRef.commonBaseType(ctx, returnTarget.types),
+      );
+    }
     // The local's binding still points at the `Object?`-declared variable;
     // rebind it so later bound-refresh (e.g. `boxIfNeeded`) keeps the
     // least-upper-bound type.

@@ -170,7 +170,10 @@ StatementInfo macroLoop(
   ]);
   after?.call(ctx);
   ctx.endScope();
-  return alwaysLoopOnce
+  // A break can reach the loop's exit even when the body expression has
+  // type Never. Retain divergence only when no edge reaches that exit.
+  return alwaysLoopOnce &&
+          ctx.activeGraph.graph.predecessorsOf(exit.id!).isEmpty
       ? result.copyWith(willAlwaysBreak: false)
       : StatementInfo();
 }

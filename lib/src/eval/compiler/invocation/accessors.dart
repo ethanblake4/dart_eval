@@ -393,27 +393,15 @@ sealed class GetTarget {
       methodSignature = null;
     }
     final exact = receiver.exactType ?? declaredLeafClass(ctx, receiver.type);
-    // A provably-class receiver can reach member storage directly. An
-    // exact receiver is never a subclass instance; a concreteTypes
-    // receiver may be, so the slot is only valid when no descendant
-    // redeclares the member.
-    final directType =
-        exact ??
-        (receiver.concreteTypes.length == 1 &&
-                !ctx.memberOverriddenInSubclass(
-                  receiver.concreteTypes.first.file,
-                  receiver.concreteTypes.first.name,
-                  name,
-                )
-            ? receiver.concreteTypes.first
-            : null);
-    if (directType != null) {
+    // Field storage and owner-link hops require an exact receiver layout.
+    // A subclass can inherit the member while storing it on another link.
+    if (exact != null) {
       // Storage for an inherited field lives on its declaring class's
       // link, reached from the receiver by LoadSuper hops. The slot walk
       // only matches guest members — bridged ancestors never appear in
       // `instanceGetterIndices`, so a native member simply falls through.
       final slot = ctx.memberLookup.accessorSlot(
-        directType,
+        exact,
         name,
         MemberKind.getter,
       );
@@ -1076,23 +1064,13 @@ sealed class SetTarget {
         );
     final fieldType = declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
     final exact = object.exactType ?? declaredLeafClass(ctx, object.type);
-    final directType =
-        exact ??
-        (object.concreteTypes.length == 1 &&
-                !ctx.memberOverriddenInSubclass(
-                  object.concreteTypes.first.file,
-                  object.concreteTypes.first.name,
-                  name,
-                )
-            ? object.concreteTypes.first
-            : null);
-    if (directType != null) {
+    if (exact != null) {
       // Storage for an inherited field lives on its declaring class's
       // link, reached from the receiver by LoadSuper hops. The slot walk
       // only matches guest members — bridged ancestors never appear in
       // `instanceGetterIndices`, so a native member simply falls through.
       final slot = ctx.memberLookup.accessorSlot(
-        directType,
+        exact,
         name,
         MemberKind.setter,
       );

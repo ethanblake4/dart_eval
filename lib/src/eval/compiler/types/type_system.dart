@@ -14,6 +14,10 @@ final class TypeSystem {
 
   final CompilerContext _ctx;
 
+  // Recursive bounds may revisit the same subtype question without making
+  // progress. Keep this only for active type-parameter expansions.
+  final _activeParameterRelations = <(TypeRef, TypeRef, bool, bool)>{};
+
   /// Maps [type]'s declared parameters to the applied arguments — the
   /// substitution that resolves member and supertype annotations written in
   /// the declaration's own parameter space. Refs constructed without
@@ -142,7 +146,8 @@ final class TypeSystem {
     // `FutureOr<S>` unifies through whichever branch matches the concrete's
     // shape — a `Future<int>` argument binds S through `Future<S>`, a plain
     // `int` binds it directly.
-    if (pattern is InterfaceTypeRef && pattern.decl.isSpec(AsyncTypes.futureOr)) {
+    if (pattern is InterfaceTypeRef &&
+        pattern.decl.isSpec(AsyncTypes.futureOr)) {
       final s = interfaceArgumentsOf(pattern).isEmpty
           ? CoreTypes.dynamic.ref(_ctx)
           : interfaceArgumentsOf(pattern).first;
@@ -186,7 +191,11 @@ final class TypeSystem {
       return;
     }
     final args = interfaceArgumentsOf(pattern);
-    for (var i = 0; i < args.length && i < interfaceArgumentsOf(concrete).length; i++) {
+    for (
+      var i = 0;
+      i < args.length && i < interfaceArgumentsOf(concrete).length;
+      i++
+    ) {
       unify(args[i], interfaceArgumentsOf(concrete)[i], substitutions);
     }
   }
@@ -217,7 +226,8 @@ final class TypeSystem {
       if (identical(nominalDeclOf(current), nominalDeclOf(concrete))) {
         if (interfaceArgumentsOf(current).isEmpty &&
             !identical(current, pattern) &&
-            interfaceArgumentsOf(pattern).length == interfaceArgumentsOf(concrete).length) {
+            interfaceArgumentsOf(pattern).length ==
+                interfaceArgumentsOf(concrete).length) {
           // The declaring class's supertype is raw; bind `pattern`'s
           // arguments positionally instead.
           final pArgs = interfaceArgumentsOf(pattern);
@@ -615,11 +625,8 @@ final class TypeSystem {
     if (t is TypeParameterTypeRef) {
       final bound = t.effectiveBound;
       if (bound == null) return t;
-      if (bound is InterfaceTypeRef &&
-          bound.decl.isSpec(AsyncTypes.futureOr)) {
-        return flatten(bound).withNullable(
-          bound.nullable || nullable,
-        );
+      if (bound is InterfaceTypeRef && bound.decl.isSpec(AsyncTypes.futureOr)) {
+        return flatten(bound).withNullable(bound.nullable || nullable);
       }
       final instantiation = asInstanceOf(
         bound,
@@ -636,8 +643,9 @@ final class TypeSystem {
     if (t.name == 'FutureOr' && interfaceArgumentsOf(t).isNotEmpty) {
       // `FutureOr<S>` unwraps once — `flatten(FutureOr<S>)` is `S`, not
       // `flatten(S)` — so `FutureOr<Future<int>>` awaits to `Future<int>`.
-      return interfaceArgumentsOf(t).first
-          .withNullable(interfaceArgumentsOf(t).first.nullable || nullable);
+      return interfaceArgumentsOf(
+        t,
+      ).first.withNullable(interfaceArgumentsOf(t).first.nullable || nullable);
     }
     final instantiation = asInstanceOf(t, _ctx.types.bySpec(CoreTypes.future));
     if (instantiation != null) {
@@ -685,36 +693,37 @@ final class TypeSystem {
   /// conditional/`??=` rules test the joined type against.
   TypeRef greatestClosure(TypeRef type) => switch (type) {
     TypeParameterTypeRef() => CoreTypes.object.ref(_ctx).withNullable(true),
-    InterfaceTypeRef(:final arguments) => arguments.isEmpty
-        ? type
-        : type.copyWith(
-            arguments: [for (final arg in arguments) greatestClosure(arg)],
-          ),
+    InterfaceTypeRef(:final arguments) =>
+      arguments.isEmpty
+          ? type
+          : type.copyWith(
+              arguments: [for (final arg in arguments) greatestClosure(arg)],
+            ),
     RecordTypeRef(:final positional, :final named) => RecordTypeRef(
-        [for (final field in positional) greatestClosure(field)],
-        {
-          for (final entry in named.entries)
-            entry.key: greatestClosure(entry.value),
-        },
-        nullable: type.nullable,
-      ),
+      [for (final field in positional) greatestClosure(field)],
+      {
+        for (final entry in named.entries)
+          entry.key: greatestClosure(entry.value),
+      },
+      nullable: type.nullable,
+    ),
     FunctionTypeRef(:final signature) => type.copyWith(
-        signature: FunctionSignature(
-          typeParameters: signature.typeParameters,
-          positional: [
-            for (final field in signature.positional) greatestClosure(field),
-          ],
-          requiredPositional: signature.requiredPositional,
-          named: {
-            for (final entry in signature.named.entries)
-              entry.key: (
-                type: greatestClosure(entry.value.type),
-                required: entry.value.required,
-              ),
-          },
-          returnType: greatestClosure(signature.returnType),
-        ),
+      signature: FunctionSignature(
+        typeParameters: signature.typeParameters,
+        positional: [
+          for (final field in signature.positional) greatestClosure(field),
+        ],
+        requiredPositional: signature.requiredPositional,
+        named: {
+          for (final entry in signature.named.entries)
+            entry.key: (
+              type: greatestClosure(entry.value.type),
+              required: entry.value.required,
+            ),
+        },
+        returnType: greatestClosure(signature.returnType),
       ),
+    ),
   };
 
   /// Given a set of [types], find their closest common ancestor type —
@@ -747,26 +756,47 @@ final class TypeSystem {
     return result.withNullable(result.nullable || makeNullable);
   }
 
-  /// The pairwise LUB step behind [leastUpperBound]: subtype wins, a shared
-  /// generic declaration merges its arguments covariantly (Dart classes are
-  /// covariant unless declared `in`/`inout`, which dart_eval does not model),
+  /// The pairwise LUB step behind [leastUpperBound]: function and parameter
+  /// rules precede interface subtyping. A shared declaration merges arguments
+  /// covariantly (Dart classes are covariant unless declared `in`/`inout`,
+  /// which dart_eval does not model),
   /// and incomparable types intersect their superinterface *instantiations*
   /// — the set element keeps its type arguments, so `Comparable<num>` and
   /// `Comparable<String>` never meet — then takes the unique deepest.
   TypeRef _pairwiseUpperBound(TypeRef a, TypeRef b) {
+    if (a.isSpec(CoreTypes.never)) {
+      return b.withNullable(b.nullable || a.nullable);
+    }
+    if (b.isSpec(CoreTypes.never)) {
+      return a.withNullable(a.nullable || b.nullable);
+    }
+    if (a.isSpec(CoreTypes.nullType)) return b.withNullable(true);
+    if (b.isSpec(CoreTypes.nullType)) return a.withNullable(true);
+    // Function/interface joins use Object before the general subtype rule.
+    // A function below FutureOr<Function> still joins that union at Object.
+    final mixedFunction = (a is FunctionTypeRef) != (b is FunctionTypeRef);
+    if (mixedFunction &&
+        a is! TypeParameterTypeRef &&
+        b is! TypeParameterTypeRef &&
+        !a.isSpec(CoreTypes.dynamic) &&
+        !b.isSpec(CoreTypes.dynamic) &&
+        !a.isSpec(CoreTypes.voidType) &&
+        !b.isSpec(CoreTypes.voidType)) {
+      final other = a is FunctionTypeRef ? b : a;
+      if (other.isSpec(CoreTypes.function)) return other;
+      return leastUpperBound({CoreTypes.object.ref(_ctx), other});
+    }
     if (a.isAssignableTo(_ctx, b, forceAllowDynamic: false)) return b;
     if (b.isAssignableTo(_ctx, a, forceAllowDynamic: false)) return a;
     if (a is TypeParameterTypeRef) {
-      return _pairwiseUpperBound(
-        a.effectiveBound?.withNullable(false) ?? CoreTypes.dynamic.ref(_ctx),
-        b,
-      );
+      return leastUpperBound({_closedParameterBound(a), b});
     }
     if (b is TypeParameterTypeRef) {
-      return _pairwiseUpperBound(
-        a,
-        b.effectiveBound?.withNullable(false) ?? CoreTypes.dynamic.ref(_ctx),
-      );
+      return leastUpperBound({a, _closedParameterBound(b)});
+    }
+    if (a.isSpec(CoreTypes.object) || b.isSpec(CoreTypes.object)) {
+      final other = a.isSpec(CoreTypes.object) ? b : a;
+      return CoreTypes.object.ref(_ctx).withNullable(!_isNonNullable(other));
     }
     // Identically-shaped signatures meet pointwise: the return type joins
     // upward while parameters meet at their greatest lower bound, matching
@@ -798,10 +828,7 @@ final class TypeSystem {
                   required: entry.value.required,
                 ),
             },
-            returnType: _pairwiseUpperBound(
-              sa.returnType,
-              sb.returnType,
-            ),
+            returnType: _pairwiseUpperBound(sa.returnType, sb.returnType),
           ),
         );
       }
@@ -822,10 +849,9 @@ final class TypeSystem {
         }
       }
     }
-    final common =
-        _superinterfaceSet(a)
-          ..add(a)
-          ..retainAll(_superinterfaceSet(b)..add(b));
+    final common = _superinterfaceSet(a)
+      ..add(a)
+      ..retainAll(_superinterfaceSet(b)..add(b));
     if (common.isEmpty) {
       return CoreTypes.dynamic.ref(_ctx);
     }
@@ -841,6 +867,36 @@ final class TypeSystem {
       if (atDepth.length == 1) return atDepth.first;
     }
     return CoreTypes.dynamic.ref(_ctx);
+  }
+
+  /// Close only this parameter's recursive occurrences, respecting variance.
+  TypeRef _closedParameterBound(TypeParameterTypeRef type) => _closeBound(
+    type.effectiveBound ?? CoreTypes.object.ref(_ctx).withNullable(true),
+    Substitution.of({
+      type.parameter: CoreTypes.object.ref(_ctx).withNullable(true),
+    }),
+    Substitution.of({type.parameter: CoreTypes.never.ref(_ctx)}),
+  );
+
+  bool _isNonNullable(TypeRef type, [Set<TypeParameterDef>? visiting]) {
+    if (type.nullable ||
+        type.isSpec(CoreTypes.nullType) ||
+        type.isSpec(CoreTypes.dynamic) ||
+        type.isSpec(CoreTypes.voidType)) {
+      return false;
+    }
+    if (type is TypeParameterTypeRef) {
+      final active = visiting ?? <TypeParameterDef>{};
+      final bound = type.effectiveBound;
+      return bound != null &&
+          active.add(type.parameter) &&
+          _isNonNullable(bound, active);
+    }
+    if (type.isSpec(AsyncTypes.futureOr)) {
+      final arguments = interfaceArgumentsOf(type);
+      return arguments.isNotEmpty && _isNonNullable(arguments.first, visiting);
+    }
+    return true;
   }
 
   /// The subtype-either-way greatest lower bound used for function
@@ -878,7 +934,6 @@ final class TypeSystem {
 
     return depth(type);
   }
-
 
   /// The declaration-shaped chain for [type]: `[this]`, then layers of
   /// supertypes — the superclass's own chain forms the deepest layers while
@@ -967,11 +1022,7 @@ final class TypeSystem {
         final inner = s.isEmpty
             ? CoreTypes.dynamic.ref(_ctx)
             : s.first.withNullable(to.nullable || s.first.nullable);
-        return isAssignable(
-          from,
-          inner,
-          forceAllowDynamic: forceAllowDynamic,
-        );
+        return isAssignable(from, inner, forceAllowDynamic: forceAllowDynamic);
       }
       return to.isSpec(CoreTypes.object) && to.nullable;
     }
@@ -987,11 +1038,7 @@ final class TypeSystem {
       if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
         final s = interfaceArgumentsOf(to);
         return s.isNotEmpty &&
-            isAssignable(
-              from,
-              s.first,
-              forceAllowDynamic: forceAllowDynamic,
-            );
+            isAssignable(from, s.first, forceAllowDynamic: forceAllowDynamic);
       }
       return false;
     }
@@ -1004,46 +1051,57 @@ final class TypeSystem {
       return false;
     }
 
-    if (from.isTypeParameter) {
+    if (from is TypeParameterTypeRef) {
       // Same parameter — the nullability gate above already handled the
       // `E` → `E?` direction; `==` would also reject it on nullability.
-      if (from is TypeParameterTypeRef &&
-          to is TypeParameterTypeRef &&
-          from.parameter == to.parameter) {
+      if (to is TypeParameterTypeRef && from.parameter == to.parameter) {
         return true;
       }
-      // A union target decomposes before the bound fallback — `S` is a
-      // member of `FutureOr<S>` even though the bound `Object?` is not
-      // assignable to it.
-      if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
-        final s = interfaceArgumentsOf(to).isEmpty
-            ? CoreTypes.dynamic.ref(_ctx)
-            : interfaceArgumentsOf(to).first;
-        final future = _ctx.types
-            .bySpec(CoreTypes.future)
-            .instantiate([s], nullable: to.nullable);
-        return isAssignable(
-              from,
-              future,
-              forceAllowDynamic: forceAllowDynamic,
-              allowDynamicParameterDowncast: allowDynamicParameterDowncast,
-            ) ||
-            isAssignable(
-              from,
-              s.withNullable(to.nullable || s.nullable),
-              forceAllowDynamic: forceAllowDynamic,
-              allowDynamicParameterDowncast: allowDynamicParameterDowncast,
-            );
-      }
-      // A type parameter is assignable to [to] iff its declared bound is
-      // (or the promoted bound, `X & S`, when flow analysis narrowed it).
-      // An unbounded parameter (`<T>`) has the implicit bound `Object?`.
-      return isAssignable(
-        (from as TypeParameterTypeRef).effectiveBound ??
-            CoreTypes.object.ref(_ctx).withNullable(true),
+      final relation = (
+        from,
         to,
-        forceAllowDynamic: forceAllowDynamic,
+        forceAllowDynamic,
+        allowDynamicParameterDowncast,
       );
+      if (!_activeParameterRelations.add(relation)) return false;
+      try {
+        // A union target decomposes before the bound fallback — `S` is a
+        // member of `FutureOr<S>` even though the bound `Object?` is not
+        // assignable to it.
+        if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
+          final s = interfaceArgumentsOf(to).isEmpty
+              ? CoreTypes.dynamic.ref(_ctx)
+              : interfaceArgumentsOf(to).first;
+          final future = _ctx.types.bySpec(CoreTypes.future).instantiate([
+            s,
+          ], nullable: to.nullable);
+          if (isAssignable(
+                from,
+                future,
+                forceAllowDynamic: forceAllowDynamic,
+                allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+              ) ||
+              isAssignable(
+                from,
+                s.withNullable(to.nullable || s.nullable),
+                forceAllowDynamic: forceAllowDynamic,
+                allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+              )) {
+            return true;
+          }
+        }
+        // A type parameter is assignable to [to] iff its declared bound is
+        // (or the promoted bound, `X & S`, when flow analysis narrowed it).
+        // An unbounded parameter (`<T>`) has the implicit bound `Object?`.
+        return isAssignable(
+          from.effectiveBound ?? CoreTypes.object.ref(_ctx).withNullable(true),
+          to,
+          forceAllowDynamic: forceAllowDynamic,
+          allowDynamicParameterDowncast: allowDynamicParameterDowncast,
+        );
+      } finally {
+        _activeParameterRelations.remove(relation);
+      }
     }
 
     // `FutureOr<S>` is the union `Future<S> | S`: a target accepts a value
@@ -1053,9 +1111,9 @@ final class TypeSystem {
       final s = interfaceArgumentsOf(from).isEmpty
           ? CoreTypes.dynamic.ref(_ctx)
           : interfaceArgumentsOf(from).first;
-      final future = _ctx.types
-          .bySpec(CoreTypes.future)
-          .instantiate([s], nullable: from.nullable);
+      final future = _ctx.types.bySpec(CoreTypes.future).instantiate([
+        s,
+      ], nullable: from.nullable);
       return isAssignable(
             future,
             to,
@@ -1070,13 +1128,13 @@ final class TypeSystem {
           );
     }
 
-if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
+    if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
       final s = interfaceArgumentsOf(to).isEmpty
           ? CoreTypes.dynamic.ref(_ctx)
           : interfaceArgumentsOf(to).first;
-      final future = _ctx.types
-          .bySpec(CoreTypes.future)
-          .instantiate([s], nullable: to.nullable);
+      final future = _ctx.types.bySpec(CoreTypes.future).instantiate([
+        s,
+      ], nullable: to.nullable);
       return isAssignable(
             from,
             future,
@@ -1090,7 +1148,7 @@ if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
             allowDynamicParameterDowncast: allowDynamicParameterDowncast,
           );
     }
-        final generics = overrideGenerics ?? _effectiveTypeArguments(from);
+    final generics = overrideGenerics ?? _effectiveTypeArguments(from);
     final targetGenerics = _effectiveTypeArguments(to);
 
     // Records are structural: `hasSameDeclarationAs` alone would require
@@ -1182,11 +1240,7 @@ if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
       final instantiated = substitution.isEmpty
           ? type
           : type.substituteTypeParameters(substitution);
-      if (isAssignable(
-        instantiated,
-        to,
-        forceAllowDynamic: false,
-      )) {
+      if (isAssignable(instantiated, to, forceAllowDynamic: false)) {
         return true;
       }
     }
@@ -1213,8 +1267,7 @@ if (to is InterfaceTypeRef && to.decl.isSpec(AsyncTypes.futureOr)) {
     final targetSignature = target.signature;
     if (sourceSignature.requiredPositional >
             targetSignature.requiredPositional ||
-        sourceSignature.positional.length <
-            targetSignature.positional.length) {
+        sourceSignature.positional.length < targetSignature.positional.length) {
       return false;
     }
     if (sourceSignature.typeParameters.length !=
