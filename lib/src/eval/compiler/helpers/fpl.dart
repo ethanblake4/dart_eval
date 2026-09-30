@@ -151,7 +151,13 @@ List<FormalParameter> resolveFPLDefaults(
     // An unwritten parameter type on an instance method is inherited from
     // the overridden member's signature (Dart's override inference).
     return (
-      _inheritedParameterType(ctx, param, decLibrary, parameterHost),
+      _inheritedParameterType(
+        ctx,
+        param,
+        decLibrary,
+        parameterHost,
+        typeParameters,
+      ),
       null,
     );
   } else if (param is FieldFormalParameter) {
@@ -189,6 +195,7 @@ TypeRef? _inheritedParameterType(
   FormalParameter param,
   int decLibrary,
   Declaration? parameterHost,
+  Map<String, TypeRef> typeParameters,
 ) {
   final list = param.parent;
   final method = list?.parent;
@@ -209,6 +216,14 @@ TypeRef? _inheritedParameterType(
     ctx,
     decl,
     MemberName(method.name.lexeme, kind),
+    methodTypeParameters: [
+      for (final parameter
+          in method.typeParameters?.typeParameters ?? const <TypeParameter>[])
+        if ((typeParameters[parameter.name.lexeme] ??
+                ctx.typeScopes[decLibrary]?[parameter.name.lexeme])
+            case TypeParameterTypeRef(:final parameter))
+          parameter,
+    ],
   );
   if (signature == null) return null;
   if (param.isNamed) {

@@ -163,11 +163,9 @@ Variable materializeTearOff(
   }
 
   final functionType = switch (declaration) {
-    MethodDeclaration() => ctx.typeFactory.declaredFunctionType(
+    MethodDeclaration() => ctx.typeFactory.declaredMethodType(
       offset.file ?? ctx.library,
-      declaration.parameters,
-      declaration.returnType,
-      declaration.typeParameters,
+      declaration,
       memberTypeParameters: memberParams,
       ownTypeParameterOwner: callableOwner,
     ),

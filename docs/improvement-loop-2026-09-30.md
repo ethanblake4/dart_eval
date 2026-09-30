@@ -170,3 +170,18 @@ pass fresh and serialized. Six focused regressions check both language
 versions, reject the opposite version's inferred types and retain mutation
 barriers. Targeted analysis is clean, with no runtime changes. The newly
 passing SDK paths have no expect_fail entries.
+
+## Second cycle, correctness pass 3
+
+Method callable metadata was reconstructed from written annotations, erasing
+types supplied by override inference. A shared method type builder now reuses
+the resolved member signature for runtime metadata, tear-offs and body return
+context. Async methods consequently retain inherited Future payload types.
+Inherited generic method parameters are rebound by position to the overriding
+method's scope, including differently named parameters. An inherited return
+type constrains call inference as a written annotation does.
+
+Three regressions cover runtime tear-off types, generic substitution and async
+payloads in fresh and serialized runtimes. All 58 focused tear-off, generic,
+extension and async tests pass. The complete SDK override_inference fixture
+passes, and targeted analysis is clean. Runtime code is unchanged.

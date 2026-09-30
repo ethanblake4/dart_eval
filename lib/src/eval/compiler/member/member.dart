@@ -295,7 +295,12 @@ final class SourceMember extends Member {
     }
     final owner = this.owner;
     if (owner is! TypeDeclMemberOwner) return signature;
-    final inherited = inheritedMemberSignature(_ctx, owner.decl, name);
+    final inherited = inheritedMemberSignature(
+      _ctx,
+      owner.decl,
+      name,
+      methodTypeParameters: signature.typeParameters,
+    );
     // The paired accessor participates too: `set foo(int)` supplies an
     // untyped getter's return, and `int get foo` an untyped setter's
     // parameter type.
@@ -356,18 +361,19 @@ final class SourceMember extends Member {
           inherit(
             spec,
             [
-                  for (final p in inherited?.named ?? const <ParameterSpec>[])
-                    if (p.name == spec.name) p,
-                ].firstOrNull
-                ?.type,
+              for (final p in inherited?.named ?? const <ParameterSpec>[])
+                if (p.name == spec.name) p,
+            ].firstOrNull?.type,
           ),
       ],
       returnType: needsReturn
           ? inherited?.returnType ??
-              paired?.positional.firstOrNull?.type ??
-              signature.returnType
+                paired?.positional.firstOrNull?.type ??
+                signature.returnType
           : signature.returnType,
-      returnAnnotated: signature.returnAnnotated,
+      // An inherited return type constrains calls just like an annotation.
+      returnAnnotated: signature.returnAnnotated ||
+          (needsReturn && (inherited != null || paired != null)),
       returnOverride: signature.returnOverride,
     );
   }
@@ -483,8 +489,9 @@ final class BridgeMember extends Member {
 CallSignature? inheritedMemberSignature(
   CompilerContext ctx,
   TypeDecl decl,
-  MemberName name,
-) {
+  MemberName name, {
+  List<TypeParameterDef> methodTypeParameters = const [],
+}) {
   final supertypes = decl.supertypes;
   final candidates = <ResolvedMember>[
     for (final sup in [
@@ -495,9 +502,21 @@ CallSignature? inheritedMemberSignature(
       ?ctx.memberLookup.tryInterfaceMember(sup, name),
   ];
   if (candidates.isEmpty) return null;
-  return candidates.length == 1
+  final signature = candidates.length == 1
       ? candidates.first.signature
       : ctx.memberLookup.mergeInterfaceMembers(candidates).signature;
+  return signature.substitute(
+    Substitution.of({
+      for (
+        var i = 0;
+        i < signature.typeParameters.length && i < methodTypeParameters.length;
+        i++
+      )
+        signature.typeParameters[i]: TypeParameterTypeRef(
+          methodTypeParameters[i],
+        ),
+    }),
+  );
 }
 
 /// Member lookup on a declaration — instance members, static members, and

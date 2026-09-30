@@ -98,11 +98,9 @@ int compileMethodDeclaration(
                     as TypeParameterTypeRef)
                 .parameter,
         ];
-        ctx.functionRuntimeTypes[pos] = ctx.typeFactory.declaredFunctionType(
+        ctx.functionRuntimeTypes[pos] = ctx.typeFactory.declaredMethodType(
           ctx.library,
-          d.parameters,
-          d.returnType,
-          d.typeParameters,
+          d,
           memberTypeParameters: {
             ...switch (ctx.currentClass) {
               final host? => classTypeParameterRefs(
@@ -164,9 +162,9 @@ int compileMethodDeclaration(
                 decLibrary: ctx.library,
               );
 
-        final expectedReturnType = d.returnType == null
-            ? CoreTypes.dynamic.ref(ctx)
-            : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!);
+        final expectedReturnType =
+            (ctx.functionRuntimeTypes[pos] as FunctionTypeRef)
+                .signature.returnType;
         final parameterTypes = d.parameters == null
             ? const <TypeRef>[]
             : ctx.functionParameterTypes[pos]!;
@@ -176,14 +174,12 @@ int compileMethodDeclaration(
           setupGenerator(
             ctx,
             asynchronous: b.isAsynchronous,
-            returnType: d.returnType == null ? null : expectedReturnType,
+            returnType: expectedReturnType,
           );
         } else if (b.isAsynchronous && !b.isGenerator) {
           setupAsyncFunction(
             ctx,
-            returnType: d.returnType == null
-                ? null
-                : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!),
+            returnType: expectedReturnType,
           );
         }
 

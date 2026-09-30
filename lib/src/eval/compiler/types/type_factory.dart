@@ -5,6 +5,8 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/member/member.dart';
+import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
 /// Constructs [TypeRef]s — the single home for every annotation→type
@@ -46,10 +48,10 @@ final class TypeFactory {
         if (!names.contains(entry.key)) entry.key: entry.value,
     };
     if (outer.isEmpty) return owner;
-    return _signatureOwners.putIfAbsent(
-      (owner, outer),
-      () => TypeParameterOwner.fresh(owner),
-    );
+    return _signatureOwners.putIfAbsent((
+      owner,
+      outer,
+    ), () => TypeParameterOwner.fresh(owner));
   }
 
   /// Stable per-[BridgeFunctionDef] identity for type-parameter owner keys.
@@ -120,8 +122,9 @@ final class TypeFactory {
       // it instead of degrading the whole type to `dynamic`.
       if (n == 'FutureOr') {
         final resolved = <TypeRef>[
-          for (final arg in typeAnnotation.typeArguments?.arguments ??
-              const <TypeAnnotation>[])
+          for (final arg
+              in typeAnnotation.typeArguments?.arguments ??
+                  const <TypeAnnotation>[])
             fromAnnotation(library, arg, typeParameters: typeParameters),
         ];
         return _ctx.types.futureOr
@@ -288,8 +291,9 @@ final class TypeFactory {
                   genericIndex < interfaceArgumentsOf(candidate).length,
             );
         if (instantiatedType != null) {
-          final resolvedDeclaredType =
-              interfaceArgumentsOf(instantiatedType)[genericIndex];
+          final resolvedDeclaredType = interfaceArgumentsOf(
+            instantiatedType,
+          )[genericIndex];
           if (!resolvedDeclaredType.isAssignableTo(_ctx, boundType)) {
             throw CompileError(
               "Type argument $resolvedDeclaredType does not conform to type parameter $ref's"
@@ -644,12 +648,12 @@ final class TypeFactory {
 
     TypeRef resolveParameter(FormalParameter parameter) =>
         parameter.type == null
-            ? CoreTypes.dynamic.ref(_ctx)
-            : formalParameterAnnotationType(
-                library,
-                parameter,
-                typeParameters: allTypeParams,
-              );
+        ? CoreTypes.dynamic.ref(_ctx)
+        : formalParameterAnnotationType(
+            library,
+            parameter,
+            typeParameters: allTypeParams,
+          );
 
     final parameters = parameterList?.parameters ?? const <FormalParameter>[];
     final positional = <TypeRef>[
@@ -790,6 +794,70 @@ final class TypeFactory {
     );
   }
 
+  /// A method's callable type includes types inferred from its interfaces.
+  /// Rebind those types to the caller's class and callable parameter scopes.
+  FunctionTypeRef declaredMethodType(
+    int library,
+    MethodDeclaration method, {
+    Map<String, TypeRef> memberTypeParameters = const {},
+    required TypeParameterOwner ownTypeParameterOwner,
+  }) {
+    final declared =
+        declaredFunctionType(
+              library,
+              method.parameters,
+              method.returnType,
+              method.typeParameters,
+              memberTypeParameters: memberTypeParameters,
+              ownTypeParameterOwner: ownTypeParameterOwner,
+            )
+            as FunctionTypeRef;
+    final host = method.parent?.parent;
+    if (method.isStatic || host is! Declaration) return declared;
+    final owner = _ctx.types.find(library, declarationName(host));
+    final member = owner?.declaredMember(
+      MemberName(
+        method.name.lexeme,
+        method.isGetter
+            ? MemberKind.getter
+            : method.isSetter
+            ? MemberKind.setter
+            : MemberKind.method,
+      ),
+    );
+    if (member == null) return declared;
+    final signature = member.signature;
+    final resolved = signature.substitute(
+      Substitution.of({
+        for (final parameter in owner!.typeParameters)
+          if (memberTypeParameters[parameter.name] case final type?)
+            parameter: type,
+        for (var i = 0; i < signature.typeParameters.length; i++)
+          signature.typeParameters[i]: TypeParameterTypeRef(
+            declared.signature.typeParameters[i],
+          ),
+      }),
+    );
+    return FunctionTypeRef(
+      FunctionSignature(
+        typeParameters: declared.signature.typeParameters,
+        positional: [
+          for (final parameter in resolved.positional) parameter.type,
+        ],
+        requiredPositional: resolved.requiredPositional,
+        named: {
+          for (final parameter in resolved.named)
+            parameter.name: (
+              type: parameter.type,
+              required: parameter.isRequired,
+            ),
+        },
+        returnType: resolved.returnType,
+      ),
+      decl: declared.decl,
+    );
+  }
+
   /// The declared type of a formal parameter's type annotation. Legacy
   /// function-typed parameters (`R f<P>(args)`) carry their parameter list and
   /// type parameters on a [FunctionTypedFormalParameterSuffix] rather than a
@@ -827,4 +895,3 @@ final class TypeFactory {
     );
   }
 }
-
