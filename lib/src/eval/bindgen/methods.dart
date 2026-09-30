@@ -52,7 +52,7 @@ String $methods(BindgenContext ctx, InterfaceElement element) {
               'final self = target! as \$${element.name};\n'
               '${returnsValue ? 'final result = ' : ''}'
               '${callOp.format('self.\$value', argumentAccessors(ctx, e.formalParameters, callable: true, member: member))};\n'
-              'return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union)};';
+              'return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union, runtimeTypeOwner: 'self')};';
         }
         return '''
         static const \$Function __${op.name} = \$Function(_${op.name});

@@ -33,6 +33,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'converter.dart';
 
@@ -184,7 +185,12 @@ class $Codec<S, T> implements $Instance {
   $Codec.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

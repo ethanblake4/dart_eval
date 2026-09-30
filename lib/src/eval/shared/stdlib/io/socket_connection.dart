@@ -35,6 +35,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $HttpHeaders,
         $RedirectInfo,
         $Socket;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/convert.dart'
     hide
         $SocketException,
@@ -1732,6 +1733,10 @@ class $Socket implements $Instance {
         final _done = $value.done;
         return $Future.wrap(
           _done.then((e) => runtime.wrapAlways(e, recursive: true)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(CoreTypes.dynamic),
+          ]),
         );
       case 'encoding':
         final _encoding = $value.encoding;
@@ -1741,19 +1746,49 @@ class $Socket implements $Instance {
         return $bool(_isBroadcast);
       case 'length':
         final _length = $value.length;
-        return $Future.wrap(_length.then((e) => $int(e)));
+        return $Future.wrap(
+          _length.then((e) => $int(e)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        );
       case 'isEmpty':
         final _isEmpty = $value.isEmpty;
-        return $Future.wrap(_isEmpty.then((e) => $bool(e)));
+        return $Future.wrap(
+          _isEmpty.then((e) => $bool(e)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(CoreTypes.bool),
+          ]),
+        );
       case 'first':
         final _first = $value.first;
-        return $Future.wrap(_first.then((e) => $Uint8List.wrap(e)));
+        return $Future.wrap(
+          _first.then((e) => $Uint8List.wrap(e)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(TypedDataTypes.uint8List),
+          ]),
+        );
       case 'last':
         final _last = $value.last;
-        return $Future.wrap(_last.then((e) => $Uint8List.wrap(e)));
+        return $Future.wrap(
+          _last.then((e) => $Uint8List.wrap(e)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(TypedDataTypes.uint8List),
+          ]),
+        );
       case 'single':
         final _single = $value.single;
-        return $Future.wrap(_single.then((e) => $Uint8List.wrap(e)));
+        return $Future.wrap(
+          _single.then((e) => $Uint8List.wrap(e)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(TypedDataTypes.uint8List),
+          ]),
+        );
       case 'port':
         final _port = $value.port;
         return $int(_port);
@@ -1972,6 +2007,10 @@ class $Socket implements $Instance {
     final result = self.$value.addStream((r as $Value?)!.$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1987,6 +2026,10 @@ class $Socket implements $Instance {
     final result = self.$value.close();
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -2031,6 +2074,10 @@ class $Socket implements $Instance {
     final result = self.$value.flush();
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -2069,7 +2116,13 @@ class $Socket implements $Instance {
               );
             },
     );
-    return $Stream.wrap(result.map((e) => $Uint8List.wrap(e)));
+    return $Stream.wrap(
+      result.map((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __listen = $Function(_listen);
@@ -2154,7 +2207,13 @@ class $Socket implements $Instance {
         1,
       )?.$value;
     });
-    return $Stream.wrap(result.map((e) => $Uint8List.wrap(e)));
+    return $Stream.wrap(
+      result.map((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __map = $Function(_map);
@@ -2265,7 +2324,13 @@ class $Socket implements $Instance {
                   ?.$value;
             },
     );
-    return $Stream.wrap(result.map((e) => $Uint8List.wrap(e)));
+    return $Stream.wrap(
+      result.map((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __expand = $Function(_expand);
@@ -2303,6 +2368,10 @@ class $Socket implements $Instance {
     final result = self.$value.pipe((r as $Value?)!.$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -2339,7 +2408,13 @@ class $Socket implements $Instance {
         2,
       )?.$value;
     });
-    return $Future.wrap(result.then((e) => $Uint8List.wrap(e)));
+    return $Future.wrap(
+      result.then((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __fold = $Function(_fold);
@@ -2380,7 +2455,13 @@ class $Socket implements $Instance {
     final result = self.$value.join(
       (r is $Value ? r : null) == null ? "" : (r as $String).$value,
     );
-    return $Future.wrap(result.then((e) => $String(e)));
+    return $Future.wrap(
+      result.then((e) => $String(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   static const $Function __contains = $Function(_contains);
@@ -2393,7 +2474,13 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     final result = self.$value.contains((r as $Value?)!.$reified);
-    return $Future.wrap(result.then((e) => $bool(e)));
+    return $Future.wrap(
+      result.then((e) => $bool(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.bool),
+      ]),
+    );
   }
 
   static const $Function __forEach = $Function(_forEach);
@@ -2414,7 +2501,13 @@ class $Socket implements $Instance {
         1,
       );
     });
-    return $Future.wrap(result.then((e) => null));
+    return $Future.wrap(
+      result.then((e) => null),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.voidType),
+      ]),
+    );
   }
 
   static const $Function __every = $Function(_every);
@@ -2435,7 +2528,13 @@ class $Socket implements $Instance {
         1,
       )?.$value;
     });
-    return $Future.wrap(result.then((e) => $bool(e)));
+    return $Future.wrap(
+      result.then((e) => $bool(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.bool),
+      ]),
+    );
   }
 
   static const $Function __any = $Function(_any);
@@ -2456,7 +2555,13 @@ class $Socket implements $Instance {
         1,
       )?.$value;
     });
-    return $Future.wrap(result.then((e) => $bool(e)));
+    return $Future.wrap(
+      result.then((e) => $bool(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.bool),
+      ]),
+    );
   }
 
   static const $Function __cast = $Function(_cast);
@@ -2486,6 +2591,12 @@ class $Socket implements $Instance {
     final result = self.$value.toList();
     return $Future.wrap(
       result.then((e) => $List.view(e, (e) => $Uint8List.wrap(e))),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(TypedDataTypes.uint8List),
+        ]),
+      ]),
     );
   }
 
@@ -2501,6 +2612,12 @@ class $Socket implements $Instance {
     final result = self.$value.toSet();
     return $Future.wrap(
       result.then((e) => $Set.wrap((e).map((e) => $Uint8List.wrap(e)).toSet())),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.internParameterizedType(CoreTypes.set, [
+          runtime.lookupType(TypedDataTypes.uint8List),
+        ]),
+      ]),
     );
   }
 
@@ -2529,7 +2646,13 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     final result = self.$value.take((r as $int).$value);
-    return $Stream.wrap(result.map((e) => $Uint8List.wrap(e)));
+    return $Stream.wrap(
+      result.map((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __takeWhile = $Function(_takeWhile);
@@ -2550,7 +2673,13 @@ class $Socket implements $Instance {
         1,
       )?.$value;
     });
-    return $Stream.wrap(result.map((e) => $Uint8List.wrap(e)));
+    return $Stream.wrap(
+      result.map((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __skip = $Function(_skip);
@@ -2563,7 +2692,13 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     final result = self.$value.skip((r as $int).$value);
-    return $Stream.wrap(result.map((e) => $Uint8List.wrap(e)));
+    return $Stream.wrap(
+      result.map((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __skipWhile = $Function(_skipWhile);
@@ -2584,7 +2719,13 @@ class $Socket implements $Instance {
         1,
       )?.$value;
     });
-    return $Stream.wrap(result.map((e) => $Uint8List.wrap(e)));
+    return $Stream.wrap(
+      result.map((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __distinct = $Function(_distinct);
@@ -2611,7 +2752,13 @@ class $Socket implements $Instance {
                   ?.$value;
             },
     );
-    return $Stream.wrap(result.map((e) => $Uint8List.wrap(e)));
+    return $Stream.wrap(
+      result.map((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __firstWhere = $Function(_firstWhere);
@@ -2642,7 +2789,13 @@ class $Socket implements $Instance {
                   ?.$value;
             },
     );
-    return $Future.wrap(result.then((e) => $Uint8List.wrap(e)));
+    return $Future.wrap(
+      result.then((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __lastWhere = $Function(_lastWhere);
@@ -2673,7 +2826,13 @@ class $Socket implements $Instance {
                   ?.$value;
             },
     );
-    return $Future.wrap(result.then((e) => $Uint8List.wrap(e)));
+    return $Future.wrap(
+      result.then((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __singleWhere = $Function(_singleWhere);
@@ -2704,7 +2863,13 @@ class $Socket implements $Instance {
                   ?.$value;
             },
     );
-    return $Future.wrap(result.then((e) => $Uint8List.wrap(e)));
+    return $Future.wrap(
+      result.then((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __elementAt = $Function(_elementAt);
@@ -2717,7 +2882,13 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     final result = self.$value.elementAt((r as $int).$value);
-    return $Future.wrap(result.then((e) => $Uint8List.wrap(e)));
+    return $Future.wrap(
+      result.then((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __timeout = $Function(_timeout);
@@ -2744,7 +2915,13 @@ class $Socket implements $Instance {
               );
             },
     );
-    return $Stream.wrap(result.map((e) => $Uint8List.wrap(e)));
+    return $Stream.wrap(
+      result.map((e) => $Uint8List.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(TypedDataTypes.uint8List),
+      ]),
+    );
   }
 
   static const $Function __destroy = $Function(_destroy);

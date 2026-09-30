@@ -775,6 +775,18 @@ class \$${element.name}Fn {
 
   String $getRuntimeType(BindgenContext ctx, InterfaceElement element) {
     final runtimeType = ctx.classConfig?.runtimeTypeOverride;
+    if (element.typeParameters.isNotEmpty && runtimeType == null) {
+      ctx.imports.add('package:dart_eval/src/eval/runtime/runtime.dart');
+      return '''
+  @override
+  int \$getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType(\$spec)
+        : runtime.importRuntimeType(data.runtime, data.\$runtimeType);
+  }
+''';
+    }
     return '''
   @override
   int \$getRuntimeType(Runtime runtime) => runtime.lookupType(${runtimeType ?? '\$spec'});

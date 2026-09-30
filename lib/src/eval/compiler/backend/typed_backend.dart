@@ -256,9 +256,8 @@ class TypedBackend {
     // default thunk can introduce new functions (and their callees) after
     // the first pass, so resolve them here and resume the walk.
     for (final allocation in classAllocations) {
-      final memberGroups =
-          context.instanceDeclarationPositions[allocation.library]![allocation
-              .name]!;
+      final memberGroups = context
+          .instanceDeclarationPositions[allocation.library]![allocation.name]!;
       for (final group in memberGroups.values) {
         for (final id in group.values) {
           if (id < 0) continue;
@@ -270,7 +269,11 @@ class TypedBackend {
               param,
               bound: param.type == null
                   ? null
-                  : _tryAnnotationType(context, allocation.library, param.type!),
+                  : _tryAnnotationType(
+                      context,
+                      allocation.library,
+                      param.type!,
+                    ),
             );
             if (thunk >= 0 && seen.add(thunk)) {
               reachable.add(thunk);
@@ -418,16 +421,16 @@ class TypedBackend {
             ],
             defaultTypeArguments: _defaultTypeArguments(context, id),
             runtimeTypeId: context.runtimeTypes.idOf(switch (memberKinds[id]) {
-              (final name, final kind) => context.memberLookup
-                  .tearOffRuntimeSignature(
-                    declaringType,
-                    name,
-                    kind,
-                    context.functionRuntimeTypes[id] ??
-                        CoreTypes.function.ref(context),
-                    parameters,
-                    parameterTypes,
-                  ),
+              (final name, final kind) =>
+                context.memberLookup.tearOffRuntimeSignature(
+                  declaringType,
+                  name,
+                  kind,
+                  context.functionRuntimeTypes[id] ??
+                      CoreTypes.function.ref(context),
+                  parameters,
+                  parameterTypes,
+                ),
               _ =>
                 context.functionRuntimeTypes[id] ??
                     CoreTypes.function.ref(context),
@@ -1445,7 +1448,8 @@ class _LoweringSession {
           var callIndex = b._externalCalls.indexWhere(
             (call) =>
                 call.externalFunctionId == external.externalFunctionId &&
-                call.argumentCount == external.args.length,
+                call.argumentCount == external.args.length &&
+                call.constructorTypeId == (creation?.runtimeTypeId ?? -1),
           );
           if (callIndex < 0) {
             callIndex = b._externalCalls.length;
@@ -1453,6 +1457,7 @@ class _LoweringSession {
               TypedExternalCall(
                 external.externalFunctionId,
                 external.args.length,
+                constructorTypeId: creation?.runtimeTypeId ?? -1,
               ),
             );
           }

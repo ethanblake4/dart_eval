@@ -444,11 +444,29 @@ extension TypedRuntimeInterop on Runtime {
   /// Interns the nominal instantiation `[spec]<[arguments]>` from resolved
   /// runtime type-ids — for stamping bridged wrappers whose element type is
   /// recovered from the producing receiver's runtime type.
-  int internParameterizedType(BridgeTypeSpec spec, List<int> arguments) {
+  int internParameterizedType(
+    BridgeTypeSpec spec,
+    List<int> arguments, {
+    bool nullable = false,
+  }) {
     final nominal = lookupType(spec);
     return _internResolvedType(
-      [nominal, 0, ...arguments],
+      [nominal, nullable ? 1 : 0, ...arguments],
       nominal,
+      null,
+      const [],
+      _TypeResolution(null),
+      const {},
+    );
+  }
+
+  /// Adds nullability to an already resolved nominal or structural type.
+  int nullableRuntimeType(int type) {
+    final descriptor = _typeDescriptors[type];
+    if (descriptor[1] == 1) return type;
+    return _internResolvedType(
+      [descriptor[0], 1, ...descriptor.skip(2)],
+      type,
       null,
       const [],
       _TypeResolution(null),

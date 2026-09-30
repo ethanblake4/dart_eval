@@ -45,6 +45,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExp,
         $RegExpMatch,
         $StringSink;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [Comparable]
 class $Comparable<T> implements $Instance {
@@ -161,7 +162,12 @@ class $Comparable<T> implements $Instance {
   $Comparable.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

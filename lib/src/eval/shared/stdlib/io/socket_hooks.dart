@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'dart:io';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -17,7 +19,13 @@ $Value? socketConnect(Runtime runtime, $Value? _, List<$Value?> args) {
     sourcePort: _arg(args, 3) == null ? 0 : (_arg(args, 3) as $int).$value,
     timeout: _arg(args, 4)?.$value,
   );
-  return $Future.wrap(connection.then((socket) => $Socket.wrap(socket)));
+  return $Future.wrap(
+    connection.then((socket) => $Socket.wrap(socket)),
+    runtime: runtime,
+    runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+      runtime.lookupType(IoTypes.socket),
+    ]),
+  );
 }
 
 $Value? socketStartConnect(Runtime runtime, $Value? _, List<$Value?> args) {
@@ -31,7 +39,13 @@ $Value? socketStartConnect(Runtime runtime, $Value? _, List<$Value?> args) {
     sourceAddress: _arg(args, 2)?.$reified,
     sourcePort: _arg(args, 3) == null ? 0 : (_arg(args, 3) as $int).$value,
   );
-  return $Future.wrap(connection.then((task) => $Object(task)));
+  return $Future.wrap(
+    connection.then((task) => $Object(task)),
+    runtime: runtime,
+    runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+      runtime.lookupType(CoreTypes.object),
+    ]),
+  );
 }
 
 $Value? _arg(List<$Value?> args, int index) =>

@@ -29,6 +29,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
@@ -237,7 +238,12 @@ class $StreamSubscription<T> implements $Instance {
   $StreamSubscription.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -279,7 +285,13 @@ class $StreamSubscription<T> implements $Instance {
   ) {
     final self = target! as $StreamSubscription;
     final result = self.$value.cancel();
-    return $Future.wrap(result.then((e) => null));
+    return $Future.wrap(
+      result.then((e) => null),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.voidType),
+      ]),
+    );
   }
 
   static const $Function __onData = $Function(_onData);
@@ -319,8 +331,19 @@ class $StreamSubscription<T> implements $Instance {
     self.$value.onError(
       (r as $Value?) == null || (r as $Value?) is $null
           ? null
-          : (Object error, StackTrace trace) {
-              $Stream.$callError(runtime, r as EvalCallable, error, trace);
+          : (a0, [a1, a2]) {
+              final _a0 = runtime.wrapAlways(a0);
+              ((r as $Value?)! as EvalCallable)(
+                runtime,
+                null,
+                _a0,
+                a1 != null ? runtime.wrapAlways(a1) : null,
+                a2 != null
+                    ? [runtime.wrapAlways(a2)]
+                    : a1 != null
+                    ? 2
+                    : 1,
+              );
             },
     );
     return null;

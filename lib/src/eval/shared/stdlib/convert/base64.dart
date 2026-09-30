@@ -49,6 +49,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'converter.dart';
 import 'byte_conversion.dart';
@@ -323,7 +324,13 @@ class $Base64Encoder implements $Instance {
   ) {
     final self = target! as $Base64Encoder;
     final result = self.$value.bind((r as $Value?)!.$value);
-    return $Stream.wrap(result.map((e) => $String(e)));
+    return $Stream.wrap(
+      result.map((e) => $String(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   static const $Function __cast = $Function(_cast);
@@ -634,7 +641,15 @@ class $Base64Decoder implements $Instance {
   ) {
     final self = target! as $Base64Decoder;
     final result = self.$value.bind((r as $Value?)!.$value);
-    return $Stream.wrap(result.map((e) => $List.view(e, (e) => $int(e))));
+    return $Stream.wrap(
+      result.map((e) => $List.view(e, (e) => $int(e))),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(CoreTypes.int),
+        ]),
+      ]),
+    );
   }
 
   static const $Function __cast = $Function(_cast);

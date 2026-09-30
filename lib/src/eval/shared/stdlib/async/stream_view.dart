@@ -29,6 +29,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
@@ -1240,7 +1241,12 @@ class $StreamView<T> implements $Instance {
   $StreamView.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -1250,24 +1256,51 @@ class $StreamView<T> implements $Instance {
         return $bool(_isBroadcast);
       case 'length':
         final _length = $value.length;
-        return $Future.wrap(_length.then((e) => $int(e)));
+        return $Future.wrap(
+          _length.then((e) => $int(e)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        );
       case 'isEmpty':
         final _isEmpty = $value.isEmpty;
-        return $Future.wrap(_isEmpty.then((e) => $bool(e)));
+        return $Future.wrap(
+          _isEmpty.then((e) => $bool(e)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(CoreTypes.bool),
+          ]),
+        );
       case 'first':
         final _first = $value.first;
         return $Future.wrap(
           _first.then((e) => runtime.wrapAlways(e, recursive: true)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??
+                runtime.lookupType(CoreTypes.dynamic),
+          ]),
         );
       case 'last':
         final _last = $value.last;
         return $Future.wrap(
           _last.then((e) => runtime.wrapAlways(e, recursive: true)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??
+                runtime.lookupType(CoreTypes.dynamic),
+          ]),
         );
       case 'single':
         final _single = $value.single;
         return $Future.wrap(
           _single.then((e) => runtime.wrapAlways(e, recursive: true)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??
+                runtime.lookupType(CoreTypes.dynamic),
+          ]),
         );
       case 'asBroadcastStream':
         return $Closure(__asBroadcastStream.func, this);
@@ -1402,6 +1435,11 @@ class $StreamView<T> implements $Instance {
     );
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1489,6 +1527,11 @@ class $StreamView<T> implements $Instance {
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1602,6 +1645,11 @@ class $StreamView<T> implements $Instance {
     );
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1640,6 +1688,10 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.pipe((r as $Value?)!.$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1678,6 +1730,11 @@ class $StreamView<T> implements $Instance {
     });
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1719,7 +1776,13 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.join(
       (r is $Value ? r : null) == null ? "" : (r as $String).$value,
     );
-    return $Future.wrap(result.then((e) => $String(e)));
+    return $Future.wrap(
+      result.then((e) => $String(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   static const $Function __contains = $Function(_contains);
@@ -1732,7 +1795,13 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.contains((r as $Value?)!.$reified);
-    return $Future.wrap(result.then((e) => $bool(e)));
+    return $Future.wrap(
+      result.then((e) => $bool(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.bool),
+      ]),
+    );
   }
 
   static const $Function __forEach = $Function(_forEach);
@@ -1753,7 +1822,13 @@ class $StreamView<T> implements $Instance {
         1,
       );
     });
-    return $Future.wrap(result.then((e) => null));
+    return $Future.wrap(
+      result.then((e) => null),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.voidType),
+      ]),
+    );
   }
 
   static const $Function __every = $Function(_every);
@@ -1774,7 +1849,13 @@ class $StreamView<T> implements $Instance {
         1,
       )?.$value;
     });
-    return $Future.wrap(result.then((e) => $bool(e)));
+    return $Future.wrap(
+      result.then((e) => $bool(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.bool),
+      ]),
+    );
   }
 
   static const $Function __any = $Function(_any);
@@ -1795,7 +1876,13 @@ class $StreamView<T> implements $Instance {
         1,
       )?.$value;
     });
-    return $Future.wrap(result.then((e) => $bool(e)));
+    return $Future.wrap(
+      result.then((e) => $bool(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.bool),
+      ]),
+    );
   }
 
   static const $Function __cast = $Function(_cast);
@@ -1827,6 +1914,13 @@ class $StreamView<T> implements $Instance {
       result.then(
         (e) => $List.view(e, (e) => runtime.wrapAlways(e, recursive: true)),
       ),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.internParameterizedType(CoreTypes.list, [
+          runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+              runtime.lookupType(CoreTypes.dynamic),
+        ]),
+      ]),
     );
   }
 
@@ -1846,6 +1940,13 @@ class $StreamView<T> implements $Instance {
           (e).map((e) => runtime.wrapAlways(e, recursive: true)).toSet(),
         ),
       ),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.internParameterizedType(CoreTypes.set, [
+          runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+              runtime.lookupType(CoreTypes.dynamic),
+        ]),
+      ]),
     );
   }
 
@@ -1876,6 +1977,11 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.take((r as $int).$value);
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1899,6 +2005,11 @@ class $StreamView<T> implements $Instance {
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1914,6 +2025,11 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.skip((r as $int).$value);
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1937,6 +2053,11 @@ class $StreamView<T> implements $Instance {
     });
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1966,6 +2087,11 @@ class $StreamView<T> implements $Instance {
     );
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -1999,6 +2125,11 @@ class $StreamView<T> implements $Instance {
     );
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -2032,6 +2163,11 @@ class $StreamView<T> implements $Instance {
     );
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -2065,6 +2201,11 @@ class $StreamView<T> implements $Instance {
     );
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -2080,6 +2221,11 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.elementAt((r as $int).$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -2109,6 +2255,11 @@ class $StreamView<T> implements $Instance {
     );
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 

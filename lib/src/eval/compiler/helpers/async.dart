@@ -79,9 +79,13 @@ StatementInfo doAsyncReturn(
 /// inferred return type is known.
 BeginAsync setupAsyncFunction(CompilerContext ctx, {TypeRef? returnType}) {
   final future = CoreTypes.future.ref(ctx);
-  final runtimeType = returnType != null && sameDeclaration(returnType, future)
-      ? returnType
-      : future.copyWith(arguments: [CoreTypes.dynamic.ref(ctx)]);
+  final runtimeType = future.copyWith(
+    arguments: [
+      returnType == null
+          ? CoreTypes.dynamic.ref(ctx)
+          : ctx.typeSystem.flatten(returnType),
+    ],
+  );
   final begin = BeginAsync(
     ctx.svar('#completer'),
     runtimeTypeId: ctx.runtimeTypes.idOf(runtimeType),

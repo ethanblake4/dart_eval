@@ -14,8 +14,6 @@
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'dart:async';
 
@@ -31,6 +29,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
@@ -43,6 +42,8 @@ import 'package:dart_eval/stdlib/async.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+
+import 'stream_hooks.dart' as hooks;
 
 /// dart_eval wrapper binding for [StreamIterator]
 class $StreamIterator<T> implements $Instance {
@@ -138,7 +139,7 @@ class $StreamIterator<T> implements $Instance {
 
   /// Wrapper for the [StreamIterator.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $StreamIterator.wrap(StreamIterator(TypedInterop.stream(r, runtime)));
+    return hooks.streamIterator(runtime, null, [r as $Value?]);
   }
 
   final $Instance _superclass;
@@ -153,7 +154,12 @@ class $StreamIterator<T> implements $Instance {
   $StreamIterator.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -201,6 +207,10 @@ class $StreamIterator<T> implements $Instance {
     final result = self.$value.cancel();
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 

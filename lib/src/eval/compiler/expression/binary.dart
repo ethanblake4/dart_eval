@@ -249,11 +249,11 @@ Variable _compileShortCircuit(
       // `x ?? .y` gives the RHS the join context: the outer bound when it
       // is informative, else the LHS type T1 itself — an uninformative `_`
       // context makes J = T1 (dart-lang/language#3650), nullability
-      // included. `dynamic` is a real context — only `_` (null/absent),
-      // `void`, and bare type parameters are uninformative.
+      // included. `dynamic`, `void`, and bare type parameters also use T1.
       // `x && .y`/`||` give it `bool`.
       final rightBound = operator == '??'
           ? (boundType != null &&
+                    !boundType.isSpec(CoreTypes.dynamic) &&
                     !boundType.isSpec(CoreTypes.voidType) &&
                     !boundType.isTypeParameter
                 ? boundType
@@ -307,9 +307,7 @@ Variable _compileShortCircuit(
   // `??` shares the conditional's S-rule: when the join doesn't fit the
   // context's greatest closure but both contributing types do, the
   // expression's type is that closure.
-  if (operator == '??' &&
-      boundType != null &&
-      ctx.inferenceUpdate3(left)) {
+  if (operator == '??' && boundType != null && ctx.inferenceUpdate3(left)) {
     final s = ctx.typeSystem.greatestClosure(boundType);
     if (!outType.isAssignableTo(ctx, s, forceAllowDynamic: false) &&
         (lhsType == null ||

@@ -167,6 +167,7 @@ String? wrapVar(
   List<ElementAnnotation>? metadata,
   bool forCollection = false,
   List<String>? unionTypeNames,
+  String? runtimeTypeOwner,
 }) {
   if (type is VoidType) {
     if (func) {
@@ -186,6 +187,7 @@ String? wrapVar(
     metadata: metadata,
     wrapList: wrapList,
     unionTypeNames: unionTypeNames,
+    runtimeTypeOwner: runtimeTypeOwner,
   );
 
   if (wrapped == null) {
@@ -215,6 +217,7 @@ String? wrapType(
   bool wrapList = false,
   List<ElementAnnotation>? metadata,
   List<String>? unionTypeNames,
+  String? runtimeTypeOwner,
 }) {
   final union = metadata?.firstWhereOrNull(
     (e) => e.element?.displayName == 'UnionOf',
@@ -289,13 +292,9 @@ String? wrapType(
   if (type.isDartAsyncFutureOr && type is ParameterizedType) {
     ctx.imports.add('dart:async');
     final arg = type.typeArguments.first;
-    if (arg is VoidType) {
-      return '$unionStr($expr is Future ? \$Future.wrap($expr) '
-          ': const \$null())';
-    }
-    return '$unionStr($expr is Future ? \$Future.wrap(($expr as Future)'
-        '.then((e) => ${wrapVar(ctx, arg, 'e')})) : '
-        '${wrapVar(ctx, arg, expr)})';
+    return '$unionStr($expr is Future ? '
+        '${_wrapFuture(ctx, arg, '($expr as Future)', runtimeTypeOwner, wrapPayload: arg is! VoidType)} : '
+        '${arg is VoidType ? 'const \$null()' : wrapVar(ctx, arg, expr)})';
   }
 
   final element =
@@ -398,12 +397,13 @@ String? wrapType(
     if (boundName == 'Stream') {
       final generic = type as ParameterizedType;
       final arg = generic.typeArguments.first;
-      return '$unionStr\$Stream.wrap($expr.map((e) => ${wrapVar(ctx, arg, 'e')}))';
+      final metadata = _asyncTypeMetadata(ctx, 'stream', arg, runtimeTypeOwner);
+      return '$unionStr\$Stream.wrap($expr.map((e) => ${wrapVar(ctx, arg, 'e')})$metadata)';
     }
     if (boundName == 'Future') {
       final generic = type as ParameterizedType;
       final arg = generic.typeArguments.first;
-      return '$unionStr\$Future.wrap($expr.then((e) => ${wrapVar(ctx, arg, 'e')}))';
+      return unionStr + _wrapFuture(ctx, arg, expr, runtimeTypeOwner);
     }
     final wName = wrapperName ?? boundName;
     if (unnamedValueConstructor) {
@@ -455,6 +455,67 @@ String? wrapType(
   }
 
   return null;
+}
+
+String _asyncTypeMetadata(
+  BindgenContext ctx,
+  String spec,
+  DartType payload,
+  String? owner,
+) {
+  final typeId = _runtimeTypeId(ctx, payload, owner);
+  if (typeId != null) {
+    ctx.imports.add('package:dart_eval/src/eval/runtime/runtime.dart');
+  }
+  return typeId == null
+      ? ''
+      : ', runtime: runtime, runtimeTypeId: '
+            'runtime.internParameterizedType(CoreTypes.$spec, [$typeId])';
+}
+
+String _wrapFuture(
+  BindgenContext ctx,
+  DartType payload,
+  String expr,
+  String? owner, {
+  bool wrapPayload = true,
+}) {
+  final metadata = _asyncTypeMetadata(ctx, 'future', payload, owner);
+  final value = wrapPayload
+      ? '$expr.then((e) => ${wrapVar(ctx, payload, 'e')})'
+      : expr;
+  return '\$Future.wrap($value$metadata)';
+}
+
+/// Reify known host result types without guessing erased generic arguments.
+String? _runtimeTypeId(BindgenContext ctx, DartType type, String? owner) {
+  if (type is TypeParameterType) {
+    final host = type.element.enclosingElement;
+    if (owner == null || host is! InterfaceElement) return null;
+    final index = host.typeParameters.indexOf(type.element);
+    final receiver = owner == 'this' ? '' : '$owner.';
+    final typeId =
+        'runtime.runtimeTypeArgumentAt($receiver\$getRuntimeType(runtime), $index) '
+        '?? runtime.lookupType(CoreTypes.dynamic)';
+    return type.nullabilitySuffix == NullabilitySuffix.question
+        ? 'runtime.nullableRuntimeType($typeId)'
+        : typeId;
+  }
+  if (type is FunctionType || type is RecordType) {
+    return null;
+  }
+  final arguments = type is ParameterizedType
+      ? [
+          for (final argument in type.typeArguments)
+            _runtimeTypeId(ctx, argument, owner),
+        ]
+      : <String?>[];
+  if (arguments.contains(null)) return null;
+  final spec = bridgeTypeSpecFrom(ctx, type);
+  final nullable = type.nullabilitySuffix == NullabilitySuffix.question;
+  if (arguments.isEmpty && !nullable) return 'runtime.lookupType($spec)';
+  return 'runtime.internParameterizedType($spec, [${arguments.join(', ')}]'
+      '${nullable ? ', nullable: true' : ''})';
 }
 
 /// Emit a `BridgeTypeAnnotation` for a YAML type name such as `int`,

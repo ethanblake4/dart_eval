@@ -1176,7 +1176,7 @@ abstract final class TypedMachine {
 
     case 256:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       r = TypedInterop.invokeExternal(program, runtime, r, s, c, index); s = null; c = null;
+       r = TypedInterop.invokeExternal(program, runtime, r, s, c, index, frame); s = null; c = null;
        break;
     case 257:
        r = TypedInterop.newBridgeSuperShim();
@@ -1186,7 +1186,7 @@ abstract final class TypedMachine {
        break;
     case 259:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       r = TypedInterop.attachBridge(runtime, r, s, index);
+       r = TypedInterop.attachBridge(runtime, r, s, index, frame);
        break;
     case 260:
        r = TypedInterop.runtimeTypeOf(runtime, r);

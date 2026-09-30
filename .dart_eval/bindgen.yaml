@@ -62,6 +62,10 @@ libraries:
       AssertionError:
         file: errors.dart
         implementsSdk: true
+        hooks: error_hooks.dart
+        constructors:
+          new:
+            hook: assertionError
       ArgumentError:
         file: errors.dart
         implementsSdk: true
@@ -144,6 +148,8 @@ libraries:
     registry:
       file: lib/src/eval/shared/types.dart
       class: AsyncTypes
+      extra:
+        futureOr: FutureOr
     classes:
       # dart:core re-exports Future/Stream; their specs register under
       # dart:core (CoreTypes) to match.
@@ -168,12 +174,20 @@ libraries:
         file: event_sink.dart
       StreamIterator:
         file: stream_iterator.dart
+        hooks: stream_hooks.dart
+        constructors:
+          new:
+            hook: streamIterator
       StreamTransformer:
         file: stream_transformer.dart
       StreamView:
         file: stream_view.dart
       StreamController:
         file: stream_controller.dart
+        hooks: stream_hooks.dart
+        methods:
+          add:
+            hook: streamControllerAdd
   - uri: dart:collection
     typedefs: [IterableBase, IterableMixin]
     outDir: lib/src/eval/shared/stdlib/collection

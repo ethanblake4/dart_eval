@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -615,7 +617,13 @@ class $InternetAddress implements InternetAddress, $Instance {
   ) {
     final obj = target?.$value as InternetAddress;
     final $result = obj.reverse();
-    return $Future.wrap($result.then((value) => $InternetAddress.wrap(value)));
+    return $Future.wrap(
+      $result.then((value) => $InternetAddress.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.internetAddress),
+      ]),
+    );
   }
 
   static $Value? _$static$method$lookup(
@@ -637,6 +645,12 @@ class $InternetAddress implements InternetAddress, $Instance {
           }),
         ),
       ),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(IoTypes.internetAddress),
+        ]),
+      ]),
     );
   }
 

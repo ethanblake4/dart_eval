@@ -28,6 +28,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $DoubleLinkedQueue,
         $DoubleLinkedQueueEntry,
         $MapBase;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'queue.dart';
 
@@ -1030,7 +1031,12 @@ class $ListQueue<E> implements $Instance {
   $ListQueue.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 129;
+  static const version = 130;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -325,6 +325,7 @@ abstract final class TypedCodec {
     for (final call in program.externalCalls) {
       u32(call.externalFunctionId);
       u32(call.argumentCount);
+      u32(call.constructorTypeId + 1);
     }
     void defaults(List<Object?> values) {
       final data = _writeObjects(values);
@@ -467,7 +468,7 @@ abstract final class TypedCodec {
       classCount * 24 +
           callSiteCount * 28 +
           exportCount * 20 +
-          externalCallCount * 8 +
+          externalCallCount * 12 +
           closureCount * 40 +
           closureCallCount * 8 +
           globalCount * 16 +
@@ -582,7 +583,9 @@ abstract final class TypedCodec {
     }
     final externalCalls = <TypedExternalCall>[];
     for (var i = 0; i < externalCallCount; i++) {
-      externalCalls.add(TypedExternalCall(u32(), u32()));
+      externalCalls.add(
+        TypedExternalCall(u32(), u32(), constructorTypeId: u32() - 1),
+      );
     }
     List<String> strings() {
       final count = u32();

@@ -414,7 +414,7 @@ String familyOf(String name) {
   );
   add(
     'callExternal',
-    'r = TypedInterop.invokeExternal(program, runtime, r, s, c, index); s = null; c = null;',
+    'r = TypedInterop.invokeExternal(program, runtime, r, s, c, index, frame); s = null; c = null;',
     output: 6,
     immediate: 'externalCall',
     mayThrow: true,
@@ -436,7 +436,7 @@ String familyOf(String name) {
   );
   add(
     'rAttachBridge',
-    'r = TypedInterop.attachBridge(runtime, r, s, index);',
+    'r = TypedInterop.attachBridge(runtime, r, s, index, frame);',
     inputs: [6, 7],
     output: 6,
     immediate: 'typeId',

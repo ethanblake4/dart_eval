@@ -116,7 +116,7 @@ String propertyGetters(
     return '''
       case '$name':
         final _$name = \$value.${e.name};
-        return ${wrapVar(ctx, e.type.returnType, '_$name', metadata: e.metadata.annotations, unionTypeNames: member?.returns?.union)};''';
+        return ${wrapVar(ctx, e.type.returnType, '_$name', metadata: e.metadata.annotations, unionTypeNames: member?.returns?.union, runtimeTypeOwner: 'this')};''';
   }).join('\n')}${syntheticGetters.map((s) {
     if (s.hook != null) {
       return '''

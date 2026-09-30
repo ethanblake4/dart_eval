@@ -370,10 +370,7 @@ class $Future<T> implements Future<T>, $Instance {
     }
     return runtimeTypeId == null
         ? runtime.lookupType(CoreTypes.future)
-        : runtime.importRuntimeType(
-            this.runtime ?? runtime,
-            runtimeTypeId!,
-          );
+        : runtime.importRuntimeType(this.runtime ?? runtime, runtimeTypeId!);
   }
 
   @override
@@ -443,10 +440,7 @@ class $Future<T> implements Future<T>, $Instance {
     Object? c,
   ) {
     final $t = target as $Future;
-    final t = runtime.runtimeTypeArgumentAt(
-      $t.$getRuntimeType(runtime),
-      0,
-    );
+    final t = runtime.runtimeTypeArgumentAt($t.$getRuntimeType(runtime), 0);
     return $Stream.wrap(
       $t.$value.asStream(),
       runtime: runtime,
@@ -531,7 +525,15 @@ class $Future<T> implements Future<T>, $Instance {
     }
 
     bool testCb(Object error) =>
-        test!.call(runtime, target, TypedExceptionState.boxException(error, runtime), null, 1)?.$value
+        test!
+                .call(
+                  runtime,
+                  target,
+                  TypedExceptionState.boxException(error, runtime),
+                  null,
+                  1,
+                )
+                ?.$value
             as bool? ??
         false;
     return $Future.wrap(
@@ -560,20 +562,21 @@ class $Future<T> implements Future<T>, $Instance {
 
 $Value? _futureDelayed(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = s as EvalFunction?;
+  final resultType = runtime.bridgeConstructorTypeId ??
+      (computation == null ? null : runtime.typedFutureTypeForCallback(computation));
   return $Future.wrap(
     Future.delayed(
       (r as $Value).$value,
       computation == null
           ? null
-          : () => _futureArg(
+          : () => _futureCompletionArg(
               runtime,
               computation.call(runtime, null, null, null, 0),
+              resultType,
             ),
     ),
     runtime: runtime,
-    runtimeTypeId: computation == null
-        ? null
-        : runtime.typedFutureTypeForCallback(computation),
+    runtimeTypeId: resultType,
   );
 }
 
@@ -583,34 +586,29 @@ Object? _futureArg(Runtime runtime, Object? arg) => arg is TypedInstance
     ? arg
     : TypedInterop.exportExternal(arg, runtime: runtime);
 
+Object? _futureCompletionArg(Runtime runtime, Object? arg, int? resultType) {
+  // A nested Future payload must survive the erased host Future boundary.
+  if (arg is $Future && resultType != null &&
+      !runtime.isTypedValueType(arg, resultType)) {
+    return GuestFuturePayload(arg);
+  }
+  return _futureArg(runtime, arg);
+}
+
 $Value? _futureValue(Runtime runtime, Object? r, Object? s, Object? c) {
-  // Stamp `Future<V>` from the value's own type — `Future<Null>` for a null
-  // literal — so `await` gates typed `Future<T>` still adopt it when
-  // `V <: T` (Null lands inside every nullable T).
   final argType = r is $Value
       ? r.$getRuntimeType(runtime)
       : runtime.lookupType(CoreTypes.nullType);
-  if (r is $Future) {
-    // `Future<T>.value(v)` adopts `v` only when `v is Future<T>`. `T` never
-    // reaches a bridge impl, and inference picks `Future<X>` for a future
-    // argument anyway — hold the value so `Future<X>` lands as the payload
-    // instead of `Future<dynamic>` chaining it away.
-    final completer = Completer<Object?>.sync();
-    completer.complete(GuestFuturePayload(r));
-    return $Future.wrap(
-      completer.future,
-      runtime: runtime,
-      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
-        argType,
-      ]),
-    );
-  }
+  final argument = runtime.descriptorFor(argType);
+  final resultType =
+      runtime.bridgeConstructorTypeId ??
+      runtime.internParameterizedType(CoreTypes.future, [
+        r is $Future && argument.length > 2 ? argument[2] : argType,
+      ]);
   return $Future.wrap(
-    Future.value(_futureArg(runtime, r)),
+    Future.value(_futureCompletionArg(runtime, r, resultType)),
     runtime: runtime,
-    runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
-      argType,
-    ]),
+    runtimeTypeId: resultType,
   );
 }
 
@@ -654,33 +652,39 @@ final class _GuestStackTrace implements StackTrace {
 // must not reuse the microtask/sync paths.
 $Value? _futureNew(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = r as EvalFunction;
+  final resultType = runtime.bridgeConstructorTypeId ??
+      runtime.typedFutureTypeForCallback(computation);
   return $Future.wrap(
     Future(
-      () => _futureArg(runtime, computation.call(runtime, null, null, null, 0)),
+      () => _futureCompletionArg(runtime, computation.call(runtime, null, null, null, 0), resultType),
     ),
     runtime: runtime,
-    runtimeTypeId: runtime.typedFutureTypeForCallback(computation),
+    runtimeTypeId: resultType,
   );
 }
 
 $Value? _futureSync(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = r as EvalFunction;
+  final resultType = runtime.bridgeConstructorTypeId ??
+      runtime.typedFutureTypeForCallback(computation);
   return $Future.wrap(
     Future.sync(
-      () => _futureArg(runtime, computation.call(runtime, null, null, null, 0)),
+      () => _futureCompletionArg(runtime, computation.call(runtime, null, null, null, 0), resultType),
     ),
     runtime: runtime,
-    runtimeTypeId: runtime.typedFutureTypeForCallback(computation),
+    runtimeTypeId: resultType,
   );
 }
 
 $Value? _futureMicrotask(Runtime runtime, Object? r, Object? s, Object? c) {
   final computation = r as EvalFunction;
+  final resultType = runtime.bridgeConstructorTypeId ??
+      runtime.typedFutureTypeForCallback(computation);
   return $Future.wrap(
     Future.microtask(
-      () => _futureArg(runtime, computation.call(runtime, null, null, null, 0)),
+      () => _futureCompletionArg(runtime, computation.call(runtime, null, null, null, 0), resultType),
     ),
     runtime: runtime,
-    runtimeTypeId: runtime.typedFutureTypeForCallback(computation),
+    runtimeTypeId: resultType,
   );
 }

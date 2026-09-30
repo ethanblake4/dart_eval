@@ -29,6 +29,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
@@ -193,7 +194,12 @@ class $StreamSink<S> implements $Instance {
   $StreamSink.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -202,6 +208,10 @@ class $StreamSink<S> implements $Instance {
         final _done = $value.done;
         return $Future.wrap(
           _done.then((e) => runtime.wrapAlways(e, recursive: true)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(CoreTypes.dynamic),
+          ]),
         );
       case 'addStream':
         return $Closure(__addStream.func, this);
@@ -230,6 +240,10 @@ class $StreamSink<S> implements $Instance {
     final result = self.$value.addStream((r as $Value?)!.$value);
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -245,6 +259,10 @@ class $StreamSink<S> implements $Instance {
     final result = self.$value.close();
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 

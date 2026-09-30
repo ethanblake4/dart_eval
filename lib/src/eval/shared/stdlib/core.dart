@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
@@ -257,6 +259,10 @@ $Value? _deferredLoadLibrary(Runtime runtime, Object? r, Object? s, Object? c) {
           return null;
         }),
       ),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.nullType),
+      ]),
     );
   });
 }

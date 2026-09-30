@@ -33,6 +33,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -258,7 +259,12 @@ class $Converter<S, T> implements $Instance {
   $Converter.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -293,6 +299,11 @@ class $Converter<S, T> implements $Instance {
     final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(
       result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 1) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 

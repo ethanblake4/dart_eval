@@ -53,6 +53,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [Encoding]
 class $Encoding implements $Instance {
@@ -386,7 +387,13 @@ class $Encoding implements $Instance {
   ) {
     final self = target! as $Encoding;
     final result = self.$value.decodeStream((r as $Value?)!.$value);
-    return $Future.wrap(result.then((e) => $String(e)));
+    return $Future.wrap(
+      result.then((e) => $String(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   @override

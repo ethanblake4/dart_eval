@@ -29,6 +29,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
@@ -42,9 +43,8 @@ import 'package:dart_eval/stdlib/async.dart'
         $StreamView,
         $StreamController;
 
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
-
 import 'stream_sink.dart';
+import 'stream_hooks.dart' as hooks;
 
 /// dart_eval wrapper binding for [StreamController]
 class $StreamController<T> implements $Instance {
@@ -547,24 +547,10 @@ class $StreamController<T> implements $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) {
-    // Instances created inside the VM carry their instantiated type
-    // (`StreamController<int>`) in bridgeData — the wrapper is erased.
     final data = Runtime.bridgeData[this];
-    if (data != null) {
-      return runtime.importRuntimeType(data.runtime, data.$runtimeType);
-    }
-    return runtime.lookupType($spec);
-  }
-
-  /// This controller's `T`, viewed as `spec<T>` — the controller's
-  /// instantiated runtime type rides in `bridgeData` (attached by
-  /// `BridgeInstantiate`); null when no instantiation was attached.
-  int? _elementRuntimeType(Runtime runtime, BridgeTypeSpec spec) {
-    final data = Runtime.bridgeData[this];
-    if (data == null) return null;
-    final owner = runtime.importRuntimeType(data.runtime, data.$runtimeType);
-    final t = runtime.runtimeTypeArgumentAt(owner, 0);
-    return t == null ? null : runtime.internParameterizedType(spec, [t]);
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
   }
 
   @override
@@ -574,13 +560,20 @@ class $StreamController<T> implements $Instance {
         final _done = $value.done;
         return $Future.wrap(
           _done.then((e) => runtime.wrapAlways(e, recursive: true)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(CoreTypes.dynamic),
+          ]),
         );
       case 'stream':
         final _stream = $value.stream;
         return $Stream.wrap(
           _stream.map((e) => runtime.wrapAlways(e, recursive: true)),
           runtime: runtime,
-          runtimeTypeId: _elementRuntimeType(runtime, CoreTypes.stream),
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+            runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??
+                runtime.lookupType(CoreTypes.dynamic),
+          ]),
         );
       case 'onListen':
         final _onListen = $value.onListen;
@@ -613,7 +606,14 @@ class $StreamController<T> implements $Instance {
             : $Function((runtime, target, r, s, c) {
                 final funcResult = _onCancel();
                 return (funcResult is Future
-                    ? $Future.wrap(funcResult)
+                    ? $Future.wrap(
+                        (funcResult as Future),
+                        runtime: runtime,
+                        runtimeTypeId: runtime.internParameterizedType(
+                          CoreTypes.future,
+                          [runtime.lookupType(CoreTypes.voidType)],
+                        ),
+                      )
                     : const $null());
               });
       case 'sink':
@@ -658,6 +658,10 @@ class $StreamController<T> implements $Instance {
     );
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -673,6 +677,10 @@ class $StreamController<T> implements $Instance {
     final result = self.$value.close();
     return $Future.wrap(
       result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
     );
   }
 
@@ -684,9 +692,7 @@ class $StreamController<T> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $StreamController;
-    self.$value.add((r as $Value?)?.$value);
-    return null;
+    return hooks.streamControllerAdd(runtime, target, r, s, c);
   }
 
   static const $Function __addError = $Function(_addError);

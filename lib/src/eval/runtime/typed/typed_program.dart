@@ -312,7 +312,9 @@ class TypedProgram {
       if (call.externalFunctionId < 0 ||
           call.externalFunctionId > 0xffffffff ||
           call.argumentCount < 0 ||
-          call.argumentCount > 65538) {
+          call.argumentCount > 65538 ||
+          call.constructorTypeId < -1 ||
+          call.constructorTypeId > 0xfffffffe) {
         throw const FormatException('Invalid typed external call');
       }
     }

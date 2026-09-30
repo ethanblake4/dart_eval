@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'dart:io';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -173,7 +175,13 @@ class $FileSystemEntity implements $Instance {
   ) {
     final entity = target!.$value as FileSystemEntity;
     runtime.assertPermission('filesystem:read', entity.path);
-    return $Future.wrap(entity.exists().then((value) => $bool(value)));
+    return $Future.wrap(
+      entity.exists().then((value) => $bool(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.bool),
+      ]),
+    );
   }
 
   static const $Function _existsSync = $Function(__existsSync);
@@ -206,6 +214,10 @@ class $FileSystemEntity implements $Instance {
       entity
           .delete(recursive: recursive ?? false)
           .then((value) => $FileSystemEntity.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.fileSystemEntity),
+      ]),
     );
   }
 
@@ -239,6 +251,10 @@ class $FileSystemEntity implements $Instance {
     final newPath = (r as $Value?)!.$value as String;
     return $Future.wrap(
       entity.rename(newPath).then((value) => $FileSystemEntity.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.fileSystemEntity),
+      ]),
     );
   }
 

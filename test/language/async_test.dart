@@ -35,6 +35,38 @@ Iterable<(String, Runtime)> _runtimes(Program program) sync* {
 
 void main() {
   test(
+    'Future constructors preserve unions and nested generic payloads',
+    () async {
+      final program = _compile('''
+      import 'dart:async';
+      FutureOr<Object> union() async => Future<Object>.value(42);
+      Future<T> generic<T>(T value) async => await Future<T>.value(value);
+      Future<bool> main() async {
+        final inner = Future<int>.value(3);
+        final outer = Future<Future<int>>.value(inner);
+        final retained = await outer;
+        final synchronous = await Future<Future<int>>.sync(() => inner);
+        final microtask = await Future<Future<int>>.microtask(() => inner);
+        final scheduled = await Future<Future<int>>(() => inner);
+        final delayed = await Future<Future<int>>.delayed(Duration.zero, () => inner);
+        return await retained == 3 && await Future.value(inner) == 3 &&
+            await union() == 42 && await generic<int>(7) == 7 &&
+            identical(synchronous, inner) && identical(microtask, inner) &&
+            identical(scheduled, inner) && identical(delayed, inner) &&
+            await synchronous == 3 && await microtask == 3 &&
+            await scheduled == 3 && await delayed == 3;
+      }
+    ''');
+      for (final (kind, runtime) in _runtimes(program)) {
+        expect(
+          await runtime.executeLib(_library, 'main'),
+          $bool(true),
+          reason: kind,
+        );
+      }
+    },
+  );
+  test(
     'custom Futures preserve inline values and catchable early errors',
     () async {
       final program = _compile('''

@@ -49,6 +49,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'converter.dart';
 import 'chunked_conversion.dart';
@@ -405,7 +406,13 @@ class $JsonEncoder implements $Instance {
   ) {
     final self = target! as $JsonEncoder;
     final result = self.$value.bind((r as $Value?)!.$value);
-    return $Stream.wrap(result.map((e) => $String(e)));
+    return $Stream.wrap(
+      result.map((e) => $String(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   static const $Function __cast = $Function(_cast);
@@ -745,6 +752,10 @@ class $JsonDecoder implements $Instance {
     final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(
       result.map((e) => e == null ? const $null() : $Object(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.internParameterizedType(CoreTypes.object, [], nullable: true),
+      ]),
     );
   }
 

@@ -19,6 +19,7 @@ import 'dart:math';
 import 'dart:core';
 
 import 'package:dart_eval/stdlib/core.dart' hide $Point, $Random;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [Point]
 class $Point<T extends num> implements $Instance {
@@ -212,7 +213,12 @@ class $Point<T extends num> implements $Instance {
   $Point.wrap(this.$value) : _superclass = $Object($value);
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+  int $getRuntimeType(Runtime runtime) {
+    final data = Runtime.bridgeData[this];
+    return data == null
+        ? runtime.lookupType($spec)
+        : runtime.importRuntimeType(data.runtime, data.$runtimeType);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

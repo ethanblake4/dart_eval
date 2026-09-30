@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 import 'typed_instance.dart';
 import 'typed_host_collections.dart';
 import 'typed_program.dart';
+import 'typed_frame.dart';
 import 'typed_closure.dart';
 import 'typed_call_site.dart';
 import 'typed_async.dart';
@@ -72,12 +73,18 @@ abstract final class TypedInterop {
     Object? host,
     Object? subclass,
     int typeId,
+    TypedFrame frame,
   ) {
     final target = _runtime(runtime);
     final instance = host as $Instance;
     Runtime.bridgeData[instance] = BridgeData(
       target,
-      typeId,
+      target.resolveTypedEnvironmentType(
+        typeId,
+        actualOwnerType: frame.typeEnvironmentOwnerType(target),
+        callableTypeArguments: frame.effectiveTypeArguments,
+        typeEnvironment: frame.typeEnvironment,
+      ),
       subclass as $Instance?,
     );
     return instance;
@@ -93,16 +100,37 @@ abstract final class TypedInterop {
     Object? second,
     Object? rest,
     int siteIndex,
+    TypedFrame frame,
   ) {
     final target = _runtime(runtime);
     final site = program.externalCalls[siteIndex];
-    return target.invokeTypedExternal(
-      site.externalFunctionId,
-      site.argumentCount,
-      first,
-      second,
-      rest,
+    if (site.constructorTypeId < 0) {
+      return target.invokeTypedExternal(
+        site.externalFunctionId,
+        site.argumentCount,
+        first,
+        second,
+        rest,
+      );
+    }
+    final previous = target.bridgeConstructorTypeId;
+    target.bridgeConstructorTypeId = target.resolveTypedEnvironmentType(
+      site.constructorTypeId,
+      actualOwnerType: frame.typeEnvironmentOwnerType(target),
+      callableTypeArguments: frame.effectiveTypeArguments,
+      typeEnvironment: frame.typeEnvironment,
     );
+    try {
+      return target.invokeTypedExternal(
+        site.externalFunctionId,
+        site.argumentCount,
+        first,
+        second,
+        rest,
+      );
+    } finally {
+      target.bridgeConstructorTypeId = previous;
+    }
   }
 
   /// Materialize a `first`/`rest` register pair as a positional vector.

@@ -66,6 +66,10 @@ class Runtime {
   /// Evaluated frames live on the heap, so the host stack cannot enforce this.
   int maxCallDepth = 10000;
 
+  /// The reified result type during a bridge constructor invocation.
+  /// Nested bridge calls restore their caller's context on return.
+  int? bridgeConstructorTypeId;
+
   /// The current runtime version code
   static const int versionCode = 106;
 
@@ -583,9 +587,7 @@ class Runtime {
         nominal,
         source[1],
         source[2],
-        source[3] < 0
-            ? source[3]
-            : _importNominalType(origin, source[3]),
+        source[3] < 0 ? source[3] : _importNominalType(origin, source[3]),
         source[4],
         importRuntimeType(origin, source[5]),
       ],

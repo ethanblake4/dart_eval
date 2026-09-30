@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'dart:io';
 import 'package:dart_eval/stdlib/core.dart';
@@ -632,7 +634,13 @@ class $Process implements $Instance {
       runInShell: (rest[3] as $Value?)?.$value ?? false,
       mode: (rest[4] as $Value?)?.$value ?? ProcessStartMode.normal,
     );
-    return $Future.wrap(value.then((e) => $Process.wrap(e)));
+    return $Future.wrap(
+      value.then((e) => $Process.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.process),
+      ]),
+    );
   }
 
   /// Wrapper for the [Process.run] method
@@ -649,7 +657,13 @@ class $Process implements $Instance {
       stdoutEncoding: (rest[4] as $Value?)?.$value ?? systemEncoding,
       stderrEncoding: (rest[5] as $Value?)?.$value ?? systemEncoding,
     );
-    return $Future.wrap(value.then((e) => $ProcessResult.wrap(e)));
+    return $Future.wrap(
+      value.then((e) => $ProcessResult.wrap(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.processResult),
+      ]),
+    );
   }
 
   /// Wrapper for the [Process.runSync] method
@@ -698,7 +712,13 @@ class $Process implements $Instance {
     switch (identifier) {
       case 'exitCode':
         final exitCode = $value.exitCode;
-        return $Future.wrap(exitCode.then((e) => $int(e)));
+        return $Future.wrap(
+          exitCode.then((e) => $int(e)),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        );
 
       case 'stdout':
         final stdout = $value.stdout;

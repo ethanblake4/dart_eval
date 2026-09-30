@@ -355,7 +355,9 @@ void main() {
   });
 
   test('external call descriptors round trip and keep the table immutable', () {
-    final calls = [const TypedExternalCall(0xffffffff, 4)];
+    final calls = [
+      const TypedExternalCall(0xffffffff, 4, constructorTypeId: 0xfffffffe),
+    ];
     final p = TypedProgram(
       Uint8List.fromList([
         TypedOp.ext,
@@ -374,6 +376,7 @@ void main() {
     expect(restored.externalCalls.single.externalFunctionId, 0xffffffff);
     expect(restored.externalCalls.single.argumentCount, 4);
     expect(restored.externalCalls.single.overflowCount, 2);
+    expect(restored.externalCalls.single.constructorTypeId, 0xfffffffe);
     expect(restored.code, p.code);
   });
   test(
@@ -406,6 +409,8 @@ void main() {
         const TypedExternalCall(0x100000000, 0),
         const TypedExternalCall(0, -1),
         const TypedExternalCall(0, 65539),
+        const TypedExternalCall(0, 0, constructorTypeId: -2),
+        const TypedExternalCall(0, 0, constructorTypeId: 0xffffffff),
       ]) {
         expect(
           () => TypedProgram(code, externalCalls: [call]),

@@ -49,6 +49,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'converter.dart';
 import 'byte_conversion.dart';
@@ -329,7 +330,13 @@ class $Utf8Decoder implements $Instance {
   ) {
     final self = target! as $Utf8Decoder;
     final result = self.$value.bind((r as $Value?)!.$value);
-    return $Stream.wrap(result.map((e) => $String(e)));
+    return $Stream.wrap(
+      result.map((e) => $String(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   static const $Function __cast = $Function(_cast);
@@ -712,7 +719,13 @@ class $Utf8Codec implements $Instance {
   ) {
     final self = target! as $Utf8Codec;
     final result = self.$value.decodeStream((r as $Value?)!.$value);
-    return $Future.wrap(result.then((e) => $String(e)));
+    return $Future.wrap(
+      result.then((e) => $String(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   @override
@@ -967,7 +980,15 @@ class $Utf8Encoder implements $Instance {
   ) {
     final self = target! as $Utf8Encoder;
     final result = self.$value.bind((r as $Value?)!.$value);
-    return $Stream.wrap(result.map((e) => $List.view(e, (e) => $int(e))));
+    return $Stream.wrap(
+      result.map((e) => $List.view(e, (e) => $int(e))),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(CoreTypes.int),
+        ]),
+      ]),
+    );
   }
 
   static const $Function __cast = $Function(_cast);

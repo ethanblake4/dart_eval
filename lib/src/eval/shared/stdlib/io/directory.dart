@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'dart:io';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -186,6 +188,10 @@ class $Directory implements $Instance {
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(
       entity.create().then((value) => $Directory.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.directory),
+      ]),
     );
   }
 
@@ -219,6 +225,10 @@ class $Directory implements $Instance {
     runtime.assertPermission('filesystem:write', newPath);
     return $Future.wrap(
       entity.rename(newPath).then((value) => $Directory.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.directory),
+      ]),
     );
   }
 

@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'dart:io';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -513,7 +515,13 @@ class $File implements $Instance {
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:write', entity.path);
-    return $Future.wrap(entity.create().then((value) => $File.wrap(value)));
+    return $Future.wrap(
+      entity.create().then((value) => $File.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.file),
+      ]),
+    );
   }
 
   static const $Function _createSync = $Function(__createSync);
@@ -544,6 +552,10 @@ class $File implements $Instance {
     runtime.assertPermission('filesystem:read', entity.path);
     return $Future.wrap(
       entity.lastAccessed().then((value) => $DateTime.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dateTime),
+      ]),
     );
   }
 
@@ -574,6 +586,10 @@ class $File implements $Instance {
     runtime.assertPermission('filesystem:read', entity.path);
     return $Future.wrap(
       entity.lastModified().then((value) => $DateTime.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dateTime),
+      ]),
     );
   }
 
@@ -602,7 +618,13 @@ class $File implements $Instance {
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
-    return $Future.wrap(entity.length().then((value) => $int(value)));
+    return $Future.wrap(
+      entity.length().then((value) => $int(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
   }
 
   static const $Function _lengthSync = $Function(__lengthSync);
@@ -646,7 +668,13 @@ class $File implements $Instance {
   ) {
     final entity = target!.$value as File;
     runtime.assertPermission('filesystem:read', entity.path);
-    return $Future.wrap(entity.readAsString().then((value) => $String(value)));
+    return $Future.wrap(
+      entity.readAsString().then((value) => $String(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.string),
+      ]),
+    );
   }
 
   static const $Function _readAsStringSync = $Function(__readAsStringSync);
@@ -676,6 +704,12 @@ class $File implements $Instance {
     runtime.assertPermission('filesystem:read', entity.path);
     return $Future.wrap(
       entity.readAsBytes().then((value) => $List.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(CoreTypes.int),
+        ]),
+      ]),
     );
   }
 
@@ -706,6 +740,12 @@ class $File implements $Instance {
     runtime.assertPermission('filesystem:read', entity.path);
     return $Future.wrap(
       entity.readAsLines().then((value) => $List.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(CoreTypes.string),
+        ]),
+      ]),
     );
   }
 
@@ -738,6 +778,10 @@ class $File implements $Instance {
     runtime.assertPermission('filesystem:write', newPath);
     return $Future.wrap(
       entity.rename(newPath).then((value) => $File.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.file),
+      ]),
     );
   }
 
@@ -769,7 +813,13 @@ class $File implements $Instance {
     final entity = target!.$value as File;
     final time = (r as $Value?)!.$value as DateTime;
     runtime.assertPermission('filesystem:write', entity.path);
-    return $Future.wrap(entity.setLastAccessed(time));
+    return $Future.wrap(
+      entity.setLastAccessed(time),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
+    );
   }
 
   static const $Function _setLastAccessedSync = $Function(
@@ -802,7 +852,13 @@ class $File implements $Instance {
     final entity = target!.$value as File;
     final time = (r as $Value?)!.$value as DateTime;
     runtime.assertPermission('filesystem:write', entity.path);
-    return $Future.wrap(entity.setLastModified(time));
+    return $Future.wrap(
+      entity.setLastModified(time),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(CoreTypes.dynamic),
+      ]),
+    );
   }
 
   static const $Function _setLastModifiedSync = $Function(
@@ -841,6 +897,10 @@ class $File implements $Instance {
       entity
           .writeAsString(contents /*, mode: mode, encoding: encoding*/)
           .then($File.wrap),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.file),
+      ]),
     );
   }
 
@@ -877,6 +937,10 @@ class $File implements $Instance {
     runtime.assertPermission('filesystem:write', entity.path);
     return $Future.wrap(
       entity.writeAsBytes(bytes /*, mode: mode*/).then($File.wrap),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.file),
+      ]),
     );
   }
 

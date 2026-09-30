@@ -1,3 +1,5 @@
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'dart:io';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -267,6 +269,10 @@ class $HttpClient implements $Instance {
       (target!.$value as HttpClient)
           .openUrl(method, url)
           .then((value) => $HttpClientRequest.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.httpClientRequest),
+      ]),
     );
   }
 
@@ -286,6 +292,10 @@ class $HttpClient implements $Instance {
     final request = (target!.$value as HttpClient).get(url, port, path);
     return $Future.wrap(
       request.then((value) => $HttpClientRequest.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.httpClientRequest),
+      ]),
     );
   }
 
@@ -307,6 +317,10 @@ class $HttpClient implements $Instance {
     final request = (target!.$value as HttpClient).post(url, port, path);
     return $Future.wrap(
       request.then((value) => $HttpClientRequest.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.httpClientRequest),
+      ]),
     );
   }
 
@@ -328,6 +342,10 @@ class $HttpClient implements $Instance {
     final request = (target!.$value as HttpClient).put(url, port, path);
     return $Future.wrap(
       request.then((value) => $HttpClientRequest.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.httpClientRequest),
+      ]),
     );
   }
 
@@ -345,6 +363,10 @@ class $HttpClient implements $Instance {
     final request = (target!.$value as HttpClient).getUrl(url);
     return $Future.wrap(
       request.then((value) => $HttpClientRequest.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.httpClientRequest),
+      ]),
     );
   }
 
@@ -362,6 +384,10 @@ class $HttpClient implements $Instance {
     final request = (target!.$value as HttpClient).postUrl(url);
     return $Future.wrap(
       request.then((value) => $HttpClientRequest.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.httpClientRequest),
+      ]),
     );
   }
 
@@ -379,6 +405,10 @@ class $HttpClient implements $Instance {
     final request = (target!.$value as HttpClient).putUrl(url);
     return $Future.wrap(
       request.then((value) => $HttpClientRequest.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.httpClientRequest),
+      ]),
     );
   }
 
@@ -519,6 +549,10 @@ class $HttpClientRequest implements $Instance {
     final request = target!.$value as HttpClientRequest;
     return $Future.wrap(
       request.close().then((value) => $HttpClientResponse.wrap(value)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+        runtime.lookupType(IoTypes.httpClientResponse),
+      ]),
     );
   }
 
@@ -657,6 +691,10 @@ class $HttpClientResponse implements $Instance {
     (target!.$value as HttpClientResponse).detachSocket().then(
       (socket) => $Socket.wrap(socket),
     ),
+    runtime: runtime,
+    runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+      runtime.lookupType(IoTypes.socket),
+    ]),
   );
 
   @override

@@ -51,6 +51,8 @@ import 'symbol.dart';
 
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
+import 'error_hooks.dart' as hooks;
+
 /// dart_eval wrapper binding for [Error]
 class $Error implements Error, $Instance {
   /// Configure this class for use in a [Runtime]
@@ -1116,17 +1118,7 @@ class $AssertionError implements AssertionError, $Instance {
 
   /// Wrapper for the [AssertionError.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    Object? message;
-    if (r is $Value) {
-      // Typed instances may not have a reifiable host value — fall back
-      // to their runtime `toString` for the error message.
-      try {
-        message = r.$reified;
-      } catch (_) {
-        message = r.toString();
-      }
-    }
-    return $AssertionError.wrap(AssertionError(message));
+    return hooks.assertionError(runtime, null, [r as $Value?]);
   }
 
   final $Instance _superclass;
