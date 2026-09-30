@@ -19,6 +19,17 @@ import '../macros/branch.dart' show compileNonNullCondition;
 
 enum PatternBindContext { none, declare, declareFinal, matching }
 
+/// The success edge continues matching; failures select the next alternative.
+abstract interface class PatternMatchContinuation {
+  void requireMatch(Variable condition);
+  Variable matchOr(
+    LogicalOrPattern pattern,
+    Variable subject,
+    PatternBindContext patternContext,
+  );
+  bool get deferCaptures;
+}
+
 /// The names a pattern binds — [declared] selects declared variables (fresh
 /// bindings, e.g. `var (a, b) = ...`) vs assigned variables (writes to
 /// existing locals, e.g. `(a, b) = ...`).
@@ -179,17 +190,17 @@ Variable patternMatchAndBind(
   ListPatternElement pattern,
   Variable V, {
   PatternBindContext patternContext = PatternBindContext.none,
-  void Function(Variable)? requireMatch,
+  PatternMatchContinuation? continuation,
 }) {
   final result = _matchPattern(
     ctx,
     pattern,
     V,
     patternContext: patternContext,
-    requireMatch: requireMatch,
+    continuation: continuation,
   );
-  if (requireMatch == null) return result;
-  requireMatch(result);
+  if (continuation == null) return result;
+  continuation.requireMatch(result);
   return BuiltinValue(boolval: true).push(ctx);
 }
 
@@ -198,8 +209,9 @@ Variable _matchPattern(
   ListPatternElement pattern,
   Variable V, {
   required PatternBindContext patternContext,
-  void Function(Variable)? requireMatch,
+  PatternMatchContinuation? continuation,
 }) {
+  final requireMatch = continuation?.requireMatch;
   switch (pattern) {
     case ConstantPattern pat:
       // The pattern's context type is the matched value's type — this is
@@ -228,7 +240,7 @@ Variable _matchPattern(
           field.pattern,
           GetTarget.read(ctx, V, fieldName),
           patternContext: patternContext,
-          requireMatch: requireMatch,
+          continuation: continuation,
         );
         if (result == null || requireMatch != null) {
           result = fieldResult;
@@ -269,7 +281,7 @@ Variable _matchPattern(
           element,
           listEl,
           patternContext: patternContext,
-          requireMatch: requireMatch,
+          continuation: continuation,
         );
         if (result == null || requireMatch != null) {
           result = elementResult;
@@ -312,13 +324,30 @@ Variable _matchPattern(
       final bindingType = pat is DeclaredVariablePattern && pat.type != null
           ? TypeRef.fromAnnotation(ctx, ctx.library, pat.type!)
           : V.type;
+      final currentType =
+          bindingType.nullable &&
+              !V.type.nullable &&
+              !V.type.isSpec(CoreTypes.dynamic) &&
+              !V.type.isSpec(CoreTypes.nullType)
+          ? bindingType.withNullable(false)
+          : bindingType;
       final v = Variable.ssa(
         ctx,
         Assign(ctx.svar(variableName), V.ssa),
-        bindingType,
+        currentType,
         rep: V.rep,
       );
-      if (bindsVariable) ctx.setLocal(variableName, v, isFinal: isFinal);
+      if (bindsVariable) {
+        final binding = ctx.setLocal(
+          variableName,
+          v,
+          declaredType: bindingType,
+          isFinal: isFinal,
+        );
+        if (continuation?.deferCaptures != true) {
+          binding.captureBinding(ctx, pat);
+        }
+      }
 
       if (pat is DeclaredVariablePattern) {
         return _typeTest(ctx, pat.type, V);
@@ -326,6 +355,9 @@ Variable _matchPattern(
 
       return BuiltinValue(boolval: true).push(ctx);
     case LogicalOrPattern pat:
+      if (continuation != null) {
+        return continuation.matchOr(pat, V, patternContext);
+      }
       final alternativeContext = patternContext == PatternBindContext.matching
           ? PatternBindContext.none
           : patternContext;
@@ -348,7 +380,7 @@ Variable _matchPattern(
         pat.leftOperand,
         V,
         patternContext: patternContext,
-        requireMatch: requireMatch,
+        continuation: continuation,
       );
       final right = patternMatchAndBind(
         ctx,
@@ -357,7 +389,7 @@ Variable _matchPattern(
             ? V
             : V.withType(matchedPatternType(ctx, pat.leftOperand, V.type)),
         patternContext: patternContext,
-        requireMatch: requireMatch,
+        continuation: continuation,
       );
       if (requireMatch != null) return right;
       return CallResolver(ctx).invokeOperator(left, '&&', [right]).result;
@@ -381,7 +413,7 @@ Variable _matchPattern(
           field.pattern,
           fieldValue,
           patternContext: patternContext,
-          requireMatch: requireMatch,
+          continuation: continuation,
         );
         result = requireMatch != null
             ? fieldResult
@@ -400,7 +432,7 @@ Variable _matchPattern(
         pat.pattern,
         boxed.copyWith(type: slot),
         patternContext: patternContext,
-        requireMatch: requireMatch,
+        continuation: continuation,
       );
     case RelationalPattern pat:
       final operand = compileExpression(pat.operand, ctx, V.type);
@@ -418,7 +450,7 @@ Variable _matchPattern(
         pat.pattern,
         V,
         patternContext: patternContext,
-        requireMatch: requireMatch,
+        continuation: continuation,
       );
     case NullCheckPattern pat:
       final nonNull = compileNonNullCondition(ctx, V);
@@ -428,7 +460,7 @@ Variable _matchPattern(
         pat.pattern,
         V.copyWith(type: V.type.withNullable(false)),
         patternContext: patternContext,
-        requireMatch: requireMatch,
+        continuation: continuation,
       );
       if (requireMatch != null) return matched;
       return CallResolver(ctx).invokeOperator(nonNull, '&&', [matched]).result;
@@ -447,7 +479,7 @@ Variable _matchPattern(
         pat.pattern,
         V.withType(V.type.withNullable(false)),
         patternContext: patternContext,
-        requireMatch: requireMatch,
+        continuation: continuation,
       );
     default:
       throw CompileError('Unsupported pattern type: ${pattern.runtimeType}');

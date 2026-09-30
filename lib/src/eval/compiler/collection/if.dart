@@ -1,6 +1,8 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/collection/list.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
@@ -26,11 +28,26 @@ List<TypeRef> compileIfElement(
 ) {
   final potentialReturnTypes = <TypeRef>[];
   final elseElement = e.elseElement;
+  final caseClause = e.caseClause;
+  final subject = caseClause == null
+      ? null
+      : compileExpression(e.expression, ctx);
+  final caseValue = subject?.copyIntoFreshSlot(ctx, 'case_value');
 
   macroBranch(
     ctx,
     null,
-    conditionExpression: e.expression,
+    conditionExpression: caseClause == null ? e.expression : null,
+    conditionGraph: caseClause == null
+        ? null
+        : (ctx, yes, no) => compilePatternCondition(
+            ctx,
+            caseClause.guardedPattern,
+            caseValue!,
+            yes,
+            no,
+            source: e.expression,
+          ),
     thenBranch: (ctx, _) {
       potentialReturnTypes.addAll(compileBody(e.thenElement));
       return StatementInfo();

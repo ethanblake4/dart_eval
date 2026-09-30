@@ -183,8 +183,10 @@ final class ArgumentBinder {
       );
     }
 
-    final declaredSignature = callee?.type is FunctionTypeRef
-        ? (callee!.type as FunctionTypeRef).signature
+    final callableType =
+        callee?.type ?? (target is MemberValueCall ? target.valueType : null);
+    final declaredSignature = callableType is FunctionTypeRef
+        ? callableType.signature
         : null;
     final suppliedTypeArguments = [
       for (final annotation
@@ -393,6 +395,11 @@ final class ArgumentBinder {
           argTypes: argTypes,
           namedArgTypes: namedArgTypes,
         ) ??
+        (target is MemberValueCall &&
+                declaredSignature != null &&
+                !declaredSignature.returnType.isSpec(CoreTypes.voidType)
+            ? declaredSignature.returnType
+            : null) ??
         CoreTypes.dynamic.ref(ctx);
     return BoundCall(
       positional: positionalArgs,

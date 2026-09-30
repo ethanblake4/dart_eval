@@ -600,10 +600,13 @@ final class EqualityCall extends CallTarget {
 /// Calling the *value* held by a field, getter, or record field: read the
 /// member, then invoke the result as a closure.
 final class MemberValueCall extends CallTarget {
-  const MemberValueCall({required this.read});
+  const MemberValueCall({required this.read, this.valueType});
 
   /// Reads the member value (a getter invocation or field load).
   final Variable Function(CompilerContext ctx) read;
+
+  /// The declared member type, available before its value is read.
+  final TypeRef? valueType;
 
   @override
   CallSignature? get signature => null;
@@ -612,6 +615,12 @@ final class MemberValueCall extends CallTarget {
   Variable emit(CompilerContext ctx, BoundCall call) {
     final callee = read(ctx);
     final result = ClosureCall(callee: callee).emit(ctx, call);
+    // Binding already instantiated a declared generic function signature.
+    if (valueType case FunctionTypeRef(
+      :final signature,
+    ) when signature.typeParameters.isNotEmpty) {
+      return result;
+    }
     // The bound call was computed without knowing the callee; the freshly
     // read value may carry callable metadata that refines the result type.
     final refined = callResultType(

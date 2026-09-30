@@ -508,3 +508,49 @@ changing behavior; focused reanalysis is clean. The dependency warning and
 benchmark import info remain pre-existing. Diff checks pass. Final logs:
 cycle3-pass3-ordinary-verified.log, sdk-full-cycle3-pass3-verified.log,
 cycle3-pass3-analyze-verified.log, and cycle3-pattern-final-style.log.
+
+## Third cycle, correctness pass 4
+
+Logical OR patterns now have separate alternative blocks. The left failure
+edge selects the right alternative; successful edges join compatible bindings
+before the guard. Both arms keep a shared register representation when possible.
+Captured OR variables allocate one existing capture cell after the join, including
+nested alternatives. Pattern-variable annotations retain their declared type
+while a nonnullable matched value can promote a nullable binding. OR joins retain
+common explicit type proofs, including intermediate AND promotions, rather than
+inventing a promotion from the alternatives' least upper bound.
+
+Capture analysis now models pattern declarations and their guard/body scopes.
+Adjacent switch cases give each guard an independent binding and the shared
+body a separate binding, allocating cells only for names actually captured.
+If-case variables do not shadow outer variables in the else branch. Collection
+if-case elements evaluate the subject once and use the same guarded-pattern
+graph as statements and switch expressions. No new runtime operation is needed.
+
+Function-typed primary parameters lower into ordinary generated field AST
+annotations. Direct generic function-valued fields, getters and record members
+now supply their declared signature to argument inference before reading the
+member. The actual getter still runs after its arguments, preserving Dart's
+evaluation order. Instantiated generic results survive that read; nongeneric
+member calls retain existing result refinement from promoted callable metadata.
+The separate primary late-initializer restriction remains explicit.
+
+Focused validation covers native and fresh/serialized results for both OR
+alternatives, skipped getters, captured-variable mutation, nullable joins,
+common scalar/record proofs, collection list/set/map cases and generic member
+calls. The SDK logical-or flow, guard capture and guard scope fixtures pass
+with assertions enabled in both runtime modes. Seventy-seven capture checks
+and sixty-eight generic-member/primary/binding/closure checks pass; targeted
+analysis is clean. Ordinary validation passes 1915 tests with 62 skips.
+
+Four stale SDK expectations are removed after assertion-enabled dual-runtime
+checks: logical-or flow, guard capture, guard scope and identifier-when-not.
+The final SDK sweep passes all 2700 harness checks with 362 skips and no
+unexpected outcomes or stale statuses. Actual SDK outcomes are 2297 passed,
+133 failed and 270 compile errors. Logs: cycle4-ordinary.log,
+sdk-full-cycle4-verified.log, cycle4-focused-sdk-probes.log and
+cycle4-stale-probe.log. The fixes use existing runtime operations.
+The final OR regression also checks a third nested alternative, captures of
+preceding AND bindings and getter writes to captured outer locals; native and
+both evaluated runtimes agree. Full analysis retains only the existing
+dependency warning and benchmark import info. Diff checks pass.

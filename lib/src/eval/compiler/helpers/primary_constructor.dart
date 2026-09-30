@@ -22,6 +22,8 @@ void lowerPrimaryConstructor(ClassDeclaration declaration) {
   if (header is! PrimaryConstructorDeclaration) return;
   final body = header.body;
   final members = declaration.body.members;
+  // Late initializers run on first access in instance scope. Ordinary field
+  // lowering currently evaluates them during construction instead.
   if (members.whereType<FieldDeclaration>().any(
     (field) =>
         !field.isStatic &&
@@ -41,12 +43,16 @@ void lowerPrimaryConstructor(ClassDeclaration declaration) {
       parameters.add(parameter as ast.FormalParameterImpl);
       continue;
     }
-    if (parameter.functionTypedSuffix != null) {
-      throw CompileError(
-        'Function-typed declaring primary parameters are not supported',
-        parameter,
-      );
-    }
+    final suffix = parameter.functionTypedSuffix;
+    final fieldType = suffix == null
+        ? parameter.type as ast.TypeAnnotationImpl?
+        : ast.GenericFunctionTypeImpl(
+            returnType: parameter.type as ast.TypeAnnotationImpl?,
+            functionKeyword: Token(Keyword.FUNCTION, parameter.name!.offset),
+            typeParameters: suffix.typeParameters as ast.TypeParameterListImpl?,
+            parameters: suffix.formalParameters as ast.FormalParameterListImpl,
+            question: suffix.question,
+          );
     final field = ast.VariableDeclarationImpl(
       comment: null,
       metadata: [],
@@ -67,10 +73,10 @@ void lowerPrimaryConstructor(ClassDeclaration declaration) {
           comment: null,
           metadata: [],
           lateKeyword: null,
-          keyword: parameter.type == null || parameter.isFinal
+          keyword: fieldType == null || parameter.isFinal
               ? parameter.constFinalOrVarKeyword
               : null,
-          type: parameter.type as ast.TypeAnnotationImpl?,
+          type: fieldType,
           variables: [field],
         ),
         semicolon: Token(TokenType.SEMICOLON, parameter.end),

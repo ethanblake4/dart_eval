@@ -259,7 +259,12 @@ final class LocalBinding {
   /// cells lose allocation proofs because a closure can replace their value.
   void captureBinding(CompilerContext ctx, AstNode declaration) {
     final analysis = capturesFor(declaration);
-    if (!analysis.captured.contains(declaration)) return;
+    if (!analysis.captured.contains(declaration) &&
+        !(declaration is SwitchMember &&
+            (analysis.capturedCaseBodies[declaration]?.contains(name) ??
+                false))) {
+      return;
+    }
     // An initialized final object can live directly in the environment.
     // Scalars still use typed cells: LoadCapture reads the object bank.
     if (isFinal &&

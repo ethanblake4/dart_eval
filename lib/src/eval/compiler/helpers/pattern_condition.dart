@@ -3,11 +3,13 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import '../backend/representation.dart';
+import '../builtins.dart';
 import '../context.dart';
 import '../expression/condition.dart';
 import '../expression/expression.dart';
 import '../variable.dart';
 import '../type.dart';
+import '../values/abi.dart';
 import 'assigned_locals.dart';
 import 'conversion.dart';
 import 'pattern.dart';
@@ -37,9 +39,75 @@ import 'promotion.dart';
               : assignedLocalNames([guard.expression]),
         );
   final initialState = ctx.saveState();
+  final matching = _PatternCondition(ctx, initialState, whenFalse);
+
+  patternMatchAndBind(
+    ctx,
+    pattern.pattern,
+    subject,
+    patternContext: PatternBindContext.matching,
+    continuation: matching,
+  );
+  if (guard != null) {
+    final value = compileExpression(
+      guard.expression,
+      ctx,
+      CoreTypes.bool.ref(ctx),
+    );
+    enforceConditionType(ctx, value, guard.expression);
+    matching.requireMatch(value);
+  }
+  ctx.resolveBranchStateDiscontinuity(initialState);
+  ctx.pushOp(Jump(whenTrue.label!));
+  final tail = ctx.flushBlock();
+  ctx.builder.link(tail, whenTrue);
+  // Only enclosing locals join the failed tests. Pattern locals carry the
+  // types and values of the successful path into the guard and case body.
+  final bindings = ctx.locals.removeLast();
+  ctx.mergeBranchState(matching.failedStates);
+  ctx.locals.add(bindings);
+  if (slot != null) {
+    final matchedType = matchedPatternType(ctx, pattern.pattern, subject.type);
+    if (slot.member == null) {
+      slot.local.binding?.typesOfInterest.add(matchedType);
+      if (pattern.pattern case RecordPattern record) {
+        slot.local.binding?.typesOfInterest.add(
+          recordPatternShape(ctx, record),
+        );
+      }
+    }
+    slot.local.inferType(
+      ctx,
+      matchedType,
+      slot.viaSuper ? 'super:${slot.member}' : slot.member,
+    );
+  }
+  return (
+    BasicBlockBuilder(ctx.activeGraph, [whenTrue, whenFalse], parent),
+    matching.canMatch,
+    matching.canFail,
+  );
+}
+
+final class _PatternCondition implements PatternMatchContinuation {
+  _PatternCondition(
+    this.ctx,
+    this.initialState,
+    this.whenFalse, {
+    this.deferCaptures = false,
+  }) : parent = ctx.builder;
+
+  final CompilerContext ctx;
+  final ContextSaveState initialState;
+  final BasicBlock<Operation> whenFalse;
+  final BasicBlockBuilder parent;
   final failedStates = <ContextSaveState>[];
   var canMatch = true;
   var canFail = false;
+  @override
+  final bool deferCaptures;
+
+  @override
   void requireMatch(Variable condition) {
     if (condition.facts.constBool == true) return;
     final value = convertForAssignment(
@@ -60,50 +128,122 @@ import 'promotion.dart';
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [next], parent);
   }
 
-  patternMatchAndBind(
-    ctx,
-    pattern.pattern,
-    subject,
-    patternContext: PatternBindContext.matching,
-    requireMatch: requireMatch,
-  );
-  if (guard != null) {
-    final value = compileExpression(
-      guard.expression,
-      ctx,
-      CoreTypes.bool.ref(ctx),
+  @override
+  Variable matchOr(
+    LogicalOrPattern pattern,
+    Variable subject,
+    PatternBindContext patternContext,
+  ) {
+    final before = ctx.saveState();
+    final rightBlock = BasicBlock<Operation>(
+      [],
+      label: ctx.label('pattern_or'),
     );
-    enforceConditionType(ctx, value, guard.expression);
-    requireMatch(value);
-  }
-  ctx.resolveBranchStateDiscontinuity(initialState);
-  ctx.pushOp(Jump(whenTrue.label!));
-  final tail = ctx.flushBlock();
-  ctx.builder.link(tail, whenTrue);
-  // Only enclosing locals join the failed tests. Pattern locals carry the
-  // types and values of the successful path into the guard and case body.
-  final bindings = ctx.locals.removeLast();
-  ctx.mergeBranchState(failedStates);
-  ctx.locals.add(bindings);
-  if (slot != null) {
-    final matchedType = matchedPatternType(ctx, pattern.pattern, subject.type);
-    if (slot.member == null) {
-      slot.local.binding?.typesOfInterest.add(matchedType);
-      if (pattern.pattern case RecordPattern record) {
-        slot.local.binding?.typesOfInterest.add(
-          recordPatternShape(ctx, record),
+    final join = BasicBlock<Operation>([], label: ctx.label('pattern_join'));
+    final left = _PatternCondition(
+      ctx,
+      initialState,
+      rightBlock,
+      deferCaptures: true,
+    );
+    patternMatchAndBind(
+      ctx,
+      pattern.leftOperand,
+      subject,
+      patternContext: patternContext,
+      continuation: left,
+    );
+    final leftState = ctx.saveState();
+    final leftTail = ctx.flushBlock();
+
+    ctx.restoreState(before);
+    ctx.mergeBranchState(left.failedStates);
+    ctx.builder = BasicBlockBuilder(ctx.activeGraph, [rightBlock], parent);
+    final right = _PatternCondition(
+      ctx,
+      initialState,
+      whenFalse,
+      deferCaptures: true,
+    );
+    patternMatchAndBind(
+      ctx,
+      pattern.rightOperand,
+      subject,
+      patternContext: patternContext,
+      continuation: right,
+    );
+    final rightState = ctx.saveState();
+    final rightTail = ctx.flushBlock();
+    final declarations = {
+      for (final declaration in _declarations(pattern.leftOperand))
+        if (declaration.name.lexeme != '_')
+          declaration.name.lexeme: declaration,
+    };
+    final outputs = <String, Variable>{};
+    for (final name in declarations.keys) {
+      final lhs = leftState.locals.last[name]!.current;
+      final rhs = rightState.locals.last[name]!.current;
+      final type = TypeRef.commonBaseType(ctx, {lhs.type, rhs.type});
+      // Keep a shared register bank. Conversion is necessary only when the
+      // alternatives actually produce different physical representations.
+      final rep = lhs.rep == rhs.rep ? lhs.rep : Abi.storageSlot(type);
+      outputs[name] = Variable.of(
+        ctx,
+        ctx.svar(name),
+        type,
+        rep: rep,
+        facts: lhs.facts.join(rhs.facts),
+      );
+    }
+
+    void finishArm(BasicBlock tail, ContextSaveState state) {
+      ctx.restoreState(state);
+      ctx.builder = BasicBlockBuilder(ctx.activeGraph, [tail], parent);
+      for (final entry in outputs.entries) {
+        ctx.locals.last[entry.key]!.current.toRep(
+          ctx,
+          entry.value.rep,
+          into: entry.value.ssa,
         );
       }
+      ctx.resolveBranchStateDiscontinuity(before);
+      ctx.pushOp(Jump(join.label!));
+      final end = ctx.flushBlock();
+      ctx.builder.link(end, join);
     }
-    slot.local.inferType(
-      ctx,
-      matchedType,
-      slot.viaSuper ? 'super:${slot.member}' : slot.member,
-    );
+
+    finishArm(leftTail, leftState);
+    finishArm(rightTail, rightState);
+    ctx.restoreState(before);
+    ctx.mergeBranchState([
+      if (left.canMatch) leftState,
+      if (left.canFail && right.canMatch) rightState,
+    ]);
+    ctx.builder = BasicBlockBuilder(ctx.activeGraph, [join], parent);
+    for (final entry in outputs.entries) {
+      final original = leftState.locals.last[entry.key]!.binding;
+      final binding = ctx.setLocal(
+        entry.key,
+        entry.value,
+        declaredType: original.declaredType,
+        isFinal: original.isFinal,
+      );
+      // The guard is the first possible closure creation. Allocate its cell
+      // after joining, so both alternatives share exactly one binding.
+      if (!deferCaptures) {
+        binding.captureBinding(ctx, declarations[entry.key]!);
+      }
+    }
+    if (left.canFail) failedStates.addAll(right.failedStates);
+    canFail |= canMatch && left.canFail && right.canFail;
+    canMatch &= left.canMatch || (left.canFail && right.canMatch);
+    return BuiltinValue(boolval: true).push(ctx);
   }
-  return (
-    BasicBlockBuilder(ctx.activeGraph, [whenTrue, whenFalse], parent),
-    canMatch,
-    canFail,
-  );
+}
+
+Iterable<DeclaredVariablePattern> _declarations(AstNode pattern) sync* {
+  if (pattern is DeclaredVariablePattern) yield pattern;
+  for (final child in pattern.childEntities.whereType<AstNode>()) {
+    yield* _declarations(child);
+  }
 }

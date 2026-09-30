@@ -14,6 +14,8 @@ CaptureAnalysis capturesFor(AstNode node) {
 /// creation never controls whether a shared cell exists.
 class CaptureAnalysis extends RecursiveAstVisitor<void> {
   final captured = <AstNode>{};
+  final capturedCaseBodies = <SwitchMember, Set<String>>{};
+  final _patternBindings = <AstNode, List<DeclaredVariablePattern>>{};
 
   /// Names written inside each closure, keyed by the closure node — a
   /// write takes flow-analysis effect at the point the closure is
@@ -61,7 +63,12 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
     }
     final owner = _functions.indexOf(binding.$2);
     if (owner == _functions.length - 1) return;
-    captured.add(binding.$1);
+    final declaration = binding.$1;
+    if (declaration is SwitchMember) {
+      capturedCaseBodies.putIfAbsent(declaration, () => {}).add(name);
+    } else {
+      captured.addAll(_patternBindings[declaration] ?? [declaration]);
+    }
     for (final function in _functions.skip(owner + 1)) {
       if (function is FunctionExpression) {
         free.putIfAbsent(function, () => {}).add(name);
@@ -159,9 +166,118 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   void visitForStatement(ForStatement node) =>
       _scope(() => super.visitForStatement(node));
   @override
+  void visitForElement(ForElement node) =>
+      _scope(() => super.visitForElement(node));
+  @override
   void visitForEachPartsWithDeclaration(ForEachPartsWithDeclaration node) {
     node.iterable.accept(this);
     _declare(node.loopVariable.name.lexeme, node.loopVariable);
+  }
+
+  void _pattern(DartPattern pattern) {
+    final declarations = _PatternDeclarations();
+    pattern.accept(declarations);
+    for (final entries in declarations.names.values) {
+      for (final declaration in entries) {
+        _patternBindings[declaration] = entries;
+      }
+    }
+    pattern.accept(this);
+  }
+
+  @override
+  void visitDeclaredVariablePattern(DeclaredVariablePattern node) =>
+      _declare(node.name.lexeme, node);
+
+  @override
+  void visitGuardedPattern(GuardedPattern node) {
+    _pattern(node.pattern);
+    node.whenClause?.expression.accept(this);
+  }
+
+  @override
+  void visitPatternVariableDeclaration(PatternVariableDeclaration node) {
+    _pattern(node.pattern);
+    node.expression.accept(this);
+  }
+
+  @override
+  void visitForEachPartsWithPattern(ForEachPartsWithPattern node) {
+    node.iterable.accept(this);
+    _pattern(node.pattern);
+  }
+
+  @override
+  void visitIfStatement(IfStatement node) {
+    node.expression.accept(this);
+    _scope(() {
+      node.caseClause?.guardedPattern.accept(this);
+      node.thenStatement.accept(this);
+    });
+    node.elseStatement?.accept(this);
+  }
+
+  @override
+  void visitIfElement(IfElement node) {
+    node.expression.accept(this);
+    _scope(() {
+      node.caseClause?.guardedPattern.accept(this);
+      node.thenElement.accept(this);
+    });
+    node.elseElement?.accept(this);
+  }
+
+  @override
+  void visitSwitchExpressionCase(SwitchExpressionCase node) => _scope(() {
+    node.guardedPattern.accept(this);
+    node.expression.accept(this);
+  });
+
+  @override
+  void visitSwitchStatement(SwitchStatement node) {
+    node.expression.accept(this);
+    var start = 0;
+    while (start < node.members.length) {
+      var end = start;
+      while (end + 1 < node.members.length &&
+          node.members[end].statements.isEmpty) {
+        end++;
+      }
+      final body = node.members[end];
+      if (start == end) {
+        _scope(() {
+          if (body is SwitchPatternCase) body.guardedPattern.accept(this);
+          if (body is SwitchCase) body.expression.accept(this);
+          for (final statement in body.statements) {
+            statement.accept(this);
+          }
+        });
+      } else {
+        final names = <String>{};
+        for (var i = start; i <= end; i++) {
+          final member = node.members[i];
+          _scope(() {
+            if (member is SwitchPatternCase) {
+              member.guardedPattern.accept(this);
+              final declarations = _PatternDeclarations();
+              member.guardedPattern.pattern.accept(declarations);
+              names.addAll(declarations.names.keys);
+            } else if (member is SwitchCase) {
+              member.expression.accept(this);
+            }
+          });
+        }
+        _scope(() {
+          for (final name in names) {
+            _declare(name, body);
+          }
+          for (final statement in body.statements) {
+            statement.accept(this);
+          }
+        });
+      }
+      start = end + 1;
+    }
   }
 
   @override
@@ -194,5 +310,16 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       return;
     }
     _use(node.name, setter: setter);
+  }
+}
+
+class _PatternDeclarations extends RecursiveAstVisitor<void> {
+  final names = <String, List<DeclaredVariablePattern>>{};
+
+  @override
+  void visitDeclaredVariablePattern(DeclaredVariablePattern node) {
+    if (node.name.lexeme != '_') {
+      names.putIfAbsent(node.name.lexeme, () => []).add(node);
+    }
   }
 }

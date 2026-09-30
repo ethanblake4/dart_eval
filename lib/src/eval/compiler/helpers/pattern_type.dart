@@ -43,11 +43,8 @@ TypeRef matchedPatternType(
         rightOperand,
         matchedPatternType(ctx, leftOperand, bound),
       );
-    case LogicalOrPattern(:final leftOperand, :final rightOperand):
-      return TypeRef.commonBaseType(ctx, {
-        matchedPatternType(ctx, leftOperand, bound),
-        matchedPatternType(ctx, rightOperand, bound),
-      });
+    case LogicalOrPattern():
+      return _patternPromotions(ctx, pattern, bound).last;
     case RecordPattern():
       final shape = recordPatternShape(ctx, pattern);
       final record =
@@ -94,6 +91,37 @@ TypeRef matchedPatternType(
       );
     default:
       return bound;
+  }
+}
+
+/// A join retains proofs reached by both alternatives, including intermediate
+/// promotions in an `&&` chain. It cannot invent a proof from their LUB.
+List<TypeRef> _patternPromotions(
+  CompilerContext ctx,
+  ListPatternElement pattern,
+  TypeRef bound,
+) {
+  switch (pattern) {
+    case ParenthesizedPattern(:final pattern):
+      return _patternPromotions(ctx, pattern, bound);
+    case NullCheckPattern(:final pattern) || NullAssertPattern(:final pattern):
+      return [
+        bound,
+        ..._patternPromotions(ctx, pattern, bound.withNullable(false)),
+      ];
+    case LogicalAndPattern(:final leftOperand, :final rightOperand):
+      final left = _patternPromotions(ctx, leftOperand, bound);
+      return [...left, ..._patternPromotions(ctx, rightOperand, left.last)];
+    case LogicalOrPattern(:final leftOperand, :final rightOperand):
+      final left = _patternPromotions(ctx, leftOperand, bound);
+      final right = _patternPromotions(ctx, rightOperand, bound);
+      return [
+        bound,
+        for (final type in left)
+          if (type != bound && right.contains(type)) type,
+      ];
+    default:
+      return [bound, matchedPatternType(ctx, pattern, bound)];
   }
 }
 

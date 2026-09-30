@@ -384,6 +384,7 @@ final class CallResolver {
           receiverType.named.containsKey(e.methodName.name)) {
         final target = MemberValueCall(
           read: (ctx) => GetTarget.read(ctx, L, e.methodName.name),
+          valueType: receiverType.named[e.methodName.name],
         );
         final bound = ArgumentBinder(
           ctx,
@@ -478,7 +479,14 @@ final class CallResolver {
         // `receiver.field(...)` / `receiver.getter(...)`: the member's
         // *value* is invoked, not a method — property read then implicit
         // `.call`. The arguments evaluate before the member read.
-        final target = MemberValueCall(read: readMember);
+        final target = MemberValueCall(
+          read: readMember,
+          valueType: ctx.memberLookup.fieldType(
+            L.type,
+            e.methodName.name,
+            source: e,
+          ),
+        );
         final bound = ArgumentBinder(
           ctx,
         ).bindSuppliedOnly(target, callSite(), callee: null);

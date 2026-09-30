@@ -6,6 +6,8 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assigned_locals.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart'
+    show patternBoundNames;
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/break.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -242,11 +244,34 @@ StatementInfo _executeMatchingCases(
   // Execute the case with statements (if found)
   if (executionIndex < cases.length) {
     final member = cases[executionIndex];
+    final sharedBody =
+        executionIndex > 0 && cases[executionIndex - 1].statements.isEmpty;
+    if (sharedBody) {
+      ctx.beginScope();
+      if (cases[startIndex] case SwitchPatternCase accepted) {
+        for (final name in patternBoundNames(
+          accepted.guardedPattern.pattern,
+          declared: true,
+        ).toSet()) {
+          final binding = ctx.lookupBinding(name)!;
+          final value = binding.read(ctx).copyIntoFreshSlot(ctx, 'case_body');
+          ctx
+              .setLocal(
+                name,
+                value,
+                declaredType: binding.declaredType,
+                isFinal: binding.isFinal,
+              )
+              .captureBinding(ctx, member);
+        }
+      }
+    }
     final stmtInfo = _executeSwitchBlock(
       ctx,
       member.statements,
       expectedReturnType,
     );
+    if (sharedBody) ctx.endScope();
     willAlwaysReturn = stmtInfo.willAlwaysReturn;
     willAlwaysThrow = stmtInfo.willAlwaysThrow;
     willAlwaysBreak = stmtInfo.willAlwaysBreak;
