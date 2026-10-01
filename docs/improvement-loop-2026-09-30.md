@@ -1814,3 +1814,41 @@ tests pass, covering record contexts, raw and recursive type identity, nested
 generic environments, omitted bounds, type descriptors, append/native List and
 codecs. No runtime, opcode or generator source changes in this pass, so the final
 23-driver AOT sweep remains valid. Evidence is retained in cycle7-cleanup.
+
+## Cycle 8 correctness pass 1
+
+Wide integer tokens in double contexts now use their mathematical value rather
+than the parser's nullable or signed int cache. Small integers keep the existing
+fast path; other tokens are checked for finite, exact double representation at
+compile time. High-bit hexadecimal tokens therefore retain their unsigned double
+value, while ordinary int contexts retain Dart's signed hexadecimal behavior.
+Inexact and overflowing double literals are rejected.
+
+Custom binary operators now supply their substituted formal operand context,
+including inherited and extension operators. Index and setter contexts reuse the
+same resolver helper. Primitive arithmetic and equality keep their existing
+context rules, and operands retain their existing single evaluation and snapshot.
+
+The larger SDK fixture then exposed omitted constructor defaults being emitted
+as null: scalar-default evaluation had also read the absent cached int value.
+Default evaluation now shares the contextual literal parser for guest calls,
+closure descriptors and exports, preserving wide values and negative zero without
+adding runtime conversions. Explicit constructor type annotations resolve in the
+caller's library, including imported, named, redirecting and lexical generic calls.
+
+The native wide/default and operator witnesses pass. Native CFE rejects all eight
+precision/range controls and the inexact custom-operator operand. Scoped analysis
+is clean; 57 focused tests pass, including fresh/serialized execution, omitted
+defaults, constructor/method tear-offs, closures and direct host export defaults.
+Both double_literals/double_literal_coercion_test.dart and
+double_literals/implicit_double_context_test.dart pass fresh and serialized.
+The ordinary suite passes 2076 tests with 86 skips. Temporary representation
+diagnostics used to locate the default bug are fully removed. No runtime, opcode,
+generator or stdlib source changes are made in this pass.
+
+SDK-full reports 2416 passes, 218 compile errors, 103 runtime failures and three
+reported skips. The two verified numeric fixtures are its only expectation
+mismatches, and their stale expect_fail entries are removed. Genuine supported
+failures decrease from 323 to 321; language-floor skips remain separate.
+The actual filtered SDK-full harness passes both fixtures after the exclusions
+are removed. Evidence is retained in cycle8-pass1.

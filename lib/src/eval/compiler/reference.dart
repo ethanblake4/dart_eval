@@ -1,5 +1,6 @@
 import 'helpers/global.dart';
 import 'helpers/conversion.dart';
+import 'helpers/extension.dart';
 import 'member/member_name.dart';
 import 'backend/representation.dart' show MachineRepresentation;
 import 'package:analyzer/dart/ast/ast.dart';
@@ -14,7 +15,6 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'values/abi.dart';
@@ -264,42 +264,9 @@ class IndexedReference implements Reference {
   /// The declared value-parameter type of the receiver's `[]=` operator, or
   /// null when it cannot be resolved (dynamic receivers, missing member).
   TypeRef? setterValueType(CompilerContext ctx, [AstNode? source]) =>
-      operatorParameterType(ctx, _variable.type, '[]=', 1, source: source);
-
-  /// Context for an index or assigned value, including inherited and bridged
-  /// operators viewed through the receiver's type arguments.
-  static TypeRef? operatorParameterType(
-    CompilerContext ctx,
-    TypeRef receiver,
-    String operator,
-    int index, {
-    AstNode? source,
-  }) {
-    try {
-      return ctx.memberLookup
-          .interfaceMember(
-            receiver,
-            MemberName.method(operator),
-            source: source,
-          )
-          .signature
-          .positional
-          .elementAtOrNull(index)
-          ?.type;
-    } on CompileError {
-      // An extension operator may apply instead.
-    }
-    final found = resolveExtensionMember(ctx, receiver, operator);
-    if (found == null) return null;
-    final (ext, member, bindings) = found;
-    final parameter = member.parameters?.parameters.elementAtOrNull(index);
-    if (parameter == null) return null;
-    return ctx.typeFactory.formalParameterAnnotationType(
-      ext.library,
-      parameter,
-      typeParameters: extBindingsMap(ext, bindings),
-    );
-  }
+      CallResolver(
+        ctx,
+      ).operatorParameterType(_variable.type, '[]=', 1, source: source);
 
   @override
   Variable getValue(

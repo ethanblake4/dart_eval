@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -1127,6 +1128,44 @@ final class CallResolver {
       ...resolved.ownerTypeArguments,
       ...ownerTypeArgumentsOf(owner, viewedAs),
     };
+  }
+
+  /// Operand context, with inherited and extension type arguments substituted.
+  TypeRef? operatorParameterType(
+    TypeRef receiver,
+    String operator,
+    int index, {
+    AstNode? source,
+  }) {
+    try {
+      return ctx.memberLookup
+          .interfaceMember(
+            receiver,
+            MemberName.method(operator),
+            source: source,
+          )
+          .signature
+          .positional
+          .elementAtOrNull(index)
+          ?.type;
+    } on CompileError {
+      // An extension operator may apply instead.
+    }
+    final found = resolveExtensionMember(
+      ctx,
+      receiver,
+      operator,
+      arity: operator == '[]=' ? 2 : 1,
+    );
+    if (found == null) return null;
+    final (ext, member, bindings) = found;
+    final parameter = member.parameters?.parameters.elementAtOrNull(index);
+    if (parameter == null) return null;
+    return ctx.typeFactory.formalParameterAnnotationType(
+      ext.library,
+      parameter,
+      typeParameters: extBindingsMap(ext, bindings),
+    );
   }
 
   /// `a + b`, `a[i]`, `!x`, `a == b`, `it.moveNext()` — the operator and

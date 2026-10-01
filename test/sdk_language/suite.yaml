@@ -160,8 +160,6 @@ expect_fail:
     reason: 'extension type declarations unsupported'
   - path: 'dot_shorthands/type_parameter/type_parameter_test.dart'
     reason: 'extension type declarations unsupported'
-  - path: 'double_literals/double_literal_coercion_test.dart'
-  - path: 'double_literals/implicit_double_context_test.dart'
   - path: 'enum/duplicate_test.dart'
   - path: 'enum/enhanced_enums_basic_test.dart'
   - path: 'enum/enum_test.dart'

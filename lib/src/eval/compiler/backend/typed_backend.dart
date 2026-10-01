@@ -688,6 +688,7 @@ class TypedBackend {
       context,
       library,
       parameter,
+      bound: type,
     );
     if (defaultValue is int && type.isSpec(CoreTypes.double)) {
       defaultValue = defaultValue.toDouble();

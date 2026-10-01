@@ -1286,7 +1286,7 @@ final class ArgumentBinder {
         if (explicitArgs != null && i < explicitArgs.length) {
           resolveGenerics[parameter] = TypeRef.fromAnnotation(
             ctx,
-            sourceLib,
+            ctx.library,
             explicitArgs[i],
           );
         } else {

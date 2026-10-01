@@ -130,7 +130,17 @@ Variable compileBinaryExpression(
   // static type (e.g. `.foo` shorthands resolve against it).
   final rightBound = switch (e.operator.type) {
     TokenType.EQ_EQ || TokenType.BANG_EQ => L.type,
-    _ => boundType,
+    // Preserve the existing arithmetic context for primitive numeric operands.
+    _
+        when L.type.isAssignableTo(
+          ctx,
+          CoreTypes.num.ref(ctx),
+          forceAllowDynamic: false,
+        ) =>
+      boundType,
+    _ =>
+      CallResolver(ctx).operatorParameterType(L.type, method, 0, source: e) ??
+          boundType,
   };
   var R = compileExpression(e.rightOperand, ctx, rightBound);
   if ((method == '==' || method == '!=') &&

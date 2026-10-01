@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/reference.dart';
 
 import '../type.dart';
 import '../variable.dart';
+import '../invocation/resolver.dart';
 
 Reference compileIndexExpressionAsReference(
   IndexExpression e,
@@ -29,8 +30,7 @@ IndexedReference compileIndexReference(
   CompilerContext ctx,
   Variable receiver,
 ) {
-  final context = IndexedReference.operatorParameterType(
-    ctx,
+  final context = CallResolver(ctx).operatorParameterType(
     receiver.type,
     expression.inGetterContext() ? '[]' : '[]=',
     0,

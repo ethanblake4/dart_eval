@@ -99,7 +99,7 @@ Variable compileOmittedArgument(
     value = null;
   } else {
     try {
-      value = evaluateDefaultValue(ctx, library, defaultExpr);
+      value = evaluateDefaultValue(ctx, library, defaultExpr, bound: type);
     } on CompileError {
       useExpression = true;
     }

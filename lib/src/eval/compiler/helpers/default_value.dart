@@ -4,6 +4,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/declaration.dart'
     show DeclarationOrBridge;
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
+import 'package:dart_eval/src/eval/compiler/expression/literal.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
@@ -73,20 +74,28 @@ T withDefaultExpressionScope<T>(
 Object? evaluateDefaultValue(
   CompilerContext ctx,
   int library,
-  Expression? expression, [
+  Expression? expression, {
   Set<AstNode>? evaluating,
-]) {
+  TypeRef? bound,
+}) {
   if (expression == null || expression is NullLiteral) return null;
   final active = evaluating ?? <AstNode>{};
   if (!active.add(expression)) {
     throw CompileError('Cyclic default value', expression);
   }
-  Object? evaluate(Expression value) =>
-      evaluateDefaultValue(ctx, library, value, active);
+  Object? evaluate(Expression value, {TypeRef? context}) =>
+      evaluateDefaultValue(
+        ctx,
+        library,
+        value,
+        evaluating: active,
+        bound: context,
+      );
   try {
     switch (expression) {
-      case IntegerLiteral(:final value):
-        return value;
+      case IntegerLiteral():
+        final value = parseConstLiteral(expression, ctx, bound);
+        return value.doubleval ?? value.intval;
       case DoubleLiteral(:final value):
         return value;
       case BooleanLiteral(:final value):
@@ -94,9 +103,9 @@ Object? evaluateDefaultValue(
       case StringLiteral(:final stringValue) when stringValue != null:
         return stringValue;
       case ParenthesizedExpression(:final expression):
-        return evaluate(expression);
+        return evaluate(expression, context: bound);
       case PrefixExpression(:final operand, :final operator):
-        final value = evaluate(operand);
+        final value = evaluate(operand, context: bound);
         return switch ((operator.lexeme, value)) {
           ('-', int value) => -value,
           ('-', double value) => -value,
@@ -109,11 +118,11 @@ Object? evaluateDefaultValue(
         :final rightOperand,
         :final operator,
       ):
-        final left = evaluate(leftOperand);
+        final left = evaluate(leftOperand, context: bound);
         if (operator.lexeme == '??' && left != null) return left;
         if (operator.lexeme == '&&' && left == false) return false;
         if (operator.lexeme == '||' && left == true) return true;
-        final right = evaluate(rightOperand);
+        final right = evaluate(rightOperand, context: bound);
         return switch ((operator.lexeme, left, right)) {
           ('+', num a, num b) => a + b,
           ('-', num a, num b) => a - b,
@@ -136,6 +145,7 @@ Object? evaluateDefaultValue(
       ):
         return evaluate(
           evaluate(condition) as bool ? thenExpression : elseExpression,
+          context: bound,
         );
       case SimpleIdentifier(:final name):
         final staticMember = withDefaultExpressionScope(
@@ -153,7 +163,7 @@ Object? evaluateDefaultValue(
               ctx,
               staticMember!.$2,
               variable.initializer,
-              active,
+              evaluating: active,
             );
           }
         }
@@ -167,7 +177,7 @@ Object? evaluateDefaultValue(
             ctx,
             declaration!.sourceLib,
             variable.initializer,
-            active,
+            evaluating: active,
           );
         }
     }
@@ -352,7 +362,7 @@ Variable pushDefaultValue(CompilerContext ctx, Object? value) =>
   }
   if (expression == null) return (null, -1);
   try {
-    return (evaluateDefaultValue(ctx, library, expression), -1);
+    return (evaluateDefaultValue(ctx, library, expression, bound: bound), -1);
   } on CompileError {
     return (null, _compileDefaultThunk(ctx, library, expression, bound));
   }
