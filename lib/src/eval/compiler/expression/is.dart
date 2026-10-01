@@ -12,6 +12,8 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   var V = compileExpression(e.expression, ctx);
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, e.type);
   final not = e.notOperator != null;
+  final runtimeType = V.type.erasedExtensionType;
+  final runtimeSlot = slot.erasedExtensionType;
 
   // `x is S` narrows only when `S` is a subtype of the operand's type.
   if (isPromotionSubtype(ctx, slot, V.type)) {
@@ -19,16 +21,16 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   }
 
   /// If the type is definitely a subtype of the slot, we can just return true.
-  if (slot is! FunctionTypeRef &&
-      slot is! RecordTypeRef &&
-      V.type.isAssignableTo(ctx, slot, forceAllowDynamic: false)) {
+  if (runtimeSlot is! FunctionTypeRef &&
+      runtimeSlot is! RecordTypeRef &&
+      runtimeType.isAssignableTo(ctx, runtimeSlot, forceAllowDynamic: false)) {
     return BuiltinValue(boolval: !not).push(ctx);
   }
 
   /// `x is Never` can never hold — no runtime value has type Never — so
   /// both directions fold statically. That makes a guarded branch
   /// unreachable.
-  if (slot.isSpec(CoreTypes.never)) {
+  if (runtimeSlot.isSpec(CoreTypes.never)) {
     return BuiltinValue(boolval: not).push(ctx);
   }
 
@@ -38,13 +40,11 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   /// analysis then treats that edge of a branch as unreachable.
   /// A bare type parameter can instantiate to a nullable type, so its
   /// null membership must be checked in the runtime type environment.
-  final definitelyFalse = slot.isSpec(CoreTypes.nullType)
-      ? !V.type.nullable &&
-            !V.type.isSpec(CoreTypes.dynamic) &&
-            !V.type.isTypeParameter
-      : V.type.isSpec(CoreTypes.nullType) &&
-            !slot.isTypeParameter &&
-            !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, slot);
+  final definitelyFalse = runtimeSlot.isSpec(CoreTypes.nullType)
+      ? !runtimeType.hasNullableRepresentation && !runtimeType.isTypeParameter
+      : runtimeType.isSpec(CoreTypes.nullType) &&
+            !runtimeSlot.isTypeParameter &&
+            !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, runtimeSlot);
   if (definitelyFalse) {
     return BuiltinValue(boolval: not).push(ctx);
   }

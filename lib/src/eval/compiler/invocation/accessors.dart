@@ -8,6 +8,7 @@ import 'deferred.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import '../helpers/extension_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import '../member/call_signature.dart';
@@ -216,6 +217,16 @@ sealed class GetTarget {
     List<TypeRef>? typeArguments,
     BoundExtension? extensionPin,
   }) {
+    if (extensionPin == null) {
+      final representation = extensionRepresentationField(
+        ctx,
+        receiver.type,
+        name,
+      );
+      if (representation != null) {
+        return ReceiverGet(receiver.withType(representation));
+      }
+    }
     if ((name == 'isEmpty' || name == 'isNotEmpty') &&
         receiver.type.isSpec(CoreTypes.string) &&
         !receiver.type.nullable &&
@@ -1061,6 +1072,12 @@ sealed class SetTarget {
     String name, {
     AstNode? source,
   }) {
+    if (extensionRepresentationField(ctx, object.type, name) != null) {
+      throw CompileError(
+        'Extension type representation field is read-only',
+        source,
+      );
+    }
     final declaredFieldType = ctx.memberLookup.fieldType(
       object.type,
       name,

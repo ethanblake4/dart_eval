@@ -43,6 +43,39 @@ sealed class TypeRef {
 
   final bool nullable;
 
+  /// Source extension types can hold null without a `?` on their annotation.
+  bool get hasNullableRepresentation {
+    final type = erasedExtensionType;
+    return type.nullable ||
+        type.isSpec(CoreTypes.nullType) ||
+        type.isSpec(CoreTypes.dynamic);
+  }
+
+  /// Erases only an outer extension type, preserving its representation's
+  /// nullability. Nested runtime descriptor components erase independently.
+  TypeRef get erasedExtensionType {
+    var type = this;
+    if (type is! InterfaceTypeRef ||
+        type.decl is! SourceTypeDecl ||
+        type.decl.kind != TypeDeclKind.extensionType) {
+      return type;
+    }
+    final visited = <TypeDecl>{};
+    var nullable = type.nullable;
+    while (type is InterfaceTypeRef &&
+        type.decl is SourceTypeDecl &&
+        type.decl.kind == TypeDeclKind.extensionType) {
+      if (!visited.add(type.decl)) {
+        throw CompileError(
+          'Cyclic extension type representation: ${type.name}',
+        );
+      }
+      type = (type.decl as SourceTypeDecl).extensionRepresentation!;
+      nullable = nullable || type.nullable;
+    }
+    return type.withNullable(nullable);
+  }
+
   /// Given a set of [TypeRef]s, find their closest common ancestor type.
   factory TypeRef.commonBaseType(CompilerContext ctx, Set<TypeRef> types) =>
       ctx.typeSystem.leastUpperBound(types);
@@ -379,6 +412,12 @@ classLikeClauses(Declaration? dec) => switch (dec) {
       implementsClause?.interfaces.toList() ?? const <NamedType>[],
       typeParameters,
     ),
+  ExtensionTypeDeclaration(:final implementsClause, :final namePart) => (
+    null,
+    const <NamedType>[],
+    implementsClause?.interfaces.toList() ?? const <NamedType>[],
+    namePart.typeParameters,
+  ),
   _ => (null, const <NamedType>[], const <NamedType>[], null),
 };
 

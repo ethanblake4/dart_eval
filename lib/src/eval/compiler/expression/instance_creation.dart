@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import '../helpers/constructor_type.dart';
+import '../helpers/extension_type.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import '../member/call_signature.dart';
@@ -104,6 +105,19 @@ Variable compileInstanceOf(
   required bool isConst,
   required AstNode source,
 }) {
+  final declaration = nominalDeclOf(staticType);
+  if (declaration is SourceTypeDecl &&
+      declaration.kind == TypeDeclKind.extensionType) {
+    return constructExtensionType(
+      ctx,
+      declaration,
+      instantiatedType,
+      name,
+      argumentList,
+      isConst: isConst,
+      source: source,
+    );
+  }
   // A class that declares no constructors gets a synthesized `Name.` body
   // taking only the runtime-type argument, with no lookup-table entry.
   if (name.isEmpty &&

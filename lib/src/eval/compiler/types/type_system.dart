@@ -942,6 +942,7 @@ final class TypeSystem {
   );
 
   bool _isNonNullable(TypeRef type, [Set<TypeParameterDef>? visiting]) {
+    type = type.erasedExtensionType;
     if (type.nullable ||
         type.isSpec(CoreTypes.nullType) ||
         type.isSpec(CoreTypes.dynamic) ||

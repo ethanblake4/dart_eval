@@ -21,6 +21,7 @@ import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import '../helpers/constructor_type.dart';
+import '../helpers/extension_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../member/call_signature.dart';
 import '../member/resolved_member.dart';
@@ -371,6 +372,20 @@ final class CallResolver {
     final staticMemberName = ctorNameOf(e.methodName.name);
 
     if (receiver case TypeLiteralReceiver(:final type)) {
+      final declaration = nominalDeclOf(type);
+      if (staticMemberName.isEmpty &&
+          declaration is SourceTypeDecl &&
+          declaration.kind == TypeDeclKind.extensionType) {
+        return constructExtensionType(
+          ctx,
+          declaration,
+          type,
+          staticMemberName,
+          e.argumentList,
+          isConst: callSite().inConstContext,
+          source: e,
+        );
+      }
       // Static method
       staticType = type;
       final staticMember = ctx.memberLookup.staticMember(
@@ -1776,6 +1791,25 @@ final class CallResolver {
         // `E(x)` — extension namespaces win over constructor calls.
         final ext = extensionForType(ctx, type);
         if (ext != null) return applyExtension(ctx, e, ext);
+        final extensionType = nominalDeclOf(type);
+        if (extensionType is SourceTypeDecl &&
+            extensionType.kind == TypeDeclKind.extensionType) {
+          if (e.typeArguments != null) {
+            throw CompileError(
+              'Extension type does not take type arguments',
+              e,
+            );
+          }
+          return constructExtensionType(
+            ctx,
+            extensionType,
+            type,
+            '',
+            e.argumentList,
+            isConst: site.inConstContext,
+            source: e,
+          );
+        }
         if (declaration is TypeAlias && declaration is! ClassTypeAlias) {
           var resolved = ctx.typeFactory.resolveTypeAlias(
             ctx.library,

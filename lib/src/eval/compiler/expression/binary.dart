@@ -151,10 +151,10 @@ Variable compileBinaryExpression(
     // operand makes it trivially true, and a provably non-nullable one
     // (non-`dynamic`) trivially false — flow analysis then treats the other
     // branch edge as unreachable.
-    if (value.type.isSpec(CoreTypes.nullType)) {
+    if (value.type.erasedExtensionType.isSpec(CoreTypes.nullType)) {
       return BuiltinValue(boolval: method == '==').push(ctx);
     }
-    if (!value.type.nullable && !value.type.isSpec(CoreTypes.dynamic)) {
+    if (!value.type.hasNullableRepresentation) {
       return BuiltinValue(boolval: method == '!=').push(ctx);
     }
     final test = compileNullCondition(ctx, value);

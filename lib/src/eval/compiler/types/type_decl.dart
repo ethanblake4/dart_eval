@@ -12,6 +12,7 @@ enum TypeDeclKind {
   mixin,
   enumDecl,
   classAlias,
+  extensionType,
   bridgeClass,
   bridgeEnum,
 }
@@ -176,7 +177,8 @@ sealed class TypeDecl {
     TypeRef mixin,
     List<TypeRef> chainSoFar,
   ) {
-    if (clauseName.typeArguments != null || interfaceArgumentsOf(mixin).isNotEmpty) {
+    if (clauseName.typeArguments != null ||
+        interfaceArgumentsOf(mixin).isNotEmpty) {
       return mixin;
     }
     final mixinDeclRef = nominalDeclOf(mixin);
@@ -222,8 +224,8 @@ sealed class TypeDecl {
   }
 }
 
-/// A nominal type declared in compiled source: a class, mixin, enum, or
-/// `class C = S with M` alias.
+/// A nominal type declared in compiled source: a class, mixin, enum,
+/// extension type, or `class C = S with M` alias.
 final class SourceTypeDecl extends TypeDecl {
   SourceTypeDecl(
     super.ctx,
@@ -241,8 +243,46 @@ final class SourceTypeDecl extends TypeDecl {
     MixinDeclaration() => TypeDeclKind.mixin,
     EnumDeclaration() => TypeDeclKind.enumDecl,
     ClassTypeAlias() => TypeDeclKind.classAlias,
+    ExtensionTypeDeclaration() => TypeDeclKind.extensionType,
     _ => throw StateError('Unsupported type declaration $node'),
   };
+
+  /// The representation parameter of an extension type's primary constructor.
+  FormalParameter? get extensionRepresentationParameter {
+    final declaration = node;
+    if (declaration is! ExtensionTypeDeclaration) return null;
+    final primary = declaration.namePart;
+    if (primary is! PrimaryConstructorDeclaration ||
+        primary.formalParameters.parameters.length != 1) {
+      throw CompileError(
+        'Extension types require one representation parameter',
+      );
+    }
+    return primary.formalParameters.parameters.single;
+  }
+
+  /// Extension types retain their source identity but erase to this type.
+  late final TypeRef? extensionRepresentation =
+      _resolveExtensionRepresentation();
+
+  TypeRef? _resolveExtensionRepresentation() {
+    final parameter = extensionRepresentationParameter;
+    if (parameter == null) return null;
+    final annotation = parameter.type;
+    if (annotation == null || parameter.functionTypedSuffix != null) {
+      throw CompileError('Unsupported extension type representation');
+    }
+    final previousScope = ctx.typeScopes.remove(library);
+    try {
+      return TypeRef.fromAnnotation(ctx, library, annotation);
+    } finally {
+      if (previousScope == null) {
+        ctx.typeScopes.remove(library);
+      } else {
+        ctx.typeScopes[library] = previousScope;
+      }
+    }
+  }
 
   @override
   List<TypeParameterDef> computeTypeParameters() {
@@ -268,6 +308,14 @@ final class SourceTypeDecl extends TypeDecl {
 
   @override
   DeclaredSupertypes computeSupertypes() {
+    if (node is ExtensionTypeDeclaration) {
+      // Nullable representations do not make the nominal type an Object.
+      return DeclaredSupertypes(
+        CoreTypes.object.ref(ctx).withNullable(true),
+        const [],
+        const [],
+      );
+    }
     final (extendsClause, withClause, implementsClause, _) = classLikeClauses(
       node,
     );
@@ -414,27 +462,27 @@ final class TypeDeclRegistry {
   /// the nominal keeps arguments (`FutureOr<S>`) flowing through `TypeRef`
   /// machinery instead of degrading to `dynamic`.
   BridgeTypeDecl get futureOr => _futureOrDecl ??= () {
-        final decl = BridgeTypeDecl(
-          _ctx,
-          _ctx.libraryMap['dart:async'] ?? _ctx.library,
-          'dart:async',
-          'FutureOr',
-          classDef: const BridgeClassDef(
-            BridgeClassType(
-              BridgeTypeRef(AsyncTypes.futureOr),
-              generics: {'T': BridgeGenericParam()},
-            ),
-            constructors: {},
-            methods: {},
-            getters: {},
-            setters: {},
-            fields: {},
-            wrap: true,
-          ),
-        );
-        register(decl);
-        return decl;
-      }();
+    final decl = BridgeTypeDecl(
+      _ctx,
+      _ctx.libraryMap['dart:async'] ?? _ctx.library,
+      'dart:async',
+      'FutureOr',
+      classDef: const BridgeClassDef(
+        BridgeClassType(
+          BridgeTypeRef(AsyncTypes.futureOr),
+          generics: {'T': BridgeGenericParam()},
+        ),
+        constructors: {},
+        methods: {},
+        getters: {},
+        setters: {},
+        fields: {},
+        wrap: true,
+      ),
+    );
+    register(decl);
+    return decl;
+  }();
 
   /// The declaration declared in [library] under [name] — the declaring
   /// library only, no visibility. On first use the decl is materialized

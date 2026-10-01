@@ -40,6 +40,7 @@ final class RuntimeTypes {
   /// Allocates (or fetches) the descriptor id for [type]. Structural type
   /// equality decides identity, so structurally equal types share one id.
   int idOf(TypeRef type) {
+    type = type.erasedExtensionType;
     if (type.hasSchemaHoles) {
       throw CompileError(
         'Unresolved type schema $type reached runtime metadata',
@@ -61,6 +62,7 @@ final class RuntimeTypes {
   /// The runtime descriptor list for [type]: `[parentId, isNullable,
   /// tag?, ...]` in the order the runtime decoder expects.
   List<int> descriptorOf(TypeRef type) {
+    type = type.erasedExtensionType;
     final descriptor = _descriptorOf(type);
     _componentDescriptors.putIfAbsent(
       List<int>.unmodifiable(descriptor),

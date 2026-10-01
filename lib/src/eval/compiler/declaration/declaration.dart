@@ -1,6 +1,7 @@
 // ignore_for_file: body_might_complete_normally_nullable
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/class.dart';
@@ -12,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/variable.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
+import 'package:dart_eval/src/eval/compiler/type.dart';
 
 int? compileDeclaration(
   Declaration d,
@@ -21,7 +23,9 @@ int? compileDeclaration(
   List<FieldDeclaration>? fields,
   Map<ClassMember, int> memberLibraries = const {},
 }) {
-  if (d is ClassDeclaration) {
+  if (d is ExtensionTypeDeclaration) {
+    _validateExtensionType(ctx, d);
+  } else if (d is ClassDeclaration) {
     compileClassDeclaration(ctx, d);
   } else if (d is EnumDeclaration) {
     compileEnumDeclaration(ctx, d);
@@ -51,6 +55,38 @@ int? compileDeclaration(
     // Typedefs are compile-time-only; resolved lazily in TypeRef.fromAnnotation.
   } else {
     throw CompileError('No support for ${d.runtimeType}');
+  }
+}
+
+void _validateExtensionType(
+  CompilerContext ctx,
+  ExtensionTypeDeclaration declaration,
+) {
+  final primary = declaration.namePart;
+  if (primary is! PrimaryConstructorDeclaration ||
+      primary.constructorName != null ||
+      primary.typeParameters != null ||
+      declaration.implementsClause != null ||
+      declaration.body.members.isNotEmpty) {
+    throw CompileError(
+      'Only nongeneric extension types with an unnamed primary constructor '
+      'and no members or implements clause are supported',
+    );
+  }
+  final decl =
+      ctx.types.find(ctx.library, primary.typeName.lexeme) as SourceTypeDecl;
+  final parameter = decl.extensionRepresentationParameter!;
+  if (parameter is! RegularFormalParameter ||
+      parameter.name == null ||
+      !parameter.isRequiredPositional) {
+    throw CompileError('Unsupported extension type representation parameter');
+  }
+  final representation = decl.extensionRepresentation!.erasedExtensionType;
+  if (!representation.isSpec(CoreTypes.nullType) &&
+      !(representation.isSpec(CoreTypes.object) && representation.nullable)) {
+    throw CompileError(
+      'Only Null and Object? extension representations are supported',
+    );
   }
 }
 

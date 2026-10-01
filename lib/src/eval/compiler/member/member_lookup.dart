@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/compiler/expression/identifier.dart'
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
+import '../helpers/extension_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/member/resolved_member.dart';
@@ -692,6 +693,10 @@ final class MemberLookup {
     Substitution substitutions = Substitution.empty,
   }) {
     if (type.isSpec(CoreTypes.dynamic)) return null;
+    if (!forSet && !forFieldFormal) {
+      final representation = extensionRepresentationField(ctx, type, name);
+      if (representation != null) return representation;
+    }
     if (type.isTypeParameter) {
       final bound = (type as TypeParameterTypeRef).effectiveBound;
       if (bound == null) return null;

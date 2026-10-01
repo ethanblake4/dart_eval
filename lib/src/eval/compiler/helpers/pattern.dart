@@ -394,10 +394,7 @@ Variable _matchPattern(
         );
       }
       final currentType =
-          bindingType.nullable &&
-              !V.type.nullable &&
-              !V.type.isSpec(CoreTypes.dynamic) &&
-              !V.type.isSpec(CoreTypes.nullType)
+          bindingType.nullable && !V.type.hasNullableRepresentation
           ? bindingType.withNullable(false)
           : bindingType;
       final v = Variable.ssa(
@@ -539,7 +536,7 @@ Variable _matchPattern(
       if (requireMatch != null) return matched;
       return CallResolver(ctx).invokeOperator(nonNull, '&&', [matched]).result;
     case NullAssertPattern pat:
-      if (V.type.nullable || V.type.isSpec(CoreTypes.dynamic)) {
+      if (V.type.hasNullableRepresentation) {
         final boxed = V.boxed ? V : V.boxIntoFreshSlot(ctx);
         ctx.pushOp(
           AssertType(
@@ -676,9 +673,7 @@ Variable _matchMapPattern(
   final arguments = interfaceArgumentsOf(mapType);
   final valueType = arguments[1];
   final knownNullable =
-      valueType.nullable ||
-      valueType.isSpec(CoreTypes.dynamic) ||
-      valueType.isSpec(CoreTypes.nullType) ||
+      valueType.hasNullableRepresentation ||
       valueType.isSpec(CoreTypes.voidType);
   final nonNullable =
       !knownNullable &&

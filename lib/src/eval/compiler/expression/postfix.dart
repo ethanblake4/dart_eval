@@ -20,7 +20,7 @@ Variable compilePostfixExpression(
   TypeRef? bound,
 ]) {
   Variable assertNonNull(Variable v) {
-    if (v.type.nullable || v.type.isSpec(CoreTypes.dynamic)) {
+    if (v.type.hasNullableRepresentation) {
       final boxed = v.boxIfNeeded(ctx, e.operand);
       ctx.pushOp(
         AssertType(boxed.ssa, ctx.runtimeTypes.idOf(CoreTypes.object.ref(ctx))),

@@ -1119,6 +1119,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       ClassDeclaration d => d.body.members,
       EnumDeclaration d => d.body.members,
       MixinDeclaration d => d.body.members,
+      ExtensionTypeDeclaration d => d.body.members,
       _ => null,
     };
     if (declaration is ClassTypeAlias) {
@@ -1229,7 +1230,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       if (declaration is! ClassDeclaration &&
           declaration is! EnumDeclaration &&
           declaration is! MixinDeclaration &&
-          declaration is! ClassTypeAlias) {
+          declaration is! ClassTypeAlias &&
+          declaration is! ExtensionTypeDeclaration) {
         return null;
       }
       final name = declarationName(declaration);
@@ -1243,6 +1245,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             declaration,
           );
       _ctx.types.register(decl);
+      if (declaration is ExtensionTypeDeclaration) {
+        return InterfaceTypeRef(decl);
+      }
       return _registerTypeRef(libraryIndex, name, decl);
     }
   }

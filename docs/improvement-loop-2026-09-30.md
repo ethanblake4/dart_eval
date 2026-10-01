@@ -1901,3 +1901,46 @@ expect_fail entries are removed. Genuine supported failures decrease from 321
 to 319; language-floor skips remain separate.
 The actual filtered SDK-full harness passes both fixtures after the exclusions
 are removed, with exit 0 and two passes.
+
+## Cycle 8 correctness pass 3
+
+The compiler now admits bodyless nongeneric extension types with an unnamed
+primary constructor and a Null or Object? representation. Their source types
+remain nominal. Construction and representation-field projection retain the
+same SSA value and its representation facts, with no guest class allocation.
+Representation fields are read-only, and private projection uses the defining
+library. Unsupported members, implements clauses, generics and scalar
+representations remain explicit compilation errors for later passes.
+
+Runtime descriptor IDs erase outer extension types to their representation,
+including nullable and nested descriptor components. No extension class row is
+registered. Declaration annotations resolve outside caller type-parameter
+scopes, so a caller parameter named Object cannot alter the representation.
+
+A separate representation-nullability predicate preserves source nullability
+while correcting null equality, postfix assertions, null-aware selectors and
+cascades, casts, type-test folding and pattern null checks. Native witnesses
+confirm that E(Null) and Ref(Object?) can hold null despite a nonnullable source
+annotation. Identity, nested collection/record/function descriptors, casts,
+call boundaries and null operations pass fresh and serialized with both Dart
+3.8 and 3.9 flow rules. All eight invalid source controls reject both natively
+and in Eval. An initial nullable type-literal expression was invalid native
+syntax and was replaced with the valid List<Ref>/List<Object?> comparison.
+
+Public Symbol literals now use the existing const interning operation after
+their existing generated bridge construction. Private-symbol behavior and
+nonconst Symbol construction are unchanged. Native evidence confirms public
+literal/const identity and nonconst equality/hash without canonical nonconst
+identity. No generated binding, runtime or opcode changes are made.
+
+Scoped analysis is clean. The expanded compatibility focus passes 128 tests;
+the final core group adds the second language-version control and passes all
+11 tests. Original SDK regress_53610, literal_runtime_1 and triple-shift fixtures
+pass fresh and serialized. The ordinary run reports 2098 passes, 86 skips and
+one stale triple-shift expectation mismatch. Its actual filtered core harness
+passes after removing that exclusion, giving 2099 passing ordinary cases.
+The actual filtered SDK-full harness passes all three verified fixtures after
+their stale exclusions are removed. Final SDK-full exits 0 with 2421 passes,
+216 compile errors, 100 runtime failures and three reported skips, with no
+expectation mismatches. Genuine supported failures decrease from 319 to 316;
+language-floor skips remain separate. Evidence is retained in cycle8-pass3.

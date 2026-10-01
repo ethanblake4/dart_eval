@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
-import 'package:dart_eval/src/eval/shared/types.dart';
 
 Variable compileCascadeExpression(
   CascadeExpression e,
@@ -85,9 +84,7 @@ Variable compileCascadeExpression(
       ctx,
       null,
       elseEdgeUnreachable: () =>
-          ctx.soundFlowAnalysis(e) &&
-          !target.type.nullable &&
-          !target.type.isSpec(CoreTypes.dynamic),
+          ctx.soundFlowAnalysis(e) && !target.type.hasNullableRepresentation,
       condition: (ctx) => compileNonNullCondition(ctx, target),
       thenBranch: (ctx, _) {
         // Inside `?..` the target is non-null: sections read members off
@@ -106,7 +103,8 @@ Variable compileCascadeExpression(
   }
   // `o?..sections` still evaluates to `o` when `o` is null — the result
   // keeps the target's declared type even if sections narrowed it.
-  if (e.isNullAware && (!ctx.soundFlowAnalysis(e) || target.type.nullable)) {
+  if (e.isNullAware &&
+      (!ctx.soundFlowAnalysis(e) || target.type.hasNullableRepresentation)) {
     result = result.withFacts(target.facts);
   }
   return result.withType(target.type);

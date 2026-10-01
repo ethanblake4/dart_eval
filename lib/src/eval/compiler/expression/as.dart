@@ -17,6 +17,8 @@ import '../helpers/type_check.dart';
 Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   var V = compileExpression(e.expression, ctx);
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, e.type);
+  final runtimeType = V.type.erasedExtensionType;
+  final runtimeSlot = slot.erasedExtensionType;
 
   /// If the type is the slot, we can just return
   if (V.type == slot) {
@@ -51,13 +53,12 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // non-nullable operand. The assert still runs (it produces the TypeError);
   // the code after it is compiled but unreachable.
   final guaranteedThrow =
-      slot.isSpec(CoreTypes.never) ||
+      runtimeSlot.isSpec(CoreTypes.never) ||
       ctx.soundFlowAnalysis(e) &&
-          (V.type.isSpec(CoreTypes.nullType)
-              ? !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, slot)
-              : slot.isSpec(CoreTypes.nullType) &&
-                    !V.type.nullable &&
-                    !V.type.isSpec(CoreTypes.dynamic));
+          (runtimeType.isSpec(CoreTypes.nullType)
+              ? !CoreTypes.nullType.ref(ctx).isAssignableTo(ctx, runtimeSlot)
+              : runtimeSlot.isSpec(CoreTypes.nullType) &&
+                    !runtimeType.hasNullableRepresentation);
   Variable update(Variable v, TypeRef type) {
     final result = v.withType(type);
     if (promotes && promotesLocal) {
