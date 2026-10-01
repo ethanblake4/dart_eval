@@ -911,11 +911,29 @@ final class MemberLookup {
       final id =
           ctx.instanceDeclarationPositions[type.file]?[type
               .name]?[kind]?[memberName];
+      final compiledTypes = id == null ? null : ctx.functionParameterTypes[id];
+      // Mixin methods fold into their applications and have no compiled
+      // owner body. Their original signature still carries class parameters.
+      final declaredSignature =
+          includeClassTypeParameters && compiledTypes == null
+          ? ctx.types
+                .find(type.file, type.name)
+                ?.declaredMember(MemberName(memberName, kind))
+                ?.signature
+          : null;
       _markCovariantParameters(
         decl.parameters?.parameters ?? const <FormalParameter>[],
-        id == null || !includeClassTypeParameters
+        !includeClassTypeParameters
             ? null
-            : ctx.functionParameterTypes[id],
+            : compiledTypes ??
+                  (declaredSignature == null
+                      ? null
+                      : [
+                          for (final parameter in declaredSignature.positional)
+                            parameter.type,
+                          for (final parameter in declaredSignature.named)
+                            parameter.type,
+                        ]),
         positional,
         named,
       );

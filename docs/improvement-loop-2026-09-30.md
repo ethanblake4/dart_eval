@@ -1122,3 +1122,42 @@ are in cycle5-final-aot-flagged-abba.
 Scoped analysis is clean across all nine changed production Dart files and three
 new language tests. Native initializer diagnostics also pass, confirming the
 ordering and lazy-field expectations used to prepare the next correctness pass.
+
+## Cycle 5 correctness pass 2
+
+Non-late declaration initializers now execute even when an initializing formal
+or initializer-list entry supplies the final stored value. The existing store
+suppression remains intact. Redirecting constructors still delegate without
+repeating initialization. The shared evaluation helper retains declaring-library
+and folded-mixin type contexts. Its names now distinguish evaluation from storage.
+Late-field lowering is outside this fix.
+
+Folded mixin tear-offs now recover covariance evidence from the original member
+signature when their declaring mixin has no compiled method body. The runtime
+function type erases covariant class-parameter occurrences as Dart requires;
+static signatures and physical argument checks keep the applied class types.
+Negative occurrences and method-local generic parameters retain their types.
+
+Both native witnesses pass. All 36 focused constructor, late-field, covariance,
+function-type and mixin tests pass, with clean scoped analysis. The SDK field
+initialization-order variant and both runnable modern mixin inference variants
+pass fresh and serialized. Their two stale expectation entries are removed.
+The field fixture's negative early-super variant retains its expected compile
+error. The full ordinary run has 2014 passes, 63 skips and one stale expectation
+assertion for final/field_initialization_order. That additional fixture passes
+fresh and serialized; removing its row resolves the sole assertion and yields
+2015 passing tests. Full SDK validation reports 2525 passing fixtures, 239 compile
+errors, 116 runtime failures and one unsupported fixture. Its only assertion
+failure is another stale row for modern previous-mixin inference. The fixture
+passes fresh and serialized, so that fourth expectation entry is removed. No new
+SDK failures appear. Logs are cycle5-pass2-ordinary, cycle5-pass2-sdk-full and the
+matching field-sdk-variants and mixin-previous-variants rechecks.
+
+The run_one SDK diagnostic tool now materializes multitest variants and respects
+the suite's negative-test policy. Compilation and runtime construction failures
+cannot satisfy an expected runtime-error case. Each variant keeps the existing
+guest exception-field and stack diagnostics, and failures return a nonzero exit.
+The helper is formatted and scoped analysis is clean. Smoke checks cover an
+ordinary constructor fixture, the initialization-order multitest with its skipped
+negative, and a genuinely expected runtime-error variant from async_star_invalid.
+Runtime source is unchanged, so this checkpoint adds no new AOT requirement.

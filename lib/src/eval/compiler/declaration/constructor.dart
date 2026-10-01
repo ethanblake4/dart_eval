@@ -360,7 +360,7 @@ void compileConstructorDeclaration(
     for (final init in otherInitializers)
       if (init is ConstructorFieldInitializer) init.fieldName.name,
   };
-  final evaluatedFieldInits = _evalUnusedFieldInitializers(
+  final evaluatedFieldInits = _evalFieldInitializers(
     ctx,
     fields,
     usedNames,
@@ -404,7 +404,7 @@ void compileConstructorDeclaration(
   }
 
   evaluatedFieldInits.addAll(
-    _evalUnusedFieldInitializers(
+    _evalFieldInitializers(
       ctx,
       fields,
       usedNames,
@@ -582,7 +582,7 @@ void compileDefaultConstructor(
 
   // Field initializers run before the superconstructor invocation — evaluate
   // them now and apply the values once the instance exists.
-  final evaluatedFieldInits = _evalUnusedFieldInitializers(
+  final evaluatedFieldInits = _evalFieldInitializers(
     ctx,
     fields,
     const {},
@@ -714,7 +714,7 @@ Variable _compileFieldInitializer(
   ).boxIfNeeded(ctx);
 }
 
-Variable _compileUnusedFieldInitializer(
+Variable _compileFieldDeclarationInitializer(
   CompilerContext ctx,
   FieldDeclaration fd,
   VariableDeclaration field,
@@ -763,12 +763,10 @@ Variable _compileUnusedFieldInitializer(
   return value;
 }
 
-/// Evaluates the initializer expressions of fields not bound by the
-/// constructor's initializer list, storing each result in a local. Field
-/// initializers run before the superconstructor invocation (initializer list
-/// semantics), but the instance does not exist yet — the values are applied
-/// by [_compileUnusedFields] after the instance is created.
-Map<String, Variable> _evalUnusedFieldInitializers(
+/// Evaluates declaration initializers before the superconstructor invocation.
+/// Non-late expressions run even when a constructor supplies another value.
+/// [_compileUnusedFields] stores only the values the constructor has not replaced.
+Map<String, Variable> _evalFieldInitializers(
   CompilerContext ctx,
   List<FieldDeclaration> fields,
   Set<String> usedNames,
@@ -780,10 +778,13 @@ Map<String, Variable> _evalUnusedFieldInitializers(
   for (final fd in fields) {
     if (isLate != null && fd.fields.isLate != isLate) continue;
     for (final field in fd.fields.variables) {
-      if (usedNames.contains(field.name.lexeme) || field.initializer == null) {
+      if (field.initializer == null ||
+          (fd.fields.isLate && usedNames.contains(field.name.lexeme))) {
         continue;
       }
-      evaluated[field.name.lexeme] = _compileUnusedFieldInitializer(
+      // Non-late declaration initializers run even when the constructor
+      // replaces their value. _compileUnusedFields suppresses that store.
+      evaluated[field.name.lexeme] = _compileFieldDeclarationInitializer(
         ctx,
         fd,
         field,
@@ -820,7 +821,7 @@ void _compileUnusedFields(
         if (V != null) {
           ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, V.ssa));
         } else {
-          final value = _compileUnusedFieldInitializer(
+          final value = _compileFieldDeclarationInitializer(
             ctx,
             fd,
             field,
@@ -1241,7 +1242,7 @@ void compileAliasForwardingConstructor(
   argSsa.add(pushRuntimeTypeId(ctx, targetType));
   // Field initializers run before the superconstructor invocation — evaluate
   // them now and apply the values once the instance exists.
-  final evaluatedFieldInits = _evalUnusedFieldInitializers(
+  final evaluatedFieldInits = _evalFieldInitializers(
     ctx,
     fields,
     const {},
