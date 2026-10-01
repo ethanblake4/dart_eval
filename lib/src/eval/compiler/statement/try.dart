@@ -66,6 +66,13 @@ StatementInfo _compileTry(
   final endBlock = BasicBlock<Operation>([], label: ctx.label('try_end'));
   final bodyBlock = BasicBlock<Operation>([], label: ctx.label('try_body'));
   final outerState = ctx.saveState();
+  final pendingJumps = [
+    if (finallyBlock != null)
+      for (final label in ctx.labels)
+        if (label.jumpStates case final targets?
+            when label.exceptionDepth <= ctx.exceptionDepth)
+          for (final states in targets.values) (states, states.length),
+  ];
   final captureSlots = <(int, String), ExceptionSlot>{};
   // Mutable bindings crossing a handler boundary live in typed frame slots.
   // An exception can leave between any two operations, so edge phi copies
@@ -190,12 +197,22 @@ StatementInfo _compileTry(
   ContextSaveState? finallyEntryState;
   ContextSaveState? finallyExitState;
   if (finallyBlock != null) {
+    // Jumps originating in this finally do not execute it a second time.
+    final crossingJumps = [
+      for (final (states, start) in pendingJumps)
+        (states, states.skip(start).toList()),
+    ];
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [finallyBlock], parent);
     restoreBindings();
     finallyEntryState = ctx.saveState();
     finalInfo = compileFinally!();
     if (completes(finalInfo)) {
       finallyExitState = ctx.saveState();
+      for (final (_, snapshots) in crossingJumps) {
+        for (final state in snapshots) {
+          state.applyFinallyWrites(finallyEntryState, finallyExitState);
+        }
+      }
       final normalCompletion =
           completes(bodyInfo) || catchBlock != null && completes(catchInfo);
       ctx.pushOp(ResumeCompletion(terminal: !normalCompletion));
@@ -238,10 +255,8 @@ StatementInfo _compileTry(
           ..writeEpoch = epoch;
         binding.rebind(value);
       }
-      final finallyExit =
-          finallyExitState?.locals[frame][entry.key]?.current;
-      final finallyEntry =
-          finallyEntryState?.locals[frame][entry.key]?.current;
+      final finallyExit = finallyExitState?.locals[frame][entry.key]?.current;
+      final finallyEntry = finallyEntryState?.locals[frame][entry.key]?.current;
       if (finallyExit != null &&
           finallyEntry != null &&
           finallyExit.writeEpoch > finallyEntry.writeEpoch) {

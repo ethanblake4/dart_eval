@@ -45,6 +45,7 @@ CompilerLabel findJumpLabel(
 /// registered at a shallower [CompilerLabel.exceptionDepth].
 void jumpToLabel(CompilerContext ctx, CompilerLabel label, BasicBlock target) {
   label.cleanup(ctx);
+  label.onJump?.call(ctx, target);
   if (ctx.exceptionDepth > label.exceptionDepth) {
     completeJump(ctx, target, label.exceptionDepth);
   } else {

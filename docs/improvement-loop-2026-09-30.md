@@ -1480,3 +1480,36 @@ reverted, restoring the exact source of CD1B9EC2. Full-sweep evidence is in
 cycle6-pass3-fix/aot-final; longer controls are in long-abba-final, and rejected
 trial evidence is in pragma-trial/abba. These results justify retaining the
 small correctness boundary check without changing the interpreter loop.
+
+## Cycle 6 correctness pass 4
+
+Loop analysis now separates break exits from continue backedges. Update and
+condition headers join the body and continue states; post-loop analysis joins
+the false-condition state with break states only. A body/backedge proof no
+longer erases facts guaranteed by the false condition. Do-loop headers retain
+their conservative pre-loop state, matching native Dart's rejection of
+assignment-only narrowing.
+
+Loop labels expose their existing saved jump lists to enclosing try/finally
+analysis. A completing finalizer overlays its write summaries onto jumps that
+cross it, checking binding identity and preserving the saved SSA and storage.
+Nested finalizers apply in order; jumps originating inside a finalizer are
+excluded from its own overlay. Terminal finalizers preserve prior predecessor
+proofs, as verified against native Dart. Try blocks without finally skip the
+pending-label scan. The saved-state bookkeeping adds no runtime checks or
+adapters, and runtime source is unchanged.
+
+The native witness includes a finite finalizer that overrides a break with a
+continue, temporarily demotes the value, then reaches the false-condition exit.
+All 66 focused tests pass and scoped analysis is clean. Both runnable do-loop
+variants and the while-loop baseline pass fresh and serialized SDK probes;
+their negative 01 variants retain the expected Object.length compile error.
+The ordinary suite passes with 2051 tests and 63 skips. SDK-full records 2538
+passing fixtures, 236 compile errors, 106 expected runtime failures and one
+unsupported skip. Its only assertion failures are the two verified stale
+expectations for nnbd/type_promotion/do_condition_is_not_type_test.dart and
+while_condition_false_test.dart. Only those entries are removed and the final
+filtered harness passes both fixtures. There remain
+342 genuine compile/runtime failures, with no new failures. Broad and focused
+logs are retained in cycle6-pass4. Runtime source is unchanged, so this pass
+requires no runtime AOT gate.

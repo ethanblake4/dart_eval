@@ -152,10 +152,10 @@ mixin ScopeContext on Object implements AbstractScopeContext {
           // stay invalidated.
           if (other.writeEpoch > epoch) epoch = other.writeEpoch;
           if (other.type != type) {
-            type = TypeRef.commonBaseType(
-              this as CompilerContext,
-              {type, other.type},
-            );
+            type = TypeRef.commonBaseType(this as CompilerContext, {
+              type,
+              other.type,
+            });
             typeChanged = true;
           }
         }
@@ -216,6 +216,7 @@ class CompilerContext with ScopeContext {
     _builder = value;
     _flowTerminated = false;
   }
+
   late BasicBlockBuilder _builder;
   var blockCode = <Operation>[];
   final Map<int, ControlFlowGraph> functionGraphs = {};
@@ -267,7 +268,6 @@ class CompilerContext with ScopeContext {
   @override
   set flowTerminated(bool value) => _flowTerminated = value;
   bool _flowTerminated = false;
-
 
   int beginFunction(String name) {
     finishMethod();
@@ -567,17 +567,16 @@ class CompilerContext with ScopeContext {
         final name = switch (member) {
           // A non-final instance field blocks (`late final` fields still
           // promote — their single-assignment semantics keep one value).
-          FieldDeclaration m when
-            m.staticKeyword == null && !m.fields.isFinal =>
+          FieldDeclaration m
+              when m.staticKeyword == null && !m.fields.isFinal =>
             m.fields.variables.first.name.lexeme,
           // A concrete getter or method supplies a real getter — it
           // blocks. Setters, abstract members (empty body), and statics
           // don't.
-          MethodDeclaration m when
-            !m.isStatic &&
-                !m.isSetter &&
-                (m.body is! EmptyFunctionBody ||
-                    m.externalKeyword != null) =>
+          MethodDeclaration m
+              when !m.isStatic &&
+                  !m.isSetter &&
+                  (m.body is! EmptyFunctionBody || m.externalKeyword != null) =>
             m.name.lexeme,
           _ => null,
         };
@@ -598,8 +597,12 @@ class CompilerContext with ScopeContext {
     final concrete = <String>{};
     final required = <String>{};
     final seen = <String>{};
-    void walk(NamedType? superT, List<NamedType> mixins, List<NamedType> impls,
-        bool interfaceOnly) {
+    void walk(
+      NamedType? superT,
+      List<NamedType> mixins,
+      List<NamedType> impls,
+      bool interfaceOnly,
+    ) {
       void visit(NamedType? t, bool interface) {
         if (t == null) return;
         final ref = visibleTypes[library]?[refKey(t)];
@@ -649,12 +652,13 @@ class CompilerContext with ScopeContext {
       concrete.clear();
       required.clear();
       seen.clear();
-      instanceDeclarationsMap[library]?[declarationName(dec)]?.forEach(
-        (key, member) {
-          final base = key.split(RegExp(r'[*@]')).first;
-          if (base.startsWith('_')) concrete.add(base);
-        },
-      );
+      instanceDeclarationsMap[library]?[declarationName(dec)]?.forEach((
+        key,
+        member,
+      ) {
+        final base = key.split(RegExp(r'[*@]')).first;
+        if (base.startsWith('_')) concrete.add(base);
+      });
       final (sup, mix, impl, _) = classLikeClauses(dec);
       walk(sup, mix, impl, false);
       for (final name in required) {
@@ -663,6 +667,7 @@ class CompilerContext with ScopeContext {
     }
     return blockers;
   }
+
   Map<int, Map<String, TypeRef>> topLevelVariableInferredTypes = {};
   late final TypeDeclRegistry types = TypeDeclRegistry(this);
   late final TypeSystem typeSystem = TypeSystem(this);
@@ -847,9 +852,7 @@ class CompilerContext with ScopeContext {
         if (!_sameMemberMap(current.facts.promotedMembers, savedMembers)) {
           binding.rebind(
             current.withFacts(
-              current.facts.copyWith(
-                promotedMembers: savedMembers ?? const {},
-              ),
+              current.facts.copyWith(promotedMembers: savedMembers ?? const {}),
             ),
           );
         }
@@ -885,9 +888,7 @@ final class SavedLocalBinding {
   /// Records a member promotion (`c._f is int`) on the saved value — the
   /// facts live on the receiver's variable so they restore with it.
   void promoteMember(String member, TypeRef type) {
-    current = current.withFacts(
-      current.facts.withPromotedMember(member, type),
-    );
+    current = current.withFacts(current.facts.withPromotedMember(member, type));
   }
 
   LocalBinding restore() {
@@ -911,6 +912,38 @@ class ContextSaveState {
   }
 
   late final List<Map<String, SavedLocalBinding>> locals;
+
+  /// Carries finally writes into a saved jump's proofs, retaining its SSA and
+  /// storage. The finalizer accesses those bindings through exception slots.
+  void applyFinallyWrites(ContextSaveState entry, ContextSaveState exit) {
+    for (var frame = 0; frame < locals.length; frame++) {
+      for (final slot in locals[frame].entries) {
+        final before = frame < entry.locals.length
+            ? entry.locals[frame][slot.key]
+            : null;
+        final after = frame < exit.locals.length
+            ? exit.locals[frame][slot.key]
+            : null;
+        if (before == null ||
+            after == null ||
+            !identical(slot.value.binding, before.binding) ||
+            !identical(after.binding, before.binding) ||
+            after.current.writeEpoch <= before.current.writeEpoch) {
+          continue;
+        }
+        final current = slot.value.current;
+        slot.value.current =
+            current.copyWith(
+                type: after.current.type,
+                facts: current.facts.cleared(),
+              )
+              ..writeEpoch = math.max(
+                current.writeEpoch + 1,
+                after.current.writeEpoch,
+              );
+      }
+    }
+  }
 
   /// Whether the code sequence had terminated when the state was saved.
   final bool flowTerminated;

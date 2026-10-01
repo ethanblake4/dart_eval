@@ -34,7 +34,8 @@ StatementInfo macroLoop(
   // the header/condition is compiled against the pre-loop state.
   ctx.widenAssignedLocals(assignedLoopLocalNames(assignedNamesScan));
   final initialState = ctx.saveState();
-  final edgeStates = <ContextSaveState>[];
+  final breakStates = <ContextSaveState>[];
+  final continueStates = <ContextSaveState>[];
   final header = BasicBlock<Operation>([], label: ctx.label('loop_header'));
   final bodyBlock = BasicBlock<Operation>([], label: ctx.label('loop_body'));
   final exit = BasicBlock<Operation>([], label: ctx.label('loop_exit'));
@@ -57,8 +58,7 @@ StatementInfo macroLoop(
         ctx,
         bodyBlock,
         exit,
-      ).$1
-          .block(0);
+      ).$1.block(0);
       ctx.inferTypes();
     } else if (condition != null) {
       final value = convertForAssignment(
@@ -80,8 +80,12 @@ StatementInfo macroLoop(
   final label = CompilerLabel(
     (ctx) {
       ctx.resolveBranchStateDiscontinuity(initialState);
-      edgeStates.add(ctx.saveState());
     },
+    onJump: (ctx, target) {
+      final state = ctx.saveState();
+      (target == exit ? breakStates : continueStates).add(state);
+    },
+    jumpStates: {exit: breakStates, continueTarget: continueStates},
     exceptionDepth: ctx.exceptionDepth,
     breakTarget: exit,
     continueTarget: continueTarget,
@@ -112,7 +116,7 @@ StatementInfo macroLoop(
   // falls through. Emit these blocks independently of the body's exit flags.
   if (updateBlock?.id != null) {
     ctx.restoreState(initialState);
-    ctx.mergeBranchState([?bodyExitState, ...edgeStates]);
+    ctx.mergeBranchState([?bodyExitState, ...continueStates]);
     // The update runs only on the condition's true edge —
     // `for (; x is int; f(x))` sees `x` promoted.
     if (conditionExpression != null) {
@@ -128,7 +132,7 @@ StatementInfo macroLoop(
   ContextSaveState? conditionExitState;
   if (alwaysLoopOnce && header.id != null) {
     ctx.restoreState(initialState);
-    ctx.mergeBranchState([?bodyExitState, ...edgeStates]);
+    ctx.mergeBranchState([?bodyExitState, ...continueStates]);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [header], parent);
     if (conditionExpression != null) {
       ctx.enterTypeInferenceContext();
@@ -156,18 +160,15 @@ StatementInfo macroLoop(
 
   ctx.builder.float(exit);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
-  ctx.restoreState(initialState);
+  ctx.restoreState(conditionExitState ?? initialState);
   // `while (cond) {...}` reaches the exit with cond false, so its
   // false-edge promotions apply to post-loop code. (For `do {} while`,
   // they were already applied onto the merged back-edge state above.)
   if (conditionExpression != null && !alwaysLoopOnce) {
+    ctx.mergeBranchState([?bodyExitState, ...continueStates]);
     applyConditionPromotions(ctx, conditionExpression, false);
   }
-  ctx.mergeBranchState([
-    ?conditionExitState,
-    ?bodyExitState,
-    ...edgeStates,
-  ]);
+  ctx.mergeBranchState(breakStates);
   after?.call(ctx);
   ctx.endScope();
   // A break can reach the loop's exit even when the body expression has

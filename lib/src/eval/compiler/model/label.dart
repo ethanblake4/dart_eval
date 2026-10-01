@@ -6,6 +6,8 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 
 class CompilerLabel {
   final void Function(CompilerContext ctx) cleanup;
+  final void Function(CompilerContext ctx, BasicBlock target)? onJump;
+  final Map<BasicBlock, List<ContextSaveState>>? jumpStates;
   final BasicBlock? breakTarget;
   final BasicBlock? continueTarget;
   final int exceptionDepth;
@@ -17,6 +19,8 @@ class CompilerLabel {
 
   const CompilerLabel(
     this.cleanup, {
+    this.onJump,
+    this.jumpStates,
     this.breakTarget,
     this.continueTarget,
     this.names = const {},
