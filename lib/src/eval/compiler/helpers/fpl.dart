@@ -72,7 +72,7 @@ List<FormalParameter> resolveFPLDefaults(
   for (final param in [...positional, ...named]) {
     if (ignoreDefaults) continue;
     // The declared parameter type is the default value's context type.
-    var bound = param.type == null
+    var bound = !hasFormalParameterAnnotation(param)
         ? null
         : ctx.typeFactory.formalParameterAnnotationType(
             decLibrary ?? ctx.library,
@@ -94,15 +94,15 @@ List<FormalParameter> resolveFPLDefaults(
 
   for (final param in [...positional, ...named]) {
     final argument = SSA('arg_$paramIndex');
-    final annotation = param.type;
-    var declaredType = annotation == null
+    final hasAnnotation = hasFormalParameterAnnotation(param);
+    var declaredType = !hasAnnotation
         ? CoreTypes.dynamic.ref(ctx)
         : ctx.typeFactory.formalParameterAnnotationType(
             decLibrary ?? ctx.library,
             param,
             typeParameters: typeParameters,
           );
-    if (annotation == null && parameterHost != null) {
+    if (!hasAnnotation && parameterHost != null) {
       // Field and super formal parameters may omit their type, which then
       // comes from the target field or super-parameter.
       declaredType =
@@ -141,7 +141,7 @@ List<FormalParameter> resolveFPLDefaults(
   Map<String, TypeRef> typeParameters = const {},
 }) {
   final type = param.type;
-  if (type != null) {
+  if (hasFormalParameterAnnotation(param)) {
     return (
       ctx.typeFactory.formalParameterAnnotationType(
         decLibrary,

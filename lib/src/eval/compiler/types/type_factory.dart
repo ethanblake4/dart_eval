@@ -9,6 +9,10 @@ import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 
+/// Legacy function-typed formals can declare a signature without a return type.
+bool hasFormalParameterAnnotation(FormalParameter parameter) =>
+    parameter.type != null || parameter.functionTypedSuffix != null;
+
 /// Constructs [TypeRef]s — the single home for every annotation→type
 /// resolution path (source annotations, bridge type refs, type aliases,
 /// applied generic arguments, function-type parts). Replaces the
@@ -647,13 +651,11 @@ final class TypeFactory {
         : fromAnnotation(library, type, typeParameters: allTypeParams);
 
     TypeRef resolveParameter(FormalParameter parameter) =>
-        parameter.type == null
-        ? CoreTypes.dynamic.ref(_ctx)
-        : formalParameterAnnotationType(
-            library,
-            parameter,
-            typeParameters: allTypeParams,
-          );
+        formalParameterAnnotationType(
+          library,
+          parameter,
+          typeParameters: allTypeParams,
+        );
 
     final parameters = parameterList?.parameters ?? const <FormalParameter>[];
     final positional = <TypeRef>[
@@ -749,16 +751,12 @@ final class TypeFactory {
       );
     }
 
-    TypeRef parameterType(FormalParameter parameter) {
-      final annotation = parameter.type;
-      return annotation == null
-          ? CoreTypes.dynamic.ref(_ctx)
-          : formalParameterAnnotationType(
-              library,
-              parameter,
-              typeParameters: memberTypeParameters,
-            );
-    }
+    TypeRef parameterType(FormalParameter parameter) =>
+        formalParameterAnnotationType(
+          library,
+          parameter,
+          typeParameters: memberTypeParameters,
+        );
 
     final all = parameters?.parameters ?? const <FormalParameter>[];
     return FunctionTypeRef(
@@ -862,14 +860,17 @@ final class TypeFactory {
   /// function-typed parameters (`R f<P>(args)`) carry their parameter list and
   /// type parameters on a [FunctionTypedFormalParameterSuffix] rather than a
   /// [GenericFunctionType], so the function type is assembled from the parts.
+  /// An omitted return annotation defaults to dynamic; an untyped ordinary
+  /// parameter remains dynamic.
   TypeRef formalParameterAnnotationType(
     int library,
     FormalParameter param, {
     Map<String, TypeRef> typeParameters = const {},
   }) {
-    final annotation = param.type!;
+    final annotation = param.type;
     final suffix = param.functionTypedSuffix;
     if (suffix == null) {
+      if (annotation == null) return CoreTypes.dynamic.ref(_ctx);
       return fromAnnotation(
         library,
         annotation,

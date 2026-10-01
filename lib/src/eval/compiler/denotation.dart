@@ -831,11 +831,13 @@ final class ExtensionMemberDenotation extends Denotation {
     if (applied && recv != null) {
       // An applied setter (`E(x).s = v` or `x.s = v` through an applicable
       // extension) converts to the parameter's declared type.
-      final paramType = member.parameters?.parameters.firstOrNull?.type == null
+      final parameter = member.parameters?.parameters.firstOrNull;
+      final paramType =
+          parameter == null || !hasFormalParameterAnnotation(parameter)
           ? null
           : ctx.typeFactory.formalParameterAnnotationType(
               ext.library,
-              member.parameters!.parameters.first,
+              parameter,
               typeParameters: extBindingsMap(ext, onBindings),
             );
       final arg = paramType == null

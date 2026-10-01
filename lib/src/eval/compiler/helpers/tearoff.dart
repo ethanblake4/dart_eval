@@ -97,9 +97,8 @@ Variable materializeTearOff(
     )
       allParameters[index]: parameterTypes[index],
   };
-  // Class member tear-offs resolve the class's own type parameters as
-  // uninstantiated references (`L.foo` on `class L<T>` keeps `T`); a
-  // generic function's own parameters stay resolvable too (`f<X>(X x)`).
+  // Resolve class parameters from a bound receiver when available; otherwise
+  // keep declaration references. The callable's own parameters remain generic.
   final memberHost = switch (declaration) {
     MethodDeclaration() => declaration.parent?.parent,
     ConstructorDeclaration() => declaration.parent?.parent,
@@ -123,6 +122,22 @@ Variable materializeTearOff(
         classLikeClauses(memberHost).$4,
       ),
   };
+  if (memberTypeParameters == null &&
+      memberExt == null &&
+      implicitReceiver != null &&
+      memberHost is Declaration) {
+    final owner = ctx.types.find(
+      offset.file ?? ctx.library,
+      declarationName(memberHost),
+    );
+    final view = ctx.typeSystem.asInstanceOf(implicitReceiver.type, owner);
+    if (view != null) {
+      final arguments = interfaceArgumentsOf(view);
+      for (var i = 0; i < arguments.length; i++) {
+        memberParams[owner!.typeParameters[i].name] = arguments[i];
+      }
+    }
+  }
   final ownTypeParams =
       (switch (declaration) {
         MethodDeclaration() => declaration.typeParameters,
@@ -144,14 +159,11 @@ Variable materializeTearOff(
   TypeRef parameterType(FormalParameter parameter) {
     final compiledType = parameterTypeByNode[parameter];
     if (compiledType != null) return compiledType;
-    final annotation = parameter.type;
-    return annotation == null
-        ? CoreTypes.dynamic.ref(ctx)
-        : ctx.typeFactory.formalParameterAnnotationType(
-            offset.file ?? ctx.library,
-            parameter,
-            typeParameters: memberParams,
-          );
+    return ctx.typeFactory.formalParameterAnnotationType(
+      offset.file ?? ctx.library,
+      parameter,
+      typeParameters: memberParams,
+    );
   }
 
   (Object?, int) parameterDefault(FormalParameter parameter) {

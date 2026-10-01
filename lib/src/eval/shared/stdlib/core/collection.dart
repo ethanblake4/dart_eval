@@ -5,6 +5,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart'
     show Runtime, TypedRuntimeInterop;
 import 'package:dart_eval/src/eval/runtime/typed/typed_collections.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 part 'iterable.dart';

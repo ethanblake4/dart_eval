@@ -70,10 +70,12 @@ final class MemberLookup {
     final parameter = parameters == null || parameters.isEmpty
         ? null
         : parameters.first;
-    if (parameter?.type == null) return CoreTypes.dynamic.ref(ctx);
+    if (parameter == null || !hasFormalParameterAnnotation(parameter)) {
+      return CoreTypes.dynamic.ref(ctx);
+    }
     return ctx.typeFactory.formalParameterAnnotationType(
       body.library,
-      parameter!,
+      parameter,
       typeParameters: lexicalSuperTypeParameters(body),
     );
   }
@@ -740,7 +742,8 @@ final class MemberLookup {
       final node = spec?.node;
       // A setter parameter with no type annotation has no queryable
       // field type (matching lookupFieldType's null).
-      if (spec == null || (node != null && node.type == null)) {
+      if (spec == null ||
+          (node != null && !hasFormalParameterAnnotation(node))) {
         return null;
       }
     }

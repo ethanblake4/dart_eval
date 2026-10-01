@@ -269,13 +269,9 @@ class TypedBackend {
               context,
               allocation.library,
               param,
-              bound: param.type == null
+              bound: !hasFormalParameterAnnotation(param)
                   ? null
-                  : _tryAnnotationType(
-                      context,
-                      allocation.library,
-                      param.type!,
-                    ),
+                  : _tryFormalParameterType(context, allocation.library, param),
             );
             if (thunk >= 0 && seen.add(thunk)) {
               reachable.add(thunk);
@@ -352,9 +348,9 @@ class TypedBackend {
             // The declared type gives default expressions their context
             // type (`[C c = .zero]`); a type that references the callee's
             // own type parameters can't resolve here — leave it unbound.
-            bound: p.type == null
+            bound: !hasFormalParameterAnnotation(p)
                 ? null
-                : _tryAnnotationType(context, allocation.library, p.type!),
+                : _tryFormalParameterType(context, allocation.library, p),
           );
           final annotation = p.type;
           return (
@@ -2517,15 +2513,15 @@ class _FunctionCode {
   final TypedArgumentKind? resultKind;
 }
 
-/// [TypeRef.fromAnnotation] that tolerates annotations referencing the
+/// Resolves formal annotations while tolerating references to the
 /// callee's own type parameters, which aren't resolvable at emit time.
-TypeRef? _tryAnnotationType(
+TypeRef? _tryFormalParameterType(
   CompilerContext ctx,
   int library,
-  TypeAnnotation annotation,
+  FormalParameter parameter,
 ) {
   try {
-    return TypeRef.fromAnnotation(ctx, library, annotation);
+    return ctx.typeFactory.formalParameterAnnotationType(library, parameter);
   } on CompileError {
     return null;
   }

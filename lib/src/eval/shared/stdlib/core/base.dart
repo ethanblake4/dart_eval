@@ -1068,8 +1068,11 @@ class $String implements $Instance {
     Object? c,
   ) {
     target as $String;
-    final other = (r as $Value?) as $String;
-    return $bool(target.$value.contains(other.$value));
+    final pattern = (r as $Value?)!.$value as Pattern;
+    final start = (c is int ? c : 2 + (c as List).length) > 1
+        ? (s as $int).$value
+        : 0;
+    return $bool(target.$value.contains(pattern, start));
   }
 
   static const $Function __endsWith = $Function(_endsWith);

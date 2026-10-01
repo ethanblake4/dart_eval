@@ -968,7 +968,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? c,
   ) {
     final $this = target?.$value as Iterable;
-    final toElement = (r as $Value?) as EvalCallable;
+    final toElement = TypedInterop.nonGenericCallable(r);
     final $result = $this.map((e) => toElement.call(runtime, null, e, null, 1));
     return $Iterable.wrap($result);
   }

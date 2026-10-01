@@ -502,7 +502,7 @@ TypeRef? setterValueType(
   FormalParameterList? parameters,
 ) {
   final param = parameters?.parameters.firstOrNull;
-  if (param == null || param.type == null) return null;
+  if (param == null || !hasFormalParameterAnnotation(param)) return null;
   return ctx.typeFactory.formalParameterAnnotationType(file, param);
 }
 

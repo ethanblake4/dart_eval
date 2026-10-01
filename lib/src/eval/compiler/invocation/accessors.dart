@@ -81,10 +81,12 @@ TypeRef? extensionAccessorType(
   final typeParameters = extBindingsMap(ext, bindings);
   if (forSet) {
     final parameter = member.parameters?.parameters.firstOrNull;
-    if (parameter?.type == null) return null;
+    if (parameter == null || !hasFormalParameterAnnotation(parameter)) {
+      return null;
+    }
     return ctx.typeFactory.formalParameterAnnotationType(
       ext.library,
-      parameter!,
+      parameter,
       typeParameters: typeParameters,
     );
   }

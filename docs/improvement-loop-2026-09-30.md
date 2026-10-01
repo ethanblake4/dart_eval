@@ -1418,3 +1418,65 @@ entry was removed before the broad run. No new failures appear. Logs are
 cycle6-pass2-ordinary.log and cycle6-pass2-sdk-full.log. There remain 345 genuine
 compile/runtime failures. No runtime benchmark gate is needed for these compiler
 changes; an exact accepted executable will precede the next runtime fix.
+
+## Cycle 6 correctness pass 3
+
+Legacy function-typed formals with omitted return annotations now retain their
+structural function signatures. An unwritten return type defaults to dynamic,
+including nested signatures. One shared annotation predicate also recognizes
+function suffixes in default, closure and accessor paths; ordinary omitted field
+and super formals keep their existing inferred types. Dynamic generic functions
+are rejected at these non-generic parameter boundaries by the existing type
+check operations. A dynamic argument now receives the required AssertType at
+that boundary, where the erased dynamic parameter previously needed no check.
+No adapter or new runtime conversion machinery is introduced.
+
+The broad SDK check exposed a previously hidden contextual method tear-off
+problem: c.bar on C<int> retained the declaration's T in its static signature.
+Materialization now substitutes the bound receiver's view of the declaring
+class, including inherited views. Callable-owned type parameters remain generic;
+explicit lexical-super and extension bindings keep their existing precedence.
+Runtime covariance erasure still uses the original parameter declarations.
+
+Iterable.map checks guest callback generic arity before constructing its lazy
+result, including an empty input. TypedClosure and TypedMember supply existing
+descriptor metadata; bound members need no temporary closure. The original
+callback is retained, with no adapter or per-element check. Implicitly and
+explicitly instantiated callbacks and ordinary methods remain valid.
+
+String.contains now unwraps its declared native Pattern parameter, accepting
+both String and RegExp, and honors the optional startIndex. Argument count gates
+the optional register read. String and Iterable use their existing explicit
+hand-maintained wrapper exceptions in .dart_eval/bindgen.yaml; generated SDK
+wrappers are unchanged.
+
+Native controls and all 19 focused tests pass. Both runnable function_dcall
+variants and the generic_function_parameter fixture pass fresh and serialized
+execution. The final ordinary suite passes with 2039 tests and 63 skips.
+SDK-full records 2536 passing fixtures, 238 compile errors, 106 expected runtime
+failures and one unsupported skip. Its sole assertion failure is the verified
+stale expectation for generic/function_dcall_test.dart, which is removed. The
+earlier broad run exposed the contextual tear-off regression; these final
+results include its correction, with no new failures. There remain 344 genuine
+compile/runtime failures. Final broad logs are cycle6-pass3-fix/ordinary-final
+and sdk-full-final; diagnostic and dual logs distinguish actual SDK fixtures
+from the separate twelve-marker native witness.
+
+The final runtime gate compares the exact pass-2 baseline executable BC69DBC0
+with the accepted candidate CD1B9EC2. All 22 AOT benchmark drivers complete;
+their 21 execution checksums match and the compile fixture remains 1271 bytes.
+Long ABBA and reverse BAAB controls clear the initial large dispatch and call
+regressions. Combined dispatch and call medians are generally within 0-3%;
+template rendering is flat and external-call controls differ by less than 2%.
+The dynamic receiver-stable control retains a roughly 4-6% cost in those longer
+paired runs, with unchanged byte count of 26426. Its source does not use the new
+callback check, so the cause is not established and no performance gain is
+claimed for this correctness pass.
+
+An isolated never-inline annotation on the cold callback helper fails to show
+a repeatable benefit. Dynamic timings reverse between ABBA and BAAB orders,
+callbacks are mostly flat and calls remain within about 2.5%. The annotation is
+reverted, restoring the exact source of CD1B9EC2. Full-sweep evidence is in
+cycle6-pass3-fix/aot-final; longer controls are in long-abba-final, and rejected
+trial evidence is in pragma-trial/abba. These results justify retaining the
+small correctness boundary check without changing the interpreter loop.

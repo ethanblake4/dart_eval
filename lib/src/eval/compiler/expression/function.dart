@@ -192,7 +192,7 @@ Variable compileFunctionExpression(
           Variable vRep;
 
           TypeRef type = CoreTypes.dynamic.ref(ctx);
-          if (p.type != null) {
+          if (hasFormalParameterAnnotation(p)) {
             type = ctx.typeFactory.formalParameterAnnotationType(
               ctx.library,
               p,

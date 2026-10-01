@@ -200,7 +200,6 @@ expect_fail:
   - path: 'function/apply_generic2_test.dart'
   - path: 'function/local3_test.dart'
   - path: 'function/local_function_test.dart'
-  - path: 'generic/function_dcall_test.dart'
   - path: 'generic/instanceof_test.dart'
   - path: 'generic/instantiate_tearoff_after_contravariance_check_test.dart'
   - path: 'generic/regress_45767_test.dart'

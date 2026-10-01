@@ -19,6 +19,23 @@ import 'typed_async.dart';
 /// The compiler emits every scalar box and unbox operation. Host functions must
 /// use an explicit bridge wrapper, such as $Function or $Closure.
 abstract final class TypedInterop {
+  /// A generic function is not a non-generic SDK callback. Validate before
+  /// constructing lazy iterables, without wrapping the callback itself.
+  static EvalCallable nonGenericCallable(Object? value) {
+    final callable = (value as $Value?) as EvalCallable;
+    final descriptor = switch (callable) {
+      TypedClosure() => callable.descriptor,
+      TypedMember() => callable.receiver.program.boundReceiverDescriptor(
+        callable.functionId,
+      ),
+      _ => null,
+    };
+    if (descriptor != null && descriptor.typeParameterBounds.isNotEmpty) {
+      throw TypeError();
+    }
+    return callable;
+  }
+
   /// Guest Stream implementations keep their own listen dispatch.
   static Stream<Object?> stream(Object? value, Runtime runtime) =>
       value is TypedInstance
