@@ -1394,16 +1394,16 @@ final class ArgumentBinder {
       );
     }
     // Inferred type arguments materialize into the emitted call's runtime
-    // type-argument list, in the callee's declaration order. A parameter
-    // nothing constrained stays a call-site placeholder and degrades to
-    // `dynamic`, as before.
+    // type-argument list, in the callee's declaration order. A caller's
+    // parameter keeps its descriptor so the active type environment resolves
+    // it; unconstrained callee parameters were defaulted above.
     final inferredRuntimeTypeArguments =
         isCallableDecl && typeArguments == null && typeParams.isNotEmpty
         ? [
             for (final p in typeParams)
               () {
                 final t = resolveGenerics[p];
-                return t == null || t.isTypeParameter
+                return t == null
                     ? ctx.runtimeTypes.idOf(CoreTypes.dynamic.ref(ctx))
                     : ctx.runtimeTypes.idOf(t);
               }(),

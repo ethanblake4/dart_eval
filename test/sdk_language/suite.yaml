@@ -448,8 +448,6 @@ expect_fail:
     reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
   - path: 'promotion_chain_intersection_join/legacy_test.dart'
     reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
-  - path: 'records/type_inference_field_name_mismatch_test.dart'
-    reason: 'record field-name mismatch inference'
   - path: 'sound_flow_analysis/equality_comparisons_disabled_test.dart'
     reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
   - path: 'sound_flow_analysis/null_aware_map_entry_test.dart'

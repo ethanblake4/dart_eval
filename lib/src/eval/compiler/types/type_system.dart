@@ -167,6 +167,21 @@ final class TypeSystem {
       }
       return;
     }
+    if (pattern is RecordTypeRef && concrete is RecordTypeRef) {
+      // A mismatched record shape contributes no field constraints.
+      if (pattern.positional.length != concrete.positional.length ||
+          pattern.named.length != concrete.named.length ||
+          !pattern.named.keys.every(concrete.named.containsKey)) {
+        return;
+      }
+      for (var i = 0; i < pattern.positional.length; i++) {
+        unify(pattern.positional[i], concrete.positional[i], substitutions);
+      }
+      for (final entry in pattern.named.entries) {
+        unify(entry.value, concrete.named[entry.key]!, substitutions);
+      }
+      return;
+    }
     if (pattern is FunctionTypeRef && concrete is FunctionTypeRef) {
       // Signature-shaped unification: positional and named parameters,
       // then the return type — `void Function(X)` against

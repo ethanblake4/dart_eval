@@ -61,6 +61,15 @@ final class RuntimeTypes {
   /// The runtime descriptor list for [type]: `[parentId, isNullable,
   /// tag?, ...]` in the order the runtime decoder expects.
   List<int> descriptorOf(TypeRef type) {
+    final descriptor = _descriptorOf(type);
+    _componentDescriptors.putIfAbsent(
+      List<int>.unmodifiable(descriptor),
+      () => idOf(type),
+    );
+    return descriptor;
+  }
+
+  List<int> _descriptorOf(TypeRef type) {
     if (type.isTypeParameter) {
       final parameter = (type as TypeParameterTypeRef).parameter;
       final owner = parameter.owner;
@@ -141,7 +150,7 @@ final class RuntimeTypes {
   );
 
   // Raw C and C<dynamic> can have identical rows but different allocated IDs.
-  // Reuse the first completed row's ID for descriptor components, so enclosing
+  // Reuse the first completed row's ID, including root rows, so enclosing
   // nominal, record and function rows also agree. Cache the original ID before
   // descending to preserve existing cyclic bound references.
   int _componentIdOf(TypeRef type) {

@@ -1604,3 +1604,32 @@ changes. All 110 focused compiler, flow, runtime and SDK harness checks pass;
 scoped analysis and diff checks are clean. Evidence is in cycle6-cleanup. The
 runtime performance checkpoint already passed its full AOT gate; this cleanup
 does not change runtime source and requires no additional sweep.
+
+## Cycle 7 correctness pass 1
+
+Record return contexts now unify field types only when positional counts and
+named keysets match completely. A mismatched shape contributes no partial
+constraints. Matching and nested fields reuse ordinary unification, including
+literal int-to-double context conversion and name-order independence.
+
+Two further controls expose metadata issues. Inferred generic calls formerly
+erased a caller's type parameter to dynamic; they now retain its descriptor for
+the existing frame type environment. A temporary reversal of that one condition
+makes the caller-forwarding check fail in both runtime modes while record checks
+still pass. Native Dart passes the same forwarding control. The descriptor
+component interner now includes completed root rows too, so nested records use
+the same canonical field IDs as runtime resolution. Previously their outer
+runtime types displayed identically but compared unequal despite equal inner
+types. These compiler changes add no runtime source, adapters, boxing or new
+bytecode operations.
+
+All eight new semantic controls pass natively and in fresh/serialized evaluator
+checks. The initial focused group passes 62 tests; final focused checks pass
+12 tests after adding the independent caller regression. Scoped analysis is
+clean. Ordinary tests pass with 2054 tests and 86 skips. SDK-full records 2405
+passing fixtures, 229 compile errors, 103 runtime failures and three reported
+unsupported skips, with only the verified stale expectation for
+records/type_inference_field_name_mismatch_test.dart. The actual fixture passes
+fresh/serialized, only that stale entry is removed, and its final filtered
+harness passes. Supported compile/runtime failures decrease from 333 to 332,
+with no new failures. Evidence is retained in cycle7-record-context.
