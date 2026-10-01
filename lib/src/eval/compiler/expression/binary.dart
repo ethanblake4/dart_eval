@@ -20,6 +20,9 @@ import '../errors.dart';
 import 'expression.dart';
 import '../values/value_rep.dart';
 import '../invocation/resolver.dart';
+import '../invocation/bound_call.dart';
+import '../invocation/targets.dart';
+import '../member/member_name.dart';
 
 final binaryOpMap = {
   TokenType.PLUS: '+',
@@ -78,6 +81,10 @@ Variable compileBinaryExpression(
   final method =
       binaryOpMap[e.operator.type] ??
       (throw CompileError('Unknown binary operator ${e.operator.type}'));
+  if (e.leftOperand is SuperExpression && (method == '==' || method == '!=')) {
+    final identity = _compileObjectSuperEquality(ctx, e, method);
+    if (identity != null) return identity;
+  }
   var L = compileExpression(
     e.leftOperand,
     ctx,
@@ -158,6 +165,51 @@ Variable compileBinaryExpression(
   // canonicalize: `identical("ab", "a" + "b")` holds in the host VM.
   final boxed = result.boxIfNeeded(ctx);
   return internConst(ctx, boxed, boxed.type);
+}
+
+Variable? _compileObjectSuperEquality(
+  CompilerContext ctx,
+  BinaryExpression expression,
+  String method,
+) {
+  final self = ctx.lookupLocal('#this')!;
+  final superType =
+      ctx.typeSystem.superclassOf(self.type) ?? CoreTypes.object.ref(ctx);
+  final target = ctx.memberLookup.superMemberTarget(
+    superType,
+    '==',
+    kind: MemberKind.method,
+    methodCall: true,
+  );
+  if (!target.found || !target.owner.isSpec(CoreTypes.object)) return null;
+
+  // Object has no stored superclass link. Its default equality compares the
+  // real receiver's identity and must bypass any overriding guest operator.
+  final argument = compileExpression(
+    expression.rightOperand,
+    ctx,
+    target.owner,
+  );
+  final boolType = CoreTypes.bool.ref(ctx);
+  final identity =
+      BridgeCall(
+        externalIndex:
+            ctx.bridgeStaticFunctionIndices[target.owner.file]!['identical']!,
+      ).emit(
+        ctx,
+        BoundCall(
+          positional: [self.boxIfNeeded(ctx), argument.boxIfNeeded(ctx)],
+          named: const [],
+          returnType: boolType,
+        ),
+      );
+  if (method == '==') return identity;
+  return Variable.ssa(
+    ctx,
+    LogicalNot(ctx.svar('not_identical'), identity.unboxIfNeeded(ctx).ssa),
+    boolType,
+    rep: ValueRep.bool,
+  );
 }
 
 // A chain of boolean locals has no promotions or terminating operands to

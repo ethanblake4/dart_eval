@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval [$Instance] representation of an [Object]
@@ -388,6 +389,13 @@ class $Object implements $Instance {
 
   static const $Function __equals = $Function(_equals);
 
+  // Guest objects, functions and type descriptors have no native value.
+  static Object? _equalityValue($Value? value) => value is TypedInstance
+      ? value.dispatchRoot
+      : value is EvalFunction || value is $TypeImpl
+      ? value
+      : value?.$value;
+
   static $Value? _equals(
     Runtime runtime,
     $Value? target,
@@ -396,7 +404,7 @@ class $Object implements $Instance {
     Object? c,
   ) {
     final other = (r as $Value?);
-    return $bool(target?.$value == other?.$value);
+    return $bool(_equalityValue(target) == _equalityValue(other));
   }
 
   static const $Function __not_equals = $Function(_not_equals);
@@ -409,7 +417,7 @@ class $Object implements $Instance {
     Object? c,
   ) {
     final other = (r as $Value?);
-    return $bool(target!.$value != other!.$value);
+    return $bool(_equalityValue(target) != _equalityValue(other));
   }
 
   static const $Function __toString = $Function(_toString);

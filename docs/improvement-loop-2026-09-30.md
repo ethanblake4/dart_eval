@@ -1161,3 +1161,57 @@ The helper is formatted and scoped analysis is clean. Smoke checks cover an
 ordinary constructor fixture, the initialization-order multitest with its skipped
 negative, and a genuinely expected runtime-error variant from async_star_invalid.
 Runtime source is unchanged, so this checkpoint adds no new AOT requirement.
+
+## Cycle 5 correctness pass 3
+
+Object's hand-maintained equality adapter now preserves guest instances,
+functions and Type descriptors instead of reading their unsupported native value.
+Guest instances use their dispatch root so an inherited method's superclass view
+still identifies the same object. The identical intrinsic applies the same root
+normalization and preserves Type descriptors in mixed comparisons. Its existing
+descriptor equality for two Type values remains intact. Custom guest equality
+continues to dispatch through the guest operator, with its argument checks.
+
+Lexical super equality now bypasses ordinary virtual equality. Object's default
+operator compares the actual receiver through the existing identical intrinsic,
+since the runtime elides Object's superclass storage link. Source superclass
+operators use the existing lexical static call path; super != negates that same
+operator's result. Tests check inherited identity, distinct instances, overridden
+operators and their call counts in both loading modes.
+
+The native superclass oracle returns zero, all 66 focused tests pass and scoped
+analysis is clean. The ordinary suite has 2016 passes, 63 skips and two stale
+expectation assertions. Both fixtures pass fresh and serialized rechecks, yielding
+2018 passing tests after removing their rows. A third targeted SDK fixture also
+passes both loading modes. The three removed expectation entries are
+operator/equality_covariant, type/constants and constants_2018/equals. Their
+negative multitest variants retain the suite's existing skip policy. The
+covariant equality fixture exercises mixed primitive/guest comparisons; lexical
+super behavior is covered independently by the new regression test.
+
+SDK-full exits successfully with 2528 passing fixtures, 239 compile errors,
+113 runtime failures and one unsupported fixture. All remaining genuine failures
+retain their expectation entries. This is three additional passing fixtures with
+no new failures compared with pass 2. Logs are cycle5-pass3-ordinary,
+cycle5-pass3-sdk-full and the matching focused, scoped-analysis and dual-mode
+SDK rechecks.
+
+The exact equality candidate completes all 22 AOT drivers with 15 samples and
+affinity mask 4; all 21 execution checksums match the exact c6838f2 baseline.
+The initial captured-void callback result is 18.2 percent slower. Two longer
+ABBA blocks at 300,000 calls per sample narrow this to 8.0 percent, with large
+OS outliers but distinct centers. Other callback cases measure 0.6 to 3.4
+percent slower. This callback timing remains a follow-up for the performance
+pass, rather than being dismissed by the initial sweep's threshold.
+
+The callback's guest program, functions and closure metadata are byte-for-byte
+identical before and after the compiler changes: 154 code bytes and 15 functions.
+An isolated build with only the Object/identical runtime changes measures about
+1.1 percent faster than baseline in the same longer comparison. The combined
+build measures about 9.3 percent slower than that runtime-only build. Thus the
+slowdown accompanies the compiler changes or the combined AOT layout; the new
+runtime adapters do not account for it in isolation. No speculative runtime
+branch or adapter is added to perturb this unrelated callback workload. Results
+are in cycle5-pass3-equality-aot, cycle5-pass3-callback-abba and
+cycle5-runtime-attribution-abba. The retained validation checkout is reused at
+c6838f2 for this attribution; all builds and measurements are serialized.

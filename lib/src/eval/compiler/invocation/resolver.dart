@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/variable/value_facts.dart';
 import 'package:dart_eval/src/eval/ir/alu.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
+import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
@@ -1175,10 +1176,11 @@ final class CallResolver {
     var recv = receiver;
     final values = [...args];
     final equality = (method == '==' || method == '!=') && values.length == 1;
+    final negateSuperEquality = equality && lexicalSuper && method == '!=';
     final boxed = Variable.boxUnboxMultiple(ctx, [recv, ...values], true);
     recv = boxed.first;
     final prepared = boxed.sublist(1);
-    if (equality) {
+    if (equality && !lexicalSuper) {
       final result =
           EqualityCall(
             left: recv,
@@ -1199,6 +1201,9 @@ final class CallResolver {
         namedArgs: const {},
       );
     }
+    // Lexical super equality calls the superclass operator without virtual
+    // dispatch. Dart defines != as the negation of that same == operator.
+    if (equality) method = '==';
     final argTypes = prepared.map((arg) => arg.type).toList();
     final namedArgTypes =
         namedArgs?.map((key, arg) => MapEntry(key, arg.type)) ?? {};
@@ -1271,7 +1276,15 @@ final class CallResolver {
             : returnType,
       );
     }
-    final result = target.emit(ctx, boundCall);
+    var result = target.emit(ctx, boundCall);
+    if (negateSuperEquality) {
+      result = Variable.ssa(
+        ctx,
+        LogicalNot(ctx.svar('super_not_equal'), result.unboxIfNeeded(ctx).ssa),
+        CoreTypes.bool.ref(ctx),
+        rep: ValueRep.bool,
+      );
+    }
     return (
       target: recv,
       result: result,
