@@ -98,8 +98,9 @@ Variable? _implicitCallTearOff(
   CompilerContext ctx,
   Variable value,
   TypeRef target,
-  AstNode? source,
-) {
+  AstNode? source, [
+  TypeRef? boundContext,
+]) {
   if (value.type.nullable) return null;
   // Type parameters coerce against their bound (`context<void Function()>(x)`
   // passes `T` as the target).
@@ -120,10 +121,19 @@ Variable? _implicitCallTearOff(
     return null;
   }
   try {
-    final tearOff = GetTarget.read(ctx, value, 'call', source: source);
+    final context = boundContext ?? effectiveTarget;
+    var tearOff = GetTarget.read(
+      ctx,
+      value,
+      'call',
+      source: source,
+      boundContext: context,
+    );
+    // Known method reads may already have instantiated the tear-off.
+    tearOff = _instantiateGenericFunction(ctx, tearOff, context) ?? tearOff;
     if (tearOff.type.isAssignableTo(
       ctx,
-      effectiveTarget,
+      context.hasSchemaHoles ? context : effectiveTarget,
       forceAllowDynamic: false,
     )) {
       return tearOff;
@@ -142,6 +152,7 @@ Variable convertForAssignment(
   Variable value,
   TypeRef target, {
   MachineRepresentation? representation,
+  TypeRef? boundContext,
   AstNode? source,
   String? description,
 }) {
@@ -151,14 +162,15 @@ Variable convertForAssignment(
   // `yield` inside an `expand` callback whose `S` hasn't bound yet).
   if (conversion == AssignmentConversion.invalid &&
       target.hasInferenceVariables) {
-    return value;
+    return _implicitCallTearOff(ctx, value, target, source, boundContext) ??
+        value;
   }
   // int → double only applies to integer literals and compile-time constant
   // int expressions — never to an int-typed variable (which is a CE in Dart).
   if (conversion == AssignmentConversion.invalid ||
       (conversion == AssignmentConversion.intToDouble && !value.isConstInt)) {
     return _instantiateGenericFunction(ctx, value, target) ??
-        _implicitCallTearOff(ctx, value, target, source) ??
+        _implicitCallTearOff(ctx, value, target, source, boundContext) ??
         (throw CompileError(
           description ?? 'Cannot assign ${value.type} to $target',
           source,

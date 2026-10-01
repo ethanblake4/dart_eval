@@ -1,4 +1,5 @@
 import 'const.dart';
+import 'callable_inference.dart';
 import 'default_value.dart';
 import 'extension.dart';
 import 'package:analyzer/dart/ast/ast.dart';
@@ -449,16 +450,9 @@ Variable instantiateRuntimeCallable(
       bindings[signature.typeParameters[i]] = typeArguments[i];
     }
   } else {
-    ctx.typeSystem.unify(type, boundContext!, bindings);
-    // Parameters inference can't pin down instantiate to their bounds —
-    // `test<T>([T? x])` under a `void Function()` context is `test<Object?>`.
-    for (final parameter in signature.typeParameters) {
-      bindings.putIfAbsent(
-        parameter,
-        () => (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
-            .lowerTypeParameters(ctx),
-      );
-    }
+    bindings.addAll(
+      inferCallableTypeArguments(ctx, type, boundContext! as FunctionTypeRef),
+    );
   }
   // The adapter forwards optional parameters through its own defaults, which
   // only a fresh tear-off can supply — instantiating a stored closure loses

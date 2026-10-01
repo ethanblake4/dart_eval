@@ -26,10 +26,20 @@ BuiltinValue parseConstLiteral(
     if (bound != null && bound.isSpec(CoreTypes.double)) {
       return BuiltinValue(doubleval: _integerAsDouble(l));
     }
-    if (l.value == null) {
+    var value = l.value;
+    final parent = l.parent;
+    if ((value == null || value < 0) &&
+        parent is PrefixExpression &&
+        parent.operator.lexeme == '-') {
+      // A directly negated token has the signed range, unlike -(token).
+      final signed = int.tryParse('-${l.literal.lexeme.replaceAll('_', '')}');
+      // Preserve the operand: the existing unary negation applies its sign.
+      value = signed == null ? null : -signed;
+    }
+    if (value == null) {
       throw CompileError('Integer literal is outside the int range', l);
     }
-    return BuiltinValue(intval: l.value);
+    return BuiltinValue(intval: value);
   } else if (l is DoubleLiteral) {
     return BuiltinValue(doubleval: l.value);
   } else if (l is SimpleStringLiteral) {

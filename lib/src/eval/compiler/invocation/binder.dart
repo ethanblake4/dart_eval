@@ -279,13 +279,37 @@ final class ArgumentBinder {
         }
       }
       if (parameterType != null) {
+        final originalType = argument.type;
+        final coercionContext = declaredType!
+            .substituteTypeParameters(substitutions)
+            .substituteTypeParameters(
+              Substitution.of({
+                for (final parameter in ownParameters)
+                  parameter: UnknownTypeRef.instance,
+              }),
+            );
         argument = convertForAssignment(
           ctx,
           argument,
           parameterType,
           representation: MachineRepresentation.object,
+          boundContext: coercionContext,
           source: site.source,
         );
+        final convertedType = argument.type;
+        if (site.shape.typeArguments == null &&
+            ownParameters.isNotEmpty &&
+            originalType is! FunctionTypeRef &&
+            convertedType is FunctionTypeRef &&
+            convertedType.signature.typeParameters.isEmpty) {
+          _inferArgument(
+            declaredType,
+            argument.type,
+            ownParameters,
+            inferredArguments,
+          );
+          substitutions = Substitution.of(_solveArguments(inferredArguments));
+        }
       }
       return argument
           .copyIntoFreshSlot(ctx, 'closure_argument')
@@ -577,6 +601,15 @@ final class ArgumentBinder {
           argumentSubstitution = Substitution.of(solved);
         }
       }
+      final originalType = arg0.type;
+      final coercionContext = spec.type
+          .substituteTypeParameters(argumentSubstitution)
+          .substituteTypeParameters(
+            Substitution.of({
+              for (final parameter in parameterDefs)
+                parameter: UnknownTypeRef.instance,
+            }),
+          );
       arg0 = coerceArgumentForParameter(
         ctx,
         arg0,
@@ -584,8 +617,21 @@ final class ArgumentBinder {
         param,
         parameterHost,
         genericParameter: spec.erased,
+        boundContext: coercionContext,
         source: source,
       );
+      // Only implicit callable coercion adds evidence after boundary conversion.
+      final convertedType = arg0.type;
+      if (unifyPattern != null &&
+          originalType is! FunctionTypeRef &&
+          convertedType is FunctionTypeRef &&
+          convertedType.signature.typeParameters.isEmpty) {
+        _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
+        argumentSubstitution = Substitution.of({
+          ...resolveGenerics,
+          ..._solveArguments(candidates),
+        });
+      }
       // A following source expression can assign to the local slot that
       // produced this value. Already-compiled operands were captured by the
       // caller before target resolution.

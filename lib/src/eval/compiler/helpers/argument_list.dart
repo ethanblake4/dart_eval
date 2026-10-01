@@ -27,6 +27,7 @@ Variable coerceArgumentForParameter(
   FormalParameter param,
   Declaration parameterHost, {
   bool genericParameter = false,
+  TypeRef? boundContext,
   AstNode? source,
 }) {
   final paramRep = Abi.sourceParameter(
@@ -44,6 +45,7 @@ Variable coerceArgumentForParameter(
     arg0,
     paramType,
     representation: paramRep.bank,
+    boundContext: boundContext,
     source: source ?? parameterHost,
     description:
         'Cannot assign argument of type ${arg0.type.toStringClear(ctx, paramType)} '

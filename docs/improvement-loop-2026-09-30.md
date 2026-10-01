@@ -1852,3 +1852,52 @@ mismatches, and their stale expect_fail entries are removed. Genuine supported
 failures decrease from 323 to 321; language-floor skips remain separate.
 The actual filtered SDK-full harness passes both fixtures after the exclusions
 are removed. Evidence is retained in cycle8-pass1.
+
+## Cycle 8 correctness pass 2
+
+Callable argument inference now includes the specialized function type produced
+by implicit .call coercion. Original argument evidence remains intact; only a
+nominal-to-nongeneric-function conversion contributes additional constraints.
+The source-call and function-value binders use the same rule. The conversion
+context replaces only unresolved invocation-owned parameters with holes, keeping
+resolved dynamic/Object and enclosing parameters meaningful.
+
+Contextual generic callable inference keeps lower and upper constraints separate.
+Inputs choose their least upper bound, outputs constrain the result from above,
+and declared bounds are checked after substitution. This prevents a permissive
+Object return context from overwriting an input's String constraint. Nullable,
+dependent, recursive, repeated and nested callable controls agree with native
+Dart. Null-only and dependent upper-only cases retain the previous inference
+path; this pass does not introduce a recursive-bound solver.
+
+Known and virtual method reads reuse existing tear-off specialization machinery,
+and already-specialized tear-offs avoid a second instantiation. Receiver
+evaluation order and authoritative overriding dispatch are preserved. A generic
+callable under a FutureOr context is rejected consistently with native Dart;
+an initially proposed positive control was invalid and is retained as negative
+evidence instead. No runtime, opcode, adapter implementation or stdlib changes
+are made.
+
+Integer tokens directly under unary minus now validate the signed raw token
+when its cached value is absent or wrapped. This admits decimal int minimum,
+including separators, and rejects directly negated out-of-range hex tokens.
+Parentheses retain ordinary unsigned-hex wrapping. The existing unary Negate
+operation and contextual double path are unchanged, and scalar defaults share
+the correction through the common literal parser.
+
+Native witnesses pass, and native CFE rejects all six integer range controls,
+the invalid numeric callable bound and generic FutureOr coercion. The native
+callable type arguments are String for the nullable/F-bound/nested controls,
+int for the numeric bound, num/int for dependent bounds, and num for repeated
+inputs and the bounded producer. Scoped analysis is clean and 112 focused tests
+pass before adding the separately verified FutureOr negative regression.
+The exact inference/issue_56666_test.dart and number/separators_test.dart both
+pass fresh and serialized. Evidence is retained in cycle8-pass2.
+
+The ordinary suite passes 2088 tests with 86 skips. SDK-full reports 2418 passes,
+217 compile errors, 102 runtime failures and three reported skips. Its only
+expectation mismatches are the two verified fixtures above, whose stale
+expect_fail entries are removed. Genuine supported failures decrease from 321
+to 319; language-floor skips remain separate.
+The actual filtered SDK-full harness passes both fixtures after the exclusions
+are removed, with exit 0 and two passes.
