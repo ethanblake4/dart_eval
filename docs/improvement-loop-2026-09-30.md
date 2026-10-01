@@ -1740,3 +1740,62 @@ Bytecode checks confirm [?1] matches [1] and an absent key's value call is remov
 Supported compile/runtime failures decrease from 327 to 323, with no new failing
 fixtures. The final filtered SDK-full harness passes all four removed rows.
 Evidence is retained in cycle7-null-aware and cycle7-downward-inference.
+
+## Cycle 7 performance
+
+Dynamic native List.add calls now lower to a checked append instruction when the
+call is an ordinary method with one positional argument and no named or type
+arguments. Only the final TypedNativeList wrapper takes the direct path. It uses
+the existing cached element-type check and the wrapper's backing-list add; custom
+wrappers, guest ListBase overrides and Set.add retain ordinary dispatch. The
+existing List bridge delegates to the same helper. No backing copy, wrapper,
+adapter, extra boxing or argument marshalling is introduced. List is explicitly
+hand-maintained in .dart_eval/bindgen.yaml for its runtime semantics.
+
+The machine and opcode tables are regenerated from generate_typed_machine.dart.
+The new normal opcode shifts later IDs, so TypedCodec advances from 132 to 133.
+Cold validation rejects incompatible append call-site shapes. Codec tests use the
+declared version for their serialized header and reject the previous inner version.
+
+Native validation and 86 focused tests pass, including fresh/serialized execution,
+invalid writes before mutation, host aliases and export identity, custom property
+dispatch, guest overrides and Set.add's bool result. Defining-runtime cache flips
+are tested across fresh/serialized instances of the same program, rather than
+different numeric descriptor layouts; the existing import helper is unchanged.
+An initial test incorrectly expected an exported boxed null to remain boxed.
+Both direct and ordinary dispatch normalize that argument to null at the entry
+boundary; the corrected control checks both paths. Analysis and the generator
+check are clean at 223 normal and 165 extended instructions.
+
+The ordinary run passes 2069 tests with 86 skips and finds only two hard-coded
+version-132 assertions. After their correction, all four global-codec tests pass,
+including the obsolete-version control. SDK-full passes with its unchanged footer
+of 2414 passes, 220 compile errors, 103 runtime failures and three reported skips;
+no expectation changes or new semantic failures occur.
+
+Unchanged baseline and candidate AOT executables run serially at affinity mask 4.
+The five-workload pilot uses ABBA then BAAB, four process medians per side and
+15 samples per invocation. Dynamic receiver writes improve from 26.612 to 17.170 ms
+(-35.5%); unknown-value writes improve from 24.657 to 14.460 ms (-41.4%). Both order
+blocks improve, and every checksum matches. Other dynamic rows range from -4.3%
+to +2.1%; JSON is +0.1%, calls range -0.3% to +2.1%, inventory is -0.9%/-0.4% and
+virtual calls range +0.0% to +1.4%. A failed initial pilot attempt is discarded:
+its PowerShell process object lost the exit code after refresh. The ignored runner
+retains the native handle and checks a non-null exit code before recording a run.
+
+The final exact-executable 23-driver AOT sweep matches all 22 execution checksums;
+both compile outputs are 1271 bytes. It shows -35.6%/-34.5% for the two append rows.
+Initial single-pair flags include callbacks +5.4%, virtual calls +5.9%, inventory
++6.1% and a sync-async control at 0.008 versus 0.013 ms. A 32-process repeat uses
+longer callbacks, virtual, inventory and async workloads with both orders and
+15 samples. The flagged callback becomes -2.7%/-0.6%, virtual rows stay within
+2.5%, inventory within 1.3%, and syncFunction improves in both orders. Other
+callback controls move by up to 3.5%; these modest changes remain in the evidence.
+Dynamic receiver-alternating's single-sweep +5.0% is +0.5% in the longer eight-run
+pilot. Unrelated gains such as globals -8.9% are not attributed to append dispatch.
+
+Baseline SHA256: DBCE352D1F16AA27934962329A4B6A9D4AECFA7FDA4BD7A2EA66844BB2317BDE.
+Candidate SHA256: 403E65DCA8AD7695626ABCF56AB87F41DB9FA7B3C44ABBE81A835E95FF559754.
+Evidence is retained in cycle7-list-add-performance, including pilot-abba-baab-verified,
+full23-aot/named-median-changes.csv and bounded-controls. The runtime candidate is
+accepted for its repeatable append gains with no persistent large control slowdown.

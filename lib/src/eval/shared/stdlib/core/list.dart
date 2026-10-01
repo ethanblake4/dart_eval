@@ -1377,6 +1377,11 @@ class $List<E> implements List<E>, $Instance {
 
   @override
   void add(E value) => $value.add(value);
+  static void $checkedAdd(Runtime runtime, $List wrapper, $Value? value) {
+    wrapper._checkElement(runtime, value);
+    wrapper.$value.add(value);
+  }
+
   static const __$add = $Function(_$add);
   static $Value? _$add(
     Runtime runtime,
@@ -1385,11 +1390,7 @@ class $List<E> implements List<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final wrapper = target as $List;
-    final $this = wrapper.$value;
-    final value = (r as $Value?);
-    wrapper._checkElement(runtime, value);
-    $this.add(value);
+    $checkedAdd(runtime, target as $List, r as $Value?);
     return null;
   }
 

@@ -1212,6 +1212,17 @@ String familyOf(String name) {
     immediate: 'callSite',
     mayThrow: true,
   );
+  add(
+    'callAppend',
+    '''if (r is TypedNativeList && runtime != null) {
+            \$List.\$checkedAdd(runtime, r, s as \$Value?);
+            r = null; s = null; c = null;
+          } else {
+          $virtualCall
+          }''',
+    immediate: 'callSite',
+    mayThrow: true,
+  );
   for (final (name, operator) in [('Eq', '=='), ('Ne', '!=')]) {
     add(
       'eString${name}RS',

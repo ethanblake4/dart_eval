@@ -81,7 +81,7 @@ void main() {
         throwsUnsupportedError,
       );
       final bytes = program.write();
-      expect(bytes.getUint32(4, Endian.little), 132);
+      expect(bytes.getUint32(4, Endian.little), TypedCodec.version);
       expect(bytes.getUint32(64, Endian.little), 7);
       final decoded = TypedProgram.read(bytes.buffer);
       expect(
@@ -168,6 +168,7 @@ void main() {
     ).write().buffer.asUint8List();
     const global = 76 + 33;
     for (final (offset, value) in [
+      (4, TypedCodec.version - 1),
       (64, 65537),
       (global, 2),
       (global + 4, 255),
@@ -182,6 +183,5 @@ void main() {
       final truncated = Uint8List.fromList(bytes.take(length).toList());
       expect(() => TypedProgram.read(truncated.buffer), throwsFormatException);
     }
-    expect(TypedCodec.version, 132);
   });
 }

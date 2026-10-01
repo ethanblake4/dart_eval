@@ -1047,6 +1047,39 @@ abstract final class TypedMachine {
           }
           }
            continue dispatch;
+        case TypedOp.callAppend:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           if (r is TypedNativeList && runtime != null) {
+            $List.$checkedAdd(runtime, r, s as $Value?);
+            r = null; s = null; c = null;
+          } else {
+          final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
+          if (member != null) {
+            final function = member.function;
+            r = member.receiver;
+            frame = frame.enter(
+              function,
+              pc,
+              typeEnvironmentReceiver: member.receiver,
+            );
+            pc = function.entry;
+          } else {
+            final site = program.callSites[index];
+            final callTypeArguments = runtime == null
+                ? site.typeArguments
+                : runtime.resolveTypedCallTypeArguments(
+                    site.typeArguments,
+                    actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                    callableTypeArguments: frame.effectiveTypeArguments,
+                    typeEnvironment: frame.typeEnvironment,
+                  );
+            r = TypedDispatch.invoke(
+              program, runtime, r, s, c, index, callTypeArguments,
+            );
+            s = null; c = null;
+          }
+          }
+           continue dispatch;
         case TypedOp.jumpETrueShort:
            if (e) { pc = pc + 2 + (code[pc] | (code[pc + 1] << 8)).toSigned(16); } else { pc += 2; }
            continue dispatch;

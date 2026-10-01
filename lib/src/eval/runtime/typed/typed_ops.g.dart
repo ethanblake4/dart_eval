@@ -239,23 +239,24 @@ abstract final class TypedOp {
   static const returnNull = 202;
   static const callVirtual = 203;
   static const callIndex = 204;
-  static const jumpETrueShort = 205;
-  static const jumpEFalseShort = 206;
-  static const jumpShort = 207;
-  static const jumpNotEqABShort = 208;
-  static const jumpNotEqFGShort = 209;
-  static const jumpNotNeABShort = 210;
-  static const jumpNotNeFGShort = 211;
-  static const jumpNotLtABShort = 212;
-  static const jumpNotLtFGShort = 213;
-  static const jumpNotLteABShort = 214;
-  static const jumpNotLteFGShort = 215;
-  static const jumpNotGtABShort = 216;
-  static const jumpNotGtFGShort = 217;
-  static const jumpNotGteABShort = 218;
-  static const jumpNotGteFGShort = 219;
-  static const ext = 220;
-  static const callPlain = 221;
+  static const callAppend = 205;
+  static const jumpETrueShort = 206;
+  static const jumpEFalseShort = 207;
+  static const jumpShort = 208;
+  static const jumpNotEqABShort = 209;
+  static const jumpNotEqFGShort = 210;
+  static const jumpNotNeABShort = 211;
+  static const jumpNotNeFGShort = 212;
+  static const jumpNotLtABShort = 213;
+  static const jumpNotLtFGShort = 214;
+  static const jumpNotLteABShort = 215;
+  static const jumpNotLteFGShort = 216;
+  static const jumpNotGtABShort = 217;
+  static const jumpNotGtFGShort = 218;
+  static const jumpNotGteABShort = 219;
+  static const jumpNotGteFGShort = 220;
+  static const ext = 221;
+  static const callPlain = 222;
   static const extendedBase = 256;
   static const callExternal = 256;
   static const rNewBridgeSuperShim = 257;
@@ -628,6 +629,7 @@ abstract final class TypedOp {
     TypedInstruction('returnNull', [], [], TypedImmediate.none, false, true, false, 'returnNull'),
     TypedInstruction('callVirtual', [], [], TypedImmediate.callSite, true, false, false, 'callVirtual'),
     TypedInstruction('callIndex', [], [], TypedImmediate.callSite, true, false, false, 'callIndex'),
+    TypedInstruction('callAppend', [], [], TypedImmediate.callSite, true, false, false, 'callAppend'),
     TypedInstruction('jumpETrueShort', [4], [], TypedImmediate.shortBranch, false, false, false, 'jumpETrueShort'),
     TypedInstruction('jumpEFalseShort', [4], [], TypedImmediate.shortBranch, false, false, false, 'jumpEFalseShort'),
     TypedInstruction('jumpShort', [], [], TypedImmediate.shortBranch, false, true, false, 'jumpShort'),
@@ -645,7 +647,6 @@ abstract final class TypedOp {
     TypedInstruction('jumpNotGteFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotGteFGShort'),
     TypedInstruction('ext', [], [], TypedImmediate.none, false, false, false, 'ext'),
     TypedInstruction('callPlain', [], [], TypedImmediate.function, true, false, false, 'callPlain'),
-    TypedInstruction('reserved222', [], [], TypedImmediate.none, false, false, false, 'reserved222'),
     TypedInstruction('reserved223', [], [], TypedImmediate.none, false, false, false, 'reserved223'),
     TypedInstruction('reserved224', [], [], TypedImmediate.none, false, false, false, 'reserved224'),
     TypedInstruction('reserved225', [], [], TypedImmediate.none, false, false, false, 'reserved225'),

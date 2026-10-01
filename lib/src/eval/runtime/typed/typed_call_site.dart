@@ -25,6 +25,15 @@ final class TypedCallSite {
   final List<int> argumentTypes;
   final TypedMemberKind kind;
 
+  /// The fixed shape required by the checked native append instruction.
+  bool get isListAppend =>
+      kind == TypedMemberKind.method &&
+      name == 'add' &&
+      argumentCount == 1 &&
+      positionalCount == 1 &&
+      namedNames.isEmpty &&
+      typeArguments.isEmpty;
+
   /// The fixed shape required by the native indexed-read instruction.
   bool get isIndexRead =>
       kind == TypedMemberKind.method &&

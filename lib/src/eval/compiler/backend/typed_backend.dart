@@ -1240,7 +1240,11 @@ class _LoweringSession {
     out.add(
       TypedOperation(
         b._named([
-          b._callSites[siteIndex].isIndexRead ? 'callIndex' : 'callVirtual',
+          b._callSites[siteIndex].isIndexRead
+              ? 'callIndex'
+              : b._callSites[siteIndex].isListAppend
+              ? 'callAppend'
+              : 'callVirtual',
         ]),
         op.writesTo == null ? null : value(op.writesTo!),
         registerArguments,
