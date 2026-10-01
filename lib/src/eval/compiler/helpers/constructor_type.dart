@@ -16,6 +16,17 @@ Map<TypeParameterDef, TypeRef> constructorContextArguments(
     return const {};
   }
   context = inferContextType(ctx, constructed, context);
+  // A raw annotation is an instantiate-to-bound context, not an
+  // unconstrained constructor application.
+  if (context is InterfaceTypeRef && context.arguments.isEmpty) {
+    final parameters = context.decl.typeParameters;
+    if (parameters.isNotEmpty) {
+      final defaults = ctx.typeSystem.instantiateToBounds(parameters);
+      context = context.copyWith(
+        arguments: [for (final parameter in parameters) defaults[parameter]!],
+      );
+    }
+  }
   final view = ctx.typeSystem.asInstanceOf(
     owner.thisType,
     nominalDeclOf(context),

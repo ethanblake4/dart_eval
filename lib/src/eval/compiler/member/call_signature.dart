@@ -476,7 +476,19 @@ final class CallSignature {
           node is ClassTypeAlias ||
           node is ExtensionDeclaration,
     );
-    final prefix = host is Declaration ? '${declarationName(host)}.' : '';
+    final ownerName = host is ExtensionDeclaration
+        ? host.name?.lexeme ??
+              ctx.extensions
+                  .firstWhere(
+                    (extension) =>
+                        extension.library == library &&
+                        identical(extension.declaration, host),
+                  )
+                  .name
+        : host is Declaration
+        ? declarationName(host)
+        : '';
+    final prefix = host is Declaration ? '$ownerName.' : '';
     // Parameter annotations may name the declaring class's (or extension's)
     // own type parameters — seed them like `SourceMember._buildSignature`.
     var ownerParams = const <String, TypeRef>{};
@@ -489,7 +501,7 @@ final class CallSignature {
         TypeParameterOwner(
           TypeParameterOwnerKind.extension,
           library,
-          host.name?.lexeme ?? '',
+          ownerName,
         ),
         nodes,
         scope,

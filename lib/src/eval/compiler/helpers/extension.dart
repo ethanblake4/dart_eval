@@ -117,6 +117,28 @@ bool _unifyOnPattern(
         previous.isAssignableTo(ctx, actual) ||
         actual.isAssignableTo(ctx, previous);
   }
+  // FutureOr<S> matches either S or Future<S>. An actual FutureOr keeps
+  // its payload through the same-declaration path below, without flattening.
+  if (pattern is InterfaceTypeRef &&
+      pattern.decl.isSpec(AsyncTypes.futureOr) &&
+      pattern.arguments.isNotEmpty &&
+      !actual.isSpec(AsyncTypes.futureOr)) {
+    final future = ctx.typeSystem.asInstanceOf(
+      actual,
+      ctx.types.bySpec(CoreTypes.future),
+    );
+    // A nullable Future needs null-aware access or a non-null promotion.
+    if (future != null && (actual.nullable || future.nullable)) return false;
+    final arguments = future == null
+        ? const <TypeRef>[]
+        : interfaceArgumentsOf(future);
+    final payload = future == null
+        ? actual
+        : arguments.isEmpty
+        ? CoreTypes.dynamic.ref(ctx)
+        : arguments.single;
+    return _unifyOnPattern(ctx, pattern.arguments.single, payload, bound);
+  }
   // Record `on` patterns are structural: same positional count and named
   // field set, with each field type unified to bind the extension's type
   // parameters. Records have no width subtyping, so the shapes must match
@@ -147,6 +169,27 @@ bool _unifyOnPattern(
       }
     }
     return true;
+  }
+  if (pattern is FunctionTypeRef) {
+    if (actual is! FunctionTypeRef) return false;
+    final substitutions = <TypeParameterDef, TypeRef>{};
+    ctx.typeSystem.unify(pattern, actual, substitutions);
+    for (final entry in substitutions.entries) {
+      if (entry.key.owner.kind == TypeParameterOwnerKind.extension &&
+          !_unifyOnPattern(
+            ctx,
+            TypeParameterTypeRef(entry.key),
+            entry.value,
+            bound,
+          )) {
+        return false;
+      }
+    }
+    return actual.isAssignableTo(
+      ctx,
+      pattern.substituteTypeParameters(Substitution.of(substitutions)),
+      forceAllowDynamic: false,
+    );
   }
   final candidates = [actual, ...ctx.typeSystem.directSupertypes(actual)];
   for (final candidate in candidates) {
@@ -261,7 +304,6 @@ TypeRef _instantiateOnType(
   }
   return best == null ? null : (bestExt!, best, bestBindings!);
 }
-
 
 /// Whether [member]'s parameter list can be invoked with [arity] positional
 /// arguments: between its required and total positional parameter count.

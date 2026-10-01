@@ -1347,3 +1347,37 @@ No timing attribution or repeated broad run is needed for identical executable
 output. Logs are cycle5-trusted-list/cleanup-full22-aot. The ordinary and SDK-full
 results from the performance checkpoint remain the broad validation for this
 behavior-preserving cleanup.
+
+## Cycle 6 correctness pass 1
+
+Raw constructor contexts now supply the declaration's instantiate-to-bounds
+arguments before downward inference. A raw Box<T extends A> annotation therefore
+keeps Box<A> when its constructor receives an AA, while inferred and explicitly
+typed Box<AA> expressions retain their narrower type. The focused test covers
+local, return, field, parameter and inherited-interface contexts, dependent
+bounds and unconstrained Object contexts.
+
+Generic extension matching now deconstructs FutureOr payloads and structural
+function signatures. An actual FutureOr retains its own payload; Future values
+supply their element type. Nullable Futures still require null-aware access.
+Function matching uses the existing type unifier and strict assignability after
+substitution, including optional parameters accepted by the extension's signature.
+
+The SDK fixture also exposed anonymous extensions sharing an empty parameter
+owner name. Compilation and declaration signatures now use each extension's
+registered name, consistent with member lookup and on-type substitution. Named
+extensions keep their direct name lookup. The regression combines anonymous
+extensions with different parameter names and arities, plus a generic method.
+
+These changes affect only compilation. They add no runtime checks, adapters,
+boxing or interpreter instructions. Native assertions and fresh/serialized
+extension controls pass. All 24 focused tests pass and scoped analysis is clean.
+The final ordinary suite passes with 2028 tests and 63 skips. SDK-full records
+2532 passing fixtures, 238 compile errors, 110 expected runtime failures and one
+unsupported skip. Its only assertion failures are the two stale expectations for
+generic/generic_test.dart and extension_methods/static_extension_silly_types_test.dart.
+Every runnable variant of both fixtures passes fresh and serialized validation;
+their negative 01 variants follow the existing negative:skip policy. After
+removing those exact expectations, the filtered final SDK harness passes both
+fixtures. No new failures appear. Logs are cycle6-pass1-final-ordinary.log and
+cycle6-pass1-sdk-full.log. There remain 348 genuine compile/runtime failures.

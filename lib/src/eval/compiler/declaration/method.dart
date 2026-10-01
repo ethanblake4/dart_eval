@@ -49,7 +49,7 @@ int compileMethodDeclaration(
       d.typeParameters?.typeParameters ?? const <TypeParameter>[];
   final stInfo = _withExtensionTypeParameters(
     ctx,
-    parent,
+    parentName,
     extensionTypeParameters,
     () {
       // Capture the extension parameter refs before the method scope
@@ -299,17 +299,17 @@ int compileMethodDeclaration(
 /// the extension parameters absent when the two numeric positions coincide.
 T _withExtensionTypeParameters<T>(
   CompilerContext ctx,
-  Declaration parent,
+  String extensionName,
   List<TypeParameter> parameters,
   T Function() body,
 ) {
-  if (parent is! ExtensionDeclaration || parameters.isEmpty) return body();
+  if (parameters.isEmpty) return body();
   return ctx.withTypeParameters(
     ctx.library,
     TypeParameterOwner(
       TypeParameterOwnerKind.extension,
       ctx.library,
-      parent.name?.lexeme ?? '',
+      extensionName,
     ),
     parameters,
     body,
