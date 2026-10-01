@@ -415,7 +415,9 @@ final class CallResolver {
       // `fn.call(...)`: Function has no declared `call` member; the call is
       // the invocation itself, typed by the callee's own signature.
       return invokeValue(callSite(), callee: L);
-    } else if (!L.type.isSpec(CoreTypes.dynamic)) {
+    } else if (!L.type.isSpec(CoreTypes.dynamic) &&
+        !(L.type is TypeParameterTypeRef &&
+            extensionLookupType(ctx, L.type).isSpec(CoreTypes.dynamic))) {
       // `record.field(args)` on a named record field invokes the field's
       // value — a property read followed by an implicit `.call`, matching
       // the field/getter path below.
@@ -685,7 +687,7 @@ final class CallResolver {
           ? bridgeClassGenericParameters(ctx, staticType!)
           : _bridgeClassTypeArguments(
               ctx,
-              L.type,
+              ownerType,
               resolvedMember.ownerDecl!.library,
             );
       if (isStatic && br is BridgeConstructorDef && bound != null) {
@@ -913,7 +915,9 @@ final class CallResolver {
           ],
         );
       }
-    } else if (L.type.isSpec(CoreTypes.dynamic)) {
+    } else if (L.type.isSpec(CoreTypes.dynamic) ||
+        L.type is TypeParameterTypeRef &&
+            extensionLookupType(ctx, L.type).isSpec(CoreTypes.dynamic)) {
       target = DynamicCall(
         receiver: L.copyIntoFreshSlot(ctx, 'dynamic_receiver'),
         name: e.methodName.name,

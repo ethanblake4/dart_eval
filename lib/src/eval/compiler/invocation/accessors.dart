@@ -237,9 +237,7 @@ sealed class GetTarget {
         return IntrinsicGet(receiver, name, string: isString, unbox: true);
       }
     }
-    final resolvedReceiver = ctx.typeSystem.throughTypeParameters(
-      receiver.type,
-    );
+    final resolvedReceiver = extensionLookupType(ctx, receiver.type);
     if (name == 'runtimeType') {
       // `runtimeType` is overridable like any other getter — only
       // intrinsify it when the receiver's class doesn't declare it and no
@@ -350,7 +348,7 @@ sealed class GetTarget {
       // An extension getter may apply.
       final found = resolveExtensionMember(
         ctx,
-        resolvedReceiver,
+        receiver.type,
         name,
         getter: true,
       );
@@ -358,7 +356,7 @@ sealed class GetTarget {
         return ExtensionGetterCall(receiver, found.$1, found.$2, found.$3);
       }
       // An extension method read produces a bound tear-off.
-      final foundMethod = resolveExtensionMember(ctx, resolvedReceiver, name);
+      final foundMethod = resolveExtensionMember(ctx, receiver.type, name);
       if (foundMethod != null) {
         return ExtensionMethodTearOff(
           receiver,

@@ -173,8 +173,6 @@ expect_fail:
     reason: '?. on explicit extension application + expectStaticType'
   - path: 'extension_methods/static_extension_inference_test.dart'
     reason: 'constructor type-argument inference for Pair<A,B> raw invocation'
-  - path: 'extension_methods/static_extension_resolution_7_test.dart'
-    reason: 'extension members on type-variable and promoted-type receivers'
   - path: 'extension_methods/static_extension_syntax_test.dart'
     reason: 'constructor type-argument inference for Pair<A,B> raw invocation'
   - path: 'extension_type/combined_member_signature_test.dart'

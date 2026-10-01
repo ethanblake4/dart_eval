@@ -1633,3 +1633,35 @@ records/type_inference_field_name_mismatch_test.dart. The actual fixture passes
 fresh/serialized, only that stale entry is removed, and its final filtered
 harness passes. Supported compile/runtime failures decrease from 333 to 332,
 with no new failures. Evidence is retained in cycle7-record-context.
+
+## Cycle 7 correctness pass 2
+
+Extension selection retains the receiver's lexical type parameter instead of
+replacing it with its bound. Instance-member lookup uses the effective bound,
+including nullability and chained parameters. Promotion intersections are
+erased from inferred extension arguments while their lexical identity remains.
+Explicit dynamic bounds retain dynamic invocation until promotion supplies a
+concrete bound. Native and fresh/serialized controls cover bounded, unbounded,
+promoted, nullable and chained receivers, plus instance-member precedence.
+
+The ordinary suite exposed an inherited bridge callback regression: a guest
+Iterable subclass was looked up by its guest name inside the bridge library,
+leaving its callback element parameter unresolved. Bridge argument contexts
+now use the resolved declaring-owner view, which also projects reordered
+subclass type arguments correctly. Focused imported, multihop and alias controls
+exercise map/where callbacks through the existing canonical toList path.
+Separate prefixed type-argument lookup and Iterable getter reification failures
+found while developing these controls remain recorded for subsequent passes;
+they are not counted as fixed. No runtime, generated stdlib, adapters, boxing or
+new bytecode operations are added by this pass.
+
+Ordinary tests pass with 2055 tests and 86 skips. The additional imported
+callback fixture was added after broad discovery and passes separately;
+the final focused group passes nine tests, with native controls and clean scoped
+analysis. SDK-full records 2406 passing fixtures, 229 compile errors, 102 runtime
+failures and three reported unsupported skips. Its only stale assertion is
+extension_methods/static_extension_resolution_7_test.dart. The final source
+passes that actual fixture fresh/serialized, only its expectation is removed,
+and the filtered harness passes. Supported compile/runtime failures decrease
+from 332 to 331, with no new failures. Evidence is retained in
+cycle7-extension-bounds.

@@ -95,6 +95,19 @@ VariableDeclaration? extensionStaticField(EvalExtension ext, String name) {
   return null;
 }
 
+/// The bound used to exclude instance members before extension selection.
+/// An omitted source bound is Object?, while explicit dynamic stays dynamic.
+TypeRef extensionLookupType(CompilerContext ctx, TypeRef receiver) {
+  var type = receiver;
+  var nullable = type.nullable;
+  final seen = <TypeRef>{};
+  while (type is TypeParameterTypeRef && seen.add(type)) {
+    type = type.effectiveBound ?? CoreTypes.object.ref(ctx).withNullable(true);
+    nullable = nullable || type.nullable;
+  }
+  return type.withNullable(nullable);
+}
+
 /// Binds [pattern] (an extension `on` clause, possibly containing the
 /// extension's type parameters) against [actual] or one of its instantiated
 /// supertypes, writing bindings into [bound] indexed by parameter position.
@@ -110,7 +123,15 @@ bool _unifyOnPattern(
     final index = (pattern as TypeParameterTypeRef).parameter.index;
     final previous = bound[index];
     if (previous == null) {
-      bound[index] = actual;
+      // Infer from the lexical parameter, erasing its promotion intersection.
+      bound[index] =
+          actual is TypeParameterTypeRef && actual.promotedBound != null
+          ? TypeParameterTypeRef(
+              actual.parameter,
+              nullable: actual.nullable,
+              file: actual.file,
+            )
+          : actual;
       return true;
     }
     return previous == actual ||
@@ -272,6 +293,10 @@ TypeRef _instantiateOnType(
   int? arity,
 }) {
   EvalExtension? bestExt;
+  if (receiverType is TypeParameterTypeRef &&
+      extensionLookupType(ctx, receiverType).isSpec(CoreTypes.dynamic)) {
+    return null;
+  }
   MethodDeclaration? best;
   TypeRef? bestOnType;
   List<TypeRef>? bestBindings;
