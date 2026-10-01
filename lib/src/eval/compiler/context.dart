@@ -843,6 +843,14 @@ class CompilerContext with ScopeContext {
       savedLocalsMap.forEach((key, value) {
         final binding = myLocalsMap[key];
         if (binding == null) return;
+        if (binding.writeCaptured) {
+          binding.rebind(
+            binding.current
+                .withType(binding.declaredType)
+                .withFacts(binding.current.facts.cleared()),
+          );
+          return;
+        }
         final saved = value.current;
         var current = binding.current;
         if (current.type != saved.type) {
@@ -894,7 +902,18 @@ final class SavedLocalBinding {
   LocalBinding restore() {
     binding.storage = storage;
     binding.initialized = initialized;
-    binding.rebind(current.copyWith());
+    final restored = current.copyWith();
+    if (binding.writeCaptured) {
+      final epoch = math.max(restored.writeEpoch, binding.current.writeEpoch);
+      binding.rebind(
+        restored
+            .withType(binding.declaredType)
+            .withFacts(restored.facts.cleared())
+          ..writeEpoch = epoch,
+      );
+    } else {
+      binding.rebind(restored);
+    }
     return binding;
   }
 }

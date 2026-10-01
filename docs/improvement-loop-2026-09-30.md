@@ -1695,3 +1695,48 @@ All four and the four regressions discovered during development pass fresh and
 serialized probes. Only those four stale entries are removed; their final filtered
 harness passes. Supported compile/runtime failures decrease from 331 to 327,
 with no new failing fixtures. Evidence is retained in cycle7-spread.
+
+## Cycle 7 correctness pass 4
+
+Null-aware List, Set and Map elements compile under nullable element contexts,
+evaluate once and contribute their non-null types. Known-present values add no
+guard; known-null map keys compile their values on a disconnected inference arm,
+so graph cleanup removes value-side execution. Collection element results separate
+bottom-type inference from abrupt evaluation: ?null contributes Never without
+ending the literal, and an if/for body can throw while its enclosing element
+still completes. Nullable type parameters retain their lexical identity through
+non-null bound intersections. Map keys are snapshotted before value evaluation
+can reassign their source local.
+
+Invocation binding retains fully known preliminary downward solutions instead of
+overwriting them with argument inference. Bound refinement intersects outer
+nullability, so int? under `extends num` fixes int; nominal generic arguments
+retain their own nullability. Whole dynamic contexts still permit upward
+inference. Shorthand selector chains use the outer context to select a namespace,
+while the receiver call infers independently. Parentheses block that namespace
+propagation, matching the native compiler's rejection. Dart 3.8 null-key value
+arms retain their older flow-demotion rule without gaining an executable edge.
+
+Nested closure compilation exposed a stale snapshot: write capture was marked
+after saving a nullable local's earlier non-null promotion. Snapshot restoration
+now retains the binding's declared type, clears value facts and preserves its
+write epoch when closures can write it. Type-inference restoration also rejects
+those stale promotions. The capture controls run in fresh and serialized modes.
+This pass changes no runtime source, generated stdlib, opcode or adapter.
+
+Native witnesses pass 25 null-aware controls, a 17-row downward-inference report,
+three capture scenarios, seven valid shorthand scenarios and both 3.8/3.9 flow
+versions. Native Dart rejects the parenthesized shorthand receiver covered by a
+negative compiler test. The corrected broader focus passes 193 tests; final focus
+after shorthand and flow-version fixes passes 82 tests. Scoped analysis is clean.
+The final ordinary suite passes 2067 tests with 86 skips. SDK-full records 2414
+passing fixtures, 220 compile errors, 103 runtime failures and three reported
+unsupported skips. Its only mismatches are four newly passing expected failures:
+null_aware_elements/const_literals_test.dart, evaluation_order_test.dart,
+type_inference_simple_positive_test.dart and sound_flow_analysis/null_aware_map_entry_test.dart.
+All four and both SDK regressions found during development pass fresh and
+serialized probes on the final source. Only those four stale entries are removed.
+Bytecode checks confirm [?1] matches [1] and an absent key's value call is removed.
+Supported compile/runtime failures decrease from 327 to 323, with no new failing
+fixtures. The final filtered SDK-full harness passes all four removed rows.
+Evidence is retained in cycle7-null-aware and cycle7-downward-inference.

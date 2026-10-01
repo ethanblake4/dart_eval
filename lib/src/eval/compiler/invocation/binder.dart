@@ -457,6 +457,7 @@ final class ArgumentBinder {
     CallShape? suppliedShape,
     List<Variable> before = const [],
     Map<TypeParameterDef, TypeRef> resolveGenerics = const {},
+    Set<TypeParameterDef> fixedParameters = const {},
     Set<TypeParameterDef>? constrainedParameters,
     bool inferGenerics = true,
     Set<String>? inferParameterNames,
@@ -487,7 +488,8 @@ final class ArgumentBinder {
             when (parameterHost is ConstructorDeclaration ||
                     signature.typeParameters.contains(parameter)) &&
                 (inferParameterNames == null ||
-                    inferParameterNames.contains(entry.key)))
+                    inferParameterNames.contains(entry.key)) &&
+                !fixedParameters.contains(parameter))
           parameter,
     };
     var argumentSubstitution = Substitution.of(resolveGenerics);
@@ -908,6 +910,59 @@ final class ArgumentBinder {
         entry.key: TypeRef.commonBaseType(ctx, entry.value),
   };
 
+  Set<TypeParameterDef> _fixDownwardArguments(
+    List<TypeParameterDef> parameters,
+    Map<TypeParameterDef, TypeRef> inferred,
+    Map<TypeParameterDef, TypeRef> resolved,
+  ) {
+    final holes = Substitution.of({
+      for (final parameter in parameters) parameter: UnknownTypeRef.instance,
+    });
+    bool known(TypeRef type) =>
+        !type.hasInferenceVariables &&
+        !type.substituteTypeParameters(holes).hasSchemaHoles;
+    final fixed = <TypeParameterDef>{};
+    for (final parameter in parameters) {
+      var candidate = inferred[parameter];
+      if (candidate == null || !known(candidate)) continue;
+      final declaredBound = parameter.bound;
+      if (declaredBound != null) {
+        final bound = declaredBound.substituteTypeParameters(
+          Substitution.of(resolved),
+        );
+        if (!known(bound)) continue;
+        // Intersect outer nullability: int? under `extends num` fixes int.
+        // Null is a type of its own, rather than a nullable suffix.
+        candidate =
+            candidate.isSpec(CoreTypes.nullType) ||
+                bound.isSpec(CoreTypes.nullType)
+            ? ctx.typeSystem.greatestLowerBound(candidate, bound)
+            : ctx.typeSystem
+                  .greatestLowerBound(
+                    candidate.withNullable(false),
+                    bound.withNullable(false),
+                  )
+                  .withNullable(candidate.nullable && bound.nullable);
+        final finalBound = declaredBound.substituteTypeParameters(
+          Substitution.of({...resolved, parameter: candidate}),
+        );
+        // Recursive or incomplete bound solutions remain open to arguments.
+        if (!known(candidate) ||
+            !known(finalBound) ||
+            !candidate.isAssignableTo(
+              ctx,
+              finalBound,
+              forceAllowDynamic: false,
+            )) {
+          continue;
+        }
+      }
+      resolved[parameter] = candidate;
+      fixed.add(parameter);
+    }
+    return fixed;
+  }
+
   void _resolveInvocationGenerics(
     CallSignature signature,
     List<TypeAnnotation>? explicitArguments,
@@ -1251,6 +1306,7 @@ final class ArgumentBinder {
       );
     }
 
+    final fixedParameters = <TypeParameterDef>{};
     // Give context-sensitive arguments (notably closures) the return
     // context's type arguments before compiling their bodies.
     if (returnContext != null &&
@@ -1271,9 +1327,16 @@ final class ArgumentBinder {
           resolveGenerics[parameter] = inferred;
         }
       }
+      if (isCallableDecl &&
+          !returnContext.isSpec(CoreTypes.dynamic) &&
+          !returnContext.isSpec(CoreTypes.voidType)) {
+        fixedParameters.addAll(
+          _fixDownwardArguments(typeParams, bindings, resolveGenerics),
+        );
+      }
     }
 
-    final constrainedParameters = <TypeParameterDef>{};
+    final constrainedParameters = <TypeParameterDef>{...fixedParameters};
     final argsPair = bindParameterList(
       argumentList,
       sourceLib,
@@ -1284,6 +1347,7 @@ final class ArgumentBinder {
       source: source,
       argIndexOffset: argIndexOffset,
       resolveGenerics: resolveGenerics,
+      fixedParameters: fixedParameters,
       constrainedParameters: constrainedParameters,
       inferParameterNames: inferParameterNames,
       // Explicit arguments also fix a constructor's class parameters. Do not

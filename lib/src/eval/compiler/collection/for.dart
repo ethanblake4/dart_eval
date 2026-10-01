@@ -6,8 +6,9 @@ import 'package:dart_eval/src/eval/compiler/statement/for.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'element_result.dart';
 
-List<TypeRef> compileForElementForList(
+CollectionElementResult compileForElementForList(
   ForElement e,
   Variable list,
   CompilerContext ctx,
@@ -22,10 +23,10 @@ List<TypeRef> compileForElementForList(
 
 /// Compiles a collection `for` element, dispatching its body through
 /// [compileBody] and returning every type it may produce.
-List<TypeRef> compileForElement(
+CollectionElementResult compileForElement(
   ForElement e,
   CompilerContext ctx,
-  List<TypeRef> Function(CollectionElement) compileBody,
+  CollectionElementResult Function(CollectionElement) compileBody,
 ) {
   final potentialReturnTypes = <TypeRef>[];
   final parts = e.forLoopParts;
@@ -38,10 +39,10 @@ List<TypeRef> compileForElement(
     ).boxIfNeeded(ctx);
     if (e.awaitKeyword != null) {
       compileAwaitForLoop(ctx, e, parts, iterable, null, (ctx, ert) {
-        potentialReturnTypes.addAll(compileBody(e.body));
+        potentialReturnTypes.addAll(compileBody(e.body).types);
         return StatementInfo();
       });
-      return potentialReturnTypes;
+      return CollectionElementResult(potentialReturnTypes);
     }
     compileForEachLoop(
       ctx,
@@ -49,24 +50,24 @@ List<TypeRef> compileForElement(
       iterable,
       null,
       body: (ctx, ert) {
-        potentialReturnTypes.addAll(compileBody(e.body));
+        potentialReturnTypes.addAll(compileBody(e.body).types);
         return StatementInfo();
       },
       assignedNamesScan: [e],
     );
-    return potentialReturnTypes;
+    return CollectionElementResult(potentialReturnTypes);
   } else if (parts is ForParts) {
     compileForLoop(
       ctx,
       parts,
       null,
       body: (ctx, ert) {
-        potentialReturnTypes.addAll(compileBody(e.body));
+        potentialReturnTypes.addAll(compileBody(e.body).types);
         return StatementInfo();
       },
       assignedNamesScan: [e],
     );
   }
 
-  return potentialReturnTypes;
+  return CollectionElementResult(potentialReturnTypes);
 }

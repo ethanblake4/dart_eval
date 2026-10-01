@@ -15,6 +15,8 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import '../values/value_rep.dart';
 import '../variable/value_facts.dart';
+import 'element_result.dart';
+import 'null_aware.dart';
 
 /// Compiles `{...}` into a Set or Map literal. [bound] is the context type
 /// (e.g. a declared field or parameter type): in Dart it drives literal
@@ -74,7 +76,9 @@ Variable compileSetOrMapLiteral(
   // literal of only spreads infers from the first spread's type.
   final leaves = [for (final element in literal.elements) _leafOf(element)];
   final hasEntryLeaf = leaves.any((element) => element is MapLiteralEntry);
-  final hasExprLeaf = leaves.any((element) => element is Expression);
+  final hasExprLeaf = leaves.any(
+    (element) => element is Expression || element is NullAwareElement,
+  );
   final firstSpreadElement = leaves.whereType<SpreadElement>().firstOrNull;
   Variable? firstSpread;
   if (annotations == null &&
@@ -122,7 +126,7 @@ Variable compileSetOrMapLiteral(
     facts: ValueFacts(exact: exactCollectionType),
   );
   for (final element in literal.elements) {
-    final (keys, values) = _compileElement(
+    final elementResult = _compileElement(
       element,
       collection,
       ctx,
@@ -133,16 +137,18 @@ Variable compileSetOrMapLiteral(
           ? (firstSpreadElement, firstSpread)
           : null,
     );
-    // A Never-typed element (a throw, or a call declared Never) ends the
-    // literal's evaluation — the whole expression never produces a value.
-    if ([
-      ...keys,
-      ...values,
-    ].any((t) => t.isSpec(CoreTypes.never) && !t.nullable)) {
+    // Abrupt evaluation is separate from bottom-type contributions.
+    if (!elementResult.completesNormally) {
       return Variable.never(ctx);
     }
-    keyTypes.addAll(keys);
-    valueTypes.addAll(values);
+    if (isMap) {
+      for (var i = 0; i + 1 < elementResult.types.length; i += 2) {
+        keyTypes.add(elementResult.types[i]);
+        valueTypes.add(elementResult.types[i + 1]);
+      }
+    } else {
+      keyTypes.addAll(elementResult.types);
+    }
   }
   // Only null spreads contribute no evidence in a nonempty literal.
   TypeRef infer(TypeRef? explicit, Set<TypeRef> values) =>
@@ -176,7 +182,7 @@ CollectionElement _leafOf(CollectionElement element) => switch (element) {
   _ => element,
 };
 
-(List<TypeRef>, List<TypeRef>) _compileElement(
+CollectionElementResult _compileElement(
   CollectionElement element,
   Variable collection,
   CompilerContext ctx, {
@@ -186,117 +192,134 @@ CollectionElement _leafOf(CollectionElement element) => switch (element) {
   (SpreadElement, Variable)? peekedSpread,
 }) {
   final target = collection.ssa;
-  final keys = <TypeRef>[];
-  final values = <TypeRef>[];
   if (element is SpreadElement) {
-    final types = compileCollectionSpread(
-      element,
-      collection,
-      ctx,
-      isMap: isMap,
-      isSet: !isMap,
-      source: peekedSpread != null && identical(peekedSpread.$1, element)
-          ? peekedSpread.$2
-          : null,
-    );
-    if (types.isEmpty) return (keys, values);
-    keys.add(types.first);
-    if (isMap) values.add(types[1]);
-  } else if (element is IfElement) {
-    final types = compileIfElement(element, ctx, (e) {
-      final (k, v) = _compileElement(
-        e,
+    return CollectionElementResult(
+      compileCollectionSpread(
+        element,
         collection,
         ctx,
         isMap: isMap,
-        explicitKey: explicitKey,
-        explicitValue: explicitValue,
-        peekedSpread: peekedSpread,
-      );
-      return isMap ? [...k, ...v] : k;
-    });
-    if (isMap) {
-      for (var i = 0; i + 1 < types.length; i += 2) {
-        keys.add(types[i]);
-        values.add(types[i + 1]);
-      }
-    } else {
-      keys.addAll(types);
-    }
-  } else if (element is ForElement) {
-    final types = compileForElement(element, ctx, (e) {
-      final (k, v) = _compileElement(
-        e,
-        collection,
-        ctx,
-        isMap: isMap,
-        explicitKey: explicitKey,
-        explicitValue: explicitValue,
-        peekedSpread: peekedSpread,
-      );
-      return isMap ? [...k, ...v] : k;
-    });
-    if (isMap) {
-      for (var i = 0; i + 1 < types.length; i += 2) {
-        keys.add(types[i]);
-        values.add(types[i + 1]);
-      }
-    } else {
-      keys.addAll(types);
-    }
-  } else if (isMap && element is MapLiteralEntry) {
-    var key = compileExpression(element.key, ctx, explicitKey);
-    var value = compileExpression(element.value, ctx, explicitValue);
-    if (explicitKey != null) {
-      key = convertForAssignment(
-        ctx,
-        key,
-        explicitKey,
-        representation: MachineRepresentation.object,
-        source: element.key,
-      );
-    } else {
-      key = key.boxIfNeeded(ctx);
-    }
-    if (explicitValue != null) {
-      value = convertForAssignment(
-        ctx,
-        value,
-        explicitValue,
-        representation: MachineRepresentation.object,
-        source: element.value,
-      );
-    } else {
-      value = value.boxIfNeeded(ctx);
-    }
-    keys.add(key.type);
-    values.add(value.type);
-    if (key.type.isSpec(CoreTypes.never) ||
-        value.type.isSpec(CoreTypes.never)) {
-      return (keys, values);
-    }
-    ctx.pushOp(MapSet(target, key.ssa, value.ssa));
-  } else if (!isMap && element is Expression) {
-    var value = compileExpression(element, ctx, explicitKey);
-    value = explicitKey == null
-        ? value.boxIfNeeded(ctx)
-        : convertForAssignment(
-            ctx,
-            value,
-            explicitKey,
-            representation: MachineRepresentation.object,
-            source: element,
-          );
-    keys.add(value.type);
-    if (value.type.isSpec(CoreTypes.never)) {
-      return (keys, values);
-    }
-    ctx.pushOp(SetAdd(target, value.ssa));
-  } else {
-    throw CompileError(
-      'Unsupported set or map element ${element.runtimeType}',
-      element,
+        isSet: !isMap,
+        source: peekedSpread != null && identical(peekedSpread.$1, element)
+            ? peekedSpread.$2
+            : null,
+      ),
     );
   }
-  return (keys, values);
+  CollectionElementResult nested(CollectionElement child) => _compileElement(
+    child,
+    collection,
+    ctx,
+    isMap: isMap,
+    explicitKey: explicitKey,
+    explicitValue: explicitValue,
+    peekedSpread: peekedSpread,
+  );
+  if (element is IfElement) return compileIfElement(element, ctx, nested);
+  if (element is ForElement) return compileForElement(element, ctx, nested);
+
+  if (isMap && element is MapLiteralEntry) {
+    CollectionElementResult append(Variable key, Variable value) {
+      final storedKey = explicitKey == null
+          ? key.boxIfNeeded(ctx)
+          : convertForAssignment(
+              ctx,
+              key,
+              explicitKey,
+              representation: MachineRepresentation.object,
+              source: element.key,
+            );
+      final storedValue = explicitValue == null
+          ? value.boxIfNeeded(ctx)
+          : convertForAssignment(
+              ctx,
+              value,
+              explicitValue,
+              representation: MachineRepresentation.object,
+              source: element.value,
+            );
+      final completes = ![
+        storedKey.type,
+        storedValue.type,
+      ].any((type) => type.isSpec(CoreTypes.never) && !type.nullable);
+      if (completes) ctx.pushOp(MapSet(target, storedKey.ssa, storedValue.ssa));
+      return CollectionElementResult([
+        storedKey.type,
+        storedValue.type,
+      ], completesNormally: completes);
+    }
+
+    CollectionElementResult compileValue(Variable key) {
+      // Value evaluation may reassign the local that supplied the key.
+      if (key.binding != null) {
+        key = key.copyIntoFreshSlot(ctx, 'map_key');
+      }
+      if (element.valueQuestion != null) {
+        return compileNullAwareCollectionValue(
+          element.value,
+          ctx,
+          explicitValue,
+          (value) => append(key, value),
+          nullContribution: CollectionElementResult([
+            key.type,
+            CoreTypes.never.ref(ctx),
+          ]),
+        );
+      }
+      return append(key, compileExpression(element.value, ctx, explicitValue));
+    }
+
+    if (element.keyQuestion != null) {
+      return compileNullAwareCollectionValue(
+        element.key,
+        ctx,
+        explicitKey,
+        compileValue,
+      );
+    }
+    final key = compileExpression(element.key, ctx, explicitKey);
+    if (key.type.isSpec(CoreTypes.never) && !key.type.nullable) {
+      return CollectionElementResult([
+        key.type,
+        key.type,
+      ], completesNormally: false);
+    }
+    return compileValue(key);
+  }
+  if (!isMap) {
+    CollectionElementResult append(Variable value) {
+      final stored = explicitKey == null
+          ? value.boxIfNeeded(ctx)
+          : convertForAssignment(
+              ctx,
+              value,
+              explicitKey,
+              representation: MachineRepresentation.object,
+              source: element,
+            );
+      final completes =
+          !stored.type.isSpec(CoreTypes.never) || stored.type.nullable;
+      if (completes) ctx.pushOp(SetAdd(target, stored.ssa));
+      return CollectionElementResult([
+        stored.type,
+      ], completesNormally: completes);
+    }
+
+    if (element is NullAwareElement) {
+      return compileNullAwareCollectionValue(
+        element.value,
+        ctx,
+        explicitKey,
+        append,
+        nullContribution: CollectionElementResult([CoreTypes.never.ref(ctx)]),
+      );
+    }
+    if (element is Expression) {
+      return append(compileExpression(element, ctx, explicitKey));
+    }
+  }
+  throw CompileError(
+    'Unsupported set or map element ${element.runtimeType}',
+    element,
+  );
 }

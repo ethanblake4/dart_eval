@@ -22,6 +22,8 @@ import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import 'package:dart_eval/src/eval/ir/collection.dart';
 import '../values/value_rep.dart';
 import '../variable/value_facts.dart';
+import 'element_result.dart';
+import 'null_aware.dart';
 
 const _boxListElements = true;
 
@@ -91,14 +93,14 @@ Variable compileListLiteral(
   ctx.beginScope();
   final resultTypes = <TypeRef>[];
   for (final e in elements) {
-    final elementTypes = compileListElement(e, list, ctx, _boxListElements);
-    // A Never-typed element (a throw, or a call declared Never) ends the
-    // literal's evaluation — the whole expression never produces a value.
-    if (elementTypes.any((t) => t.isSpec(CoreTypes.never) && !t.nullable)) {
+    final element = compileListElement(e, list, ctx, _boxListElements);
+    // An element that cannot complete ends the literal's evaluation.
+    // A bottom-type contribution alone (such as ?null) does not.
+    if (!element.completesNormally) {
       ctx.endScope();
       return Variable.never(ctx);
     }
-    resultTypes.addAll(elementTypes);
+    resultTypes.addAll(element.types);
   }
   ctx.endScope();
 
@@ -170,13 +172,26 @@ Variable boxListContents(CompilerContext ctx, Variable list) {
   return newList;
 }
 
-List<TypeRef> compileListElement(
+CollectionElementResult compileListElement(
   CollectionElement e,
   Variable list,
   CompilerContext ctx,
   bool box,
 ) {
   final listType = interfaceArgumentsOf(list.type)[0];
+  if (e is NullAwareElement) {
+    return compileNullAwareCollectionValue(e.value, ctx, listType, (value) {
+      final stored = convertForAssignment(
+        ctx,
+        value,
+        listType,
+        representation: box ? MachineRepresentation.object : null,
+        source: e,
+      );
+      ctx.pushOp(ListAppend(list.ssa, stored.ssa));
+      return CollectionElementResult([stored.type]);
+    }, nullContribution: CollectionElementResult([CoreTypes.never.ref(ctx)]));
+  }
   if (e is Expression) {
     var result = compileExpression(e, ctx, listType);
     result = convertForAssignment(
@@ -189,16 +204,18 @@ List<TypeRef> compileListElement(
           'Cannot use expression of type ${result.type} in list of type $listType',
     );
     if (result.type.isSpec(CoreTypes.never) && !result.type.nullable) {
-      return [result.type];
+      return CollectionElementResult([result.type], completesNormally: false);
     }
     ctx.pushOp(ListAppend(list.ssa, result.ssa));
-    return [result.type];
+    return CollectionElementResult([result.type]);
   } else if (e is IfElement) {
     return compileIfElementForList(e, list, ctx, box);
   } else if (e is ForElement) {
     return compileForElementForList(e, list, ctx, box);
   } else if (e is SpreadElement) {
-    return compileSpreadElementForList(e, list, ctx, box);
+    return CollectionElementResult(
+      compileSpreadElementForList(e, list, ctx, box),
+    );
   }
   throw CompileError('Unknown list collection element ${e.runtimeType}');
 }

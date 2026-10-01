@@ -7,8 +7,9 @@ import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'element_result.dart';
 
-List<TypeRef> compileIfElementForList(
+CollectionElementResult compileIfElementForList(
   IfElement e,
   Variable list,
   CompilerContext ctx,
@@ -21,10 +22,10 @@ List<TypeRef> compileIfElementForList(
 
 /// Compiles a collection `if` element, dispatching its then/else elements
 /// through [compileBody] and returning every type they may produce.
-List<TypeRef> compileIfElement(
+CollectionElementResult compileIfElement(
   IfElement e,
   CompilerContext ctx,
-  List<TypeRef> Function(CollectionElement) compileBody,
+  CollectionElementResult Function(CollectionElement) compileBody,
 ) {
   final potentialReturnTypes = <TypeRef>[];
   final elseElement = e.elseElement;
@@ -33,6 +34,8 @@ List<TypeRef> compileIfElement(
       ? null
       : compileExpression(e.expression, ctx);
   final caseValue = subject?.copyIntoFreshSlot(ctx, 'case_value');
+  var thenCompletes = true;
+  var elseCompletes = true;
 
   macroBranch(
     ctx,
@@ -49,16 +52,23 @@ List<TypeRef> compileIfElement(
             source: e.expression,
           ),
     thenBranch: (ctx, _) {
-      potentialReturnTypes.addAll(compileBody(e.thenElement));
+      final result = compileBody(e.thenElement);
+      potentialReturnTypes.addAll(result.types);
+      thenCompletes = result.completesNormally;
       return StatementInfo();
     },
     elseBranch: elseElement == null
         ? null
         : (ctx, _) {
-            potentialReturnTypes.addAll(compileBody(elseElement));
+            final result = compileBody(elseElement);
+            potentialReturnTypes.addAll(result.types);
+            elseCompletes = result.completesNormally;
             return StatementInfo();
           },
   );
 
-  return potentialReturnTypes;
+  return CollectionElementResult(
+    potentialReturnTypes,
+    completesNormally: thenCompletes || elseCompletes,
+  );
 }

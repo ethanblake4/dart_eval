@@ -48,14 +48,23 @@ bool containsLeadingShorthand(Expression e) => switch (e) {
   DotShorthandInvocation() ||
   DotShorthandConstructorInvocation() => true,
   PostfixExpression(:final operand) => containsLeadingShorthand(operand),
-  ParenthesizedExpression(:final expression) => containsLeadingShorthand(
-    expression,
-  ),
   PropertyAccess(:final target?) => containsLeadingShorthand(target),
   MethodInvocation(:final target?) => containsLeadingShorthand(target),
   IndexExpression(:final target?) => containsLeadingShorthand(target),
   _ => false,
 };
+
+bool _isSelectorReceiver(AstNode source) {
+  while (source.parent is PostfixExpression) {
+    source = source.parent!;
+  }
+  return switch (source.parent) {
+    MethodInvocation(:final target) ||
+    PropertyAccess(:final target) ||
+    IndexExpression(:final target) => identical(target, source),
+    _ => false,
+  };
+}
 
 /// `.member` — a static member (enum value, static field, getter, method
 /// tear-off) of the context type.
@@ -149,7 +158,8 @@ Variable _invokeShorthandMember(
       argumentList,
       typeArguments: typeArguments,
       source: source,
-      returnContext: bound,
+      // The chain's context selects the namespace, not this receiver's type.
+      returnContext: _isSelectorReceiver(source) ? null : bound,
     );
 
     return target.emit(

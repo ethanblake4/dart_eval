@@ -112,13 +112,49 @@ void main() {
         final callable =
             runtime.executeLib('package:capture/main.dart', 'main')
                 as EvalCallable;
-        expect((callable.call(runtime, null, null, null, 0) as $int).$value, 34);
-        expect((TypedInterop.call(runtime, callable, 0, null, null) as $int).$value, 34);
+        expect(
+          (callable.call(runtime, null, null, null, 0) as $int).$value,
+          34,
+        );
+        expect(
+          (TypedInterop.call(runtime, callable, 0, null, null) as $int).$value,
+          34,
+        );
       }
     },
   );
 
   final cases = <String, (String, Object?)>{
+    'named closure writes discard restored nullable-local promotions': (
+      '''bool main() {
+      int? value = 1;
+      void clear() { value = null; }
+      clear(); return value == null;
+    }''',
+      true,
+    ),
+    'conditional closure creation discards saved nullable-local promotions': (
+      '''bool main() {
+      int? value = 1;
+      final hasValue = value != null;
+      late void Function() clear;
+      if (hasValue) { clear = () { value = null; }; }
+      else { clear = () {}; }
+      clear(); return value == null;
+    }''',
+      true,
+    ),
+    'recorded bool cannot revive a promotion after a captured write': (
+      '''bool main() {
+      int? value = 1;
+      final wasInt = value is int;
+      void clear() { value = null; }
+      clear();
+      if (wasInt) return value == null;
+      return false;
+    }''',
+      true,
+    ),
     'conditional closure creation shares the binding': (
       '''int main() {
       var value = 1; dynamic read;
@@ -281,15 +317,18 @@ void main() {
   };
   for (final entry in cases.entries) {
     test(entry.key, () {
-      final runtime = Runtime.ofProgram(
-        Compiler().compile({
-          'capture': {'main.dart': entry.value.$1},
-        }),
-      );
-      expect(
-        runtime.executeLib('package:capture/main.dart', 'main'),
-        entry.value.$2,
-      );
+      final program = Compiler().compile({
+        'capture': {'main.dart': entry.value.$1},
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        expect(
+          runtime.executeLib('package:capture/main.dart', 'main'),
+          entry.value.$2,
+        );
+      }
     });
   }
 }
