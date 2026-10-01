@@ -6,6 +6,10 @@
 # Pinned commit of dart-lang/sdk.
 sdk_commit: 6c4009687d2c881f880127fc12b9ad7c72111d33
 
+# Evaluated Dart source targets Dart 3.0+. Older explicit test language
+# overrides are unsupported; unversioned fixtures remain eligible.
+min_sdk: '3.0'
+
 # Directories under tests/language forming the "core" set — a fast,
 # semantics-focused subset for use during feature development
 # (`dart test test/sdk_language/core_test.dart`). The full suite runs
@@ -75,7 +79,6 @@ expect_fail:
   - path: 'bool/has_environment_test.dart'
   - path: 'canonicalize/hashing_memoize_array_test.dart'
   - path: 'canonicalize/hashing_shallow_collision_array_test.dart'
-  - path: 'class_modifiers/trans_legacy/legacy_superdeclaration_test.dart'
   - path: 'closure/forwarding_stub_tearoff_generic_test.dart'
   - path: 'closure/forwarding_stub_tearoff_test.dart'
   - path: 'closure/in_initializer2_test.dart'
@@ -213,7 +216,6 @@ expect_fail:
   - path: 'inference/returning_generator_return_type_test.dart'
   - path: 'inference_update_2/field_promotion_and_no_such_method_test.dart'
   - path: 'inference_update_2/field_promotion_and_object_pattern_test.dart'
-  - path: 'inference_update_2/no_such_method_restriction_disabled_test.dart'
   - path: 'inference_update_2/no_such_method_restriction_enabled_test.dart'
   - path: 'inference_update_2/no_such_method_restriction_stack_trace_test.dart'
   - path: 'inference_update_2/promotion_makes_new_extension_available_test.dart'
@@ -237,10 +239,6 @@ expect_fail:
   - path: 'mixin/with_named_import_test.dart'
   - path: 'mixin_declaration/mixin_declaration_subtype_test.dart'
   - path: 'mixin_declaration/mixin_declaration_syntax_test.dart'
-  - path: 'mixin_legacy/class_from_core_library_test.dart'
-  - path: 'mixin_legacy/super_2_test.dart'
-  - path: 'mixin_legacy/super_test.dart'
-  - path: 'mixin_legacy/with_named_import_test.dart'
   - path: 'nnbd/const/potentially_constant_types_test.dart'
   - path: 'nnbd/constant_null_safety_mode_test.dart'
   - path: 'nnbd/flow_analysis/unreachable_via_getter_get_test.dart'
@@ -420,14 +418,8 @@ expect_fail:
     reason: 'promotion-chain layering (sound flow analysis) not implemented'
   - path: 'inference/issue_56666_test.dart'
     reason: 'generic .call-method inference not implemented'
-  - path: 'inference_update_1/horizontal_inference_disabled_test.dart'
-    reason: 'horizontal inference (inference_update_1) not implemented'
-  - path: 'inference_update_1/horizontal_inference_enabled_test.dart'
-    reason: 'horizontal inference (inference_update_1) not implemented'
   - path: 'inference_update_1/horizontal_inference_extension_method_test.dart'
     reason: 'horizontal inference (inference_update_1) not implemented'
-  - path: 'inference_update_1/write_capture_deferral_disabled_test.dart'
-    reason: 'write-capture deferral (inference_update_1) not implemented'
   - path: 'inference_update_2/field_promotion_on_lhs_of_if_null_test.dart'
     reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
   - path: 'inference_update_2/preserved_by_join_test.dart'

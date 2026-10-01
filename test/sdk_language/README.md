@@ -5,7 +5,7 @@ suite under dart_eval — no mirror repository to maintain.
 
 ## Layout
 
-- `suite.yaml` — pin, core set, negative-test mode, and status lists.
+- `suite.yaml` — pin, minimum language version, core set, negative-test mode, and status lists.
 - `sdk_language.dart` — checkout management, test classification, source
   collection, and `registerSdkSuite` (shared by both entrypoints).
 - `shims.dart` — hand-written `package:expect`, `package:expect/async_helper`,
@@ -48,6 +48,24 @@ Negative variants follow `negative:`. Results are printed per variant and
 aggregated under the original fixture path: an `expect_fail` entry becomes
 stale only when every runnable variant passes. Unsupported runnable variants
 prevent reporting the fixture as fully passing.
+
+## Minimum language version
+
+Evaluated Dart source targets Dart 3.0 or later. `suite.yaml` sets
+`min_sdk: '3.0'`; the value must be a quoted `major.minor` version. The harness
+compares numeric components, so `3.10` is later than `3.9`.
+
+A fixture root or selected multitest variant with a recognized leading
+`// @dart=` override below `min_sdk` is classified unsupported, with the
+source and minimum versions in its skip reason. This takes precedence over
+negative/runtime-error markers. Unversioned fixtures remain eligible, and
+Dart 3 overrides still exercise later language-version controls. Ordinary
+comments and strings mentioning `@dart` do not change classification.
+
+Relative SDK fixture dependencies with explicit overrides below the minimum
+also skip the importing test during source collection. Unversioned helpers,
+package shims, and vendored package sources retain their existing behavior.
+This suite filter does not add a public compiler rejection policy.
 
 ## Status lists
 

@@ -1513,3 +1513,26 @@ filtered harness passes both fixtures. There remain
 342 genuine compile/runtime failures, with no new failures. Broad and focused
 logs are retained in cycle6-pass4. Runtime source is unchanged, so this pass
 requires no runtime AOT gate.
+
+## Dart 3 minimum policy
+
+The SDK suite now sets min_sdk: '3.0', following the requested evaluated-source
+support floor. Numeric major/minor comparison handles versions such as 3.10.
+The analyzer's recognized language override determines eligibility for each
+fixture root and selected multitest variant; ordinary comments and strings do
+not act as overrides. Explicitly old relative SDK helpers also make their
+importing fixture unsupported. Unversioned helpers, package shims and vendored
+packages retain their existing loading behavior. Later Dart 3 feature gates
+remain meaningful.
+
+All 33 SDK harness checks pass and scoped analysis is clean. An actual-source
+audit identifies nine expect_fail entries entirely blocked by the new floor,
+including one modern root importing a Dart 2.19 helper. Only those obsolete
+entries are removed. These are policy exclusions, not correctness fixes or
+newly passing fixtures. The staged Dart 2 compatibility implementation is
+retired; modern horizontal-inference work remains relevant. Audit evidence is
+cycle6-performance-baseline/min-sdk-audit.json; the final filtered harness
+confirms all nine fixtures skip for the minimum-version reasons.
+Runtime/compiler source is
+unchanged by this policy checkpoint, so the frozen performance baseline remains
+valid.

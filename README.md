@@ -22,6 +22,8 @@ dart_eval's compiler is powered under the hood by the Dart
 up-to-date parsing. While compilation and execution aren't quite there yet, dart_eval
 has over 300 tests that are run in CI to ensure correctness.
 
+Evaluated Dart source targets Dart 3.0 or later.
+
 Currently dart_eval implements a majority of the Dart spec, but there 
 are still missing features like extension methods.
 In addition, parts of the standard library haven't been implemented. See the

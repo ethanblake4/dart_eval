@@ -35,6 +35,7 @@ String _normalizeRelPath(String relPath) => relPath.replaceAll('\\', '/');
 class SuiteConfig {
   SuiteConfig._(
     this.sdkCommit,
+    this.minSdk,
     this.coreDirs,
     this.negativeMode,
     this.excluded,
@@ -42,6 +43,9 @@ class SuiteConfig {
   );
 
   final String sdkCommit;
+
+  /// Explicit fixture language overrides below this version are unsupported.
+  final ({int major, int minor}) minSdk;
   final List<String> coreDirs;
 
   /// How to treat tests carrying static-error markers: `skip` or
@@ -58,14 +62,49 @@ class SuiteConfig {
 
   static SuiteConfig load() {
     final file = File('test/sdk_language/suite.yaml');
-    final yaml = loadYaml(file.readAsStringSync()) as YamlMap;
+    return SuiteConfig.fromYaml(file.readAsStringSync());
+  }
+
+  factory SuiteConfig.fromYaml(String source) {
+    final yaml = loadYaml(source) as YamlMap;
     return SuiteConfig._(
       yaml['sdk_commit'] as String,
+      _parseVersion(yaml.containsKey('min_sdk') ? yaml['min_sdk'] : '3.0'),
       (yaml['core'] as YamlList).map((e) => e as String).toList(),
       yaml['negative'] as String? ?? 'skip',
       _pathReasonMap(yaml['exclude']),
       _pathReasonMap(yaml['expect_fail']),
     );
+  }
+
+  static ({int major, int minor}) _parseVersion(Object? value) {
+    final match = value is String
+        ? RegExp(r'^(\d+)\.(\d+)$').firstMatch(value)
+        : null;
+    if (match == null) {
+      throw FormatException(
+        'min_sdk must be a quoted major.minor version',
+        value,
+      );
+    }
+    return (major: int.parse(match[1]!), minor: int.parse(match[2]!));
+  }
+
+  /// The parser recognizes leading language overrides without mistaking
+  /// ordinary comments or string contents for a version directive.
+  String? unsupportedLanguageVersion(String source) {
+    if (!source.contains('@dart')) return null;
+    final version = parseString(
+      content: source,
+      throwIfDiagnostics: false,
+    ).unit.languageVersionToken;
+    if (version == null ||
+        version.major > minSdk.major ||
+        (version.major == minSdk.major && version.minor >= minSdk.minor)) {
+      return null;
+    }
+    return 'language version ${version.major}.${version.minor} is below '
+        'min_sdk ${minSdk.major}.${minSdk.minor}';
   }
 
   static Map<String, String> _pathReasonMap(Object? entries) => {
@@ -177,7 +216,7 @@ enum TestOutcome { passed, failed, compileError, skipped, timedOut }
 
 /// The checked-out SDK tree: `.dart_tool/sdk_language/<sha>`.
 class SdkSuite {
-  SdkSuite._(this.config, this.checkoutDir);
+  SdkSuite(this.config, this.checkoutDir);
 
   final SuiteConfig config;
   final Directory checkoutDir;
@@ -197,7 +236,7 @@ class SdkSuite {
       p.join('.dart_tool', 'sdk_language', config.sdkCommit),
     );
     await _ensureCheckout(dir, config.sdkCommit);
-    return SdkSuite._(config, dir);
+    return SdkSuite(config, dir);
   }
 
   static Future<void> _ensureCheckout(Directory dir, String sha) async {
@@ -313,6 +352,10 @@ class SdkSuite {
             source: source,
             unsupportedReason: reason,
           );
+    final versionReason = config.unsupportedLanguageVersion(source);
+    if (versionReason != null) {
+      return classified(TestKind.unsupported, versionReason);
+    }
     // Helpers imported by tests (no main) aren't tests themselves. A part
     // file may define main() — scan `part` targets relative to the test.
     var hasMain = RegExp(r'\bmain\s*\(').hasMatch(source);
@@ -458,6 +501,10 @@ class SdkSuite {
           'SDK multitest ${test.relPath} requires '
           'suite.variants(test) before collecting sources',
         );
+      }
+      final versionReason = config.unsupportedLanguageVersion(source);
+      if (versionReason != null) {
+        throw UnsupportedError('$rel: $versionReason');
       }
       sources['sdk_language/$rel'] = DartSource(
         'package:sdk_language/$rel',
