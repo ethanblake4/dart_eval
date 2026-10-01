@@ -1381,3 +1381,40 @@ their negative 01 variants follow the existing negative:skip policy. After
 removing those exact expectations, the filtered final SDK harness passes both
 fixtures. No new failures appear. Logs are cycle6-pass1-final-ordinary.log and
 cycle6-pass1-sdk-full.log. There remain 348 genuine compile/runtime failures.
+
+## Cycle 6 correctness pass 2
+
+Implicit value calls now require an actual call method in the receiver's static
+interface. Fields and getters named call do not qualify, even when their values
+are functions. The check reads source declaration kind and bridged method kind,
+uses the existing cycle-safe effective-bound traversal, and preserves inherited,
+mixin, abstract-interface, generic-bound, dynamic, Function and extension calls.
+A getter shadows an extension method instead of granting an implicit call.
+Explicit property calls remain valid. This emits no additional bytecode.
+
+Nested raw types previously used different child IDs from their explicit default
+instantiations, despite equal descriptor contents and printed types. RuntimeTypes
+now memoizes descriptor component IDs by immutable integer rows. The first equal
+completed row supplies the representative. Direct type IDs, declaration IDs,
+binder identities and runtime equality remain unchanged. Caching the allocated
+ID before descent preserves existing cyclic references without copying type trees
+or changing instantiate-to-bounds rules.
+
+Native controls, all 42 focused tests and scoped analysis pass. Every runnable
+cyclic_type_test.dart variant passes fresh and serialized validation, including
+the formerly failing nested contractive and noncontractive cases. Its exact
+expect_fail entry is removed. The getter/field implicit-call fixtures retain all
+positive behavior; their negative 01 variants now produce CompileError under an
+explicit diagnostic probe. Negative 02 implicit tear-off diagnostics remain a
+separate existing limitation.
+
+The ordinary suite passes with 2036 tests and 63 skips. SDK-full records 2535
+passing fixtures, 238 compile errors, 107 expected runtime failures and one
+unsupported skip. Its only assertion failures are newly stale expectations for
+generic/f_bounded_quantification4_test.dart and unsorted/cyclic_type2_test.dart.
+Both fixtures pass fresh/serialized probes; their exact entries are removed and
+the final filtered harness passes. The previously verified cyclic_type_test.dart
+entry was removed before the broad run. No new failures appear. Logs are
+cycle6-pass2-ordinary.log and cycle6-pass2-sdk-full.log. There remain 345 genuine
+compile/runtime failures. No runtime benchmark gate is needed for these compiler
+changes; an exact accepted executable will precede the next runtime fix.

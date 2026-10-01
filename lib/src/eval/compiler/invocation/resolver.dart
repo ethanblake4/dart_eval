@@ -217,11 +217,49 @@ final class CallResolver {
         ? known
         : null;
     final callable = direct == null ? (read ?? callee!) : null;
+    if (callable != null) _checkImplicitCallable(callable.type, site);
     final target = ClosureCall(callee: callable, known: direct);
     final bound = ArgumentBinder(
       ctx,
     ).bindSuppliedOnly(target, site, callee: callable);
     return (_emitValue(target, bound, callable, site), bound);
+  }
+
+  void _checkImplicitCallable(TypeRef type, CallSite site) {
+    type = ctx.typeSystem.throughTypeParameters(type);
+    if (type is TypeParameterTypeRef) {
+      throw CompileError('Type $type is not callable', site.source);
+    }
+    if (type.isFunctionLike ||
+        type.isSpec(CoreTypes.dynamic) ||
+        type.isSpec(CoreTypes.never)) {
+      return;
+    }
+    final member = ctx.memberLookup
+        .tryInterfaceMember(
+          type,
+          MemberName.method('call'),
+          source: site.source,
+        )
+        ?.member;
+    if (member != null) {
+      final isMethod = switch (member) {
+        SourceMember(:final node) =>
+          node is MethodDeclaration && !node.isGetter && !node.isSetter,
+        BridgeMember(:final def, :final name) =>
+          def is BridgeMethodDef && name.kind == MemberKind.method,
+      };
+      if (isMethod && !member.isStatic) return;
+    } else if (resolveExtensionMember(
+          ctx,
+          type,
+          'call',
+          arity: site.shape.positionalArity,
+        ) !=
+        null) {
+      return;
+    }
+    throw CompileError('Type $type is not callable', site.source);
   }
 
   Variable _emitValue(

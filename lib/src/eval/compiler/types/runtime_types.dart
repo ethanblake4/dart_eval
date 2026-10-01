@@ -1,3 +1,6 @@
+import 'dart:collection';
+
+import 'package:collection/collection.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show AsyncTypes, CoreTypes;
 import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 
@@ -68,7 +71,7 @@ final class RuntimeTypes {
         RuntimeTypeDescriptorTag.typeParameter,
         ownerType,
         parameter.index,
-        idOf(_boundDescriptorType(parameter)),
+        _componentIdOf(_boundDescriptorType(parameter)),
       ];
     }
     if (type is RecordTypeRef) {
@@ -78,10 +81,10 @@ final class RuntimeTypes {
         RuntimeTypeDescriptorTag.record,
         type.positional.length,
         type.named.length,
-        for (final field in type.positional) idOf(field),
+        for (final field in type.positional) _componentIdOf(field),
         for (final field in type.named.entries) ...[
           _ctx.constantPool.addOrGet(field.key),
-          idOf(field.value),
+          _componentIdOf(field.value),
         ],
       ];
     }
@@ -93,7 +96,7 @@ final class RuntimeTypes {
         idOf(CoreTypes.function.ref(_ctx)),
         type.nullable ? 1 : 0,
         RuntimeTypeDescriptorTag.function,
-        idOf(signature.returnType),
+        _componentIdOf(signature.returnType),
         signature.requiredPositional,
         signature.positional.length,
         named.length,
@@ -104,12 +107,12 @@ final class RuntimeTypes {
         // A signature binds its own parameters. Keep dependent/F-bounds
         // symbolic for alpha-equivalent subtype checks and type display.
         for (final parameter in signature.typeParameters)
-          idOf(parameter.bound ?? CoreTypes.dynamic.ref(_ctx)),
-        for (final parameter in signature.positional) idOf(parameter),
+          _componentIdOf(parameter.bound ?? CoreTypes.dynamic.ref(_ctx)),
+        for (final parameter in signature.positional) _componentIdOf(parameter),
         for (final entry in named) ...[
           _ctx.constantPool.addOrGet(entry.key),
           entry.value.required ? 1 : 0,
-          idOf(entry.value.type),
+          _componentIdOf(entry.value.type),
         ],
       ];
     }
@@ -127,8 +130,30 @@ final class RuntimeTypes {
           in type is InterfaceTypeRef && type.arguments.isEmpty
               ? type.decl.defaultTypeArguments
               : interfaceArgumentsOf(type))
-        idOf(argument),
+        _componentIdOf(argument),
     ];
+  }
+
+  final _componentIds = <TypeRef, int>{};
+  final _componentDescriptors = HashMap<List<int>, int>(
+    equals: const ListEquality<int>().equals,
+    hashCode: const ListEquality<int>().hash,
+  );
+
+  // Raw C and C<dynamic> can have identical rows but different allocated IDs.
+  // Reuse the first completed row's ID for descriptor components, so enclosing
+  // nominal, record and function rows also agree. Cache the original ID before
+  // descending to preserve existing cyclic bound references.
+  int _componentIdOf(TypeRef type) {
+    final existing = _componentIds[type];
+    if (existing != null) return existing;
+    final id = idOf(type);
+    _componentIds[type] = id;
+    final row = List<int>.unmodifiable(descriptorOf(type));
+    return _componentIds[type] = _componentDescriptors.putIfAbsent(
+      row,
+      () => id,
+    );
   }
 
   final _callableOwnerIds = <TypeParameterOwner, int>{};
