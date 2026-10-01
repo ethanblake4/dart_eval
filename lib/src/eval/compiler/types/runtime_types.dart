@@ -156,13 +156,8 @@ final class RuntimeTypes {
   int _componentIdOf(TypeRef type) {
     final existing = _componentIds[type];
     if (existing != null) return existing;
-    final id = idOf(type);
-    _componentIds[type] = id;
-    final row = List<int>.unmodifiable(descriptorOf(type));
-    return _componentIds[type] = _componentDescriptors.putIfAbsent(
-      row,
-      () => id,
-    );
+    _componentIds[type] = idOf(type);
+    return _componentIds[type] = _componentDescriptors[descriptorOf(type)]!;
   }
 
   final _callableOwnerIds = <TypeParameterOwner, int>{};

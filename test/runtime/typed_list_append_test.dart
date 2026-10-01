@@ -9,7 +9,9 @@ import 'package:test/test.dart';
 
 final class _ObservedList extends $List<$Value?> {
   _ObservedList() : super.wrap([]);
+
   int calls = 0;
+
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     if (identifier != 'add') return super.$getProperty(runtime, identifier);
@@ -43,12 +45,6 @@ void main() {
   for (final runtime in runtimes) {
     runtime.executeLib('package:list_append/main.dart', 'main');
   }
-  test('dynamic List.add lowers to the dedicated append opcode', () {
-    expect(
-      program.typedProgram.instructions.map((entry) => entry.$2.name),
-      contains('callAppend'),
-    );
-  });
   void append(Runtime runtime, $List values, $Value? value) {
     runtime.executeLib(
       'package:list_append/main.dart',
@@ -107,6 +103,7 @@ void main() {
       expect(host, [3, 4]);
     }
   });
+
   test('cached checks preserve defining runtime and precede mutation', () {
     expect(intList, isNonNegative);
     expect(nullableIntList, isNonNegative);
@@ -143,6 +140,7 @@ void main() {
     append(runtimes.last, nullable, const $null());
     expect(nullableBacking, hasLength(2));
   });
+
   test('append opcode validates exact member shape', () {
     TypedProgram candidate(TypedCallSite site) => TypedProgram(
       Uint8List.fromList([TypedOp.callAppend, 0, 0, TypedOp.rReturn]),

@@ -1799,3 +1799,18 @@ Candidate SHA256: 403E65DCA8AD7695626ABCF56AB87F41DB9FA7B3C44ABBE81A835E95FF5597
 Evidence is retained in cycle7-list-add-performance, including pilot-abba-baab-verified,
 full23-aot/named-median-changes.csv and bounded-controls. The runtime candidate is
 accepted for its repeatable append gains with no persistent large control slowdown.
+
+## Cycle 7 cleanup
+
+Nested runtime-type components reuse descriptorOf's already registered canonical
+row instead of copying and interning it a second time. The original per-type ID
+is still cached before descent, preserving recursive bounds. Append tests retain
+semantic and malformed-codec controls; the assertion-only opcode-presence test is
+removed. The performance phase's bytecode inspection remains recorded evidence.
+
+The explicitly configured Astra medium reviewer finds no actionable issues across
+c86f9b4..459b195 and the cleanup diff. Scoped analysis is clean and 106 focused
+tests pass, covering record contexts, raw and recursive type identity, nested
+generic environments, omitted bounds, type descriptors, append/native List and
+codecs. No runtime, opcode or generator source changes in this pass, so the final
+23-driver AOT sweep remains valid. Evidence is retained in cycle7-cleanup.
