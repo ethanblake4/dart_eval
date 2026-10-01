@@ -76,9 +76,10 @@ Variable compileListLiteral(
     listSpecifiedType = boundType;
   }
 
+  // Uninferred elements are schema holes, so nested spreads can infer upward.
   final listType = CoreTypes.list
       .ref(ctx)
-      .copyWith(arguments: [listSpecifiedType ?? CoreTypes.dynamic.ref(ctx)]);
+      .copyWith(arguments: [listSpecifiedType ?? UnknownTypeRef.instance]);
   var list = Variable.ssa(
     ctx,
     NewList(ctx.svar('list')),
@@ -102,6 +103,7 @@ Variable compileListLiteral(
   ctx.endScope();
 
   if (listSpecifiedType == null || listSpecifiedType.hasSchemaHoles) {
+    // A literal containing only null spreads infers Never, unlike an empty [].
     list = list.copyWith(
       type: CoreTypes.list
           .ref(ctx)
@@ -109,12 +111,17 @@ Variable compileListLiteral(
             arguments: [
               resultTypes.isEmpty
                   ? ctx.typeSystem.closeSchemaHoles(
-                      listSpecifiedType ?? CoreTypes.dynamic.ref(ctx),
+                      listSpecifiedType ??
+                          (elements.isEmpty
+                                  ? CoreTypes.dynamic
+                                  : CoreTypes.never)
+                              .ref(ctx),
                     )
                   : TypeRef.commonBaseType(ctx, resultTypes.toSet()),
             ],
           ),
     );
+    list = list.withFacts(ValueFacts(exact: list.type));
   }
 
   return l.isConst ? internConst(ctx, list, list.type) : list;

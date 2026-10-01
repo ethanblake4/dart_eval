@@ -1665,3 +1665,33 @@ passes that actual fixture fresh/serialized, only its expectation is removed,
 and the filtered harness passes. Supported compile/runtime failures decrease
 from 332 to 331, with no new failures. Evidence is retained in
 cycle7-extension-bounds.
+
+## Cycle 7 correctness pass 3
+
+Spread sources receive Iterable element contexts for Lists and Sets, or Map
+key/value contexts for Maps. Null-aware source contexts are nullable. Source
+arguments come from the instantiated Iterable/Map view, so fixed and reordered
+inherited parameters contribute their actual element types. Raw shape validation
+retains the existing per-element checks for dynamically typed sources.
+
+Collection literals use schema holes until upward inference completes and refresh
+their exact allocation proofs with the inferred type. Context selects ambiguous
+Map/Set literals before source peeking; empty literals retain declared generic
+parameters. Proven raw collection runtimeType accesses use existing constant-type
+instructions. A statically null spread supplies no element evidence. A literal
+containing only null spreads infers Never; a truly empty literal defaults dynamic.
+Collection for sources use the existing loop-variable Iterable/Stream context,
+independently of the output element type. No runtime source, new opcode, adapter
+or additional boxing is introduced.
+
+Nineteen spread controls and six transformed loop-source controls pass natively,
+including await for. All 80 focused tests pass; scoped analysis and diff checks
+are clean. The ordinary suite passes 2058 tests with 86 skips. SDK-full records
+2410 passing fixtures, 224 compile errors, 103 runtime failures and three reported
+unsupported skips. Its only mismatches are four newly passing expected failures:
+regress/regress50905_test.dart, spread_collections/inference_test.dart,
+spread_collections/null_spread_context_test.dart and type_variable/promotion_test.dart.
+All four and the four regressions discovered during development pass fresh and
+serialized probes. Only those four stale entries are removed; their final filtered
+harness passes. Supported compile/runtime failures decrease from 331 to 327,
+with no new failing fixtures. Evidence is retained in cycle7-spread.

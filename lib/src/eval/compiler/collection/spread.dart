@@ -28,12 +28,15 @@ List<TypeRef> compileCollectionSpread(
   Variable? source,
 }) {
   final requiredType = (isMap ? CoreTypes.map : CoreTypes.iterable).ref(ctx);
-  // The target's collection type is the spread source's context type — a
-  // nested bare `{}` infers from it rather than defaulting to a Map.
+  // The source is an Iterable<E> for both Lists and Sets. Nullable spreads
+  // also permit nullable source expressions under their downward context.
+  final sourceContext = requiredType
+      .copyWith(arguments: interfaceArgumentsOf(target.type))
+      .withNullable(element.isNullAware);
   final collection =
-      source ?? compileExpression(element.expression, ctx, target.type);
+      source ?? compileExpression(element.expression, ctx, sourceContext);
   if (element.isNullAware && collection.type.isSpec(CoreTypes.nullType)) {
-    return interfaceArgumentsOf(target.type);
+    return const [];
   }
   final sourceType = collection.type.withNullable(false);
   if (!sourceType.isAssignableTo(ctx, requiredType)) {
@@ -42,7 +45,13 @@ List<TypeRef> compileCollectionSpread(
       element,
     );
   }
-  final sourceArgs = interfaceArgumentsOf(sourceType);
+  final sourceView = ctx.typeSystem.asInstanceOf(
+    sourceType,
+    ctx.types.bySpec(isMap ? CoreTypes.map : CoreTypes.iterable),
+  );
+  final sourceArgs = sourceView == null
+      ? const <TypeRef>[]
+      : interfaceArgumentsOf(sourceView);
   final types = [
     for (var i = 0; i < (isMap ? 2 : 1); i++)
       sourceArgs.length > i ? sourceArgs[i] : CoreTypes.dynamic.ref(ctx),

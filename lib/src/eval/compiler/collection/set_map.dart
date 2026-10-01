@@ -29,6 +29,15 @@ Variable compileSetOrMapLiteral(
   final resolvedBound = bound == null
       ? null
       : inferContextType(ctx, CoreTypes.map.ref(ctx), bound);
+  final hasMapContext =
+      resolvedBound != null &&
+      sameDeclaration(resolvedBound, CoreTypes.map.ref(ctx));
+  final iterableBound = resolvedBound == null
+      ? null
+      : ctx.typeSystem.asInstanceOf(
+          resolvedBound,
+          ctx.types.bySpec(CoreTypes.iterable),
+        );
   TypeRef? boundKey, boundValue;
   if (resolvedBound != null) {
     final boundArgs = interfaceArgumentsOf(resolvedBound);
@@ -36,19 +45,20 @@ Variable compileSetOrMapLiteral(
     // shape — unification binds them afterwards. A bare type parameter is
     // likewise an inference target: `const {1: 10}` under `Map<K, V>`
     // produces `Map<int, int>` and binds `K`, `V`.
+    // Empty literals retain declared parameters because they have no upward
+    // evidence; call-site inference variables still provide no constraint.
     TypeRef? constrains(TypeRef type) =>
         type is UnknownTypeRef ||
             type.hasInferenceVariables ||
-            type.isTypeParameter
+            (type.isTypeParameter && literal.elements.isNotEmpty)
         ? null
         : type;
-    if (sameDeclaration(resolvedBound, CoreTypes.map.ref(ctx)) &&
-        boundArgs.length == 2) {
+    if (hasMapContext && boundArgs.length == 2) {
       boundKey = constrains(boundArgs[0]);
       boundValue = constrains(boundArgs[1]);
-    } else if (sameDeclaration(resolvedBound, CoreTypes.set.ref(ctx)) &&
-        boundArgs.length == 1) {
-      boundKey = constrains(boundArgs[0]);
+    } else if (iterableBound != null &&
+        interfaceArgumentsOf(iterableBound).length == 1) {
+      boundKey = constrains(interfaceArgumentsOf(iterableBound).first);
     }
   }
   final explicitKey = annotations == null
@@ -70,6 +80,8 @@ Variable compileSetOrMapLiteral(
   if (annotations == null &&
       !hasEntryLeaf &&
       !hasExprLeaf &&
+      !hasMapContext &&
+      iterableBound == null &&
       firstSpreadElement != null) {
     firstSpread = compileExpression(firstSpreadElement.expression, ctx);
   }
@@ -77,28 +89,27 @@ Variable compileSetOrMapLiteral(
       explicitValue != null ||
       (annotations == null &&
           (literal.elements.isEmpty
-              // A bare `{}` is a Set only when the context says Set;
-              // otherwise it is a Map.
-              ? resolvedBound == null ||
-                    !sameDeclaration(resolvedBound, CoreTypes.set.ref(ctx))
+              // An Iterable context selects a Set for a bare `{}`.
+              ? iterableBound == null
               : hasEntryLeaf ||
                     (!hasExprLeaf &&
-                        (firstSpread?.type
-                                .withNullable(false)
-                                .isAssignableTo(
-                                  ctx,
-                                  CoreTypes.map.ref(ctx),
-                                  forceAllowDynamic: false,
-                                ) ??
-                            false))));
+                        (hasMapContext ||
+                            (firstSpread?.type
+                                    .withNullable(false)
+                                    .isAssignableTo(
+                                      ctx,
+                                      CoreTypes.map.ref(ctx),
+                                      forceAllowDynamic: false,
+                                    ) ??
+                                false)))));
   final keyTypes = <TypeRef>{};
   final valueTypes = <TypeRef>{};
   final target = ctx.svar(isMap ? 'map' : 'set');
   final collectionType = (isMap ? CoreTypes.map : CoreTypes.set).ref(ctx);
   final exactCollectionType = collectionType.copyWith(
     arguments: [
-      explicitKey ?? CoreTypes.dynamic.ref(ctx),
-      if (isMap) explicitValue ?? CoreTypes.dynamic.ref(ctx),
+      explicitKey ?? UnknownTypeRef.instance,
+      if (isMap) explicitValue ?? UnknownTypeRef.instance,
     ],
   );
   final collection = Variable.ssa(
@@ -133,19 +144,26 @@ Variable compileSetOrMapLiteral(
     keyTypes.addAll(keys);
     valueTypes.addAll(values);
   }
+  // Only null spreads contribute no evidence in a nonempty literal.
   TypeRef infer(TypeRef? explicit, Set<TypeRef> values) =>
       explicit != null && !explicit.hasSchemaHoles
       ? explicit
       : values.isEmpty
-      ? ctx.typeSystem.closeSchemaHoles(explicit ?? CoreTypes.dynamic.ref(ctx))
+      ? ctx.typeSystem.closeSchemaHoles(
+          explicit ??
+              (literal.elements.isEmpty ? CoreTypes.dynamic : CoreTypes.never)
+                  .ref(ctx),
+        )
       : TypeRef.commonBaseType(ctx, values);
+  final resultType = (collection.type as InterfaceTypeRef).copyWith(
+    arguments: [
+      infer(explicitKey, keyTypes),
+      if (isMap) infer(explicitValue, valueTypes),
+    ],
+  );
   final result = collection.copyWith(
-    type: (collection.type as InterfaceTypeRef).copyWith(
-      arguments: [
-        infer(explicitKey, keyTypes),
-        if (isMap) infer(explicitValue, valueTypes),
-      ],
-    ),
+    type: resultType,
+    facts: ValueFacts(exact: resultType),
   );
   return literal.isConst ? internConst(ctx, result, result.type) : result;
 }
@@ -181,6 +199,7 @@ CollectionElement _leafOf(CollectionElement element) => switch (element) {
           ? peekedSpread.$2
           : null,
     );
+    if (types.isEmpty) return (keys, values);
     keys.add(types.first);
     if (isMap) values.add(types[1]);
   } else if (element is IfElement) {

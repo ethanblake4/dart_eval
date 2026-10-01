@@ -239,6 +239,26 @@ sealed class GetTarget {
     }
     final resolvedReceiver = extensionLookupType(ctx, receiver.type);
     if (name == 'runtimeType') {
+      // Raw literal storage has no overridable getter or boxed type metadata.
+      // Its completed allocation proof supplies the type without boxing.
+      final exact = receiver.exactType;
+      if (exact != null &&
+          (receiver.rep == ValueRep.nativeList &&
+                  exact.isSpec(CoreTypes.list) ||
+              receiver.rep == ValueRep.nativeMap &&
+                  exact.isSpec(CoreTypes.map) ||
+              receiver.rep == ValueRep.nativeSet &&
+                  exact.isSpec(CoreTypes.set))) {
+        return IntrinsicGet(
+          receiver,
+          name,
+          constantType: (
+            ctx.runtimeTypes.idOf(exact),
+            exact.requiresTypeEnvironment,
+            exact,
+          ),
+        );
+      }
       // `runtimeType` is overridable like any other getter — only
       // intrinsify it when the receiver's class doesn't declare it and no
       // descendant overrides it (otherwise dispatch normally).
