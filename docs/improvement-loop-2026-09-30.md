@@ -1060,3 +1060,65 @@ and_extension_member fixtures, and patterns/version_2_29_changes. Whole-project
 analysis finds no code errors. It retains the development path-dependency
 warning for the sibling CFG checkout. The unused virtual_calls benchmark import
 reported by analysis is removed.
+
+## Cycle 5 correctness pass 1
+
+For-in statements and collection elements now bind patterns through the shared
+destructuring compiler. This covers index, iterator and await-for loops. Pattern
+bindings and capture cells are created in each iteration's body scope. Ordinary
+loop-variable capture renewal still precedes reading the current element. The
+await-for declaration setup reuses the synchronous helper instead of duplicating
+it. Element types are projected through Iterable or Stream, rather than read
+from unrelated type parameters of the implementing class.
+
+Native witnesses confirm that for-in pattern refutation throws StateError.
+Dedicated iteration binding contexts preserve that behavior while retaining
+ordinary declaration assignment checks and final bindings. Tests cover mutable
+and final captures, shadowing, loop exits, protocol iteration, destructuring
+failures, collection elements and contextual numeric literal inference in both
+loading modes.
+
+Await-for patterns also exposed partial record schemas reaching a bridge
+constructor's runtime metadata. Bridge argument inference now completes the
+schema from the argument's formal interface view and closes unconstrained holes.
+Constructor emission uses the resolved bound call when its earlier context still
+contains holes. A custom iterable with an unrelated generic parameter exercises
+the Stream.fromIterable boundary. The hand-maintained Stream wrapper exports
+guest iterables lazily through the existing adapter; native wrapped iterables
+retain their direct path.
+
+Folded mixin members now reuse the class hierarchy's cached inferred mixin type
+arguments. Explicit arguments and ordered bound fallback remain intact. Native
+and both loading modes cover imported mixins, alias chains, prior mixins,
+dependent bounds and folded-body type checks. Two legacy expectation rows are
+removed after all runnable variants pass. The modern runtime-type fixture still
+fails and remains listed.
+
+The hand-maintained Set wrapper gains its missing unnamed factory. It uses the
+existing typed linked-hash backing and constructor type witness. The test checks
+contextual and deferred generic types, covariant add rejection, guest equality
+and hash collisions, lookup identity and insertion order. Set.from is unchanged.
+
+The ordinary suite passes 2013 tests with 63 skips. SDK-full reports 2521 passed,
+239 compile errors, 120 runtime failures and one unsupported fixture. Compared
+with the preceding checkpoint, ten more fixtures pass and no new failures appear.
+Eight additional stale expectation entries are removed, covering the generic Set
+constructor, for-in pattern checks and temporary-variable regressions. All ten
+removed fixtures pass a variant-aware recheck in fresh and serialized modes.
+SDK-tagged negative variants remain excluded by the suite's existing policy.
+
+Logs are cycle5-pass1-ordinary, cycle5-pass1-sdk-full and
+cycle5-sdk-removed-status-recheck. The full 22-driver AOT sweep completes with all
+21 execution checksums matching the accepted cycle4-unary-host baseline.
+Long ABBA repeats use dispatch at 2.5 million iterations, calls at one million
+and external_calls at 500,000, with 15 samples and affinity mask 4. Every repeat
+checksum matches. Calls and external_calls stay within about two percent of the
+baseline. Typed scalar dispatch is flat to 1.5 percent faster. Object-reference
+dispatch measures 3.6 to 7.7 percent slower, with large within-run ranges. This
+remains unresolved timing evidence for the next performance pass; the large
+initial sweep swings are not reported as improvements. Raw results and run order
+are in cycle5-final-aot-flagged-abba.
+
+Scoped analysis is clean across all nine changed production Dart files and three
+new language tests. Native initializer diagnostics also pass, confirming the
+ordering and lazy-field expectations used to prepare the next correctness pass.

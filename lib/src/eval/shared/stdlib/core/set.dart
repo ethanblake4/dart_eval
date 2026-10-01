@@ -16,11 +16,8 @@ class $Set<E> implements Set<E>, $Instance {
   int _checkOwnerType = -1;
 
   static void configureForRuntime(Runtime runtime) {
-    return runtime.registerBridgeFuncRegisters(
-      'dart:core',
-      'Set.from',
-      __$Set$from,
-    );
+    runtime.registerBridgeFuncRegisters('dart:core', 'Set.', __$Set$new);
+    runtime.registerBridgeFuncRegisters('dart:core', 'Set.from', __$Set$from);
   }
 
   static const $type = BridgeTypeRef(CoreTypes.set);
@@ -34,6 +31,18 @@ class $Set<E> implements Set<E>, $Instance {
       generics: {'E': BridgeGenericParam()},
     ),
     constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+          params: [],
+          generics: {'E': BridgeGenericParam()},
+        ),
+        isFactory: true,
+      ),
       'from': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
@@ -251,6 +260,14 @@ class $Set<E> implements Set<E>, $Instance {
     fields: {},
     wrap: true,
   );
+
+  static $Value? __$Set$new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Set<Object?>.wrap(
+      TypedCollections.newSet(runtime),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
+  }
 
   static $Value? __$Set$from(Runtime runtime, Object? r, Object? s, Object? c) {
     final other = (r as $Value?)?.$value as Iterable;

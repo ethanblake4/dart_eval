@@ -1,7 +1,10 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -116,6 +119,7 @@ TypeRef forEachIterableBound(
       p.identifier,
       ctx,
     ).resolveType(ctx),
+    ForEachPartsWithPattern p => patternTypeBound(ctx, p.pattern, source: p),
     _ => null,
   };
   return (await_ ? CoreTypes.stream : CoreTypes.iterable)
@@ -145,9 +149,7 @@ StatementInfo compileForEachLoop(
     );
   }
 
-  final elementType = interfaceArgumentsOf(itype).isEmpty
-      ? CoreTypes.dynamic.ref(ctx)
-      : interfaceArgumentsOf(itype)[0];
+  final elementType = _forEachElementType(ctx, itype);
 
   // Index pump for natively-held collections: each element is an index
   // read instead of `moveNext` + `current` bridge calls. Mutation during
@@ -227,7 +229,7 @@ StatementInfo _compileIteratorForEach(
   List<AstNode> assignedNamesScan = const [],
 }) {
   var iterator = GetTarget.read(ctx, iterable, 'iterator');
-  late Reference loopVariable;
+  late Reference? loopVariable;
 
   return macroLoop(
     ctx,
@@ -245,12 +247,12 @@ StatementInfo _compileIteratorForEach(
     body: body,
     assignedNamesScan: assignedNamesScan,
     update: (ctx) {
-      if (parts is ForEachPartsWithDeclaration) {
-        ctx
-            .lookupBinding(parts.loopVariable.name.lexeme)!
-            .renewCaptureCell(ctx);
-      }
-      loopVariable.setValue(ctx, GetTarget.read(ctx, iterator, 'current'));
+      _bindForEachElement(
+        ctx,
+        parts,
+        loopVariable,
+        () => GetTarget.read(ctx, iterator, 'current'),
+      );
     },
     updateBeforeBody: true,
   );
@@ -291,9 +293,7 @@ StatementInfo compileAwaitForLoop(
       ctx,
     );
   }
-  final elementType = interfaceArgumentsOf(itype).isEmpty
-      ? CoreTypes.dynamic.ref(ctx)
-      : interfaceArgumentsOf(itype)[0];
+  final elementType = _forEachElementType(ctx, itype, await_: true);
   final itType = AsyncTypes.streamIterator.ref(ctx);
   final externalId =
       ctx.bridgeStaticFunctionIndices[itType.file]!['StreamIterator.']!;
@@ -308,7 +308,7 @@ StatementInfo compileAwaitForLoop(
   final iteratorName = ctx.svar('awaitfor_iterator').name;
   ctx.setLocal(iteratorName, iterator);
   final completer = ctx.lookupLocal('#completer')!;
-  late Reference loopVariable;
+  late Reference? loopVariable;
 
   return compileTryFinally(
     ctx,
@@ -318,49 +318,7 @@ StatementInfo compileAwaitForLoop(
       ctx,
       expectedReturnType,
       initialization: (ctx) {
-        if (parts is ForEachPartsWithDeclaration) {
-          final declaredType = parts.loopVariable.type == null
-              ? CoreTypes.dynamic.ref(ctx)
-              : TypeRef.fromAnnotation(
-                  ctx,
-                  ctx.library,
-                  parts.loopVariable.type!,
-                );
-          if (parts.loopVariable.type != null &&
-              !elementType.isAssignableTo(ctx, declaredType)) {
-            throw CompileError(
-              'Cannot assign $elementType to ${parts.loopVariable.type}',
-              parts,
-              ctx.library,
-              ctx,
-            );
-          }
-          final name = parts.loopVariable.name.lexeme;
-          final bindingType = parts.loopVariable.type == null
-              ? elementType
-              : declaredType;
-          ctx
-              .setLocal(
-                name,
-                BuiltinValue()
-                    .push(ctx)
-                    .copyWith(type: elementType, rep: ValueRep.boxed),
-                declaredType: bindingType,
-              )
-              .captureBinding(ctx, parts.loopVariable);
-          loopVariable = IdentifierReference(null, name);
-        } else if (parts is ForEachPartsWithIdentifier) {
-          loopVariable = compileExpressionAsReference(parts.identifier, ctx);
-          final type = loopVariable.resolveType(ctx);
-          if (!elementType.isAssignableTo(ctx, type)) {
-            throw CompileError(
-              'Cannot assign $elementType to $type',
-              parts,
-              ctx.library,
-              ctx,
-            );
-          }
-        }
+        loopVariable = _declareForEachVariable(ctx, parts, elementType);
       },
       condition: (ctx) {
         final moveNext = CallResolver(
@@ -385,14 +343,11 @@ StatementInfo compileAwaitForLoop(
       body: body,
       assignedNamesScan: [node],
       update: (ctx) {
-        if (parts is ForEachPartsWithDeclaration) {
-          ctx
-              .lookupBinding(parts.loopVariable.name.lexeme)!
-              .renewCaptureCell(ctx);
-        }
-        loopVariable.setValue(
+        _bindForEachElement(
           ctx,
-          GetTarget.read(ctx, ctx.lookupLocal(iteratorName)!, 'current'),
+          parts,
+          loopVariable,
+          () => GetTarget.read(ctx, ctx.lookupLocal(iteratorName)!, 'current'),
         );
       },
       updateBeforeBody: true,
@@ -421,11 +376,12 @@ StatementInfo compileAwaitForLoop(
 
 /// Declares the `for-in` loop variable (or resolves the assignment target
 /// for an identifier loop) and returns the reference each iteration writes.
-Reference _declareForEachVariable(
+Reference? _declareForEachVariable(
   CompilerContext ctx,
   ForEachParts parts,
   TypeRef elementType,
 ) {
+  if (parts is ForEachPartsWithPattern) return null;
   if (parts is ForEachPartsWithDeclaration) {
     final declaredType = parts.loopVariable.type == null
         ? CoreTypes.dynamic.ref(ctx)
@@ -471,6 +427,44 @@ Reference _declareForEachVariable(
   throw StateError('Unsupported for-in parts $parts');
 }
 
+TypeRef _forEachElementType(
+  CompilerContext ctx,
+  TypeRef type, {
+  bool await_ = false,
+}) {
+  final view = ctx.typeSystem.asInstanceOf(
+    type,
+    ctx.types.bySpec(await_ ? CoreTypes.stream : CoreTypes.iterable),
+  );
+  final arguments = interfaceArgumentsOf(view ?? type);
+  return arguments.isEmpty ? CoreTypes.dynamic.ref(ctx) : arguments.first;
+}
+
+/// Pattern declarations live in the body scope and create fresh capture cells
+/// each iteration. Ordinary declarations renew their cells before reading current.
+void _bindForEachElement(
+  CompilerContext ctx,
+  ForEachParts parts,
+  Reference? target,
+  Variable Function() readElement,
+) {
+  if (parts is ForEachPartsWithPattern) {
+    compileIrrefutablePattern(
+      ctx,
+      parts.pattern,
+      readElement(),
+      patternContext: parts.keyword.keyword == Keyword.FINAL
+          ? PatternBindContext.forEachFinal
+          : PatternBindContext.forEach,
+    );
+    return;
+  }
+  if (parts is ForEachPartsWithDeclaration) {
+    ctx.lookupBinding(parts.loopVariable.name.lexeme)!.renewCaptureCell(ctx);
+  }
+  target!.setValue(ctx, readElement());
+}
+
 /// `for-in` over a natively-held `List`/`Set`: an index pump in place of
 /// the `iterator`/`moveNext`/`current` protocol calls.
 StatementInfo _compileIndexForEach(
@@ -499,7 +493,7 @@ StatementInfo _compileIndexForEach(
     rep: ValueRep.int,
   );
   late LocalBinding index;
-  late Reference loopVariable;
+  late Reference? loopVariable;
 
   return macroLoop(
     ctx,
@@ -528,14 +522,11 @@ StatementInfo _compileIndexForEach(
       rep: ValueRep.bool,
     ),
     body: (ctx, ert) {
-      if (parts is ForEachPartsWithDeclaration) {
-        ctx
-            .lookupBinding(parts.loopVariable.name.lexeme)!
-            .renewCaptureCell(ctx);
-      }
-      loopVariable.setValue(
+      _bindForEachElement(
         ctx,
-        Variable.ssa(
+        parts,
+        loopVariable,
+        () => Variable.ssa(
           ctx,
           IndexList(
             ctx.svar('for_each_element'),

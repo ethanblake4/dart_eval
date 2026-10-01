@@ -32,7 +32,8 @@ void compileIrrefutablePattern(
   final failure = BasicBlock<Operation>([], label: ctx.label('pattern_failed'));
   final matching = _PatternCondition(ctx, state, failure);
   var value = subject.copyIntoFreshSlot(ctx, 'pattern_value');
-  if (value.type.isSpec(CoreTypes.dynamic)) {
+  if (patternContext.usesAssignmentContext &&
+      value.type.isSpec(CoreTypes.dynamic)) {
     value = convertForAssignment(
       ctx,
       value,

@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_closure.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_host_collections.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 
 import 'stream_subscription.dart';
 
@@ -362,10 +363,7 @@ class $Stream implements $Instance {
           params: [
             BridgeParameter(
               'futureValue',
-              BridgeTypeAnnotation(
-                BridgeTypeRef.ref('S'),
-                nullable: true,
-              ),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S'), nullable: true),
               true,
             ),
           ],
@@ -395,9 +393,7 @@ class $Stream implements $Instance {
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
             ]),
           ),
-          params: [
-            BridgeParameter('test', _predicate, false),
-          ],
+          params: [BridgeParameter('test', _predicate, false)],
         ),
       ),
       'expand': BridgeMethodDef(
@@ -712,9 +708,7 @@ class $Stream implements $Instance {
               BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
             ]),
           ),
-          params: [
-            BridgeParameter('test', _predicate, false),
-          ],
+          params: [BridgeParameter('test', _predicate, false)],
         ),
       ),
       'take': BridgeMethodDef(
@@ -740,9 +734,7 @@ class $Stream implements $Instance {
               BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
             ]),
           ),
-          params: [
-            BridgeParameter('test', _predicate, false),
-          ],
+          params: [BridgeParameter('test', _predicate, false)],
         ),
       ),
       'timeout': BridgeMethodDef(
@@ -823,9 +815,7 @@ class $Stream implements $Instance {
               BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
             ]),
           ),
-          params: [
-            BridgeParameter('test', _predicate, false),
-          ],
+          params: [BridgeParameter('test', _predicate, false)],
         ),
       ),
     },
@@ -909,7 +899,10 @@ class $Stream implements $Instance {
     Object? s,
     Object? c,
   ) {
-    return $Stream.wrap(Stream.fromIterable((r as $Value).$value as Iterable));
+    final values = r is TypedInstance
+        ? TypedInterop.exportIterable<Object?>(r, runtime)
+        : (r as $Value).$value as Iterable;
+    return $Stream.wrap(Stream.fromIterable(values));
   }
 
   /// Creates a new [$Stream] that runs periodically
@@ -1246,7 +1239,8 @@ class $Stream implements $Instance {
       (() async => $bool(
         await $target.$value.every(
           (event) =>
-              test.call(runtime, null, runtime.wrap(event), null, 1)!.$value as bool,
+              test.call(runtime, null, runtime.wrap(event), null, 1)!.$value
+                  as bool,
         ),
       ))(),
       runtime: runtime,
@@ -1480,11 +1474,7 @@ class $Stream implements $Instance {
         // `Future<List<T>>` receiver sees the declared element type.
         (values) => listId == null
             ? runtime.wrap(values, recursive: true)
-            : TypedHostCollections.box(
-                values,
-                runtime,
-                runtimeTypeId: listId,
-              ),
+            : TypedHostCollections.box(values, runtime, runtimeTypeId: listId),
       ),
       runtime: runtime,
       runtimeTypeId: $target._typedFutureId(runtime, [CoreTypes.list]),
@@ -1509,11 +1499,7 @@ class $Stream implements $Instance {
       $target.$value.toSet().then(
         (values) => setId == null
             ? runtime.wrap(values, recursive: true)
-            : TypedHostCollections.box(
-                values,
-                runtime,
-                runtimeTypeId: setId,
-              ),
+            : TypedHostCollections.box(values, runtime, runtimeTypeId: setId),
       ),
       runtime: runtime,
       runtimeTypeId: $target._typedFutureId(runtime, [CoreTypes.set]),
@@ -1734,10 +1720,7 @@ class $Stream implements $Instance {
     }
     return runtimeTypeId == null
         ? runtime.lookupType($type.spec!)
-        : runtime.importRuntimeType(
-            this.runtime ?? runtime,
-            runtimeTypeId!,
-          );
+        : runtime.importRuntimeType(this.runtime ?? runtime, runtimeTypeId!);
   }
 
   /// This stream's `T` viewed through [runtime]'s descriptor table, or null

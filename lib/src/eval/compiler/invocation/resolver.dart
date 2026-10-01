@@ -2039,6 +2039,13 @@ void _inferBridgeTypeParameters(
               existing.parameter.owner.kind ==
                   TypeParameterOwnerKind.callSite)) {
         inferred[reference] = actual;
+      } else if (existing.hasSchemaHoles) {
+        // Argument inference completes a partial context without replacing
+        // its declared components with unrelated argument types.
+        inferred[reference] = ctx.typeSystem.greatestLowerBound(
+          existing,
+          actual,
+        );
       }
       return;
     }
@@ -2049,7 +2056,10 @@ void _inferBridgeTypeParameters(
       return;
     }
     final formalArguments = formal.typeArgs;
-    final actualArguments = interfaceArgumentsOf(actual);
+    final actualView = formalArguments.isEmpty || spec == null
+        ? actual
+        : ctx.typeSystem.asInstanceOf(actual, ctx.types.bySpec(spec)) ?? actual;
+    final actualArguments = interfaceArgumentsOf(actualView);
     for (
       var index = 0;
       index < formalArguments.length && index < actualArguments.length;
@@ -2066,6 +2076,7 @@ void _inferBridgeTypeParameters(
   ) {
     infer(function.params[index].type.type, arguments[index].type);
   }
+  inferred.updateAll((_, type) => ctx.typeSystem.closeSchemaHoles(type));
 }
 
 TypeRef instantiateConstructorType(

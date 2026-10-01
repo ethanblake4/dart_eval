@@ -21,7 +21,25 @@ import '../statement/statement.dart';
 import 'conversion.dart';
 import 'type_check.dart';
 
-enum PatternBindContext { none, declare, declareFinal, matching }
+enum PatternBindContext {
+  none,
+  declare,
+  declareFinal,
+  matching,
+  forEach,
+  forEachFinal;
+
+  bool get declares =>
+      this == declare ||
+      this == declareFinal ||
+      this == forEach ||
+      this == forEachFinal;
+
+  bool get isFinal => this == declareFinal || this == forEachFinal;
+
+  bool get usesAssignmentContext =>
+      this != matching && this != forEach && this != forEachFinal;
+}
 
 /// The success edge continues matching; failures select the next alternative.
 abstract interface class PatternMatchContinuation {
@@ -336,8 +354,7 @@ Variable _matchPattern(
     case VariablePattern pat:
       final variableName = pat.name.lexeme;
       final declare =
-          patternContext == PatternBindContext.declare ||
-          patternContext == PatternBindContext.declareFinal ||
+          patternContext.declares ||
           (patternContext == PatternBindContext.matching &&
               pat is DeclaredVariablePattern);
       if (declare &&
@@ -349,7 +366,7 @@ Variable _matchPattern(
         );
       }
       final isFinal =
-          patternContext == PatternBindContext.declareFinal ||
+          patternContext.isFinal ||
           (pat is DeclaredVariablePattern &&
               pat.keyword != null &&
               pat.keyword!.keyword == Keyword.FINAL);
@@ -551,7 +568,7 @@ Variable _matchListPattern(
   PatternMatchContinuation? continuation,
 ) {
   final requiredContext =
-      patternContext != PatternBindContext.matching &&
+      patternContext.usesAssignmentContext &&
           value.type.isSpec(CoreTypes.dynamic)
       ? ctx.typeSystem.closeSchemaHoles(patternTypeBound(ctx, pattern))
       : value.type;
@@ -643,7 +660,7 @@ Variable _matchMapPattern(
     throw CompileError('Map patterns require key/value entries', pattern);
   }
   final requiredContext =
-      patternContext != PatternBindContext.matching &&
+      patternContext.usesAssignmentContext &&
           subject.type.isSpec(CoreTypes.dynamic)
       ? ctx.typeSystem.closeSchemaHoles(patternTypeBound(ctx, pattern))
       : subject.type;
@@ -778,7 +795,7 @@ Variable _typeTestType(
   // IsType takes an object operand; box into a fresh slot so V's own SSA
   // keeps its (possibly unboxed) representation for other uses.
   final operand = V.boxed ? V : V.boxIntoFreshSlot(ctx);
-  if (patternContext != PatternBindContext.matching) {
+  if (patternContext.usesAssignmentContext) {
     compileTypeAssertion(ctx, operand, slot);
     return BuiltinValue(boolval: true).push(ctx);
   }
