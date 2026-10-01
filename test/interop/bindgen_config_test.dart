@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:dart_eval/src/eval/bindgen/bindgen.dart';
 import 'package:dart_eval/src/eval/bindgen/config.dart';
+import 'package:dart_eval/src/eval/bindgen/errors.dart';
 import 'package:test/test.dart';
 
 const _widgetYaml = '''
@@ -14,6 +15,11 @@ libraries:
     classes:
       Widget:
         include: true
+        constructors:
+          "":
+            permissions:
+              - name: math.scale
+                paramData: count
         excludeMembers: [describe]
         methods:
           scale:
@@ -31,6 +37,12 @@ libraries:
         getters:
           size:
             hook: widgetSize
+        statics:
+          zero:
+            expr: '\$Widget.wrap(Widget.zero())'
+            permissions:
+              - name: math.scale
+                constData: static
         synthetic:
           - kind: method
             name: bump
@@ -43,6 +55,9 @@ libraries:
       makeWidget:
         include: true
         hook: makeWidget
+        permissions:
+          - name: math.scale
+            paramData: count
       ignored:
         include: false
 ''';
@@ -89,6 +104,18 @@ void main() {
       expect(lib.functions['makeWidget']!.hook, 'makeWidget');
       expect(lib.functions['ignored']!.include, isFalse);
     });
+
+    test('unnamed constructor aliases do not configure named constructors', () {
+      for (final name in ['', 'new']) {
+        final config = BindgenConfig.parse(
+          _widgetYaml.replaceFirst('"":', '"$name":'),
+        )..resolveDefaults();
+        final widget = config.libraries.single.classes['Widget']!;
+        expect(widget.memberConfig('constructor', ''), isNotNull);
+        expect(widget.memberConfig('constructor', 'new'), isNotNull);
+        expect(widget.memberConfig('constructor', 'named'), isNull);
+      }
+    });
   });
 
   group('config-driven generation', () {
@@ -121,7 +148,12 @@ void main() {
       expect(generated, isNot(contains('describe')));
 
       // permission assertion with param data
-      expect(generated, contains("runtime.assertPermission('math.scale'"));
+      expect(
+        generated,
+        contains(
+          "runtime.assertPermission('math.scale', Runtime.permissionData(",
+        ),
+      );
 
       // parameter-dependent return type emitted into the declaration
       expect(
@@ -150,6 +182,63 @@ void main() {
       // generated code uses the register ABI for bridge functions
       expect(generated, contains('registerBridgeFuncRegisters'));
       expect(generated, contains('callRegisters'));
+    });
+
+    test('rejects invalid permission parameter references', () async {
+      final directory = Directory(
+        'test',
+      ).absolute.createTempSync('bindgen_perm_invalid_');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final source = File(p.join(directory.path, 'widget.dart'))
+        ..writeAsStringSync(_widgetSource);
+      for (final invalid in ['missing', 'factor..path']) {
+        final config = BindgenConfig.parse(
+          _widgetYaml.replaceFirst('paramData: factor', 'paramData: $invalid'),
+        )..resolveDefaults();
+        expect(
+          () => Bindgen().parse(
+            source,
+            'widget.dart',
+            'package:bindcfg/widget.dart',
+            false,
+            config: config,
+            libraryConfig: config.libraries.single,
+          ),
+          throwsA(isA<BindingGenerationError>()),
+        );
+      }
+    });
+
+    test('unnamed constructor permission accepts the empty YAML key', () async {
+      final directory = Directory(
+        'test',
+      ).absolute.createTempSync('bindgen_perm_ctor_');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final source = File(p.join(directory.path, 'api.dart'))
+        ..writeAsStringSync('class Api { Api(String url); }');
+      final config = BindgenConfig.parse('''
+libraries:
+  - uri: package:bindcfg/api.dart
+    classes:
+      Api:
+        constructors:
+          "":
+            permissions:
+              - name: network
+                paramData: url
+''')..resolveDefaults();
+      final generated = (await Bindgen().parse(
+        source,
+        'api.dart',
+        'package:bindcfg/api.dart',
+        false,
+        config: config,
+        libraryConfig: config.libraries.single,
+      ))!;
+      expect(
+        generated,
+        contains("runtime.assertPermission('network', Runtime.permissionData("),
+      );
     });
 
     test('generated bindings run hooks and permissions', () async {
@@ -190,9 +279,7 @@ $Value? makeWidget(Runtime runtime, $Value? target, List<$Value?> args) =>
         libraryConfig: config.libraries.single,
       ))!;
 
-      File(
-        p.join(directory.path, 'widget.eval.dart'),
-      ).writeAsStringSync('''
+      File(p.join(directory.path, 'widget.eval.dart')).writeAsStringSync('''
 import 'widget.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -216,9 +303,17 @@ void main() {
   $Widget.configureForRuntime(runtime);
   $makeWidgetFn.configureForRuntime(runtime);
 
-  // constructor (const ctor → factory form)
-  final w = $Widget.$new(runtime, $int(4), null, null)! as $Widget;
-  check(w.$value.count == 4);
+  // Unnamed constructor and hook-backed function both enforce permissions.
+  var constructorDenied = false;
+  try { $Widget.$new(runtime, $int(4), null, null); } catch (_) { constructorDenied = true; }
+  check(constructorDenied);
+  var functionDenied = false;
+  try { $makeWidgetFn.callRegisters(runtime, $int(1), null, null); } catch (_) { functionDenied = true; }
+  check(functionDenied);
+  var staticDenied = false;
+  try { $Widget.$zero(runtime, null, null, null); } catch (_) { staticDenied = true; }
+  check(staticDenied);
+  final w = $Widget.wrap(const Widget(4));
 
   // renamed + permission-asserted method
   var denied = false;
@@ -231,6 +326,10 @@ void main() {
   check(denied);
 
   runtime.grant(AllowScale());
+  final created = $Widget.$new(runtime, $int(4), null, null)! as $Widget;
+  check(created.$value.count == 4);
+  final zero = $Widget.$zero(runtime, null, null, null)! as $Widget;
+  check(zero.$value.count == 0);
   final scaled = (w.$getProperty(runtime, 'scaled') as EvalCallable)
       .call(runtime, w, $int(3), $int(0), 2)!;
   check(scaled.$value == 12);

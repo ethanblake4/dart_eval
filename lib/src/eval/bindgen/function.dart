@@ -25,13 +25,13 @@ String _function(BindgenContext ctx, ExecutableElement element) {
   } else {
     body =
         '''
-          ${registerArgumentPreamble(element.formalParameters)}
-          ${assertConfigPermissions(ctx, member, element.formalParameters.map((p) => p.name ?? '').toList(), paramCount: element.formalParameters.length)}
           ${returnsValue ? 'final result = ' : ''}${element.displayName}(${argumentAccessors(ctx, element.formalParameters, registers: true, member: member).join(', ')});
           return ${wrapVar(ctx, element.returnType, 'result', unionTypeNames: member?.returns?.union)};''';
   }
   return '''
         static \$Value? callRegisters(Runtime runtime, Object? r, Object? s, Object? c) {
+          ${registerArgumentPreamble(element.formalParameters)}
+          ${assertConfigPermissions(ctx, member, element.formalParameters, paramCount: element.formalParameters.length)}
           $body
         }''';
 }

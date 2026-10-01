@@ -458,7 +458,14 @@ class BindgenClassConfig {
     'getter' => getters[name],
     'setter' => setters[name],
     'field' => fields[name],
-    'constructor' => constructors[name] ?? statics[name],
+    'constructor' =>
+      constructors[name] ??
+          (name == 'new'
+              ? constructors['']
+              : name.isEmpty
+              ? constructors['new']
+              : null) ??
+          statics[name],
     'static' => statics[name],
     _ => null,
   };

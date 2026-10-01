@@ -55,7 +55,7 @@ String $methods(BindgenContext ctx, InterfaceElement element) {
         static const \$Function __${op.name} = \$Function(_${op.name});
         static \$Value? _${op.name}(Runtime runtime, \$Value? target, Object? r, Object? s, Object? c) {
           ${assertMethodPermissions(e, callable: true)}
-          ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList(), callable: true)}
+          ${assertConfigPermissions(ctx, member, e.formalParameters, callable: true)}
           $body
         }''';
       })

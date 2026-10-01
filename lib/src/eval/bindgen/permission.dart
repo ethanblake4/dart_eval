@@ -1,38 +1,80 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/errors.dart';
 import 'parameters.dart';
 
 /// Emit `runtime.assertPermission(...)` for YAML `permissions:` entries.
-/// [paramNames] is the declaration-order parameter name list used to resolve
+/// [parameters] is the declaration-order parameter list used to resolve
 /// `paramData` references.
 String assertConfigPermissions(
   BindgenContext ctx,
   BindgenMemberConfig? member,
-  List<String> paramNames, {
+  List<FormalParameterElement> parameters, {
   bool callable = false,
   int paramCount = 0,
 }) {
   if (member == null || member.permissions.isEmpty) return '';
   String output = '';
   for (final permission in member.permissions) {
+    if (permission.name.isEmpty) {
+      throw const BindingGenerationError('Permission name cannot be empty');
+    }
     String data = '';
     if (permission.constData != null) {
-      data = ", '${permission.constData}'";
+      data = ", '${_dartLiteral(permission.constData!)}'";
     } else if (permission.paramData != null) {
-      final index = paramNames.indexOf(permission.paramData!);
-      if (index != -1) {
-        final count = paramCount == 0 ? paramNames.length : paramCount;
-        final source = callable
-            ? callSlotSource(index)
-            : registerArgumentSource(index, count);
-        data = ', $source?.\$value';
+      final path = permission.paramData!.split('.');
+      if (path.isEmpty ||
+          path.any(
+            (segment) => !RegExp(r'^[A-Za-z_][A-Za-z_0-9]*$').hasMatch(segment),
+          )) {
+        throw BindingGenerationError(
+          'Invalid permission paramData ${permission.paramData}',
+        );
       }
+      final index = parameters.indexWhere((p) => p.name == path.first);
+      if (index == -1) {
+        throw BindingGenerationError(
+          'Permission paramData ${permission.paramData} does not name a parameter',
+        );
+      }
+      final count = paramCount == 0 ? parameters.length : paramCount;
+      final source = callable
+          ? callRawSlotSource(index, optional: parameters[index].isOptional)
+          : registerRawArgumentSource(
+              index,
+              count,
+              optional: parameters[index].isOptional,
+            );
+      var value = 'Runtime.permissionData($source)';
+      if (path.length > 1) {
+        final type = parameters[index].type;
+        final typeName = type.element?.name;
+        if (typeName == null) {
+          throw BindingGenerationError(
+            'Permission paramData ${permission.paramData} needs a named parameter type',
+          );
+        }
+        final library = type.element?.library?.uri.toString();
+        if (library != null && library != ctx.uri && library != 'dart:core') {
+          ctx.imports.add(library);
+        }
+        value =
+            '($value as $typeName?)${path.skip(1).map((segment) => '?.$segment').join()}';
+      }
+      data = ', $value';
     }
-    output += "runtime.assertPermission('${permission.name}'$data);";
+    output +=
+        "runtime.assertPermission('${_dartLiteral(permission.name)}'$data);";
   }
   return output;
 }
+
+String _dartLiteral(String value) => value
+    .replaceAll(r'\', r'\\')
+    .replaceAll("'", r"\'")
+    .replaceAll(r'$', r'\$');
 
 String assertMethodPermissions(MethodElement element, {bool callable = false}) {
   final metadata = element.metadata;

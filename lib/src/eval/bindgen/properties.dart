@@ -93,7 +93,7 @@ String propertyGetters(
         case '${operatorMemberName(member?.rename ?? e.name!, e.formalParameters.length)}':
           return \$Function((runtime, target, r, s, c) {
             ${assertMethodPermissions(e, callable: true)}
-            ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList(), callable: true)}
+            ${assertConfigPermissions(ctx, member, e.formalParameters, callable: true)}
             ${returnsValue ? 'final result = ' : ''}${callOp.format('super', argumentAccessors(ctx, e.formalParameters, callable: true, exportValues: true, member: member))};
             return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union, runtimeTypeOwner: 'bridge')};
           });''';

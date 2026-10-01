@@ -261,6 +261,11 @@ class Runtime {
     }
   }
 
+  /// Permission inputs may arrive through the boxed interpreter ABI or as
+  /// native values through the typed ABI. Compare rules against host values.
+  static Object? permissionData(Object? value) =>
+      value is $Value ? value.$reified : value;
+
   /// Attempt to wrap a Dart primitive value into a [$Value].
   /// This is needed because Dart primitives cannot be implemented or extended,
   /// so creating a [bimodal wrapper](https://github.com/ethanblake4/dart_eval/wiki/Wrappers#bimodal-wrappers)

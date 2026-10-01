@@ -64,16 +64,15 @@ String _$constructor(
     final invocation =
         '$fullyQualifiedConstructorId('
         '${argumentAccessors(ctx, constructor.formalParameters, registers: true, exportValues: bridgeFactory, member: member).join(', ')})';
-    body =
-        '''
-    ${registerArgumentPreamble(constructor.formalParameters)}
-    ${assertConfigPermissions(ctx, member, constructor.formalParameters.map((p) => p.name ?? '').toList(), paramCount: constructor.formalParameters.length)}
+    body = '''
     ${bridgeFactory ? 'final result = $invocation; return ${wrapVar(ctx, element.thisType, 'result')};' : 'return ${isBridge ? invocation : '\$${element.name}.wrap($invocation)'};'}''';
   }
 
   return '''
   /// ${isBridge ? 'Proxy' : 'Wrapper'} for the [${element.name}.$name] constructor
   static \$Value? ${memberWrapperName(name)}($_signature) {
+    ${registerArgumentPreamble(constructor.formalParameters)}
+    ${assertConfigPermissions(ctx, member, constructor.formalParameters, paramCount: constructor.formalParameters.length)}
     $body
   }
 ''';
@@ -138,9 +137,6 @@ String _$staticMethod(
   } else {
     body =
         '''
-    ${registerArgumentPreamble(method.formalParameters)}
-    ${assertMethodPermissions(method)}
-    ${assertConfigPermissions(ctx, member, method.formalParameters.map((p) => p.name ?? '').toList(), paramCount: method.formalParameters.length)}
     ${method.returnType is VoidType ? '' : 'final value = '}${element.name}.${method.name}(
       ${argumentAccessors(ctx, method.formalParameters, registers: true, member: member).join(', ')}
     );
@@ -150,6 +146,9 @@ String _$staticMethod(
   return '''
   /// Wrapper for the [${element.name}.${method.name}] method
   static \$Value? ${memberWrapperName(name)}($_signature) {
+    ${registerArgumentPreamble(method.formalParameters)}
+    ${assertMethodPermissions(method)}
+    ${assertConfigPermissions(ctx, member, method.formalParameters, paramCount: method.formalParameters.length)}
     $body
   }
 ''';
