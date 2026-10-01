@@ -120,26 +120,19 @@ String argumentAccessor(
       }
       final q = (param.isRequired ? '' : '?');
       final call = (param.isRequired ? '' : '?.call');
-      final wrapped = [
-        for (var j = 0; j < type.formalParameters.length; j++)
-          if (exportValues &&
-              (type.formalParameters[j].type.isDartCoreObject ||
-                  type.formalParameters[j].type is TypeParameterType ||
-                  type.formalParameters[j].type is DynamicType))
-            wrapBridgeValue(ctx, type.formalParameters[j].name == null ||
-                    type.formalParameters[j].name!.isEmpty
-                ? 'arg$j'
-                : type.formalParameters[j].name!)
-          else wrapVar(
-            ctx,
-            type.formalParameters[j].type,
-            type.formalParameters[j].name == null ||
-                    type.formalParameters[j].name!.isEmpty
-                ? 'arg$j'
-                : type.formalParameters[j].name!,
-            forCollection: true,
-          ),
-      ];
+      final wrapped = type.formalParameters.indexed.map((entry) {
+        final (index, parameter) = entry;
+        final name = parameter.name ?? '';
+        final value = name.isEmpty ? 'arg$index' : name;
+        return exportValues
+            ? wrapBridgeArgument(
+                ctx,
+                parameter.type,
+                value,
+                forCollection: true,
+              )
+            : wrapVar(ctx, parameter.type, value, forCollection: true);
+      });
       final exprs = wrapped.map((e) => _asExpression(e!)).toList();
       final callableArgs = switch (exprs.length) {
         0 => 'null, null, 0',

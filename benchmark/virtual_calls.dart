@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed.dart';
 
 // Measures instance-method dispatch: direct Call vs InvokeDynamic.
 // Run with: dart compile exe benchmark/virtual_calls.dart -o virtual_calls.exe

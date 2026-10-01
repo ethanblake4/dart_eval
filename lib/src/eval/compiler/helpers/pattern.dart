@@ -615,12 +615,7 @@ Variable _matchListPattern(
               BuiltinValue(intval: pattern.elements.length - i).push(ctx),
             ]).result
           : BuiltinValue(intval: i).push(ctx);
-      final nativeList =
-          value.rep == ValueRep.nativeList ||
-          value.exactType?.isSpec(CoreTypes.list) == true;
-      input = nativeList
-          ? IndexedReference(value, index).getValue(ctx)
-          : CallResolver(ctx).invokeOperator(value, '[]', [index]).result;
+      input = IndexedReference(value, index).getValue(ctx);
     }
     final matched = patternMatchAndBind(
       ctx,

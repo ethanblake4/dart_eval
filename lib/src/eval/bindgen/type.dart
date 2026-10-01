@@ -269,16 +269,18 @@ String? wrapType(
     // `recursive: true` preserves collection type witnesses (e.g. the
     // `Map<String, dynamic>` runtime type produced by `json.decode`), which
     // downstream `AssertType` conversions rely on.
-    return unionStr + (runtimeTypeOwner == 'bridge'
-        ? wrapBridgeValue(ctx, expr)
-        : 'runtime.wrapAlways($expr, recursive: true)');
+    return unionStr +
+        (runtimeTypeOwner == 'bridge'
+            ? wrapBridgeValue(ctx, expr)
+            : 'runtime.wrapAlways($expr, recursive: true)');
   }
 
   // Erased type parameters of the generic wrapper — dispatch on runtime type.
   if (type is TypeParameterType) {
-    return unionStr + (runtimeTypeOwner != null
-        ? wrapBridgeValue(ctx, expr)
-        : 'runtime.wrapAlways($expr, recursive: true)');
+    return unionStr +
+        (runtimeTypeOwner != null
+            ? wrapBridgeValue(ctx, expr)
+            : 'runtime.wrapAlways($expr, recursive: true)');
   }
 
   if (type is FunctionType) {
@@ -478,11 +480,23 @@ String? wrapType(
 /// Box erased SDK values without copying collection aliases.
 /// Exported collection views already have an identity-preserving box cache.
 String wrapBridgeValue(BindgenContext ctx, String expr) {
-  ctx.imports.add('package:dart_eval/src/eval/runtime/typed/typed_interop.dart');
+  ctx.imports.add(
+    'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+  );
   return '($expr is List || $expr is Map || $expr is Set '
       '? TypedInterop.boxExternal($expr, runtime: runtime)! '
       ': runtime.wrapAlways($expr))';
 }
+
+/// Arguments crossing from native SDK code retain erased collection aliases.
+String? wrapBridgeArgument(
+  BindgenContext ctx,
+  DartType type,
+  String expr, {
+  bool forCollection = false,
+}) => type.isDartCoreObject || type is TypeParameterType || type is DynamicType
+    ? wrapBridgeValue(ctx, expr)
+    : wrapVar(ctx, type, expr, forCollection: forCollection);
 
 String _typeArgumentMetadata(
   BindgenContext ctx,

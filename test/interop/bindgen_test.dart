@@ -1,9 +1,124 @@
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:dart_eval/src/eval/bindgen/bindgen.dart';
+import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test(
+    'nullable iterable bridge getters export once and preserve null',
+    () async {
+      final directory = Directory(
+        'test',
+      ).absolute.createTempSync('bindgen_nullable_');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final source = File(p.join(directory.path, 'native.dart'))
+        ..writeAsStringSync('''
+class NullableSource<T> {
+  NullableSource();
+  Iterable<T>? get items => null;
+  Iterator<T>? get cursor => null;
+  Iterable<T>? values() => null;
+}
+''');
+      final config = BindgenConfig.parse('''
+version: 1
+defaults:
+  mode: bridge
+libraries:
+  - uri: package:bindgen/native.dart
+    classes:
+      NullableSource:
+        include: true
+''')..resolveDefaults();
+      final generated = (await Bindgen().parse(
+        source,
+        'native.dart',
+        'package:bindgen/native.dart',
+        false,
+        config: config,
+        libraryConfig: config.libraries.single,
+      ))!;
+      File(p.join(directory.path, 'native.eval.dart')).writeAsStringSync('''
+import 'native.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+$generated
+''');
+      File(p.join(directory.path, 'run.dart')).writeAsStringSync(r"""
+import 'native.eval.dart';
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart' show BridgeData;
+import 'package:dart_eval/stdlib/core.dart';
+
+class Probe<T> extends $NullableSource$bridge<T> {
+  $Value? response;
+  int reads = 0;
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    reads++;
+    return response;
+  }
+}
+void check(bool condition) {
+  if (!condition) throw StateError('Nullable bridge export assertion failed');
+}
+void main() {
+  final compiler = Compiler()
+    ..entrypoints.add('package:main/main.dart')
+    ..defineBridgeClass($NullableSource$bridge.$declaration);
+  final program = compiler.compile({'main': {'main.dart': '''
+    import 'package:bindgen/native.dart';
+    class Cursor implements Iterator<int> {
+      int index = -1;
+      bool moveNext() { index++; return index < 2; }
+      int get current => index + 4;
+    }
+    class Items implements Iterable<int> {
+      Iterator<int> get iterator => Cursor();
+      dynamic noSuchMethod(Invocation invocation) => throw StateError('unused');
+    }
+    Iterable<int> main() => Items();
+    Iterator<int> cursor() => Cursor();
+  '''}});
+  for (final runtime in [Runtime.ofProgram(program), Runtime(program.write().buffer)]) {
+    final probe = Probe<int>();
+    // The overridden getters only need the defining runtime.
+    Runtime.bridgeData[probe] = BridgeData(runtime, 0, null);
+    for (final value in <$Value?>[null, const $null()]) {
+      probe.response = value;
+      probe.reads = 0;
+      check(probe.items == null && probe.reads == 1);
+      probe.reads = 0;
+      check(probe.cursor == null && probe.reads == 1);
+      probe.response = $Function((runtime, target, r, s, c) => value);
+      probe.reads = 0;
+      check(probe.values() == null && probe.reads == 1);
+    }
+    probe.response = runtime.executeLib('package:main/main.dart', 'main') as $Value;
+    probe.reads = 0;
+    check(probe.items!.join(',') == '4,5' && probe.reads == 1);
+    probe.response = runtime.executeLib('package:main/main.dart', 'cursor') as $Value;
+    probe.reads = 0;
+    final iterator = probe.cursor!;
+    check(probe.reads == 1);
+    check(iterator.moveNext() && iterator.current == 4);
+    check(iterator.moveNext() && iterator.current == 5);
+    check(!iterator.moveNext());
+    final strings = Probe<String>()..response = $List.wrap([$String('a'), $String('b')]);
+    Runtime.bridgeData[strings] = BridgeData(runtime, 0, null);
+    check(strings.items!.join(',') == 'a,b' && strings.reads == 1);
+  }
+}
+""");
+      final result = await Process.run(Platform.resolvedExecutable, [
+        'run',
+        p.join(directory.path, 'run.dart'),
+      ]);
+      expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
   test('nested async wrappers retain their generic receiver type', () async {
     final directory = Directory(
       'test',

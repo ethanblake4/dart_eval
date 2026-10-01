@@ -1029,3 +1029,34 @@ changes, the Map lookup signature/null-key correction, and four verified stale
 expectation removals. The descriptor index and host unary fast path are the
 only accepted runtime experiments. No interpreter loop or bytecode format
 change is included. The final full AOT sweep ran before this checkpoint.
+
+## Cycle 4 cleanup
+
+Astra medium reviewed the cycle's compiler, binding generator, SDK harness and
+accepted runtime changes. It found nullable Iterable bridge getters exporting
+null through the nonnullable adapter. Nullable Iterable and Iterator getters now
+evaluate the guest getter once and return null for either host null or boxed
+null before exporting a non-null value. A generated-bridge regression exercises
+these cases, guest iterables and iterators, and generic values in both loading
+modes. Nonnullable generated getter output stays unchanged.
+
+The generator shares erased native argument boxing through wrapBridgeArgument.
+Callback parameter names are resolved once. List patterns delegate index
+dispatch to IndexedReference, which already selects native or interface access.
+Astra's follow-up review found no further concerns in these changes.
+
+All 88 focused tests pass and scoped analysis is clean. SDK regeneration exits
+successfully with all 90 generated output and registry hashes unchanged. Logs:
+cycle4-cleanup-focused-final, cycle4-cleanup-stdlib-generation and the matching
+cycle4-cleanup-stdlib-before/after SHA-256 records. Runtime source is unchanged
+from the performance checkpoint, retaining its final full AOT validation.
+
+The final ordinary suite passes all 2007 tests with 63 skips. Its log is
+cycle4-cleanup-ordinary. The previous SDK-full survey still identifies 369
+genuinely failing fixture paths for the next correctness cycle.
+
+Four targeted SDK positives also pass: list/mixin, both modern and legacy
+and_extension_member fixtures, and patterns/version_2_29_changes. Whole-project
+analysis finds no code errors. It retains the development path-dependency
+warning for the sibling CFG checkout. The unused virtual_calls benchmark import
+reported by analysis is removed.

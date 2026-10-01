@@ -60,8 +60,8 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
       )
       .map((e) {
         final returnType = e.returnType;
-        final exportIterable = returnType.isDartCoreIterable &&
-            returnType is InterfaceType;
+        final exportIterable =
+            returnType.isDartCoreIterable && returnType is InterfaceType;
         if (exportIterable) {
           ctx.imports.add(
             'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
@@ -79,10 +79,12 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
         @override
         $returnType ${e.isOperator ? 'operator ' : ''}${e.displayName}${e.typeParameters.isEmpty ? '' : '<${e.typeParameters.join(', ')}>'}(${parameterHeader(e.formalParameters, preserveTypes: true)}) {
           final runtime = \$runtime;
-          ${returnType is VoidType ? '' : exportIterable ? 'final result = ' : 'return '}${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
-            ${e.formalParameters.map((p) => p.type.isDartCoreObject || p.type is TypeParameterType || p.type is DynamicType
-                ? wrapBridgeValue(ctx, p.name ?? '')
-                : wrapVar(ctx, p.type, p.name ?? '')).join(', ')}
+          ${returnType is VoidType
+            ? ''
+            : exportIterable
+            ? 'final result = '
+            : 'return '}${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
+            ${e.formalParameters.map((p) => wrapBridgeArgument(ctx, p.type, p.name ?? '')).join(', ')}
           ])${needsCast ? 'as ${returnType.element!.name}$q)$q.cast()' : ''};
           ${exportIterable ? 'return ${q.isEmpty ? '' : 'result == null ? null : '}TypedInterop.exportIterable<${returnType.typeArguments.single}>(result, runtime);' : ''}
         }
@@ -100,45 +102,60 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
   };
 
   return properties.values
-      .where((property) => !property.isPrivate && !property.isStatic)
-      .where(
-        (property) => ctx.memberIncluded(
-          property.name!,
-          'getter',
-          isObjectMember: objectGetterNames.contains(property.name),
-        ),
-      )
-      .map((e) {
-        final type = e.type;
-        if (type is InterfaceType &&
-            (type.element.name == 'Iterator' || type.isDartCoreIterable) &&
-            type.element.library.uri.toString() == 'dart:core') {
-          ctx.imports.add(
-            'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
-          );
-          return '''
+          .where((property) => !property.isPrivate && !property.isStatic)
+          .where(
+            (property) => ctx.memberIncluded(
+              property.name!,
+              'getter',
+              isObjectMember: objectGetterNames.contains(property.name),
+            ),
+          )
+          .map((e) {
+            final type = e.type;
+            if (type is InterfaceType &&
+                (type.element.name == 'Iterator' || type.isDartCoreIterable) &&
+                type.element.library.uri.toString() == 'dart:core') {
+              ctx.imports.add(
+                'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+              );
+              if (type.nullabilitySuffix == NullabilitySuffix.question) {
+                ctx.imports.add('package:dart_eval/stdlib/core.dart');
+                return '''
+            @override
+            $type get ${e.displayName} {
+              final runtime = \$runtime;
+              final result = \$getProperty(runtime, '${e.displayName}');
+              if (result == null || result is \$null) return null;
+              return TypedInterop.export${type.isDartCoreIterable ? 'Iterable' : 'Iterator'}<${type.typeArguments.single}>(result, runtime);
+            }
+            ''';
+              }
+              return '''
           @override
           $type get ${e.displayName} => TypedInterop.export${type.isDartCoreIterable ? 'Iterable' : 'Iterator'}<${type.typeArguments.single}>(
             \$getProperty(\$runtime, '${e.displayName}'), \$runtime);
           ''';
-        }
+            }
 
-        return '''
+            return '''
         @override
         $type get ${e.displayName} => \$_get('${e.displayName}');
         ''';
-      })
-      .join('\n') +
+          })
+          .join('\n') +
       properties.values
           .where((e) => !e.isPrivate && !e.isStatic && e.setter != null)
           .where((e) => ctx.memberIncluded(e.name!, 'setter'))
-          .map((e) => '''
+          .map(
+            (e) =>
+                '''
             @override
             set ${e.displayName}(${e.type} value) {
               final runtime = \$runtime;
               \$_set('${e.displayName}', ${wrapVar(ctx, e.type, 'value')});
             }
-          ''')
+          ''',
+          )
           .join('\n');
 }
 
