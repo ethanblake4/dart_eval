@@ -965,6 +965,33 @@ void main() {
     },
   );
 
+  test('indexed-read instructions require an ordinary index call site', () {
+    TypedProgram program(TypedCallSite site) => TypedProgram(
+      Uint8List.fromList([TypedOp.callIndex, 0, 0, TypedOp.rReturn]),
+      callSites: [site],
+    );
+    const valid = TypedCallSite('[]', argumentCount: 1);
+    expect(
+      TypedProgram.read(program(valid).write().buffer).callSites.length,
+      1,
+    );
+    for (final site in const [
+      TypedCallSite('foo', argumentCount: 1),
+      TypedCallSite('[]', argumentCount: 0),
+      TypedCallSite('[]', argumentCount: 2),
+      TypedCallSite('[]', argumentCount: 1, kind: TypedMemberKind.getter),
+      TypedCallSite('[]', argumentCount: 1, typeArguments: [0]),
+      TypedCallSite(
+        '[]',
+        argumentCount: 1,
+        positionalCount: 0,
+        namedNames: ['index'],
+      ),
+    ]) {
+      expect(() => program(site), throwsFormatException);
+    }
+  });
+
   test('class instructions validate indices and member outgoing storage', () {
     TypedProgram program(int opcode, int index, {int outgoing = 0}) =>
         TypedProgram(

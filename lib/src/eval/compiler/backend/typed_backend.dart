@@ -1243,7 +1243,9 @@ class _LoweringSession {
     }
     out.add(
       TypedOperation(
-        b._named(['callVirtual']),
+        b._named([
+          b._callSites[siteIndex].isIndexRead ? 'callIndex' : 'callVirtual',
+        ]),
         op.writesTo == null ? null : value(op.writesTo!),
         registerArguments,
         fixedVariant: cfg.Variant(

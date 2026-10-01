@@ -4,6 +4,7 @@ import 'typed_program.dart';
 import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'typed_instance.dart';
+import 'typed_native_list.dart';
 import 'typed_late_field.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
@@ -882,7 +883,7 @@ abstract final class TypedMachine {
            (c as List<Object?>).add(r);
            continue dispatch;
         case TypedOp.rBoxList:
-           r = $List.wrap(r as List);
+           r = TypedNativeList.wrap(r as List);
            continue dispatch;
         case TypedOp.rBoxListTyped:
            final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -894,7 +895,7 @@ abstract final class TypedMachine {
                   callableTypeArguments: frame.effectiveTypeArguments,
                   typeEnvironment: frame.typeEnvironment,
                 );
-          r = $List.wrap(
+          r = TypedNativeList.wrap(
             r as List,
             runtimeTypeId: runtimeTypeId,
             runtime: runtime,
@@ -1004,6 +1005,41 @@ abstract final class TypedMachine {
               program, runtime, r, s, c, index, callTypeArguments,
             );
             s = null; c = null;
+          }
+           continue dispatch;
+        case TypedOp.callIndex:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           if (r is TypedNativeList || r is $MappedListView) {
+            final list = (r as $List).$value;
+            final value = list[(s as $Value?)?.$value as int] as $Value?;
+            r = value is $null ? null : value;
+            s = null; c = null;
+          } else {
+          final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
+          if (member != null) {
+            final function = member.function;
+            r = member.receiver;
+            frame = frame.enter(
+              function,
+              pc,
+              typeEnvironmentReceiver: member.receiver,
+            );
+            pc = function.entry;
+          } else {
+            final site = program.callSites[index];
+            final callTypeArguments = runtime == null
+                ? site.typeArguments
+                : runtime.resolveTypedCallTypeArguments(
+                    site.typeArguments,
+                    actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                    callableTypeArguments: frame.effectiveTypeArguments,
+                    typeEnvironment: frame.typeEnvironment,
+                  );
+            r = TypedDispatch.invoke(
+              program, runtime, r, s, c, index, callTypeArguments,
+            );
+            s = null; c = null;
+          }
           }
            continue dispatch;
         case TypedOp.jumpETrueShort:
@@ -1467,7 +1503,7 @@ abstract final class TypedMachine {
        e = TypedInterop.toBool(s);
        break;
     case 329:
-       s = $List.wrap(s as List);
+       s = TypedNativeList.wrap(s as List);
        break;
     case 330:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
@@ -1656,7 +1692,7 @@ abstract final class TypedMachine {
        e = TypedInterop.toBool(c);
        break;
     case 375:
-       c = $List.wrap(c as List);
+       c = TypedNativeList.wrap(c as List);
        break;
     case 376:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;

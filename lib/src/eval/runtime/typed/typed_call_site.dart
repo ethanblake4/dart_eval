@@ -24,4 +24,13 @@ final class TypedCallSite {
   /// An empty list supplies no proof for calls with arguments.
   final List<int> argumentTypes;
   final TypedMemberKind kind;
+
+  /// The fixed shape required by the native indexed-read instruction.
+  bool get isIndexRead =>
+      kind == TypedMemberKind.method &&
+      name == '[]' &&
+      argumentCount == 1 &&
+      positionalCount == 1 &&
+      namedNames.isEmpty &&
+      typeArguments.isEmpty;
 }

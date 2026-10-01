@@ -657,6 +657,9 @@ class TypedProgram {
         }
         if (last.immediate == TypedImmediate.callSite) {
           final site = callSites[index];
+          if (opcode == TypedOp.callIndex && !site.isIndexRead) {
+            throw const FormatException('Invalid indexed-read call site');
+          }
           final overflow = site.argumentCount > 2 ? site.argumentCount - 1 : 0;
           if (overflow > function.objectOutgoingCount) {
             throw const FormatException(

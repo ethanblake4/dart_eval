@@ -4,6 +4,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart'
     show TypedRuntimeInterop;
 import 'package:dart_eval/stdlib/core.dart';
 import 'typed_interop.dart';
+import 'typed_native_list.dart';
 
 /// Lazy boundary views preserve aliases, cycles, and mutation in both directions.
 abstract final class TypedHostCollections {
@@ -38,7 +39,7 @@ abstract final class TypedHostCollections {
     switch (collection) {
       case List<Object?>():
         backing = _ListView(collection, read, write);
-        wrapper = $List.wrap(
+        wrapper = TypedNativeList.wrap(
           backing as List<Object?>,
           runtimeTypeId: runtimeTypeId,
           runtime: runtime,
@@ -94,7 +95,7 @@ abstract final class TypedHostCollections {
           (candidate) => candidate,
           (candidate) => check(candidate, 0),
         );
-        wrapper = $List.wrap(
+        wrapper = TypedNativeList.wrap(
           backing as List<Object?>,
           runtimeTypeId: runtimeTypeId,
           runtime: runtime,

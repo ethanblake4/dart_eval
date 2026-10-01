@@ -1266,3 +1266,60 @@ carry into the performance pass. Logs are cycle6-pass4-final-aot and
 cycle6-pass4-final-abba despite this checkpoint belonging to cycle 5. The exact
 accepted executable is cycle6-pass4-final.exe, SHA-256
 a14bb43b96c9d129568420ff7ccc602624e772954e81013fb1562655c3948afa.
+
+## Cycle 5 performance pass
+
+Unknown List parameters previously paid member resolution and bridge invocation
+for every indexed read, including allocation of the List adapter's callable.
+The new callIndex instruction reads trusted native storage directly. Internal
+VM and host boxing use a final TypedNativeList wrapper through the existing
+generative constructor; there are no extra fields, views or allocations. The
+existing final MappedListView is also eligible. Public wrappers and custom
+subclasses keep ordinary dispatch.
+
+The generator shares the complete callVirtual handler as callIndex's fallback,
+preserving guest resolution, argument checks and direct VM frame entry. Existing
+register arguments, clobbers and call-site metadata remain unchanged. The native
+read retains the original boxed-index conversion, RangeError behavior, element
+identity and null normalization. Compiler selection and cold program validation
+share the indexed-read call-site predicate. Strict codec version 132 records the
+changed instruction set. All machine and opcode output is regenerated.
+
+The new indexed_aggregation benchmark weights aligned columns through a List
+parameter, using native, guest-custom and mixed receivers. Native Dart and both
+evaluator loading modes agree at 5000 batches: 6897500, 7177500 and 7037500.
+The exact accepted pass-4 baseline is compiled before production changes. At
+25000 batches and 15 samples with affinity mask 4, reverse-ABBA native medians
+are 113.839/112.840 milliseconds for baseline and 44.408/44.204 for candidate,
+about 61 percent faster. Mixed medians are 115.469/116.020 versus 68.715/70.425,
+about 40 percent faster. Guest baseline medians range from 131.698 to 140.394;
+settled candidate runs center near 87 milliseconds, about 34 percent faster.
+Drifting candidate guest runs reach 110.376 and 156.184 milliseconds and remain
+in the raw logs. These are host timing limits, not discarded checksum failures.
+
+All 76 focused tests pass, including compiled fresh/serialized custom dispatch,
+mapped lazy storage, aliases, defining runtimes, invalid writes and malformed
+indexed-read bytecode. Scoped analysis has no errors; three style infos are
+reserved for the cleanup pass. Generator output also passes its deterministic
+check.
+
+The exact candidate completes all 22 AOT drivers against the accepted pass-4
+executable. All 21 execution checksums match, and both compile-driver outputs
+are 1271 bytes. Initial call and dynamic timing flags of about 25 to 32 percent
+do not persist in longer reverse-ABBA controls. Polymorphic calls average about
+2 percent slower, boxed calls are flat and overflow calls about 1 percent slower.
+Stable dynamic dispatch is flat; alternating dynamic dispatch remains about
+5 to 6 percent slower. Config validation differs by about 1 percent and templates
+are about 3 percent slower. Callback cases stay within about 4 percent, with bound
+members slightly faster. These modest timing costs remain in the record.
+
+The dispatch driver is a non-indexed ALU/storage control. Its initial large
+improvements also disappear in longer runs; it does not establish an indexing
+benefit. The measured benefit comes from indexed_aggregation, with matching
+native, guest and mixed behavior. All benchmarks and builds are serialized.
+Results are cycle5-trusted-list/full22-aot, controls-abba.log, abba.log and
+guest-repeat.log. The exact full-sweep candidate is native_field_sweep-candidate.exe,
+SHA-256 CFA3168C1A9F792E52E9D83DF83CBA496B1D19B90292C7C6E288E60439B595A0.
+The final ordinary suite passes with 2024 tests and 63 skips. SDK-full exits
+successfully with 2530 passing fixtures, 239 compile errors, 111 expected runtime
+failures and one unsupported skip. No new failures or stale expectations appear.

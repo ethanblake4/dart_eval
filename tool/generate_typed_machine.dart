@@ -978,7 +978,7 @@ String familyOf(String name) {
   );
   add(
     'rBoxList',
-    r'r = $List.wrap(r as List);',
+    r'r = TypedNativeList.wrap(r as List);',
     inputs: [6],
     output: 6,
     mayThrow: true,
@@ -993,7 +993,7 @@ String familyOf(String name) {
                   callableTypeArguments: frame.effectiveTypeArguments,
                   typeEnvironment: frame.typeEnvironment,
                 );
-          r = $List.wrap(
+          r = TypedNativeList.wrap(
             r as List,
             runtimeTypeId: runtimeTypeId,
             runtime: runtime,
@@ -1168,9 +1168,8 @@ String familyOf(String name) {
           pc = frame.returnPc;
           frame = frame.leave();
           r = null; s = null; c = null;''', terminates: true);
-  add(
-    'callVirtual',
-    '''final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
+  const virtualCall =
+      '''final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
           if (member != null) {
             final function = member.function;
             r = member.receiver;
@@ -1194,7 +1193,19 @@ String familyOf(String name) {
               program, runtime, r, s, c, index, callTypeArguments,
             );
             s = null; c = null;
-          }''',
+          }''';
+  add('callVirtual', virtualCall, immediate: 'callSite', mayThrow: true);
+  add(
+    'callIndex',
+    r'''if (r is TypedNativeList || r is $MappedListView) {
+            final list = (r as $List).$value;
+            final value = list[(s as $Value?)?.$value as int] as $Value?;
+            r = value is $null ? null : value;
+            s = null; c = null;
+          } else {
+          ''' +
+        virtualCall +
+        '\n          }',
     immediate: 'callSite',
     mayThrow: true,
   );
@@ -1474,7 +1485,7 @@ String familyOf(String name) {
     );
     add(
       '${rn}BoxList',
-      '$rn = \$List.wrap($rn as List);',
+      '$rn = TypedNativeList.wrap($rn as List);',
       inputs: [recv],
       output: recv,
       mayThrow: true,
@@ -1887,6 +1898,7 @@ import 'typed_program.dart';
 import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'typed_instance.dart';
+import 'typed_native_list.dart';
 import 'typed_late_field.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
