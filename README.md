@@ -418,10 +418,10 @@ generation can be driven by a YAML sidecar instead of annotations. Create
 ```yaml
 libraries:
   - uri: package:my_app/api.dart
-    output: lib/src/eval/generated
+    outDir: lib/src/eval/generated
     classes:
       Book:
-        members:
+        methods:
           getPage:
             rename: pageAt
           delete:
@@ -434,6 +434,14 @@ class shaping (extends/implements overrides), return-type overrides, and generat
 shared `*Types` registry and plugin. Classes with genuinely unique runtime semantics
 can be marked `handMaintained: true` so the generator contributes their type
 declarations without emitting a wrapper.
+
+For a package split across several Dart libraries, add a root-level `plugin:`
+block to generate one plugin for all configured wrappers. Its `out` path is
+project-relative; library-level plugin paths are relative to `outDir`. Use
+`excludeDeclarations` when a custom bridge declaration replaces a generated
+wrapper declaration, and `extraDeclarations`/`extraSources` to register the
+custom compile and runtime behavior. Generated wrappers can reference types
+configured in other libraries, with imports resolved from their output paths.
 
 For some specialized use cases, bindings may need to be manually adjusted or written from scratch.
 For information about this, refer to the 

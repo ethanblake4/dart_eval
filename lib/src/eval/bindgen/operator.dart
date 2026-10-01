@@ -82,6 +82,10 @@ OperatorMethod operatorForArity(String name, int paramCount) {
   return op;
 }
 
+/// Compiler/runtime member key for an operator with this arity.
+String operatorMemberName(String name, int paramCount) =>
+    name == '-' && paramCount == 0 ? 'unary-' : name;
+
 /// Whether [method]'s arity matches the operator it declares. Non-operator
 /// methods always match.
 bool operatorArityMatches(MethodElement method) {
@@ -102,13 +106,14 @@ bool operatorArityMatches(MethodElement method) {
 /// occurrence wins so declarations on [element] override supertypes when the
 /// iterable lists supertype members first.
 Iterable<MethodElement> dedupeMethods(Iterable<MethodElement> methods) {
-  final map = <String?, MethodElement>{};
+  final map = <String, MethodElement>{};
   for (final m in methods) {
-    final prev = map[m.name];
+    final key = operatorMemberName(m.name!, m.formalParameters.length);
+    final prev = map[key];
     if (prev == null ||
         operatorArityMatches(m) ||
         !operatorArityMatches(prev)) {
-      map[m.name] = m;
+      map[key] = m;
     }
   }
   return map.values;

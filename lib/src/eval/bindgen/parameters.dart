@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
@@ -111,15 +113,33 @@ String argumentAccessor(
     if (type.nullabilitySuffix == NullabilitySuffix.question) {
       paramBuffer.write('$source == null || $source is \$null ? null : ');
     }
+    final signature = type is FunctionType
+        ? type.getDisplayString().replaceFirst(RegExp(r'\?$'), '')
+        : 'Function';
+    paramBuffer.write(
+      'runtime.cachedCallback($source! as EvalCallable, '
+      '${jsonEncode('$signature;export=$exportValues')}, (_callable) => ',
+    );
     if (type is FunctionType) {
+      if (type.typeParameters.isNotEmpty) {
+        paramBuffer.write(
+          '<${type.typeParameters.map((p) {
+            final bound = p.bound;
+            return bound == null || bound is DynamicType || (bound.isDartCoreObject && bound.nullabilitySuffix != NullabilitySuffix.none) ? p.name : '${p.name} extends ${bound.getDisplayString()}';
+          }).join(', ')}>',
+        );
+      }
       paramBuffer.write('(');
-      paramBuffer.write(parameterHeader(type.formalParameters));
+      paramBuffer.write(
+        parameterHeader(
+          type.formalParameters,
+          preserveTypes: type.typeParameters.isNotEmpty,
+        ),
+      );
       paramBuffer.write(') {\n');
       if (type.returnType is! VoidType) {
         paramBuffer.write('return ');
       }
-      final q = (param.isRequired ? '' : '?');
-      final call = (param.isRequired ? '' : '?.call');
       final wrapped = type.formalParameters.indexed.map((entry) {
         final (index, parameter) = entry;
         final name = parameter.name ?? '';
@@ -140,8 +160,7 @@ String argumentAccessor(
         2 => '${exprs[0]}, ${exprs[1]}, 2',
         _ => '${exprs[0]}, ${exprs[1]}, [${exprs.skip(2).join(', ')}]',
       };
-      final invocation =
-          '($source! as EvalCallable$q)$call(runtime, null, $callableArgs)';
+      final invocation = '_callable.call(runtime, null, $callableArgs)';
       if (type.returnType is VoidType) {
         paramBuffer.write(invocation);
       } else {
@@ -156,16 +175,15 @@ String argumentAccessor(
       // Untyped `Function` parameter (e.g. `StreamSubscription.onError`):
       // the host may call it with 1-3 positional arguments. Accept up to
       // three and forward the ones that were actually passed.
-      final q = (param.isRequired ? '' : '?');
-      final call = (param.isRequired ? '' : '?.call');
       paramBuffer.write(
         '(a0, [a1, a2]) {\n'
         'final _a0 = runtime.wrapAlways(a0);\n'
-        '($source! as EvalCallable$q)$call(runtime, null, _a0,\n'
+        '_callable.call(runtime, null, _a0,\n'
         'a1 != null ? runtime.wrapAlways(a1) : null,\n'
         'a2 != null ? [runtime.wrapAlways(a2)] : a1 != null ? 2 : 1);\n}',
       );
     }
+    paramBuffer.write(')');
   } else {
     final primitiveName = type.element?.name;
     if (primitiveSource != null &&
@@ -191,13 +209,16 @@ String argumentAccessor(
     }
     paramBuffer.write(source);
     final accessor = reify ? 'reified' : 'value';
-    if (param.isRequired) {
+    if (param.isRequired || defaultExpr != null) {
       paramBuffer.write('!.\$$accessor');
     } else {
       paramBuffer.write('?.\$$accessor');
     }
     if (needsCast) {
-      final q = (param.isRequired ? '' : '?');
+      // Optional arguments can still have non-nullable types when the host
+      // declaration supplies a default value. The fallback above handles an
+      // absent argument; the cast must reflect the declared type.
+      final q = type.nullabilitySuffix == NullabilitySuffix.question ? '?' : '';
       paramBuffer.write(' as ${type.element!.name}$q');
       // Native bridge calls have their SDK type parameters in scope. Let
       // the receiving method infer them instead of forcing erased arguments.

@@ -1192,6 +1192,9 @@ String familyOf(String name) {
             r = TypedDispatch.invoke(
               program, runtime, r, s, c, index, callTypeArguments,
             );
+            r = TypedInterop.annotateBridgeFuture(
+              runtime, r, site.returnTypeId, frame,
+            );
             s = null; c = null;
           }''';
   add('callVirtual', virtualCall, immediate: 'callSite', mayThrow: true);

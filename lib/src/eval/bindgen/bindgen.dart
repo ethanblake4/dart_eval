@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/session.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -17,6 +18,7 @@ import 'package:dart_eval/src/eval/bindgen/function.dart';
 import 'package:dart_eval/src/eval/bindgen/methods.dart';
 import 'package:dart_eval/src/eval/bindgen/properties.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
+import 'package:dart_eval/src/eval/bindgen/static_constants.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 import 'typedefs.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -185,6 +187,7 @@ class Bindgen implements BridgeDeclarationRegistry {
       await _ensureCoreNamespace(ctx);
       final code = switch (element) {
         ClassElement() => _$instance(ctx, element),
+        MixinElement() => _$opaqueMixin(ctx, element),
         EnumElement() => _$enum(ctx, element),
         TopLevelFunctionElement() => _$function(ctx, element),
         _ => null,
@@ -202,6 +205,13 @@ class Bindgen implements BridgeDeclarationRegistry {
         await process(element, cc.file ?? '${entry.key}.dart');
       } else if (element is EnumElement) {
         await process(element, cc.file ?? '${entry.key}.dart');
+      } else if (element is MixinElement && cc.opaque) {
+        await process(element, cc.file ?? '${entry.key}.dart');
+      } else {
+        throw CompileError(
+          'Configured class ${entry.key} was not found as a public class or '
+          'enum in $uri',
+        );
       }
     }
     for (final element in library.topLevelFunctions) {
@@ -231,6 +241,182 @@ class Bindgen implements BridgeDeclarationRegistry {
         sdkTypedefSourceForLibrary(library, libraryConfig.typedefs),
       );
     }
+    return result;
+  }
+
+  /// Discover public types required by the selected sidecar API but not yet
+  /// listed as classes. A caller can add these as `opaque: true` supporting
+  /// wrappers. Newly discovered types contribute only their supertypes and
+  /// generic bounds, so the closure does not expand to every member they own.
+  Future<List<({String uri, String name, bool isEnum})>> supportingTypes(
+    BindgenConfig config,
+  ) async {
+    final configured = {
+      for (final library in config.libraries)
+        for (final name in library.classes.keys) '${library.uri}::$name',
+    };
+    final discovered = <String, ({String uri, String name, bool isEnum})>{};
+    final visited = <InterfaceElement>{};
+    final visitedBounds = <TypeParameterElement>{};
+    late void Function(DartType) visitType;
+
+    void visitShape(InterfaceElement element) {
+      if (!visited.add(element)) return;
+      for (final parameter in element.typeParameters) {
+        if (visitedBounds.add(parameter)) {
+          final bound = parameter.bound;
+          if (bound != null) visitType(bound);
+        }
+      }
+      for (final supertype in element.allSupertypes) {
+        visitType(supertype);
+      }
+    }
+
+    visitType = (type) {
+      if (type is FunctionType) {
+        visitType(type.returnType);
+        for (final parameter in type.formalParameters) {
+          visitType(parameter.type);
+        }
+        for (final parameter in type.typeParameters) {
+          if (visitedBounds.add(parameter)) {
+            final bound = parameter.bound;
+            if (bound != null) visitType(bound);
+          }
+        }
+      } else if (type is RecordType) {
+        for (final field in type.positionalFields) {
+          visitType(field.type);
+        }
+        for (final field in type.namedFields) {
+          visitType(field.type);
+        }
+      } else if (type is TypeParameterType) {
+        if (visitedBounds.add(type.element)) visitType(type.bound);
+      }
+      if (type is ParameterizedType) {
+        for (final argument in type.typeArguments) {
+          visitType(argument);
+        }
+      }
+      // FutureOr is a union type in the compiler, not a class to wrap.
+      if (type.isDartAsyncFutureOr) return;
+      final element = type.element;
+      if (element is! InterfaceElement) return;
+      final uri = element.library.uri.toString();
+      final name = element.name;
+      if (name == null || name.startsWith('_')) {
+        // Private implementation types cannot be named by generated code;
+        // their public supertypes may still be useful.
+        visitShape(element);
+        return;
+      }
+      if (uri == 'dart:core') return;
+      final key = '$uri::$name';
+      if (!configured.contains(key) && !discovered.containsKey(key)) {
+        discovered[key] = (
+          uri: uri,
+          name: name,
+          isEnum: element is EnumElement,
+        );
+        visitShape(element);
+      }
+    };
+
+    void visitApi(InterfaceElement element, BindgenContext ctx) {
+      visitShape(element);
+      for (final constructor in element.constructors) {
+        if (constructor.isPrivate ||
+            !ctx.memberIncluded(constructor.name ?? '', 'constructor')) {
+          continue;
+        }
+        for (final parameter in constructor.formalParameters) {
+          visitType(parameter.type);
+        }
+      }
+      final interfaces = <InterfaceElement>[
+        if (ctx.implicitSupers)
+          for (final supertype in element.allSupertypes) supertype.element,
+        element,
+      ];
+      for (final owner in interfaces) {
+        for (final method in owner.methods) {
+          if (method.isPrivate ||
+              !ctx.memberIncluded(
+                method.name!,
+                method.isStatic ? 'static' : 'method',
+              )) {
+            continue;
+          }
+          visitType(method.returnType);
+          for (final parameter in method.formalParameters) {
+            visitType(parameter.type);
+          }
+        }
+        for (final entry in [
+          for (final accessor in owner.getters) (accessor, 'getter'),
+          for (final accessor in owner.setters) (accessor, 'setter'),
+        ]) {
+          final (accessor, kind) = entry;
+          if (accessor.isPrivate ||
+              !ctx.memberIncluded(
+                accessor.name!,
+                accessor.isStatic ? 'static' : kind,
+              )) {
+            continue;
+          }
+          visitType(accessor.returnType);
+          for (final parameter in accessor.formalParameters) {
+            visitType(parameter.type);
+          }
+        }
+        for (final field in owner.fields) {
+          if (field.isPrivate || !ctx.memberIncluded(field.name!, 'field')) {
+            continue;
+          }
+          visitType(field.type);
+        }
+      }
+    }
+
+    final session = await _session();
+    for (final libraryConfig in config.libraries) {
+      final result = await session.getLibraryByUri(libraryConfig.uri);
+      if (result is! LibraryElementResult) {
+        throw CompileError('Could not resolve library ${libraryConfig.uri}');
+      }
+      final library = result.element;
+      for (final classConfig in libraryConfig.classes.values) {
+        if (!classConfig.include ||
+            classConfig.handMaintained ||
+            classConfig.opaque) {
+          continue;
+        }
+        final element = library.exportNamespace.get2(classConfig.name);
+        if (element is! InterfaceElement) continue;
+        final ctx = BindgenContext(
+          classConfig.file ?? '${classConfig.name}.dart',
+          libraryConfig.uri,
+          all: false,
+          bridgeDeclarations: _bridgeDeclarations,
+          exportedLibMappings: _exportedLibMappings,
+          config: config,
+        )..libraryConfig = libraryConfig;
+        _shouldProcess(ctx, element);
+        visitApi(element, ctx);
+      }
+      for (final function in library.topLevelFunctions) {
+        final fc = libraryConfig.functions[function.name];
+        if (fc == null || !fc.include) continue;
+        visitType(function.returnType);
+        for (final parameter in function.formalParameters) {
+          visitType(parameter.type);
+        }
+      }
+    }
+    final result = discovered.values.toList()
+      ..sort((a, b) => '${a.uri}::${a.name}'.compareTo('${b.uri}::${b.name}'));
     return result;
   }
 
@@ -378,6 +564,7 @@ class Bindgen implements BridgeDeclarationRegistry {
         cc = lc.classes[element.name];
       }
       ctx.classConfig = cc;
+      ctx.classElement = element is InterfaceElement ? element : null;
       if (cc != null) {
         ctx.imports.addAll(cc.imports);
       }
@@ -482,17 +669,18 @@ class Bindgen implements BridgeDeclarationRegistry {
 /// dart_eval bridge binding for [${element.name}]
 class $wrapperName\$bridge${_typeParams(ctx, element)} extends ${element.name}${_typeArgs(element)} with \$Bridge<${element.name}${_typeArgs(element)}> {
 ${bindForwardedConstructors(ctx, element)}
-/// Configure this class for use in a [Runtime]
 ${bindConfigureForRuntime(ctx, element, isBridge: true)}
 /// Compile-time type specification of [$wrapperName\$bridge]
 ${bindTypeSpec(ctx, element)}
 /// Compile-time type declaration of [$wrapperName\$bridge]
 ${bindBridgeType(ctx, element)}
+${compactStaticConstants(ctx, element)?.typeDeclarations ?? ''}
 /// Compile-time class declaration of [\$${element.name}]
 ${bindBridgeDeclaration(ctx, element, isBridge: true)}
 ${$constructors(ctx, element, isBridge: true)}
 ${$staticMethods(ctx, element)}
 ${$staticGetters(ctx, element)}
+${compactStaticConstants(ctx, element)?.wrapperMembers ?? ''}
 ${$staticSetters(ctx, element)}
 ${$bridgeGet(ctx, element)}
 ${$bridgeSet(ctx, element)}
@@ -530,17 +718,18 @@ ${$equalityMembers(ctx, element)}
     return '''
 /// dart_eval wrapper binding for [${element.name}]
 class $wrapperName$typeParams implements ${implementsSdk ? '${element.name}${_typeArgs(element)}, ' : ''}\$Instance {
-/// Configure this class for use in a [Runtime]
 ${bindConfigureForRuntime(ctx, element)}
 /// Compile-time type specification of [$wrapperName]
 ${bindTypeSpec(ctx, element)}
 /// Compile-time type declaration of [$wrapperName]
 ${bindBridgeType(ctx, element)}
+${compactStaticConstants(ctx, element)?.typeDeclarations ?? ''}
 /// Compile-time class declaration of [\$${element.name}]
 ${bindBridgeDeclaration(ctx, element)}
 ${$constructors(ctx, element)}
 ${$staticMethods(ctx, element)}
 ${$staticGetters(ctx, element)}
+${compactStaticConstants(ctx, element)?.wrapperMembers ?? ''}
 ${$staticSetters(ctx, element)}
 ${$wrap(ctx, element)}
 ${$getRuntimeType(ctx, element)}
@@ -549,6 +738,54 @@ ${$methods(ctx, element)}
 ${$setProperty(ctx, element)}
 ${$equalityMembers(ctx, element)}
 ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
+}
+''';
+  }
+
+  String? _$opaqueMixin(BindgenContext ctx, MixinElement element) {
+    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
+    if (!process) return null;
+    if (ctx.classConfig?.opaque != true || isBridge || alsoWrap) {
+      throw CompileError('Mixin ${element.name} requires opaque wrap mode');
+    }
+    final wrapperName = _wrapperName(ctx, element);
+    final registerName = wrapperName.startsWith(r'$')
+        ? wrapperName.substring(1)
+        : wrapperName;
+    registerClasses.add((file: ctx.filename, uri: ctx.uri, name: registerName));
+    final typeParams = _typeParams(ctx, element);
+    final generics = element.typeParameters.isEmpty
+        ? ''
+        : 'generics: {${element.typeParameters.map((p) => "'${p.name}': BridgeGenericParam(${p.bound == null ? '' : '\$extends: ${bridgeTypeRefFromType(ctx, p.bound!)}'})").join(', ')}},';
+    final supertypes = element.allSupertypes
+        .where(
+          (type) =>
+              !type.isDartCoreObject &&
+              !(type.element.name?.startsWith('_') ?? true),
+        )
+        .map((type) => bridgeTypeRefFromType(ctx, type))
+        .toSet();
+    return '''
+/// Opaque dart_eval wrapper for [${element.name}].
+class $wrapperName$typeParams implements \$Instance {
+  static const \$spec = BridgeTypeSpec('${ctx.uri}', '${element.name}');
+  static const \$type = BridgeTypeRef(\$spec);
+  static const \$declaration = BridgeClassDef(
+    BridgeClassType(\$type, isAbstract: true,
+      $generics
+      ${supertypes.isEmpty ? '' : '\$implements: [${supertypes.join(', ')}],'}
+    ),
+    constructors: {},
+    wrap: true,
+    bridge: false,
+  );
+  static void configureForRuntime(Runtime runtime) {}
+  static void configureForCompile(BridgeDeclarationRegistry registry) =>
+      registry.defineBridgeClass(\$declaration);
+  ${$wrap(ctx, element)}
+  ${$getRuntimeType(ctx, element)}
+  ${$getProperty(ctx, element)}
+  ${$setProperty(ctx, element)}
 }
 ''';
   }
@@ -583,12 +820,15 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
     final methods = <String, MethodElement>{};
     void collect(InterfaceType t) {
       for (final g in t.getters) {
+        if (skip(g)) continue;
         getters.putIfAbsent(g.name ?? '', () => g);
       }
       for (final s in t.setters) {
+        if (skip(s)) continue;
         setters.putIfAbsent(s.name ?? '', () => s);
       }
       for (final m in t.methods) {
+        if (skip(m)) continue;
         methods.putIfAbsent(m.name ?? '', () => m);
       }
     }
@@ -620,6 +860,12 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
     for (final method in methods.values) {
       if (skip(method)) continue;
       final args = argList(method.formalParameters);
+      final typeParams = method.typeParameters.isEmpty
+          ? ''
+          : '<${method.typeParameters.map((p) {
+              final bound = p.bound;
+              return bound == null || bound is DynamicType ? p.name : '${p.name} extends ${bound.getDisplayString()}';
+            }).join(', ')}>';
       final call = switch (method.name) {
         '[]' => '\$value[$args]',
         '[]=' =>
@@ -632,7 +878,7 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
       };
       buf.writeln('''
   @override
-  ${dartTypeErased(method.returnType)} ${method.isOperator ? 'operator ' : ''}${method.name}(${parameterHeader(method.formalParameters)}) =>
+  ${method.returnType.getDisplayString()} ${method.isOperator ? 'operator ' : ''}${method.name}$typeParams(${parameterHeader(method.formalParameters, preserveTypes: true)}) =>
       $call;
 ''');
     }
@@ -711,15 +957,25 @@ class \$${element.name}Fn {
   String _typeParams(BindgenContext ctx, InterfaceElement element) {
     final params = element.typeParameters;
     if (params.isEmpty) return '';
+    if (ctx.classConfig?.opaque == true && _hasSelfBound(element)) return '';
+    void importType(DartType type) {
+      final library = type.element?.library;
+      if (library != null && library.uri.toString() != ctx.uri) {
+        ctx.imports.add(library.uri.toString());
+      }
+      if (type is ParameterizedType) {
+        for (final argument in type.typeArguments) {
+          importType(argument);
+        }
+      }
+    }
+
     return '<${params.map((p) {
       final bound = p.bound;
-      if (bound == null || bound is DynamicType || bound.isDartCoreObject) {
+      if (bound == null || bound is DynamicType || (bound.isDartCoreObject && bound.nullabilitySuffix != NullabilitySuffix.none)) {
         return p.name!;
       }
-      final boundLib = bound.element?.library;
-      if (boundLib != null) {
-        ctx.imports.add(boundLib.uri.toString());
-      }
+      importType(bound);
       return '${p.name} extends ${bound.getDisplayString()}';
     }).join(', ')}>';
   }
@@ -729,6 +985,10 @@ class \$${element.name}Fn {
   String _typeArgs(InterfaceElement element) => element.typeParameters.isEmpty
       ? ''
       : '<${element.typeParameters.map((p) => p.name).join(', ')}>';
+
+  bool _hasSelfBound(InterfaceElement element) => element.typeParameters.any(
+    (parameter) => parameter.bound?.element == element,
+  );
 
   String $superclassWrapper(BindgenContext ctx, InterfaceElement element) {
     final superclass = ctx.classConfig?.superclass;
@@ -823,10 +1083,11 @@ class \$${element.name}Fn {
         (reified?.hook != null
             ? '${ctx.hooksPrefix()}.${reified!.hook}(this)'
             : '\$value');
-    final reifiedType = reified?.type ?? element.name!;
     final wrapperName = _wrapperName(ctx, element);
     final superclassExpr = $superclassWrapper(ctx, element);
-    final valueType = '${element.name}${_typeArgs(element)}';
+    final valueType =
+        '${element.name}${ctx.classConfig?.opaque == true && _hasSelfBound(element) ? '<dynamic>' : _typeArgs(element)}';
+    final reifiedType = reified?.type ?? valueType;
     return '''
   final \$Instance _superclass;
 

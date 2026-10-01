@@ -171,7 +171,7 @@ class ${packageName.toPascalCase()}Plugin implements EvalPlugin {
 }
 
 /// Config-driven binding entry point: `dart_eval bind --config <yaml>`.
-void cliBindFromConfig(String configPath) async {
+Future<void> cliBindFromConfig(String configPath) async {
   final commandRoot = Directory(current);
   final projectRoot = findProjectRoot(commandRoot);
   final configFile = File(
@@ -202,6 +202,7 @@ void cliBindFromConfig(String configPath) async {
   }
 
   var numBound = 0;
+  final aggregateRegistrations = <BindgenPluginRegistration>[];
 
   for (final library in config.libraries) {
     final outDir = library.outDir != null
@@ -211,6 +212,9 @@ void cliBindFromConfig(String configPath) async {
       outDir.createSync(recursive: true);
     }
 
+    final classStart = bindgen.registerClasses.length;
+    final enumStart = bindgen.registerEnums.length;
+    final functionStart = bindgen.registerFunctions.length;
     Map<String, String> files;
     if (library.uri.startsWith('dart:') || library.uri.startsWith('package:')) {
       print('Binding ${library.uri}...');
@@ -243,6 +247,27 @@ void cliBindFromConfig(String configPath) async {
       };
     }
 
+    final registrations = <BindgenPluginRegistration>[
+      for (final e in bindgen.registerClasses.skip(classStart))
+        (file: e.file, name: e.name, kind: BindgenPluginKind.classBinding),
+      for (final e in bindgen.registerEnums.skip(enumStart))
+        (file: e.file, name: e.name, kind: BindgenPluginKind.enumBinding),
+      for (final e in bindgen.registerFunctions.skip(functionStart))
+        (file: e.file, name: e.name, kind: BindgenPluginKind.functionBinding),
+    ].where((e) => files.containsKey(e.file)).toList();
+    final relativeOutDir = relative(
+      outDir.path,
+      from: projectRoot.path,
+    ).replaceAll('\\', '/');
+    aggregateRegistrations.addAll([
+      for (final e in registrations)
+        (
+          file: posix.normalize(posix.join(relativeOutDir, e.file)),
+          name: e.name,
+          kind: e.kind,
+        ),
+    ]);
+
     for (final entry in files.entries) {
       final outFile = File(join(outDir.path, entry.key));
       if (!outFile.parent.existsSync()) {
@@ -264,7 +289,7 @@ void cliBindFromConfig(String configPath) async {
       final pluginDir = Directory(join(outDir.path, dirname(plugin.out)));
       if (!pluginDir.existsSync()) pluginDir.createSync(recursive: true);
       final pluginFile = File(join(outDir.path, plugin.out));
-      final content = _pluginSource(bindgen, library, files.keys.toSet());
+      final content = emitPluginSource(plugin, registrations);
       pluginFile.writeAsStringSync(
         formatter.format(content, uri: Uri.parse(library.uri)),
       );
@@ -272,6 +297,23 @@ void cliBindFromConfig(String configPath) async {
         'Generated plugin ${relative(pluginFile.path, from: projectRoot.path)}',
       );
     }
+  }
+
+  if (config.plugin case final plugin?) {
+    final pluginFile = File(join(projectRoot.path, plugin.out));
+    if (!pluginFile.parent.existsSync()) {
+      pluginFile.parent.createSync(recursive: true);
+    }
+    final content = formatter.format(
+      emitPluginSource(plugin, aggregateRegistrations),
+      uri: Uri.file(pluginFile.path),
+    );
+    if (!pluginFile.existsSync() || pluginFile.readAsStringSync() != content) {
+      pluginFile.writeAsStringSync(content);
+    }
+    print(
+      'Generated plugin ${relative(pluginFile.path, from: projectRoot.path)}',
+    );
   }
 
   // Emit `*Types` spec registries, grouped by output file.
@@ -307,23 +349,37 @@ void cliBindFromConfig(String configPath) async {
   }
 }
 
-String _pluginSource(
-  Bindgen bindgen,
-  BindgenLibraryConfig library,
-  Set<String> files,
+enum BindgenPluginKind { classBinding, enumBinding, functionBinding }
+
+/// A binding emitted by one configured library, with [file] relative to the
+/// project root for an aggregate plugin or to `outDir` for a library plugin.
+typedef BindgenPluginRegistration = ({
+  String file,
+  String name,
+  BindgenPluginKind kind,
+});
+
+/// Emit an [EvalPlugin] from already-generated bindings. Tools that format or
+/// check generated output themselves can reuse this for the aggregate plugin.
+String emitPluginSource(
+  BindgenPluginConfig plugin,
+  Iterable<BindgenPluginRegistration> registrations,
 ) {
-  final plugin = library.plugin!;
   final pluginDir = dirname(plugin.out);
-  final classes = bindgen.registerClasses.where((e) => files.contains(e.file));
-  final enums = bindgen.registerEnums.where((e) => files.contains(e.file));
-  final functions = bindgen.registerFunctions.where(
-    (e) => files.contains(e.file),
-  );
+  final classes = registrations
+      .where((e) => e.kind == BindgenPluginKind.classBinding)
+      .toList();
+  final enums = registrations
+      .where((e) => e.kind == BindgenPluginKind.enumBinding)
+      .toList();
+  final functions = registrations
+      .where((e) => e.kind == BindgenPluginKind.functionBinding)
+      .toList();
 
   final imports = <String>{
     ...plugin.imports,
     for (final e in [...classes, ...enums, ...functions])
-      posix.normalize(posix.join(pluginDir, e.file)),
+      posix.relative(e.file, from: pluginDir),
     for (final s in [...plugin.evalSources, ...plugin.extraSources])
       if (s.import != null) s.import!,
   };
@@ -347,14 +403,18 @@ String _pluginSource(
 import 'package:dart_eval/dart_eval_bridge.dart';
 ${imports.map((e) => "import '$e';").join('\n')}
 
-/// [EvalPlugin] for ${library.uri}
+${plugin.instance == null ? '' : 'const ${plugin.instance} = ${plugin.className}();'}
+
+/// Generated [EvalPlugin] for configured bindings.
 class ${plugin.className} implements EvalPlugin {
+  const ${plugin.className}();
+
   @override
   String get identifier => '${plugin.identifier}';
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
-    ${classes.map((e) => 'registry.defineBridgeClass(\$${e.name}.\$declaration);').join('\n')}
+    ${classes.where((e) => !plugin.excludeDeclarations.contains(e.name)).map((e) => 'registry.defineBridgeClass(\$${e.name}.\$declaration);').join('\n')}
     ${enums.map((e) => 'registry.defineBridgeEnum(\$${e.name}.\$declaration);').join('\n')}
     ${functions.map((e) => 'registry.defineBridgeTopLevelFunction(\$${e.name}Fn.\$declaration);').join('\n')}
     ${plugin.extraDeclarations.map((e) => 'registry.defineBridgeClass($e);').join('\n')}

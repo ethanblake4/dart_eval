@@ -123,8 +123,14 @@ final class InvokeExternal extends Operation {
   final int externalFunctionId;
 
   final List<SSA> args;
+  final int returnTypeId;
 
-  InvokeExternal(this.target, this.externalFunctionId, this.args);
+  InvokeExternal(
+    this.target,
+    this.externalFunctionId,
+    this.args, {
+    this.returnTypeId = -1,
+  });
 
   @override
   SSA? get writesTo => target;
@@ -140,15 +146,24 @@ final class InvokeExternal extends Operation {
       other is InvokeExternal &&
       target == other.target &&
       externalFunctionId == other.externalFunctionId &&
+      returnTypeId == other.returnTypeId &&
       args == other.args;
 
   @override
   int get hashCode =>
-      target.hashCode ^ externalFunctionId.hashCode ^ args.hashCode;
+      target.hashCode ^
+      externalFunctionId.hashCode ^
+      returnTypeId.hashCode ^
+      args.hashCode;
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
     final newReadsFrom = renameOperands(args, this.readsFrom, readsFrom);
-    return InvokeExternal(writesTo ?? target, externalFunctionId, newReadsFrom);
+    return InvokeExternal(
+      writesTo ?? target,
+      externalFunctionId,
+      newReadsFrom,
+      returnTypeId: returnTypeId,
+    );
   }
 }

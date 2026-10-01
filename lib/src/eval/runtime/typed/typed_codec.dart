@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 133;
+  static const version = 134;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -304,6 +304,7 @@ abstract final class TypedCodec {
       for (final type in site.argumentTypes) {
         u32(type + 1);
       }
+      u32(site.returnTypeId + 1);
     }
     for (final declaration in program.exports) {
       string(declaration.library);
@@ -327,6 +328,7 @@ abstract final class TypedCodec {
       u32(call.externalFunctionId);
       u32(call.argumentCount);
       u32(call.constructorTypeId + 1);
+      u32(call.returnTypeId + 1);
     }
     void defaults(List<Object?> values) {
       final data = _writeObjects(values);
@@ -521,6 +523,7 @@ abstract final class TypedCodec {
         (_) => u32() - 1,
         growable: false,
       );
+      final returnTypeId = u32() - 1;
       callSites.add(
         TypedCallSite(
           name,
@@ -531,6 +534,7 @@ abstract final class TypedCodec {
           typeArguments: typeArguments,
           kind: TypedMemberKind.values[kind],
           argumentTypes: argumentTypes,
+          returnTypeId: returnTypeId,
         ),
       );
     }
@@ -591,7 +595,12 @@ abstract final class TypedCodec {
     final externalCalls = <TypedExternalCall>[];
     for (var i = 0; i < externalCallCount; i++) {
       externalCalls.add(
-        TypedExternalCall(u32(), u32(), constructorTypeId: u32() - 1),
+        TypedExternalCall(
+          u32(),
+          u32(),
+          constructorTypeId: u32() - 1,
+          returnTypeId: u32() - 1,
+        ),
       );
     }
     List<String> strings() {

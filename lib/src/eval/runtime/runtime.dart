@@ -62,6 +62,19 @@ class _UnloadedEnumValues {
 /// should check permissions using [checkPermission] or [assertPermission].
 ///
 class Runtime {
+  final _callbacks = Expando<Map<String, Function>>('native callbacks');
+
+  /// Reuses a native callback for the same evaluated callable and signature.
+  /// The weak identity keys allow unused evaluated callables to be collected.
+  T cachedCallback<T extends Function>(
+    EvalCallable callable,
+    String signature,
+    T Function(EvalCallable callable) factory,
+  ) {
+    final callbacks = _callbacks[callable] ??= <String, Function>{};
+    return callbacks.putIfAbsent(signature, () => factory(callable)) as T;
+  }
+
   /// Maximum nested evaluated calls before throwing [StackOverflowError].
   /// Evaluated frames live on the heap, so the host stack cannot enforce this.
   int maxCallDepth = 10000;

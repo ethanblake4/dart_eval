@@ -1515,7 +1515,7 @@ final class _StaticBridgeDenotation extends Denotation {
       final getter = br.getters[name];
       final field = br.fields[name];
       if (getter != null || field != null) {
-        final type = getter != null
+        final returnType = getter != null
             ? TypeRef.fromBridgeAnnotation(
                 ctx,
                 getter.functionDescriptor.returns,
@@ -1529,7 +1529,7 @@ final class _StaticBridgeDenotation extends Denotation {
                 .file]!['${type.name}.${MemberName.getter(name).key}']!,
             [],
           ),
-          type,
+          returnType,
           rep: ValueRep.boxed,
         );
       }

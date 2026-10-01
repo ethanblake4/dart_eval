@@ -83,14 +83,37 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
             ? ''
             : exportIterable
             ? 'final result = '
-            : 'return '}${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
-            ${e.formalParameters.map((p) => wrapBridgeArgument(ctx, p.type, p.name ?? '')).join(', ')}
+            : 'return '}${needsCast ? '(' : ''}\$_invoke('${e.isOperator ? operatorMemberName(e.name!, e.formalParameters.length) : e.displayName}', [
+            ${e.formalParameters.map((p) => _bridgeArgument(ctx, p.type, p.name ?? '')).join(', ')}
           ])${needsCast ? 'as ${returnType.element!.name}$q)$q.cast()' : ''};
           ${exportIterable ? 'return ${q.isEmpty ? '' : 'result == null ? null : '}TypedInterop.exportIterable<${returnType.typeArguments.single}>(result, runtime);' : ''}
         }
         ''';
       })
       .join('\n');
+}
+
+String? _bridgeArgument(BindgenContext ctx, DartType type, String expression) {
+  final wrapped = wrapBridgeArgument(ctx, type, expression);
+  if (wrapped == null ||
+      type is! ParameterizedType ||
+      type.typeArguments.isEmpty ||
+      type.nullabilitySuffix == NullabilitySuffix.question) {
+    return wrapped;
+  }
+  final typeId = runtimeTypeIdFor(ctx, type, 'bridge');
+  if (typeId == null) return wrapped;
+  ctx.imports.add(
+    'package:dart_eval/src/eval/runtime/runtime.dart',
+  );
+  if (type.isDartCoreList || type.isDartCoreMap || type.isDartCoreSet) {
+    ctx.imports.add('package:dart_eval/src/eval/runtime/typed/typed_interop.dart');
+    return 'TypedInterop.boxExternal($expression, runtime: runtime, '
+        'runtimeTypeId: $typeId)!';
+  }
+  if (type.element?.library?.isInSdk == true) return wrapped;
+  ctx.imports.add('package:dart_eval/src/eval/runtime/typed/typed_interop.dart');
+  return 'TypedInterop.annotateBridgeType($wrapped, runtime, $typeId)';
 }
 
 String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
@@ -112,6 +135,18 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
           )
           .map((e) {
             final type = e.type;
+            if (type is InterfaceType && type.isDartCoreList) {
+              final nullable =
+                  type.nullabilitySuffix == NullabilitySuffix.question;
+              final elementType = type.typeArguments.single;
+              return '''
+            @override
+            $type get ${e.displayName} {
+              final result = \$_get('${e.displayName}') as List?;
+              return ${nullable ? 'result?.cast<$elementType>()' : 'result!.cast<$elementType>()'};
+            }
+            ''';
+            }
             if (type is InterfaceType &&
                 (type.element.name == 'Iterator' || type.isDartCoreIterable) &&
                 type.element.library.uri.toString() == 'dart:core') {
@@ -212,6 +247,9 @@ String parameterHeader(
         paramBuffer.write(' Function(');
         paramBuffer.write(parameterHeader(functionType.formalParameters));
         paramBuffer.write(')');
+        if (functionType.nullabilitySuffix == NullabilitySuffix.question) {
+          paramBuffer.write('?');
+        }
         break;
       default:
         if (forConstructor) {
@@ -227,6 +265,13 @@ String parameterHeader(
     );
     if (!forConstructor && param.defaultValueCode != null) {
       paramBuffer.write(' = ${param.defaultValueCode}');
+    } else if (!forConstructor &&
+        param.isOptional &&
+        param.type.isDartCoreBool &&
+        param.type.nullabilitySuffix == NullabilitySuffix.none) {
+      // A function typedef may declare an optional non-nullable bool without
+      // a default. The generated closure still needs a Dart default value.
+      paramBuffer.write(' = false');
     }
     if (i < params.length - 1) {
       paramBuffer.write(', ');

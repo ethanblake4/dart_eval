@@ -3,10 +3,18 @@ import 'package:yaml/yaml.dart';
 /// Root model for a `bindgen.yaml` sidecar configuration file consumed by
 /// `dart_eval bind --config <yaml>`.
 class BindgenConfig {
-  const BindgenConfig({required this.defaults, required this.libraries});
+  const BindgenConfig({
+    required this.defaults,
+    required this.libraries,
+    this.plugin,
+  });
 
   final BindgenDefaults defaults;
   final List<BindgenLibraryConfig> libraries;
+
+  /// Optional aggregate plugin for every generated library. Its `out` path
+  /// is project-relative, unlike a library plugin whose path is `outDir`-relative.
+  final BindgenPluginConfig? plugin;
 
   factory BindgenConfig.parse(String source) {
     final doc = loadYaml(source);
@@ -25,6 +33,7 @@ class BindgenConfig {
   factory BindgenConfig.fromYaml(YamlMap yaml) {
     final defaultsYaml = yaml['defaults'];
     final librariesYaml = yaml['libraries'];
+    final pluginYaml = yaml['plugin'];
     return BindgenConfig(
       defaults: defaultsYaml is YamlMap
           ? BindgenDefaults.fromYaml(defaultsYaml)
@@ -34,6 +43,9 @@ class BindgenConfig {
           for (final entry in librariesYaml)
             if (entry is YamlMap) BindgenLibraryConfig.fromYaml(entry),
       ],
+      plugin: pluginYaml is YamlMap
+          ? BindgenPluginConfig.fromYaml(pluginYaml)
+          : null,
     );
   }
 
@@ -198,8 +210,10 @@ class BindgenPluginConfig {
     required this.out,
     required this.className,
     required this.identifier,
+    this.instance,
     this.evalSources = const [],
     this.extraDeclarations = const [],
+    this.excludeDeclarations = const [],
     this.extraSources = const [],
     this.imports = const [],
   });
@@ -213,12 +227,20 @@ class BindgenPluginConfig {
   /// `EvalPlugin.identifier` value.
   final String identifier;
 
+  /// Optional top-level const instance name, e.g. `flutterEvalPlugin`.
+  final String? instance;
+
   /// Eval-side `DartSource` entries.
   final List<BindgenSourceRef> evalSources;
 
   /// Extra declarations registered in `configureForCompile`
   /// (expressions evaluating to a `BridgeDeclaration`, e.g. `$dynamicCls`).
   final List<String> extraDeclarations;
+
+  /// Generated wrapper names (without the leading `$`) whose compile-time
+  /// declarations are supplied by [extraDeclarations] instead. Their runtime
+  /// registrations are still emitted.
+  final List<String> excludeDeclarations;
 
   /// Additional `addSource`/`configure*` expressions added verbatim to
   /// `configureForCompile`/`configureForRuntime`.
@@ -235,8 +257,10 @@ class BindgenPluginConfig {
         _str(yaml['class']) ??
         (throw const FormatException('plugin requires `class`')),
     identifier: _str(yaml['identifier']) ?? '',
+    instance: _str(yaml['instance']),
     evalSources: _sourceList(yaml['evalSources']),
     extraDeclarations: _strList(yaml['extraDeclarations']),
+    excludeDeclarations: _strList(yaml['excludeDeclarations']),
     extraSources: _sourceList(yaml['extraSources']),
     imports: _strList(yaml['imports']),
   );
@@ -327,6 +351,8 @@ class BindgenClassConfig {
     this.wrapperName,
     this.unnamedValueConstructor = false,
     this.implementsSdk = false,
+    this.compactStaticConstants = false,
+    this.opaque = false,
     this.superclass,
     this.reified,
     this.runtimeTypeOverride,
@@ -380,6 +406,13 @@ class BindgenClassConfig {
   /// wrapped instances must satisfy host `is` checks (e.g. errors/exceptions
   /// that are thrown and caught by host code).
   final bool implementsSdk;
+
+  /// Emit a compact static-constant table for large classes such as Icons.
+  final bool compactStaticConstants;
+
+  /// Emit a typed wrapper and bridge class shape without binding members.
+  /// Useful for signature types outside the selected API surface.
+  final bool opaque;
 
   /// `_superclass` initializer override.
   final BindgenSuperclassConfig? superclass;
@@ -446,6 +479,8 @@ class BindgenClassConfig {
         unnamedValueConstructor:
             _bool(yaml['unnamedValueConstructor']) ?? false,
         implementsSdk: _bool(yaml['implementsSdk']) ?? false,
+        compactStaticConstants: _bool(yaml['compactStaticConstants']) ?? false,
+        opaque: _bool(yaml['opaque']) ?? false,
         superclass: yaml['superclass'] is YamlMap
             ? BindgenSuperclassConfig.fromYaml(yaml['superclass'] as YamlMap)
             : null,

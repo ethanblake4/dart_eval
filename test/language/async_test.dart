@@ -427,6 +427,64 @@ void main() {
     }
   });
 
+  test(
+    'awaits a typed bridge Future with an erased host type argument',
+    () async {
+      final compiler = Compiler();
+      compiler.defineBridgeTopLevelFunction(
+        const BridgeFunctionDeclaration(
+          _bridge,
+          'nativeText',
+          BridgeFunctionDef(
+            returns: BridgeTypeAnnotation(
+              BridgeTypeRef(CoreTypes.future, [
+                BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+              ]),
+            ),
+          ),
+        ),
+      );
+      final program = compiler.compile({
+        'typed_async': {
+          'main.dart':
+              '''
+          import '$_bridge';
+          Future<String> main() async => await nativeText();
+          Future<bool> mismatched() async => (await nativeText()) is Future;
+        ''',
+        },
+      });
+      for (final (kind, runtime) in _runtimes(program)) {
+        var explicitObjectFuture = false;
+        runtime.registerBridgeFuncRegisters(_bridge, 'nativeText', (
+          runtime,
+          r,
+          s,
+          c,
+        ) {
+          return $Future.wrap(
+            Future<$Value>.value($String('ok')),
+            runtime: runtime,
+            runtimeTypeId: explicitObjectFuture
+                ? runtime.lookupType(CoreTypes.future)
+                : null,
+          );
+        });
+        expect(
+          await runtime.executeLib(_library, 'main'),
+          $String('ok'),
+          reason: kind,
+        );
+        explicitObjectFuture = true;
+        expect(
+          await runtime.executeLib(_library, 'mismatched'),
+          $bool(true),
+          reason: kind,
+        );
+      }
+    },
+  );
+
   test('async void and fallthrough complete normally', () async {
     final program = _compile('''
       int marker = 0;

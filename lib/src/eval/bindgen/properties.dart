@@ -88,9 +88,9 @@ String propertyGetters(
       ''').join('\n')}${methods0.map((e) {
       final member = ctx.memberConfig(e.name!, 'method');
       final returnsValue = e.returnType is! VoidType && !e.returnType.isDartCoreNull;
-      final callOp = operatorForArity(e.displayName, e.formalParameters.length);
+      final callOp = operatorForArity(e.name!, e.formalParameters.length);
       return '''
-        case '${member?.rename ?? e.displayName}':
+        case '${operatorMemberName(member?.rename ?? e.name!, e.formalParameters.length)}':
           return \$Function((runtime, target, r, s, c) {
             ${assertMethodPermissions(e, callable: true)}
             ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList(), callable: true)}
@@ -127,10 +127,10 @@ String propertyGetters(
       case '${s.name}':
         return ${s.expr ?? 'null'};''';
   }).join('\n')}${methods0.map((e) => '''
-      case '${ctx.memberConfig(e.name!, 'method')?.rename ?? e.name}':
+      case '${operatorMemberName(ctx.memberConfig(e.name!, 'method')?.rename ?? e.name!, e.formalParameters.length)}':
         return \$Closure(__${operatorForArity(ctx.memberConfig(e.name!, 'method')?.rename ?? e.name!, e.formalParameters.length).name}.func, this);
       ''').join('\n')}${syntheticMethods.map((s) => '''
-      case '${s.name}':
+      case '${operatorMemberName(s.name, s.params.length)}':
         return \$Closure(__${operatorForArity(s.name, s.params.length).name}.func, this);
       ''').join('\n')}\n}';
 }

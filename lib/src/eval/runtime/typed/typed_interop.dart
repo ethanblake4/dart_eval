@@ -19,6 +19,17 @@ import 'typed_async.dart';
 /// The compiler emits every scalar box and unbox operation. Host functions must
 /// use an explicit bridge wrapper, such as $Function or $Closure.
 abstract final class TypedInterop {
+  /// Preserve the statically known type arguments of a native bridge value.
+  /// Generated generic wrappers otherwise report only their raw class type.
+  static V annotateBridgeType<V extends $Value>(
+    V value,
+    Runtime runtime,
+    int runtimeType,
+  ) {
+    Runtime.bridgeData[value] = BridgeData(runtime, runtimeType, null);
+    return value;
+  }
+
   /// A generic function is not a non-generic SDK callback. Validate before
   /// constructing lazy iterables, without wrapping the callback itself.
   static EvalCallable nonGenericCallable(Object? value) {
@@ -122,13 +133,15 @@ abstract final class TypedInterop {
     final target = _runtime(runtime);
     final site = program.externalCalls[siteIndex];
     if (site.constructorTypeId < 0) {
-      return target.invokeTypedExternal(
+      final result = target.invokeTypedExternal(
         site.externalFunctionId,
         site.argumentCount,
         first,
         second,
         rest,
       );
+      return annotateBridgeFuture(target, result, site.returnTypeId, frame)
+          as $Value?;
     }
     final previous = target.bridgeConstructorTypeId;
     target.bridgeConstructorTypeId = target.resolveTypedEnvironmentType(
@@ -148,6 +161,30 @@ abstract final class TypedInterop {
     } finally {
       target.bridgeConstructorTypeId = previous;
     }
+  }
+
+  /// A bridge call's declared result supplies the type argument erased by a
+  /// host-created Future wrapper. Keep wrappers that already carry a type.
+  static Object? annotateBridgeFuture(
+    Runtime? runtime,
+    Object? result,
+    int returnTypeId,
+    TypedFrame frame,
+  ) {
+    if (runtime == null ||
+        returnTypeId < 0 ||
+        result is! $Future ||
+        result.runtimeTypeId != null ||
+        Runtime.bridgeData[result] != null) {
+      return result;
+    }
+    final type = runtime.resolveTypedEnvironmentType(
+      returnTypeId,
+      actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+      callableTypeArguments: frame.effectiveTypeArguments,
+      typeEnvironment: frame.typeEnvironment,
+    );
+    return $Future.wrap(result.$value, runtimeTypeId: type, runtime: runtime);
   }
 
   /// Materialize a `first`/`rest` register pair as a positional vector.

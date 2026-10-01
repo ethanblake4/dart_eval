@@ -136,7 +136,14 @@ final class StaticCall extends CallTarget {
     final resultRep = declaredAbi(ctx)?.result ?? ValueRep.boxed;
     final index = externalIndex;
     if (index != null) {
-      ctx.pushOp(InvokeExternal(s, index, call.vector()));
+      ctx.pushOp(
+        InvokeExternal(
+          s,
+          index,
+          call.vector(),
+          returnTypeId: ctx.runtimeTypes.idOf(call.returnType),
+        ),
+      );
       return Variable.of(ctx, s, call.returnType, rep: resultRep);
     }
     _checkImplementationArguments(ctx, call);
@@ -518,6 +525,7 @@ final class BridgeCall extends CallTarget {
           namedNames: const [],
           callerLibrary: ctx.library,
           typeArguments: call.runtimeTypeArguments,
+          returnTypeId: ctx.runtimeTypes.idOf(call.returnType),
         ),
       );
     }

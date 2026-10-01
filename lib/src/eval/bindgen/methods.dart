@@ -31,10 +31,7 @@ String $methods(BindgenContext ctx, InterfaceElement element) {
         final op = operatorForArity(name, e.formalParameters.length);
         // The Dart call must use the real SDK member name even when the
         // bound name is renamed.
-        final callOp = operatorForArity(
-          e.displayName,
-          e.formalParameters.length,
-        );
+        final callOp = operatorForArity(e.name!, e.formalParameters.length);
         final hook = member?.hook;
         final expr = member?.expr;
         final String body;

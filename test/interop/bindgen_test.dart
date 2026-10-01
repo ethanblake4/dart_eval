@@ -6,6 +6,80 @@ import 'package:test/test.dart';
 
 void main() {
   test(
+    'generated unary and binary minus dispatch through distinct keys',
+    () async {
+      final directory = Directory(
+        'test',
+      ).absolute.createTempSync('bindgen_minus_');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final source = File(p.join(directory.path, 'native.dart'))
+        ..writeAsStringSync('''
+class Vector {
+  Vector(this.x);
+  final int x;
+  int operator -() => -x;
+  int operator -(Vector other) => x - other.x;
+}
+''');
+      final config = BindgenConfig.parse('''
+libraries:
+  - uri: dart:core
+    classes:
+      int:
+        handMaintained: true
+        file: package:dart_eval/stdlib/core.dart
+  - uri: package:bindgen/native.dart
+    classes:
+      Vector:
+        overrideLibrary: package:bindgen/native.dart
+''')..resolveDefaults();
+      final generated = (await Bindgen().parse(
+        source,
+        'native.eval.dart',
+        'package:bindgen/native.dart',
+        false,
+        config: config,
+        libraryConfig: config.libraries.last,
+      ))!;
+      expect(generated, contains("'unary-': BridgeMethodDef("));
+      expect(generated, contains("'-': BridgeMethodDef("));
+      File(p.join(directory.path, 'native.eval.dart')).writeAsStringSync('''
+import 'native.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+$generated
+''');
+      File(p.join(directory.path, 'run.dart')).writeAsStringSync(r"""
+import 'native.eval.dart';
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/stdlib/core.dart';
+void main() {
+  final compiler = Compiler()..defineBridgeClass($Vector.$declaration);
+  final program = compiler.compile({'main': {'main.dart': '''
+    import 'package:bindgen/native.dart';
+    int main() {
+      final a = Vector(5);
+      return -a + (a - Vector(2));
+    }
+  '''}});
+  for (final runtime in [Runtime.ofProgram(program), Runtime(program.write().buffer)]) {
+    $Vector.configureForRuntime(runtime);
+    final result = runtime.executeLib('package:main/main.dart', 'main');
+    if (result != -2 && result != $int(-2)) {
+      throw StateError('Wrong unary/binary minus result: $result');
+    }
+  }
+}
+""");
+      final result = await Process.run(Platform.resolvedExecutable, [
+        'run',
+        p.join(directory.path, 'run.dart'),
+      ]);
+      expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  test(
     'nullable iterable bridge getters export once and preserve null',
     () async {
       final directory = Directory(
@@ -196,6 +270,12 @@ class Host {
     _callback = callback;
   }
   static int invoke(int value) => _callback!(value);
+  static final List<void Function()> listeners = [];
+  static void addListener(void Function() callback) { listeners.add(callback); }
+  static void removeListener(void Function() callback) { listeners.remove(callback); }
+  static void optionalListener(void Function()? callback) {
+    if (callback != null) listeners.add(callback);
+  }
 }
 int triple(int a, int b, int c) => a + b + c;
 int addDefault(int a, {int b = 5}) => a + b;
@@ -255,6 +335,22 @@ void main() {
   $Host.$retain(runtime, $int(1), $int(2), overflow);
   overflow.fillRange(0, overflow.length, null);
   check(Host.invoke(4) == 11);
+  var notifications = 0;
+  final listener = $Function((runtime, target, r, s, c) {
+    notifications++;
+    return null;
+  });
+  $Host.$addListener(runtime, listener, null, null);
+  Host.listeners.single();
+  check(notifications == 1);
+  $Host.$removeListener(runtime, listener, null, null);
+  check(Host.listeners.isEmpty);
+  $Host.$optionalListener(runtime, const $null(), null, null);
+  $Host.$optionalListener(runtime, null, null, null);
+  check(Host.listeners.isEmpty);
+  $Host.$optionalListener(runtime, listener, null, null);
+  $Host.$removeListener(runtime, listener, null, null);
+  check(Host.listeners.isEmpty);
 }
 ''');
       final result = await Process.run(Platform.resolvedExecutable, [

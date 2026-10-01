@@ -65,6 +65,7 @@ class TypedProgram {
              typeArguments: List.unmodifiable(site.typeArguments),
              kind: site.kind,
              argumentTypes: List.unmodifiable(site.argumentTypes),
+             returnTypeId: site.returnTypeId,
            ),
          ),
        ),

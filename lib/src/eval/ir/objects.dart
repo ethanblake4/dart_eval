@@ -364,6 +364,7 @@ final class InvokeDynamic extends Operation {
   final int callerLibrary;
   final List<int> typeArguments;
   final List<int> argumentTypes;
+  final int returnTypeId;
 
   InvokeDynamic(
     this.target,
@@ -375,6 +376,7 @@ final class InvokeDynamic extends Operation {
     this.callerLibrary = -1,
     this.typeArguments = const [],
     this.argumentTypes = const [],
+    this.returnTypeId = -1,
   }) : positionalCount = positionalCount ?? args.length;
 
   @override
@@ -397,7 +399,8 @@ final class InvokeDynamic extends Operation {
       namedNames == other.namedNames &&
       callerLibrary == other.callerLibrary &&
       typeArguments == other.typeArguments &&
-      argumentTypes == other.argumentTypes;
+      argumentTypes == other.argumentTypes &&
+      returnTypeId == other.returnTypeId;
 
   @override
   int get hashCode =>
@@ -420,6 +423,7 @@ final class InvokeDynamic extends Operation {
       callerLibrary: callerLibrary,
       typeArguments: typeArguments,
       argumentTypes: argumentTypes,
+      returnTypeId: returnTypeId,
     );
   }
 }

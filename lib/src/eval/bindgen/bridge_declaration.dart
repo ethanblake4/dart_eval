@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/operator.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
+import 'package:dart_eval/src/eval/bindgen/static_constants.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 /// Member names that are excluded unless `includeObjectMembers` is set.
@@ -51,7 +52,9 @@ String? bindBridgeDeclaration(
   bool isBridge = false,
 }) {
   final cc = ctx.classConfig;
-  if (element is ClassElement && element.constructors.isEmpty) {
+  if (element is ClassElement &&
+      element.constructors.isEmpty &&
+      cc?.opaque != true) {
     return null;
   }
 
@@ -80,6 +83,7 @@ String? bindBridgeDeclaration(
   } else if (element is ClassElement &&
       element.supertype != null &&
       !element.supertype!.isDartCoreObject &&
+      !(element.supertype!.element.name?.startsWith('_') ?? false) &&
       !ctx.implicitSupers) {
     extendsStr =
         '\n\$extends: ${bridgeTypeRefFromType(ctx, element.supertype!)},';
@@ -148,6 +152,7 @@ ${syntheticDeclarations(ctx, 'setter')}
     },
     fields: {
 ${fields(ctx, element)}
+${compactStaticConstants(ctx, element)?.fieldDeclarations ?? ''}
 ${syntheticDeclarations(ctx, 'field')}
     },
     ${element is ClassElement ? '''
@@ -257,6 +262,7 @@ String setters(BindgenContext ctx, InterfaceElement element) {
 }
 
 String fields(BindgenContext ctx, InterfaceElement element) {
+  final compactNames = compactStaticConstants(ctx, element)?.fieldNames;
   final allFields = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes)
@@ -269,11 +275,12 @@ String fields(BindgenContext ctx, InterfaceElement element) {
   };
 
   final fields = allFields.values.where(
-    (element) =>
-        !element.isOriginGetterSetter &&
-        !element.isEnumConstant &&
-        !element.isPrivate &&
-        ctx.memberIncluded(element.name!, 'field'),
+    (field) =>
+        !field.isOriginGetterSetter &&
+        !field.isEnumConstant &&
+        !field.isPrivate &&
+        !(compactNames?.contains(field.name) ?? false) &&
+        ctx.memberIncluded(field.name!, 'field'),
   );
 
   return fields
@@ -373,8 +380,12 @@ String bridgeMethodDef(
   required MethodElement method,
   BindgenMemberConfig? member,
 }) {
+  final name = operatorMemberName(
+    member?.rename ?? method.name!,
+    method.formalParameters.length,
+  );
   return '''
-      '${member?.rename ?? method.name}': BridgeMethodDef(
+      '$name': BridgeMethodDef(
         ${bridgeFunctionDef(ctx, function: method, member: member)}
         ${method.isStatic ? 'isStatic: true,' : ''}
       ),
@@ -492,7 +503,7 @@ String _syntheticDeclaration(BindgenContext ctx, BindgenSyntheticMember s) {
   return switch (s.kind) {
     'method' || 'static' =>
       '''
-      '${s.name}': BridgeMethodDef(
+      '${operatorMemberName(s.name, s.params.length)}': BridgeMethodDef(
         BridgeFunctionDef(
           ${_syntheticReturns(ctx, s)},
           ${_syntheticParams(ctx, s)}

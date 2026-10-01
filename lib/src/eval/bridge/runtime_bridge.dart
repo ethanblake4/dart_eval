@@ -30,7 +30,7 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
 
   dynamic $_get(String prop) {
     final runtime = Runtime.bridgeData[this]!.runtime;
-    return ($getProperty(runtime, prop) as $Value).$reified;
+    return $getProperty(runtime, prop)?.$reified;
   }
 
   void $_set(String prop, $Value value) {

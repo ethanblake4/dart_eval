@@ -1005,6 +1005,9 @@ abstract final class TypedMachine {
             r = TypedDispatch.invoke(
               program, runtime, r, s, c, index, callTypeArguments,
             );
+            r = TypedInterop.annotateBridgeFuture(
+              runtime, r, site.returnTypeId, frame,
+            );
             s = null; c = null;
           }
            continue dispatch;
@@ -1043,6 +1046,9 @@ abstract final class TypedMachine {
             r = TypedDispatch.invoke(
               program, runtime, r, s, c, index, callTypeArguments,
             );
+            r = TypedInterop.annotateBridgeFuture(
+              runtime, r, site.returnTypeId, frame,
+            );
             s = null; c = null;
           }
           }
@@ -1075,6 +1081,9 @@ abstract final class TypedMachine {
                   );
             r = TypedDispatch.invoke(
               program, runtime, r, s, c, index, callTypeArguments,
+            );
+            r = TypedInterop.annotateBridgeFuture(
+              runtime, r, site.returnTypeId, frame,
             );
             s = null; c = null;
           }

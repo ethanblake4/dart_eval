@@ -10,6 +10,7 @@ final class TypedCallSite {
     this.callerLibrary = '',
     this.typeArguments = const [],
     this.argumentTypes = const [],
+    this.returnTypeId = -1,
     this.kind = TypedMemberKind.method,
   }) : positionalCount = positionalCount ?? argumentCount;
 
@@ -23,6 +24,9 @@ final class TypedCallSite {
   /// Compiler-proven concrete argument types, or -1 where no proof exists.
   /// An empty list supplies no proof for calls with arguments.
   final List<int> argumentTypes;
+
+  /// Declared bridge result type, or -1 for ordinary dynamic dispatch.
+  final int returnTypeId;
   final TypedMemberKind kind;
 
   /// The fixed shape required by the checked native append instruction.

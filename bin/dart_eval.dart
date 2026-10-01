@@ -149,7 +149,7 @@ Future<void> main(List<String> args) async {
     }
 
     if (command['config'] != null) {
-      cliBindFromConfig(command['config'] as String);
+      await cliBindFromConfig(command['config'] as String);
     } else {
       cliBind(
         singleFile: command['single-file'],

@@ -1222,7 +1222,9 @@ class _LoweringSession {
           site.callerLibrary == callerLibrary &&
           _sameList(site.typeArguments, typeArguments) &&
           site.kind == kind &&
-          _sameList(site.argumentTypes, argumentTypes),
+          _sameList(site.argumentTypes, argumentTypes) &&
+          site.returnTypeId ==
+              (op is objects_ir.InvokeDynamic ? op.returnTypeId : -1),
     );
     if (siteIndex < 0) {
       siteIndex = b._callSites.length;
@@ -1236,6 +1238,7 @@ class _LoweringSession {
           typeArguments: typeArguments,
           kind: kind,
           argumentTypes: argumentTypes,
+          returnTypeId: op is objects_ir.InvokeDynamic ? op.returnTypeId : -1,
         ),
       );
     }
@@ -1459,7 +1462,8 @@ class _LoweringSession {
             (call) =>
                 call.externalFunctionId == external.externalFunctionId &&
                 call.argumentCount == external.args.length &&
-                call.constructorTypeId == (creation?.runtimeTypeId ?? -1),
+                call.constructorTypeId == (creation?.runtimeTypeId ?? -1) &&
+                call.returnTypeId == external.returnTypeId,
           );
           if (callIndex < 0) {
             callIndex = b._externalCalls.length;
@@ -1468,6 +1472,7 @@ class _LoweringSession {
                 external.externalFunctionId,
                 external.args.length,
                 constructorTypeId: creation?.runtimeTypeId ?? -1,
+                returnTypeId: external.returnTypeId,
               ),
             );
           }

@@ -4,11 +4,13 @@ final class TypedExternalCall {
     this.externalFunctionId,
     this.argumentCount, {
     this.constructorTypeId = -1,
+    this.returnTypeId = -1,
   });
 
   final int externalFunctionId;
   final int argumentCount;
   final int constructorTypeId;
+  final int returnTypeId;
 
   /// With more than three arguments, C holds arguments two onward in a list.
   int get overflowCount => argumentCount > 3 ? argumentCount - 2 : 0;

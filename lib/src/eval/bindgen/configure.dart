@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
+import 'package:dart_eval/src/eval/bindgen/static_constants.dart';
 
 String bindConfigureForRuntime(
   BindgenContext ctx,
@@ -13,6 +14,7 @@ static void configureForRuntime(Runtime runtime) {
   ${constructorsForRuntime(ctx, element, isBridge: isBridge)}
   ${staticMethodsForRuntime(ctx, element, isBridge: isBridge)}
   ${staticGettersForRuntime(ctx, element, isBridge: isBridge)}
+  ${compactStaticConstants(ctx, element)?.runtimeRegistrations ?? ''}
   ${staticSettersForRuntime(ctx, element, isBridge: isBridge)}
 }
 
@@ -188,11 +190,13 @@ String staticGettersForRuntime(
   InterfaceElement element, {
   bool isBridge = false,
 }) {
+  final compactNames = compactStaticConstants(ctx, element)?.fieldNames;
   final emitted = element.getters
       .where(
         (e) =>
             e.isStatic &&
             !e.isPrivate &&
+            !(compactNames?.contains(e.name) ?? false) &&
             ctx.memberIncluded(e.name!, 'static') &&
             (e.nonSynthetic is! FieldElement ||
                 !(e.nonSynthetic as FieldElement).isEnumConstant),

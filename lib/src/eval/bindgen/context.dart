@@ -23,6 +23,9 @@ class BindgenContext {
   /// The class config currently being processed.
   BindgenClassConfig? classConfig;
 
+  /// Class currently being emitted; used to inspect member annotations.
+  InterfaceElement? classElement;
+
   /// The resolved library element, used to resolve YAML type names.
   LibraryElement? libraryElement;
 
@@ -58,6 +61,7 @@ class BindgenContext {
   bool memberIncluded(String name, String kind, {bool isObjectMember = false}) {
     if (configMode) {
       final cc = classConfig;
+      if (cc?.opaque == true) return false;
       final mc = cc?.memberConfig(kind, name);
       if (mc != null) return mc.include;
       final excluded = {
@@ -65,6 +69,10 @@ class BindgenContext {
         ...cc?.excludeMembers ?? const <String>[],
       };
       if (excluded.contains(name)) return false;
+      if ((cc?.mode ?? libraryConfig?.defaults.mode) == 'wrap' &&
+          _isProtectedMember(name, kind)) {
+        return false;
+      }
       if (isObjectMember &&
           !(libraryConfig?.defaults.includeObjectMembers ?? false)) {
         return false;
@@ -72,6 +80,39 @@ class BindgenContext {
       return true;
     }
     return !isObjectMember;
+  }
+
+  bool _isProtectedMember(String name, String kind) {
+    final element = classElement;
+    if (element == null) return false;
+    final elements = <InterfaceElement>[
+      element,
+      if (implicitSupers) ...element.allSupertypes.map((s) => s.element),
+    ];
+    for (final owner in elements) {
+      final members = switch (kind) {
+        'constructor' => owner.constructors,
+        'method' => owner.methods,
+        'getter' => owner.getters,
+        'setter' => owner.setters,
+        'field' => owner.fields,
+        'static' => [
+          ...owner.methods.where((m) => m.isStatic),
+          ...owner.getters.where((g) => g.isStatic),
+          ...owner.setters.where((s) => s.isStatic),
+        ],
+        _ => <Element>[],
+      };
+      for (final member in members) {
+        if (member.name != name) continue;
+        if (member.metadata.annotations.any(
+          (annotation) => annotation.element?.displayName == 'protected',
+        )) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /// Hooks files imported by the current output file, mapped to their import

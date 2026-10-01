@@ -3,6 +3,7 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/permission.dart';
+import 'package:dart_eval/src/eval/bindgen/static_constants.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 /// Reconstruct a `List<$Value?>` of [count] arguments from the register ABI.
@@ -180,11 +181,13 @@ String _syntheticStatics(BindgenContext ctx, InterfaceElement element) {
 }
 
 String $staticGetters(BindgenContext ctx, InterfaceElement element) {
+  final compactNames = compactStaticConstants(ctx, element)?.fieldNames;
   final emitted = element.getters
       .where(
         (e) =>
             e.isStatic &&
             !e.isPrivate &&
+            !(compactNames?.contains(e.name) ?? false) &&
             ctx.memberIncluded(e.name!, 'static') &&
             (e.nonSynthetic is! FieldElement ||
                 !(e.nonSynthetic as FieldElement).isEnumConstant),

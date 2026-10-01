@@ -312,25 +312,43 @@ String? wrapType(
   final lib = element.library!;
   final name = element.name ?? ' ';
 
-  // A class included in the sidecar config for the library currently being
-  // bound gets a generated wrapper — prefer it over the stdlib fallback.
-  final configuredClass =
-      ctx.configMode && element.library?.uri.toString() == ctx.uri
-      ? ctx.libraryConfig?.classes[element.name]
-      : null;
+  // A configured package class may be declared in a different library from
+  // the member currently being bound (common with Flutter's split libraries).
+  final configuredLibrary = ctx.config?.libraries.firstWhereOrNull(
+    (l) => l.uri == element.library?.uri.toString(),
+  );
+  final configuredClass = configuredLibrary?.classes[element.name];
   if (configuredClass != null &&
       configuredClass.include &&
       !configuredClass.handMaintained &&
-      !configuredClass.handMaintainedWrapper) {
+      !configuredClass.handMaintainedWrapper &&
+      (configuredClass.mode ?? configuredLibrary!.defaults.mode) != 'bridge') {
     final targetFile = configuredClass.file ?? '${element.name}.dart';
-    if (ctx.outputFile != null && targetFile != ctx.outputFile) {
-      ctx.imports.add(targetFile);
+    final import = _configuredWrapperImport(
+      ctx,
+      configuredLibrary!,
+      targetFile,
+    );
+    if (import != null) {
+      ctx.imports.add(import);
     }
     final wName = configuredClass.wrapperName ?? name;
     if (configuredClass.unnamedValueConstructor) {
       return '$unionStr\$$wName($expr)';
     }
     return '$unionStr\$$wName.wrap($expr)';
+  }
+
+  if (configuredClass != null &&
+      configuredClass.include &&
+      configuredClass.handMaintained &&
+      configuredClass.file != null &&
+      element.library?.isInSdk == false) {
+    ctx.imports.add(configuredClass.file!);
+    final wName = configuredClass.wrapperName ?? name;
+    return configuredClass.unnamedValueConstructor
+        ? '$unionStr\$$wName($expr)'
+        : '$unionStr\$$wName.wrap($expr)';
   }
 
   final defaultCstr = {'int', 'num', 'double', 'bool', 'String', 'Object'};
@@ -357,8 +375,13 @@ String? wrapType(
           !bound.$2.handMaintainedWrapper) {
         // Generated in this run: import the sibling file directly.
         final targetFile = bound.$2.file ?? '$boundName.dart';
-        if (ctx.outputFile != targetFile) {
-          ctx.imports.add(targetFile);
+        final import = _configuredWrapperImport(
+          ctx,
+          ctx.libraryConfig!,
+          targetFile,
+        );
+        if (import != null) {
+          ctx.imports.add(import);
         }
       } else if (bound.$2.handMaintained && bound.$2.file != null) {
         // `file` on a handMaintained class gives the import exposing its
@@ -477,6 +500,36 @@ String? wrapType(
   return null;
 }
 
+/// Import a configured wrapper from another generated output file. Both
+/// `outDir` and `file` are project-relative in the sidecar; use POSIX paths
+/// because Dart import URIs always use forward slashes, including on Windows.
+String? _configuredWrapperImport(
+  BindgenContext ctx,
+  BindgenLibraryConfig library,
+  String targetFile,
+) {
+  final sourceFile = ctx.outputFile;
+  final sourceDir = ctx.libraryConfig?.outDir;
+  final targetDir = library.outDir;
+  if (sourceFile == null || sourceDir == null || targetDir == null) {
+    return sourceFile == targetFile && ctx.libraryConfig == library
+        ? null
+        : targetFile;
+  }
+  final source = path.posix.normalize(
+    path.posix.join(sourceDir.replaceAll('\\', '/'), sourceFile),
+  );
+  final target = path.posix.normalize(
+    path.posix.join(targetDir.replaceAll('\\', '/'), targetFile),
+  );
+  if (source == target) return null;
+  final relative = path.posix.relative(
+    target,
+    from: path.posix.dirname(source),
+  );
+  return relative.startsWith('.') ? relative : './$relative';
+}
+
 /// Box erased SDK values without copying collection aliases.
 /// Exported collection views already have an identity-preserving box cache.
 String wrapBridgeValue(BindgenContext ctx, String expr) {
@@ -504,7 +557,7 @@ String _typeArgumentMetadata(
   DartType payload,
   String? owner,
 ) {
-  final typeId = _runtimeTypeId(ctx, payload, owner);
+  final typeId = runtimeTypeIdFor(ctx, payload, owner);
   if (typeId != null) {
     ctx.imports.add('package:dart_eval/src/eval/runtime/runtime.dart');
   }
@@ -529,7 +582,7 @@ String _wrapFuture(
 }
 
 /// Reify known host result types without guessing erased generic arguments.
-String? _runtimeTypeId(BindgenContext ctx, DartType type, String? owner) {
+String? runtimeTypeIdFor(BindgenContext ctx, DartType type, String? owner) {
   if (type is TypeParameterType) {
     final host = type.element.enclosingElement;
     if (owner == null || host is! InterfaceElement) return null;
@@ -553,7 +606,7 @@ String? _runtimeTypeId(BindgenContext ctx, DartType type, String? owner) {
   final arguments = type is ParameterizedType
       ? [
           for (final argument in type.typeArguments)
-            _runtimeTypeId(ctx, argument, owner),
+            runtimeTypeIdFor(ctx, argument, owner),
         ]
       : <String?>[];
   if (arguments.contains(null)) return null;
