@@ -122,7 +122,15 @@ String argumentAccessor(
       final call = (param.isRequired ? '' : '?.call');
       final wrapped = [
         for (var j = 0; j < type.formalParameters.length; j++)
-          wrapVar(
+          if (exportValues &&
+              (type.formalParameters[j].type.isDartCoreObject ||
+                  type.formalParameters[j].type is TypeParameterType ||
+                  type.formalParameters[j].type is DynamicType))
+            wrapBridgeValue(ctx, type.formalParameters[j].name == null ||
+                    type.formalParameters[j].name!.isEmpty
+                ? 'arg$j'
+                : type.formalParameters[j].name!)
+          else wrapVar(
             ctx,
             type.formalParameters[j].type,
             type.formalParameters[j].name == null ||
@@ -198,7 +206,9 @@ String argumentAccessor(
     if (needsCast) {
       final q = (param.isRequired ? '' : '?');
       paramBuffer.write(' as ${type.element!.name}$q');
-      final typeArgs = type is ParameterizedType
+      // Native bridge calls have their SDK type parameters in scope. Let
+      // the receiving method infer them instead of forcing erased arguments.
+      final typeArgs = !exportValues && type is ParameterizedType
           ? type.typeArguments.map(dartTypeErased).join(', ')
           : '';
       paramBuffer.write(')$q.cast${typeArgs.isEmpty ? '()' : '<$typeArgs>()'}');

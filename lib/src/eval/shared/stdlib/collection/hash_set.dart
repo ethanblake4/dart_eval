@@ -27,8 +27,10 @@ import 'package:dart_eval/stdlib/core.dart'
         $LinkedHashSet,
         $DoubleLinkedQueue,
         $DoubleLinkedQueueEntry,
+        $ListBase,
         $MapBase;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [HashSet]
 class $HashSet<E> implements $Instance {
@@ -1296,13 +1298,19 @@ class $HashSet<E> implements $Instance {
         return $bool(_isNotEmpty);
       case 'first':
         final _first = $value.first;
-        return runtime.wrapAlways(_first, recursive: true);
+        return (_first is List || _first is Map || _first is Set
+            ? TypedInterop.boxExternal(_first, runtime: runtime)!
+            : runtime.wrapAlways(_first));
       case 'last':
         final _last = $value.last;
-        return runtime.wrapAlways(_last, recursive: true);
+        return (_last is List || _last is Map || _last is Set
+            ? TypedInterop.boxExternal(_last, runtime: runtime)!
+            : runtime.wrapAlways(_last));
       case 'single':
         final _single = $value.single;
-        return runtime.wrapAlways(_single, recursive: true);
+        return (_single is List || _single is Map || _single is Set
+            ? TypedInterop.boxExternal(_single, runtime: runtime)!
+            : runtime.wrapAlways(_single));
       case 'cast':
         return $Closure(__cast.func, this);
 
@@ -1425,7 +1433,13 @@ class $HashSet<E> implements $Instance {
     final self = target! as $HashSet;
     final result = self.$value.cast();
     return $Set.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)).toSet(),
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
     );
   }
 
@@ -1440,7 +1454,11 @@ class $HashSet<E> implements $Instance {
     final self = target! as $HashSet;
     final result = self.$value.followedBy((r as $Value?)!.$value);
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1463,7 +1481,11 @@ class $HashSet<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1486,7 +1508,11 @@ class $HashSet<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1501,7 +1527,11 @@ class $HashSet<E> implements $Instance {
     final self = target! as $HashSet;
     final result = self.$value.whereType();
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1524,7 +1554,11 @@ class $HashSet<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1580,7 +1614,9 @@ class $HashSet<E> implements $Instance {
         2,
       )?.$value;
     });
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __fold = $Function(_fold);
@@ -1604,7 +1640,9 @@ class $HashSet<E> implements $Instance {
         2,
       )?.$value;
     });
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __every = $Function(_every);
@@ -1678,7 +1716,9 @@ class $HashSet<E> implements $Instance {
     );
     return $List.view(
       result,
-      (e) => runtime.wrapAlways(e, recursive: true),
+      (e) => (e is List || e is Map || e is Set
+          ? TypedInterop.boxExternal(e, runtime: runtime)!
+          : runtime.wrapAlways(e)),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -1698,7 +1738,13 @@ class $HashSet<E> implements $Instance {
     final self = target! as $HashSet;
     final result = self.$value.toSet();
     return $Set.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)).toSet(),
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
     );
   }
 
@@ -1713,7 +1759,11 @@ class $HashSet<E> implements $Instance {
     final self = target! as $HashSet;
     final result = self.$value.take((r as $int).$value);
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1736,7 +1786,11 @@ class $HashSet<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1751,7 +1805,11 @@ class $HashSet<E> implements $Instance {
     final self = target! as $HashSet;
     final result = self.$value.skip((r as $int).$value);
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1774,7 +1832,11 @@ class $HashSet<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1806,7 +1868,9 @@ class $HashSet<E> implements $Instance {
                   ?.$value;
             },
     );
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __lastWhere = $Function(_lastWhere);
@@ -1837,7 +1901,9 @@ class $HashSet<E> implements $Instance {
                   ?.$value;
             },
     );
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __singleWhere = $Function(_singleWhere);
@@ -1868,7 +1934,9 @@ class $HashSet<E> implements $Instance {
                   ?.$value;
             },
     );
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __elementAt = $Function(_elementAt);
@@ -1881,7 +1949,9 @@ class $HashSet<E> implements $Instance {
   ) {
     final self = target! as $HashSet;
     final result = self.$value.elementAt((r as $int).$value);
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __add = $Function(_add);
@@ -1935,7 +2005,9 @@ class $HashSet<E> implements $Instance {
     final result = self.$value.lookup((r as $Value?)!.$reified);
     return result == null
         ? const $null()
-        : runtime.wrapAlways(result, recursive: true);
+        : (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
   }
 
   static const $Function __removeAll = $Function(_removeAll);
@@ -2032,7 +2104,13 @@ class $HashSet<E> implements $Instance {
       ((r as $Value?)!.$reified as Set).cast<Object?>(),
     );
     return $Set.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)).toSet(),
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
     );
   }
 
@@ -2049,7 +2127,13 @@ class $HashSet<E> implements $Instance {
       ((r as $Value?)!.$reified as Set).cast<dynamic>(),
     );
     return $Set.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)).toSet(),
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
     );
   }
 
@@ -2066,7 +2150,13 @@ class $HashSet<E> implements $Instance {
       ((r as $Value?)!.$reified as Set).cast<Object?>(),
     );
     return $Set.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)).toSet(),
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
     );
   }
 

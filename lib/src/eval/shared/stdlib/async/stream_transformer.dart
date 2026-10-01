@@ -45,6 +45,7 @@ import 'package:dart_eval/stdlib/core.dart'
 import 'event_sink.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [StreamTransformer]
 class $StreamTransformer<S, T> implements $Instance {
@@ -497,7 +498,11 @@ class $StreamTransformer<S, T> implements $Instance {
     final self = target! as $StreamTransformer;
     final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 1) ??

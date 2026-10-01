@@ -46,6 +46,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExpMatch,
         $StringSink;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval bridge binding for [Iterable]
 class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
@@ -1103,20 +1104,30 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
 
       case 'first':
         final _first = super.first;
-        return runtime.wrapAlways(_first, recursive: true);
+        return (_first is List || _first is Map || _first is Set
+            ? TypedInterop.boxExternal(_first, runtime: runtime)!
+            : runtime.wrapAlways(_first));
 
       case 'last':
         final _last = super.last;
-        return runtime.wrapAlways(_last, recursive: true);
+        return (_last is List || _last is Map || _last is Set
+            ? TypedInterop.boxExternal(_last, runtime: runtime)!
+            : runtime.wrapAlways(_last));
 
       case 'single':
         final _single = super.single;
-        return runtime.wrapAlways(_single, recursive: true);
+        return (_single is List || _single is Map || _single is Set
+            ? TypedInterop.boxExternal(_single, runtime: runtime)!
+            : runtime.wrapAlways(_single));
       case 'cast':
         return $Function((runtime, target, r, s, c) {
           final result = super.cast();
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'followedBy':
@@ -1125,7 +1136,11 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
             TypedInterop.exportIterable((r as $Value?), runtime),
           );
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'map':
@@ -1135,7 +1150,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               ((r as $Value?)! as EvalCallable)(
                 runtime,
                 null,
-                runtime.wrapAlways(e, recursive: true),
+                (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e)),
                 null,
                 1,
               ),
@@ -1143,7 +1160,11 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
             ) as dynamic;
           });
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'where':
@@ -1152,21 +1173,31 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
             return ((r as $Value?)! as EvalCallable)(
                   runtime,
                   null,
-                  runtime.wrapAlways(element, recursive: true),
+                  (element is List || element is Map || element is Set
+                      ? TypedInterop.boxExternal(element, runtime: runtime)!
+                      : runtime.wrapAlways(element)),
                   null,
                   1,
                 )?.$value
                 as bool;
           });
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'whereType':
         return $Function((runtime, target, r, s, c) {
           final result = super.whereType();
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'expand':
@@ -1176,7 +1207,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               ((r as $Value?)! as EvalCallable)(
                 runtime,
                 null,
-                runtime.wrapAlways(element, recursive: true),
+                (element is List || element is Map || element is Set
+                    ? TypedInterop.boxExternal(element, runtime: runtime)!
+                    : runtime.wrapAlways(element)),
                 null,
                 1,
               ),
@@ -1184,7 +1217,11 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
             );
           });
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'contains':
@@ -1201,7 +1238,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
             ((r as $Value?)! as EvalCallable)(
               runtime,
               null,
-              runtime.wrapAlways(element, recursive: true),
+              (element is List || element is Map || element is Set
+                  ? TypedInterop.boxExternal(element, runtime: runtime)!
+                  : runtime.wrapAlways(element)),
               null,
               1,
             );
@@ -1215,14 +1254,20 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               ((r as $Value?)! as EvalCallable)(
                 runtime,
                 null,
-                runtime.wrapAlways(value, recursive: true),
-                runtime.wrapAlways(element, recursive: true),
+                (value is List || value is Map || value is Set
+                    ? TypedInterop.boxExternal(value, runtime: runtime)!
+                    : runtime.wrapAlways(value)),
+                (element is List || element is Map || element is Set
+                    ? TypedInterop.boxExternal(element, runtime: runtime)!
+                    : runtime.wrapAlways(element)),
                 2,
               ),
               runtime: runtime,
             ) as dynamic;
           });
-          return runtime.wrapAlways(result, recursive: true);
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
         });
       case 'fold':
         return $Function((runtime, target, r, s, c) {
@@ -1234,15 +1279,26 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
                 ((s as $Value?)! as EvalCallable)(
                   runtime,
                   null,
-                  runtime.wrapAlways(previousValue, recursive: true),
-                  runtime.wrapAlways(element, recursive: true),
+                  (previousValue is List ||
+                          previousValue is Map ||
+                          previousValue is Set
+                      ? TypedInterop.boxExternal(
+                          previousValue,
+                          runtime: runtime,
+                        )!
+                      : runtime.wrapAlways(previousValue)),
+                  (element is List || element is Map || element is Set
+                      ? TypedInterop.boxExternal(element, runtime: runtime)!
+                      : runtime.wrapAlways(element)),
                   2,
                 ),
                 runtime: runtime,
               ) as dynamic;
             },
           );
-          return runtime.wrapAlways(result, recursive: true);
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
         });
       case 'every':
         return $Function((runtime, target, r, s, c) {
@@ -1250,7 +1306,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
             return ((r as $Value?)! as EvalCallable)(
                   runtime,
                   null,
-                  runtime.wrapAlways(element, recursive: true),
+                  (element is List || element is Map || element is Set
+                      ? TypedInterop.boxExternal(element, runtime: runtime)!
+                      : runtime.wrapAlways(element)),
                   null,
                   1,
                 )?.$value
@@ -1271,7 +1329,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
             return ((r as $Value?)! as EvalCallable)(
                   runtime,
                   null,
-                  runtime.wrapAlways(element, recursive: true),
+                  (element is List || element is Map || element is Set
+                      ? TypedInterop.boxExternal(element, runtime: runtime)!
+                      : runtime.wrapAlways(element)),
                   null,
                   1,
                 )?.$value
@@ -1288,21 +1348,41 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
           );
           return $List.view(
             result,
-            (e) => runtime.wrapAlways(e, recursive: true),
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+            runtime: runtime,
+            runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+              runtime.runtimeTypeArgumentAt(
+                    Runtime.bridgeData[this]!.$runtimeType,
+                    0,
+                  ) ??
+                  runtime.lookupType(CoreTypes.dynamic),
+            ]),
           );
         });
       case 'toSet':
         return $Function((runtime, target, r, s, c) {
           final result = super.toSet();
           return $Set.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)).toSet(),
+            (result)
+                .map(
+                  (e) => (e is List || e is Map || e is Set
+                      ? TypedInterop.boxExternal(e, runtime: runtime)!
+                      : runtime.wrapAlways(e)),
+                )
+                .toSet(),
           );
         });
       case 'take':
         return $Function((runtime, target, r, s, c) {
           final result = super.take((r as $int).$value);
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'takeWhile':
@@ -1311,21 +1391,31 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
             return ((r as $Value?)! as EvalCallable)(
                   runtime,
                   null,
-                  runtime.wrapAlways(value, recursive: true),
+                  (value is List || value is Map || value is Set
+                      ? TypedInterop.boxExternal(value, runtime: runtime)!
+                      : runtime.wrapAlways(value)),
                   null,
                   1,
                 )?.$value
                 as bool;
           });
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'skip':
         return $Function((runtime, target, r, s, c) {
           final result = super.skip((r as $int).$value);
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'skipWhile':
@@ -1334,14 +1424,20 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
             return ((r as $Value?)! as EvalCallable)(
                   runtime,
                   null,
-                  runtime.wrapAlways(value, recursive: true),
+                  (value is List || value is Map || value is Set
+                      ? TypedInterop.boxExternal(value, runtime: runtime)!
+                      : runtime.wrapAlways(value)),
                   null,
                   1,
                 )?.$value
                 as bool;
           });
           return $Iterable.wrap(
-            (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+            (result).map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
           );
         });
       case 'firstWhere':
@@ -1351,7 +1447,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               return ((r as $Value?)! as EvalCallable)(
                     runtime,
                     null,
-                    runtime.wrapAlways(element, recursive: true),
+                    (element is List || element is Map || element is Set
+                        ? TypedInterop.boxExternal(element, runtime: runtime)!
+                        : runtime.wrapAlways(element)),
                     null,
                     1,
                   )?.$value
@@ -1374,7 +1472,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
                     ) as dynamic;
                   },
           );
-          return runtime.wrapAlways(result, recursive: true);
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
         });
       case 'lastWhere':
         return $Function((runtime, target, r, s, c) {
@@ -1383,7 +1483,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               return ((r as $Value?)! as EvalCallable)(
                     runtime,
                     null,
-                    runtime.wrapAlways(element, recursive: true),
+                    (element is List || element is Map || element is Set
+                        ? TypedInterop.boxExternal(element, runtime: runtime)!
+                        : runtime.wrapAlways(element)),
                     null,
                     1,
                   )?.$value
@@ -1406,7 +1508,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
                     ) as dynamic;
                   },
           );
-          return runtime.wrapAlways(result, recursive: true);
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
         });
       case 'singleWhere':
         return $Function((runtime, target, r, s, c) {
@@ -1415,7 +1519,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               return ((r as $Value?)! as EvalCallable)(
                     runtime,
                     null,
-                    runtime.wrapAlways(element, recursive: true),
+                    (element is List || element is Map || element is Set
+                        ? TypedInterop.boxExternal(element, runtime: runtime)!
+                        : runtime.wrapAlways(element)),
                     null,
                     1,
                   )?.$value
@@ -1438,12 +1544,16 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
                     ) as dynamic;
                   },
           );
-          return runtime.wrapAlways(result, recursive: true);
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
         });
       case 'elementAt':
         return $Function((runtime, target, r, s, c) {
           final result = super.elementAt((r as $int).$value);
-          return runtime.wrapAlways(result, recursive: true);
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
         });
     }
     return null;
@@ -1479,51 +1589,56 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
   @override
   Iterable<R> cast<R>() {
     final runtime = $runtime;
-    return $_invoke('cast', []);
+    final result = $_invoke('cast', []);
+    return TypedInterop.exportIterable<R>(result, runtime);
   }
 
   @override
   Iterable<E> followedBy(Iterable<E> other) {
     final runtime = $runtime;
-    return $_invoke('followedBy', [
+    final result = $_invoke('followedBy', [
       $Iterable.wrap(
         (other).map((e) => runtime.wrapAlways(e, recursive: true)),
       ),
     ]);
+    return TypedInterop.exportIterable<E>(result, runtime);
   }
 
   @override
   Iterable<T> map<T>(T Function(E) toElement) {
     final runtime = $runtime;
-    return $_invoke('map', [
+    final result = $_invoke('map', [
       $Function((runtime, target, r, s, c) {
         final funcResult = toElement((r as $Value?)!.$value);
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
     ]);
+    return TypedInterop.exportIterable<T>(result, runtime);
   }
 
   @override
   Iterable<E> where(bool Function(E) test) {
     final runtime = $runtime;
-    return $_invoke('where', [
+    final result = $_invoke('where', [
       $Function((runtime, target, r, s, c) {
         final funcResult = test((r as $Value?)!.$value);
         return $bool(funcResult);
       }),
     ]);
+    return TypedInterop.exportIterable<E>(result, runtime);
   }
 
   @override
   Iterable<T> whereType<T>() {
     final runtime = $runtime;
-    return $_invoke('whereType', []);
+    final result = $_invoke('whereType', []);
+    return TypedInterop.exportIterable<T>(result, runtime);
   }
 
   @override
   Iterable<T> expand<T>(Iterable<T> Function(E) toElements) {
     final runtime = $runtime;
-    return $_invoke('expand', [
+    final result = $_invoke('expand', [
       $Function((runtime, target, r, s, c) {
         final funcResult = toElements((r as $Value?)!.$value);
         return $Iterable.wrap(
@@ -1531,13 +1646,16 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
         );
       }),
     ]);
+    return TypedInterop.exportIterable<T>(result, runtime);
   }
 
   @override
   bool contains(Object? element) {
     final runtime = $runtime;
     return $_invoke('contains', [
-      element == null ? const $null() : $Object(element),
+      (element is List || element is Map || element is Set
+          ? TypedInterop.boxExternal(element, runtime: runtime)!
+          : runtime.wrapAlways(element)),
     ]);
   }
 
@@ -1570,7 +1688,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
   T fold<T>(T initialValue, T Function(T, E) combine) {
     final runtime = $runtime;
     return $_invoke('fold', [
-      runtime.wrapAlways(initialValue, recursive: true),
+      (initialValue is List || initialValue is Map || initialValue is Set
+          ? TypedInterop.boxExternal(initialValue, runtime: runtime)!
+          : runtime.wrapAlways(initialValue)),
       $Function((runtime, target, r, s, c) {
         final funcResult = combine(
           (r as $Value?)!.$value,
@@ -1624,35 +1744,39 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
   @override
   Iterable<E> take(int count) {
     final runtime = $runtime;
-    return $_invoke('take', [$int(count)]);
+    final result = $_invoke('take', [$int(count)]);
+    return TypedInterop.exportIterable<E>(result, runtime);
   }
 
   @override
   Iterable<E> takeWhile(bool Function(E) test) {
     final runtime = $runtime;
-    return $_invoke('takeWhile', [
+    final result = $_invoke('takeWhile', [
       $Function((runtime, target, r, s, c) {
         final funcResult = test((r as $Value?)!.$value);
         return $bool(funcResult);
       }),
     ]);
+    return TypedInterop.exportIterable<E>(result, runtime);
   }
 
   @override
   Iterable<E> skip(int count) {
     final runtime = $runtime;
-    return $_invoke('skip', [$int(count)]);
+    final result = $_invoke('skip', [$int(count)]);
+    return TypedInterop.exportIterable<E>(result, runtime);
   }
 
   @override
   Iterable<E> skipWhile(bool Function(E) test) {
     final runtime = $runtime;
-    return $_invoke('skipWhile', [
+    final result = $_invoke('skipWhile', [
       $Function((runtime, target, r, s, c) {
         final funcResult = test((r as $Value?)!.$value);
         return $bool(funcResult);
       }),
     ]);
+    return TypedInterop.exportIterable<E>(result, runtime);
   }
 
   @override

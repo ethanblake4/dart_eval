@@ -19,6 +19,7 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/stdlib/core.dart'
     hide $ByteBuffer, $TypedData, $ByteData, $Uint8List, $Uint32List;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
@@ -3807,7 +3808,12 @@ class $Uint8List implements $Instance {
   ) {
     final self = target! as $Uint8List;
     final result = self.$value.cast();
-    return $List.view(result, (e) => runtime.wrapAlways(e, recursive: true));
+    return $List.view(
+      result,
+      (e) => (e is List || e is Map || e is Set
+          ? TypedInterop.boxExternal(e, runtime: runtime)!
+          : runtime.wrapAlways(e)),
+    );
   }
 
   static const $Function __followedBy = $Function(_followedBy);
@@ -3842,7 +3848,11 @@ class $Uint8List implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -3878,7 +3888,11 @@ class $Uint8List implements $Instance {
     final self = target! as $Uint8List;
     final result = self.$value.whereType();
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -3901,7 +3915,11 @@ class $Uint8List implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -3975,7 +3993,9 @@ class $Uint8List implements $Instance {
         2,
       )?.$value;
     });
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __every = $Function(_every);
@@ -6558,7 +6578,12 @@ class $Uint32List implements $Instance {
   ) {
     final self = target! as $Uint32List;
     final result = self.$value.cast();
-    return $List.view(result, (e) => runtime.wrapAlways(e, recursive: true));
+    return $List.view(
+      result,
+      (e) => (e is List || e is Map || e is Set
+          ? TypedInterop.boxExternal(e, runtime: runtime)!
+          : runtime.wrapAlways(e)),
+    );
   }
 
   static const $Function __followedBy = $Function(_followedBy);
@@ -6593,7 +6618,11 @@ class $Uint32List implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -6629,7 +6658,11 @@ class $Uint32List implements $Instance {
     final self = target! as $Uint32List;
     final result = self.$value.whereType();
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -6652,7 +6685,11 @@ class $Uint32List implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -6726,7 +6763,9 @@ class $Uint32List implements $Instance {
         2,
       )?.$value;
     });
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __every = $Function(_every);

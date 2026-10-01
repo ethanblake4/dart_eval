@@ -506,7 +506,7 @@ ${bindDecoratorMethods(ctx, element)}
         code +=
             '''
 /// dart_eval lightweight wrapper binding for [${element.name}]
-class $wrapperName implements \$Instance {
+class $wrapperName${_typeParams(ctx, element)} implements \$Instance {
 /// Compile-time type specification of [$wrapperName]
 ${bindTypeSpec(ctx, element)}
 /// Compile-time type declaration of [$wrapperName]

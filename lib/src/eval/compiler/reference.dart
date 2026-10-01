@@ -219,6 +219,17 @@ class IndexedReference implements Reference {
     _index = _index.binding?.current ?? _index;
   }
 
+  List<TypeRef> _collectionArguments(
+    CompilerContext ctx,
+    BridgeTypeSpec collection,
+  ) {
+    final view = ctx.typeSystem.asInstanceOf(
+      _variable.type,
+      ctx.types.bySpec(collection),
+    );
+    return view == null ? const [] : interfaceArgumentsOf(view);
+  }
+
   @override
   TypeRef resolveType(
     CompilerContext ctx, {
@@ -233,9 +244,8 @@ class IndexedReference implements Reference {
       CoreTypes.list.ref(ctx),
       forceAllowDynamic: false,
     )) {
-      return interfaceArgumentsOf(_variable.type).isNotEmpty
-          ? interfaceArgumentsOf(_variable.type)[0]
-          : CoreTypes.dynamic.ref(ctx);
+      final arguments = _collectionArguments(ctx, CoreTypes.list);
+      return arguments.isNotEmpty ? arguments[0] : CoreTypes.dynamic.ref(ctx);
     }
     if (_variable.type.isAssignableTo(
       ctx,
@@ -243,8 +253,9 @@ class IndexedReference implements Reference {
       forceAllowDynamic: false,
     )) {
       // `Map.[]` is `V?`: a missing key yields null.
-      return interfaceArgumentsOf(_variable.type).length >= 2
-          ? interfaceArgumentsOf(_variable.type)[1].withNullable(true)
+      final arguments = _collectionArguments(ctx, CoreTypes.map);
+      return arguments.length >= 2
+          ? arguments[1].withNullable(true)
           : CoreTypes.dynamic.ref(ctx);
     }
     return getValue(ctx).type;
@@ -266,8 +277,15 @@ class IndexedReference implements Reference {
   }) {
     try {
       return ctx.memberLookup
-          .interfaceMember(receiver, MemberName.method(operator), source: source)
-          .signature.positional.elementAtOrNull(index)?.type;
+          .interfaceMember(
+            receiver,
+            MemberName.method(operator),
+            source: source,
+          )
+          .signature
+          .positional
+          .elementAtOrNull(index)
+          ?.type;
     } on CompileError {
       // An extension operator may apply instead.
     }
@@ -292,11 +310,15 @@ class IndexedReference implements Reference {
   ]) {
     _refreshBindings();
 
-    if (_variable.type.isAssignableTo(
-      ctx,
-      CoreTypes.list.ref(ctx),
-      forceAllowDynamic: false,
-    )) {
+    final nativeList =
+        _variable.rep == ValueRep.nativeList ||
+        _variable.exactType?.isSpec(CoreTypes.list) == true;
+    if (nativeList &&
+        _variable.type.isAssignableTo(
+          ctx,
+          CoreTypes.list.ref(ctx),
+          forceAllowDynamic: false,
+        )) {
       if (!_index.type.isAssignableTo(ctx, CoreTypes.int.ref(ctx))) {
         throw CompileError(
           'TypeError: Cannot use variable of type ${_index.type} as list index',
@@ -311,8 +333,9 @@ class IndexedReference implements Reference {
         representation: MachineRepresentation.integer,
         source: source,
       );
-      final listElementType = interfaceArgumentsOf(_variable.type).isNotEmpty
-          ? interfaceArgumentsOf(_variable.type)[0]
+      final arguments = _collectionArguments(ctx, CoreTypes.list);
+      final listElementType = arguments.isNotEmpty
+          ? arguments[0]
           : CoreTypes.dynamic.ref(ctx);
       return Variable.ssa(
         ctx,
@@ -322,11 +345,15 @@ class IndexedReference implements Reference {
       );
     }
 
-    if (_variable.type.isAssignableTo(
-      ctx,
-      CoreTypes.map.ref(ctx),
-      forceAllowDynamic: false,
-    )) {
+    final nativeMap =
+        _variable.rep == ValueRep.nativeMap ||
+        _variable.exactType?.isSpec(CoreTypes.map) == true;
+    if (nativeMap &&
+        _variable.type.isAssignableTo(
+          ctx,
+          CoreTypes.map.ref(ctx),
+          forceAllowDynamic: false,
+        )) {
       // `Map.[]` takes `Object?` — any index type is allowed at compile
       // time; a miss returns null rather than throwing.
       final map = _variable.unboxIfNeeded(ctx);
@@ -334,9 +361,10 @@ class IndexedReference implements Reference {
       // key travels boxed and a miss must produce a boxed null.
       _index = _index.boxIfNeeded(ctx, source);
 
-      final mapType = interfaceArgumentsOf(_variable.type).length < 2
+      final arguments = _collectionArguments(ctx, CoreTypes.map);
+      final mapType = arguments.length < 2
           ? CoreTypes.dynamic.ref(ctx)
-          : interfaceArgumentsOf(_variable.type)[1].withNullable(true);
+          : arguments[1].withNullable(true);
 
       final mapResult = Variable.ssa(
         ctx,
@@ -378,9 +406,10 @@ class IndexedReference implements Reference {
         );
       }
 
-      final elementType = interfaceArgumentsOf(_variable.type).isEmpty
+      final arguments = _collectionArguments(ctx, CoreTypes.list);
+      final elementType = arguments.isEmpty
           ? CoreTypes.dynamic.ref(ctx)
-          : interfaceArgumentsOf(_variable.type)[0];
+          : arguments[0];
       final formattedValue = convertForAssignment(
         ctx,
         value,

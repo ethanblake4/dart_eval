@@ -710,19 +710,75 @@ path; no runtime instruction or interpreter change is required. The focused
 witness covers function false positives, nullable members, accepted futures
 and rejected explicit, implicit and pattern casts.
 
-This checkpoint contains only the independent compiler promotion and FutureOr
-fixes. Their new witnesses pass with native Dart and both evaluated loading
-modes. The full working tree passes 1937 ordinary tests with 62 skips. SDK-full
-has 2315 actual passes, 251 compile errors and 134 expected failures, with 362
-skips and no unexpected outcomes. Full analysis retains the two existing
-diagnostics. The compiler subset passes all 1930 ordinary tests with 62 skips against
-the previous bindings in an isolated checkout. Its focused analysis is clean.
-Five stale SDK expectations are removed after fresh and serialized checks.
+MapBase and ListBase now have generated bridge and wrapper bindings. SDK
+default implementations use the existing superclass fallback and call the
+guest primitives. Generator fixes preserve inherited setters, wrapper type
+parameters, instantiated SDK owner metadata, lazy Iterable exports and
+collection identity across generic callback/result boundaries. Generated
+MapEntry keys use the existing collection box cache. No SDK method bodies are
+copied or written manually.
 
-Generated collection bindings, the hand-maintained Map lookup correction and
-coupled ordinary indexing changes remain uncommitted. The user deferred
-performance experiments and benchmark sweeps until an explicit resume, so
-their required AOT validation is pending. Correctness work continues.
+Ordinary List/Map reads and list-pattern reads require allocation or storage
+proof before selecting native indexing. Guest implementations and uncertain
+boxed receivers use existing operator dispatch. Indexed reference types use
+the actual List/Map interface arguments, including nongeneric and reordered
+subclasses. Proven native allocations keep their original instructions;
+uncertain receivers can require boxed arguments and call instructions. The
+user deferred performance work and benchmark sweeps until an explicit resume.
+These bindings and their coupled indexing changes remain uncommitted until
+the required AOT check can run.
+
+Focused tests cover inherited defaults, guest operator calls, compound writes,
+unknown native lists and collection/custom guest object keys. Existing Iterable
+and typedef regressions pass. Source mixin application remains a separate
+task. An untyped MapBase callback inference issue and the existing built-in
+Object wrapper identity limitation are not addressed by these generator fixes.
+
+SDK probes now pass non_interface_object_pattern_test.dart and
+version_2_29_changes_test.dart. The object-inference fixture advances from a
+compiler error to its inferBound runtime assertion. A separate native witness
+identifies incorrect constructor inference: D(0) becomes D<num>, or D<dynamic>
+under Object context, whereas native Dart infers D<int> in both cases. The
+schema fixture's remaining error is localized to List<int> inference for an
+untyped identifier pattern at line 59. These are the next correctness targets.
+
+Repeated generation is identical across 90 generated files and registries.
+All four collection witnesses pass natively with assertions enabled and return
+13, 7, 13 and 9, matching both evaluated loading modes. Final ordinary validation
+passes 1937 tests with 62 skips, including the Map lookup regression.
+A low-level unknown-List fixture now supplies
+the Runtime required by normal operator dispatch. Three stale SDK expectations
+are removed after assertion-enabled fresh and serialized verification:
+list/mixin_test.dart, patterns/non_interface_object_pattern_test.dart and
+patterns/version_2_29_changes_test.dart.
+
+SDK-full also exposed five generic-method regressions through the new Map
+operator dispatch. The established hand-maintained Map binding had an
+incorrect `K -> V` lookup descriptor instead of SDK `Object? -> V?` semantics,
+and its implementation rejected null keys. Correcting the descriptor and
+normalizing null to the canonical boxed null key fixes all five fixtures in
+both loading modes. A native and dual-runtime witness covers missing,
+incompatible and nullable keys, including instance precedence over an Object
+extension operator. The generated files remain identical after this manual
+binding correction.
+
+Final SDK-full has 2315 actual passes, 251 compile errors and 134 expected
+runtime failures, with 362 skipped fixtures and no unexpected outcomes. All
+2700 harness checks pass. Nine stale entries have been verified in fresh and
+serialized runtimes and removed in the working tree. Full analysis retains
+only the existing dependency warning and benchmark import info. Logs:
+cycle4-pass2-final2-ordinary.log, cycle4-pass2-final2-analyze.log and
+cycle4-pass2-final2-sdk-full.log.
+
+The independent promotion and FutureOr compiler fixes are checkpointed
+separately. Against the previous bindings, the isolated compiler checkpoint
+passes all 1930 ordinary tests with 62 skips and clean focused analysis. Five
+SDK fixtures pass in both loading modes; only those five stale expectations
+are checkpointed. The four collection-dependent removals stay with their
+bindings. Generated bindings, the manual Map signature correction and
+coupled ordinary indexing fixes stay in the working tree pending AOT
+validation. Performance experiments and sweeps are deferred at the user's
+request; correctness work continues.
 
 ## Fourth cycle, third correctness pass
 
@@ -862,3 +918,114 @@ pass4-primary-ordinary-final.log and pass4-primary-final-*.out.
 The user has resumed performance experiments and AOT sweeps. Generated
 bindings and coupled indexing changes remain uncommitted until their final
 AOT validation.
+## Fourth cycle performance work
+
+The user resumed the full loop. Correctness checkpoint 2676c4a is pushed.
+The collection generator, generated bindings and coupled indexing changes
+from the second correctness pass remain in the working tree. Their first
+AOT screen compares all 22 drivers against the saved pre-binding executable,
+with seven samples on CPU affinity mask 4. Any accepted runtime changes will
+receive a final full sweep with fifteen samples before commit.
+
+Prepared experiments target repeated virtual-call resolution, bound-method
+descriptor scans for transient handler instances, and unary host callback
+argument allocation. Production runtime code remains unchanged during baseline
+capture. The descriptor workload checks native reference checksums and both
+fresh and serialized execution, varying reachable handler implementations.
+
+The first 22-driver seven-sample screen matches all execution checksums.
+Several primitive controls vary substantially across short runs. Longer
+ABBA repeats confirm identical primitive-call bytecode between the current
+compiler with previous bindings and the held binding build. Those controls
+do not establish a reliable binding regression; raw results are retained in
+cycle4-performance-held-screen, cycle4-performance-targeted-abba and
+cycle4-performance-binding-abba.
+
+A 13-line native List/Map lookup experiment bypassed callable adaptation for
+exact wrappers while retaining subclass dispatch. All 65 focused tests and
+scoped analysis passed, but paired AOT runs were consistently about 55% slower
+for configuration validation and 43% slower for template rendering. The
+experiment is rejected and the runtime patch is removed. Logs are retained
+under cycle4-native-index-fastpath-abba. Production runtime source is again
+identical to the correctness checkpoint while the descriptor baseline is
+captured from the promoted many_handlers benchmark.
+
+Bound-method binding now uses a lazy per-program index of the first bound
+descriptor for each function. It retains receiver and runtime binding at each
+member, without caching closures across instances. The new many_handlers
+benchmark creates transient instances of 8, 32 and 128 reachable handler
+classes, checks a native reference checksum, and measures fresh and serialized
+programs. Compilation stays outside the measured interval.
+
+Fifteen-sample ABBA repeats at 100,000 records show about 4% improvement with
+8 handlers, 5–7% with 32 and 11–15% with 128. Longer call, dynamic and virtual
+call controls are roughly flat, with matching checksums. Repeated isolated
+cold runs at 128 handlers show a one-time first-call cost of about 20–27
+microseconds. Sparse storage avoids allocating one descriptor slot for every
+free function in programs with few bound methods. The dense-array alternative
+remains an ignored draft. Logs: cycle4-descriptor-candidate-abba,
+cycle4-descriptor-runtime-controls and cycle4-descriptor-cold-128.
+
+All 132 focused descriptor, codec, bound closure, type environment, virtual
+argument, dynamic dispatch, inheritance and omitted generic checks pass.
+Scoped analysis is clean. The descriptor candidate is preserved as a separate
+AOT executable before testing unary callback allocation. Final full-suite
+runtime validation and AOT measurements remain pending.
+
+The first unary callback specialization lived inside the general invocation
+method. Long ABBA repeats measured a 14.5% improvement for unary callbacks,
+but an 11.4% regression for omitted defaults and 4–7% regressions in the
+zero-argument controls. That version is rejected. The next experiment moves
+the specialization to the host call entry point and restores the general
+invocation method unchanged. Both candidates retain the original scalar
+casts, generic bounds, supplied-argument checks and defining type context.
+Logs for the rejected version: cycle4-unary-runtime-controls and
+cycle4-unary-callback-long-abba.
+
+The host-only specialization improves unary callbacks by about 29% in
+one-million-call, fifteen-sample ABBA repeats. Omitted defaults and bound
+zero-argument methods are flat; captured zero-argument controls are about
+2% slower. All 123 focused unary, closure, default, generic and covariance
+checks pass, with clean analysis. Longer call and dynamic controls show no
+repeatable material regression. Logs: cycle4-unary-host-callback-abba and
+cycle4-unary-host-runtime-controls.
+
+A full 22-driver, fifteen-sample AOT sweep against the saved pre-binding
+baseline matches all 21 execution checksums. It includes the compilation
+driver, which has no execution checksum. The sweep flags configuration
+validation, template rendering and two dynamic cases. Same-checkpoint ABBA
+attribution shows those deltas are not caused by the host unary change:
+configuration and template medians are flat to slightly faster, and dynamic
+collection writes are within about 1%. Results are retained under
+cycle4-unary-host-final-aot and cycle4-unary-host-attribution. The older-baseline
+regressions remain part of the final assessment, rather than being dismissed
+because the targeted callback benchmark improved.
+
+A further experiment caches the bound Map index callback per wrapper. It
+targets allocation during the interface dispatch required for unknown Map
+implementations. The callback retains its receiver and reads the live backing
+map; subclass property overrides remain on their existing dispatch path.
+Its 27 focused tests pass with clean analysis, but ABBA controls show flat
+configuration validation and slower or noisy template medians. The cache
+provides no consistent benefit and is removed, avoiding an extra field on
+every map wrapper. Logs remain under cycle4-map-index-cache-controls.
+
+Accepted runtime source is restored to the descriptor index and host-only
+unary specialization measured by cycle4-unary-host-final-aot. The previous
+full sweep remains the final AOT check for that exact runtime source. Ordinary
+and SDK-full tests and final scoped analysis follow before commit.
+
+Final validation passes all 2006 ordinary tests with 63 skips. SDK-full
+passes its expectation harness and reports 2511 actual passes, 243 compiler
+errors, 126 runtime failures and one unsupported aggregate. The 369 genuinely
+failing fixture paths remain for the next correctness cycle. All 47 changed
+or new Dart files have clean scoped analysis, including regenerated bindings,
+runtime code, compiler code, benchmarks and tests. Logs: cycle4-final-ordinary,
+cycle4-final-sdk-full and cycle4-final-analyze.
+
+The performance checkpoint includes the previously held collection generator
+and SDK-generated bindings, their coupled compiler dispatch/type projection
+changes, the Map lookup signature/null-key correction, and four verified stale
+expectation removals. The descriptor index and host unary fast path are the
+only accepted runtime experiments. No interpreter loop or bytecode format
+change is included. The final full AOT sweep ran before this checkpoint.

@@ -37,6 +37,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'converter.dart';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+
 /// dart_eval wrapper binding for [Codec]
 class $Codec<S, T> implements $Instance {
   /// Configure this class for use in a [Runtime]
@@ -226,7 +228,9 @@ class $Codec<S, T> implements $Instance {
   ) {
     final self = target! as $Codec;
     final result = self.$value.encode((r as $Value?)!.$value);
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __decode = $Function(_decode);
@@ -239,7 +243,9 @@ class $Codec<S, T> implements $Instance {
   ) {
     final self = target! as $Codec;
     final result = self.$value.decode((r as $Value?)!.$value);
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __fuse = $Function(_fuse);

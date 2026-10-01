@@ -46,6 +46,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExpMatch,
         $StringSink;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [MapEntry]
 class $MapEntry<K, V> implements $Instance {
@@ -149,10 +150,14 @@ class $MapEntry<K, V> implements $Instance {
     switch (identifier) {
       case 'key':
         final _key = $value.key;
-        return runtime.wrapAlways(_key, recursive: true);
+        return (_key is List || _key is Map || _key is Set
+            ? TypedInterop.boxExternal(_key, runtime: runtime)!
+            : runtime.wrapAlways(_key));
       case 'value':
         final _value = $value.value;
-        return runtime.wrapAlways(_value, recursive: true);
+        return (_value is List || _value is Map || _value is Set
+            ? TypedInterop.boxExternal(_value, runtime: runtime)!
+            : runtime.wrapAlways(_value));
     }
     return _superclass.$getProperty(runtime, identifier);
   }

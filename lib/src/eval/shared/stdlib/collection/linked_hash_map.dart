@@ -27,8 +27,10 @@ import 'package:dart_eval/stdlib/core.dart'
         $LinkedHashSet,
         $DoubleLinkedQueue,
         $DoubleLinkedQueueEntry,
+        $ListBase,
         $MapBase;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
 /// dart_eval wrapper binding for [LinkedHashMap]
@@ -982,12 +984,20 @@ class $LinkedHashMap<K, V> implements $Instance {
       case 'keys':
         final _keys = $value.keys;
         return $Iterable.wrap(
-          (_keys).map((e) => runtime.wrapAlways(e, recursive: true)),
+          (_keys).map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
         );
       case 'values':
         final _values = $value.values;
         return $Iterable.wrap(
-          (_values).map((e) => runtime.wrapAlways(e, recursive: true)),
+          (_values).map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
         );
       case 'length':
         final _length = $value.length;
@@ -1059,8 +1069,12 @@ class $LinkedHashMap<K, V> implements $Instance {
     return wrapMap(
       result,
       (key, value) => MapEntry(
-        runtime.wrapAlways(key, recursive: true),
-        runtime.wrapAlways(value, recursive: true),
+        (key is List || key is Map || key is Set
+            ? TypedInterop.boxExternal(key, runtime: runtime)!
+            : runtime.wrapAlways(key)),
+        (value is List || value is Map || value is Set
+            ? TypedInterop.boxExternal(value, runtime: runtime)!
+            : runtime.wrapAlways(value)),
       ),
     );
   }
@@ -1103,7 +1117,9 @@ class $LinkedHashMap<K, V> implements $Instance {
     final result = self.$value[(r as $Value?)!.$reified];
     return result == null
         ? const $null()
-        : runtime.wrapAlways(result, recursive: true);
+        : (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
   }
 
   static const $Function __operatorIndexSet = $Function(_operatorIndexSet);
@@ -1140,8 +1156,12 @@ class $LinkedHashMap<K, V> implements $Instance {
     return wrapMap(
       result,
       (key, value) => MapEntry(
-        runtime.wrapAlways(key, recursive: true),
-        runtime.wrapAlways(value, recursive: true),
+        (key is List || key is Map || key is Set
+            ? TypedInterop.boxExternal(key, runtime: runtime)!
+            : runtime.wrapAlways(key)),
+        (value is List || value is Map || value is Set
+            ? TypedInterop.boxExternal(value, runtime: runtime)!
+            : runtime.wrapAlways(value)),
       ),
     );
   }
@@ -1198,7 +1218,9 @@ class $LinkedHashMap<K, V> implements $Instance {
                   ?.$value;
             },
     );
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __updateAll = $Function(_updateAll);
@@ -1261,7 +1283,9 @@ class $LinkedHashMap<K, V> implements $Instance {
         0,
       )?.$value;
     });
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __addAll = $Function(_addAll);
@@ -1291,7 +1315,9 @@ class $LinkedHashMap<K, V> implements $Instance {
     final result = self.$value.remove((r as $Value?)!.$reified);
     return result == null
         ? const $null()
-        : runtime.wrapAlways(result, recursive: true);
+        : (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
   }
 
   static const $Function __clear = $Function(_clear);

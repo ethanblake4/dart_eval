@@ -42,6 +42,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'stream_sink.dart';
 import 'stream_hooks.dart' as hooks;
@@ -568,7 +569,11 @@ class $StreamController<T> implements $Instance {
       case 'stream':
         final _stream = $value.stream;
         return $Stream.wrap(
-          _stream.map((e) => runtime.wrapAlways(e, recursive: true)),
+          _stream.map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
           runtime: runtime,
           runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
             runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??

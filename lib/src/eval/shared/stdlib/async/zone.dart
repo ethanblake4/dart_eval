@@ -29,6 +29,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'timer.dart';
 
@@ -1127,7 +1128,9 @@ class $Zone implements $Instance {
         0,
       )?.$value;
     });
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __runUnary = $Function(_runUnary);
@@ -1148,7 +1151,9 @@ class $Zone implements $Instance {
         1,
       )?.$value;
     }, (s as $Value?)!.$value);
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __runBinary = $Function(_runBinary);
@@ -1173,7 +1178,9 @@ class $Zone implements $Instance {
       (s as $Value?)!.$value,
       ((c as List<Object?>)[0] as $Value?)!.$value,
     );
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __runGuarded = $Function(_runGuarded);
@@ -1257,7 +1264,9 @@ class $Zone implements $Instance {
     });
     return $Function((runtime, target, r, s, c) {
       final funcResult = result();
-      return runtime.wrapAlways(funcResult, recursive: true);
+      return (funcResult is List || funcResult is Map || funcResult is Set
+          ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
+          : runtime.wrapAlways(funcResult));
     });
   }
 
@@ -1283,7 +1292,9 @@ class $Zone implements $Instance {
     });
     return $Function((runtime, target, r, s, c) {
       final funcResult = result((r as $Value?)!.$value);
-      return runtime.wrapAlways(funcResult, recursive: true);
+      return (funcResult is List || funcResult is Map || funcResult is Set
+          ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
+          : runtime.wrapAlways(funcResult));
     });
   }
 
@@ -1312,7 +1323,9 @@ class $Zone implements $Instance {
     });
     return $Function((runtime, target, r, s, c) {
       final funcResult = result((r as $Value?)!.$value, (s as $Value?)!.$value);
-      return runtime.wrapAlways(funcResult, recursive: true);
+      return (funcResult is List || funcResult is Map || funcResult is Set
+          ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
+          : runtime.wrapAlways(funcResult));
     });
   }
 
@@ -1336,7 +1349,9 @@ class $Zone implements $Instance {
     });
     return $Function((runtime, target, r, s, c) {
       final funcResult = result();
-      return runtime.wrapAlways(funcResult, recursive: true);
+      return (funcResult is List || funcResult is Map || funcResult is Set
+          ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
+          : runtime.wrapAlways(funcResult));
     });
   }
 
@@ -1360,7 +1375,9 @@ class $Zone implements $Instance {
     });
     return $Function((runtime, target, r, s, c) {
       final funcResult = result((r as $Value?)!.$value);
-      return runtime.wrapAlways(funcResult, recursive: true);
+      return (funcResult is List || funcResult is Map || funcResult is Set
+          ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
+          : runtime.wrapAlways(funcResult));
     });
   }
 
@@ -1387,7 +1404,9 @@ class $Zone implements $Instance {
     });
     return $Function((runtime, target, r, s, c) {
       final funcResult = result((r as $Value?)!.$value, (s as $Value?)!.$value);
-      return runtime.wrapAlways(funcResult, recursive: true);
+      return (funcResult is List || funcResult is Map || funcResult is Set
+          ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
+          : runtime.wrapAlways(funcResult));
     });
   }
 

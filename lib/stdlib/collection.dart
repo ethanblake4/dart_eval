@@ -8,3 +8,5 @@ export '../src/eval/shared/stdlib/collection/linked_hash_map.dart';
 export '../src/eval/shared/stdlib/collection/linked_hash_set.dart';
 export '../src/eval/shared/stdlib/collection/list_queue.dart';
 export '../src/eval/shared/stdlib/collection/queue.dart';
+export '../src/eval/shared/stdlib/collection/map_base.dart';
+export '../src/eval/shared/stdlib/collection/list_base.dart';

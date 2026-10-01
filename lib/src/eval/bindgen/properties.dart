@@ -84,7 +84,7 @@ String propertyGetters(
     return 'switch (identifier) {\n${getters.map((e) => '''
       case '${e.displayName}':
         final _${e.displayName} = super.${e.displayName};
-        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.metadata.annotations)};
+        return ${wrapVar(ctx, e.type.returnType, '_${e.displayName}', metadata: e.metadata.annotations, runtimeTypeOwner: 'bridge')};
       ''').join('\n')}${methods0.map((e) {
       final member = ctx.memberConfig(e.name!, 'method');
       final returnsValue = e.returnType is! VoidType && !e.returnType.isDartCoreNull;
@@ -95,7 +95,7 @@ String propertyGetters(
             ${assertMethodPermissions(e, callable: true)}
             ${assertConfigPermissions(ctx, member, e.formalParameters.map((p) => p.name ?? '').toList(), callable: true)}
             ${returnsValue ? 'final result = ' : ''}${callOp.format('super', argumentAccessors(ctx, e.formalParameters, callable: true, exportValues: true, member: member))};
-            return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union)};
+            return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union, runtimeTypeOwner: 'bridge')};
           });''';
     }).join('\n')}\n}';
   }
@@ -169,6 +169,7 @@ String propertySetters(
     (element) =>
         !element.isStatic &&
         !element.isPrivate &&
+        (!isBridge || !element.isAbstract) &&
         ctx.memberIncluded(element.name!, 'setter'),
   );
   final synthetic = ctx.classConfig?.synthetic ?? const [];

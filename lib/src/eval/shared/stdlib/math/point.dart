@@ -20,6 +20,7 @@ import 'dart:core';
 
 import 'package:dart_eval/stdlib/core.dart' hide $Point, $Random;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Point]
 class $Point<T extends num> implements $Instance {
@@ -225,10 +226,14 @@ class $Point<T extends num> implements $Instance {
     switch (identifier) {
       case 'x':
         final _x = $value.x;
-        return runtime.wrapAlways(_x, recursive: true);
+        return (_x is List || _x is Map || _x is Set
+            ? TypedInterop.boxExternal(_x, runtime: runtime)!
+            : runtime.wrapAlways(_x));
       case 'y':
         final _y = $value.y;
-        return runtime.wrapAlways(_y, recursive: true);
+        return (_y is List || _y is Map || _y is Set
+            ? TypedInterop.boxExternal(_y, runtime: runtime)!
+            : runtime.wrapAlways(_y));
       case 'magnitude':
         final _magnitude = $value.magnitude;
         return $double(_magnitude);
@@ -312,7 +317,9 @@ class $Point<T extends num> implements $Instance {
   ) {
     final self = target! as $Point;
     final result = self.$value.squaredDistanceTo((r as $Value?)!.$value);
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   @override

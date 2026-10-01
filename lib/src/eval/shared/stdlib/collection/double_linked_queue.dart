@@ -27,8 +27,10 @@ import 'package:dart_eval/stdlib/core.dart'
         $LinkedHashSet,
         $DoubleLinkedQueue,
         $DoubleLinkedQueueEntry,
+        $ListBase,
         $MapBase;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'queue.dart';
 
@@ -1110,13 +1112,19 @@ class $DoubleLinkedQueue<E> implements $Instance {
         return $bool(_isNotEmpty);
       case 'first':
         final _first = $value.first;
-        return runtime.wrapAlways(_first, recursive: true);
+        return (_first is List || _first is Map || _first is Set
+            ? TypedInterop.boxExternal(_first, runtime: runtime)!
+            : runtime.wrapAlways(_first));
       case 'last':
         final _last = $value.last;
-        return runtime.wrapAlways(_last, recursive: true);
+        return (_last is List || _last is Map || _last is Set
+            ? TypedInterop.boxExternal(_last, runtime: runtime)!
+            : runtime.wrapAlways(_last));
       case 'single':
         final _single = $value.single;
-        return runtime.wrapAlways(_single, recursive: true);
+        return (_single is List || _single is Map || _single is Set
+            ? TypedInterop.boxExternal(_single, runtime: runtime)!
+            : runtime.wrapAlways(_single));
       case 'cast':
         return $Closure(__cast.func, this);
 
@@ -1251,7 +1259,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.removeFirst();
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __removeLast = $Function(_removeLast);
@@ -1264,7 +1274,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.removeLast();
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __addFirst = $Function(_addFirst);
@@ -1398,7 +1410,11 @@ class $DoubleLinkedQueue<E> implements $Instance {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.followedBy((r as $Value?)!.$value);
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1421,7 +1437,11 @@ class $DoubleLinkedQueue<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1444,7 +1464,11 @@ class $DoubleLinkedQueue<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1459,7 +1483,11 @@ class $DoubleLinkedQueue<E> implements $Instance {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.whereType();
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1482,7 +1510,11 @@ class $DoubleLinkedQueue<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1538,7 +1570,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
         2,
       )?.$value;
     });
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __fold = $Function(_fold);
@@ -1562,7 +1596,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
         2,
       )?.$value;
     });
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __every = $Function(_every);
@@ -1636,7 +1672,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
     );
     return $List.view(
       result,
-      (e) => runtime.wrapAlways(e, recursive: true),
+      (e) => (e is List || e is Map || e is Set
+          ? TypedInterop.boxExternal(e, runtime: runtime)!
+          : runtime.wrapAlways(e)),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -1656,7 +1694,13 @@ class $DoubleLinkedQueue<E> implements $Instance {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.toSet();
     return $Set.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)).toSet(),
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
     );
   }
 
@@ -1671,7 +1715,11 @@ class $DoubleLinkedQueue<E> implements $Instance {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.take((r as $int).$value);
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1694,7 +1742,11 @@ class $DoubleLinkedQueue<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1709,7 +1761,11 @@ class $DoubleLinkedQueue<E> implements $Instance {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.skip((r as $int).$value);
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1732,7 +1788,11 @@ class $DoubleLinkedQueue<E> implements $Instance {
       )?.$value;
     });
     return $Iterable.wrap(
-      (result).map((e) => runtime.wrapAlways(e, recursive: true)),
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1764,7 +1824,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
                   ?.$value;
             },
     );
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __lastWhere = $Function(_lastWhere);
@@ -1795,7 +1857,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
                   ?.$value;
             },
     );
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __singleWhere = $Function(_singleWhere);
@@ -1826,7 +1890,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
                   ?.$value;
             },
     );
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __elementAt = $Function(_elementAt);
@@ -1839,7 +1905,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.elementAt((r as $int).$value);
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __firstEntry = $Function(_firstEntry);
@@ -2047,7 +2115,9 @@ class $DoubleLinkedQueueEntry<E> implements $Instance {
     switch (identifier) {
       case 'element':
         final _element = $value.element;
-        return runtime.wrapAlways(_element, recursive: true);
+        return (_element is List || _element is Map || _element is Set
+            ? TypedInterop.boxExternal(_element, runtime: runtime)!
+            : runtime.wrapAlways(_element));
       case 'append':
         return $Closure(__append.func, this);
 
@@ -2102,7 +2172,9 @@ class $DoubleLinkedQueueEntry<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueueEntry;
     final result = self.$value.remove();
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __previousEntry = $Function(_previousEntry);

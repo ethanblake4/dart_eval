@@ -50,6 +50,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Codec,
         $ByteConversionSink,
         $ChunkedConversionSink;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Converter]
 class $Converter<S, T> implements $Instance {
@@ -298,7 +299,11 @@ class $Converter<S, T> implements $Instance {
     final self = target! as $Converter;
     final result = self.$value.bind((r as $Value?)!.$value);
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 1) ??
@@ -330,7 +335,9 @@ class $Converter<S, T> implements $Instance {
   ) {
     final self = target! as $Converter;
     final result = self.$value.convert((r as $Value?)!.$value);
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __fuse = $Function(_fuse);

@@ -42,6 +42,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [StreamSubscription]
 class $StreamSubscription<T> implements $Instance {
@@ -405,7 +406,11 @@ class $StreamSubscription<T> implements $Instance {
     final self = target! as $StreamSubscription;
     final result = self.$value.asFuture((r is $Value ? r : null)?.$value);
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 

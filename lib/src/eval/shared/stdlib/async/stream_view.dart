@@ -42,6 +42,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'stream_subscription.dart';
 import 'event_sink.dart';
@@ -1275,7 +1276,11 @@ class $StreamView<T> implements $Instance {
       case 'first':
         final _first = $value.first;
         return $Future.wrap(
-          _first.then((e) => runtime.wrapAlways(e, recursive: true)),
+          _first.then(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
           runtime: runtime,
           runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
             runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??
@@ -1285,7 +1290,11 @@ class $StreamView<T> implements $Instance {
       case 'last':
         final _last = $value.last;
         return $Future.wrap(
-          _last.then((e) => runtime.wrapAlways(e, recursive: true)),
+          _last.then(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
           runtime: runtime,
           runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
             runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??
@@ -1295,7 +1304,11 @@ class $StreamView<T> implements $Instance {
       case 'single':
         final _single = $value.single;
         return $Future.wrap(
-          _single.then((e) => runtime.wrapAlways(e, recursive: true)),
+          _single.then(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
           runtime: runtime,
           runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
             runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??
@@ -1434,7 +1447,11 @@ class $StreamView<T> implements $Instance {
             },
     );
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -1526,7 +1543,11 @@ class $StreamView<T> implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -1554,7 +1575,11 @@ class $StreamView<T> implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1577,7 +1602,11 @@ class $StreamView<T> implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1600,7 +1629,11 @@ class $StreamView<T> implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1644,7 +1677,11 @@ class $StreamView<T> implements $Instance {
             },
     );
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -1672,7 +1709,11 @@ class $StreamView<T> implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1706,7 +1747,11 @@ class $StreamView<T> implements $Instance {
     final self = target! as $StreamView;
     final result = self.$value.transform((r as $Value?)!.$value);
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1729,7 +1774,11 @@ class $StreamView<T> implements $Instance {
       )?.$value;
     });
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -1760,7 +1809,11 @@ class $StreamView<T> implements $Instance {
       )?.$value;
     });
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1896,7 +1949,11 @@ class $StreamView<T> implements $Instance {
     final self = target! as $StreamView;
     final result = self.$value.cast();
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1914,7 +1971,9 @@ class $StreamView<T> implements $Instance {
       result.then(
         (e) => $List.view(
           e,
-          (e) => runtime.wrapAlways(e, recursive: true),
+          (e) => (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e)),
           runtime: runtime,
           runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
             runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -1945,7 +2004,13 @@ class $StreamView<T> implements $Instance {
     return $Future.wrap(
       result.then(
         (e) => $Set.wrap(
-          (e).map((e) => runtime.wrapAlways(e, recursive: true)).toSet(),
+          (e)
+              .map(
+                (e) => (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e)),
+              )
+              .toSet(),
         ),
       ),
       runtime: runtime,
@@ -1969,7 +2034,11 @@ class $StreamView<T> implements $Instance {
     final self = target! as $StreamView;
     final result = self.$value.drain((r is $Value ? r : null)?.$value);
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -1984,7 +2053,11 @@ class $StreamView<T> implements $Instance {
     final self = target! as $StreamView;
     final result = self.$value.take((r as $int).$value);
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -2012,7 +2085,11 @@ class $StreamView<T> implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -2032,7 +2109,11 @@ class $StreamView<T> implements $Instance {
     final self = target! as $StreamView;
     final result = self.$value.skip((r as $int).$value);
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -2060,7 +2141,11 @@ class $StreamView<T> implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -2094,7 +2179,11 @@ class $StreamView<T> implements $Instance {
             },
     );
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -2132,7 +2221,11 @@ class $StreamView<T> implements $Instance {
             },
     );
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -2170,7 +2263,11 @@ class $StreamView<T> implements $Instance {
             },
     );
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -2208,7 +2305,11 @@ class $StreamView<T> implements $Instance {
             },
     );
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -2228,7 +2329,11 @@ class $StreamView<T> implements $Instance {
     final self = target! as $StreamView;
     final result = self.$value.elementAt((r as $int).$value);
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
@@ -2262,7 +2367,11 @@ class $StreamView<T> implements $Instance {
             },
     );
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
         runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??

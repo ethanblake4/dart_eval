@@ -46,6 +46,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExpMatch,
         $StringSink;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Iterator]
 class $Iterator<E> implements $Instance {
@@ -131,7 +132,9 @@ class $Iterator<E> implements $Instance {
     switch (identifier) {
       case 'current':
         final _current = $value.current;
-        return runtime.wrapAlways(_current, recursive: true);
+        return (_current is List || _current is Map || _current is Set
+            ? TypedInterop.boxExternal(_current, runtime: runtime)!
+            : runtime.wrapAlways(_current));
       case 'moveNext':
         return $Closure(__moveNext.func, this);
     }

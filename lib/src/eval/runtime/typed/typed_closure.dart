@@ -746,6 +746,69 @@ final class TypedClosure extends EvalFunction {
     );
   }
 
+  /// An exact unary host callback needs no argument vector or default adaptation.
+  $Value? _invokeHostUnary(Object? argument, Runtime runtime) {
+    final context = this.runtime ?? runtime;
+    final typeArguments = typeArgumentsForCall(const [], context);
+    _checkTypeArguments(typeArguments, context);
+    if (descriptor.parameterTypeIds.isNotEmpty) {
+      final ownerType = _checkedOwnerType(context);
+      final parameterTypes = _parameterTypesForCall(
+        context,
+        typeArguments,
+        ownerType,
+      );
+      _checkArgument(
+        argument,
+        0,
+        context,
+        typeArguments,
+        ownerType,
+        parameterTypes,
+      );
+    }
+    var integer = 0;
+    var floating = 0.0;
+    var boolean = false;
+    Object? object;
+    switch (function.argumentKinds.last) {
+      case TypedArgumentKind.integer:
+        integer = (argument as $int).$value;
+      case TypedArgumentKind.doublePrecision:
+        floating = (argument as $double).$value;
+      case TypedArgumentKind.boolean:
+        boolean = (argument as $bool).$value;
+      case TypedArgumentKind.string:
+        object = (argument as $String).$value;
+      case TypedArgumentKind.object:
+        object = argument;
+    }
+    final hasHidden = descriptor.hasEnvironment || descriptor.boundReceiver;
+    final hidden = descriptor.hasEnvironment
+        ? this
+        : descriptor.boundReceiver
+        ? captures.single
+        : null;
+    return _run(
+      TypedEntry.direct(
+        a: integer,
+        f: floating,
+        e: boolean,
+        r: hasHidden ? hidden : object,
+        s: hasHidden ? object : null,
+        environment: captures,
+        typeEnvironmentReceiver: descriptor.boundReceiver
+            ? captures.single
+            : null,
+        typeArguments: typeArguments,
+        lexicalTypeEnvironmentReceiver: definingTypeEnvironmentReceiver,
+        lexicalTypeArguments: definingTypeArguments,
+        lexicalTypeEnvironment: definingTypeEnvironment,
+      ),
+      context,
+    );
+  }
+
   $Value? _run(TypedEntry entry, Runtime? context) {
     final result = TypedMachine.runEntry(
       program,
@@ -770,12 +833,18 @@ final class TypedClosure extends EvalFunction {
     Object? r,
     Object? s,
     Object? c,
-  ) => invoke(
-    TypedInterop.callableCount(c),
-    r,
-    TypedInterop.callableRest(s, c),
-    runtime: runtime,
-  );
+  ) {
+    final count = TypedInterop.callableCount(c);
+    if (count == 1 &&
+        descriptor.positionalCount == 1 &&
+        descriptor.namedNames.isEmpty &&
+        function.argumentKinds.length ==
+            (descriptor.hasEnvironment || descriptor.boundReceiver ? 2 : 1)) {
+      return _invokeHostUnary(r, runtime);
+    }
+    return invoke(count, r, TypedInterop.callableRest(s, c), runtime: runtime);
+  }
+
   @override
   int $getRuntimeType(Runtime runtime) {
     if (descriptor.runtimeTypeId < 0) {

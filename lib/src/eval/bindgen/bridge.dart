@@ -60,6 +60,13 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
       )
       .map((e) {
         final returnType = e.returnType;
+        final exportIterable = returnType.isDartCoreIterable &&
+            returnType is InterfaceType;
+        if (exportIterable) {
+          ctx.imports.add(
+            'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+          );
+        }
         final needsCast =
             returnType.isDartCoreList ||
             returnType.isDartCoreMap ||
@@ -72,9 +79,12 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
         @override
         $returnType ${e.isOperator ? 'operator ' : ''}${e.displayName}${e.typeParameters.isEmpty ? '' : '<${e.typeParameters.join(', ')}>'}(${parameterHeader(e.formalParameters, preserveTypes: true)}) {
           final runtime = \$runtime;
-          ${returnType is VoidType ? '' : 'return '}${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
-            ${e.formalParameters.map((p) => wrapVar(ctx, p.type, p.name ?? '')).join(', ')}
+          ${returnType is VoidType ? '' : exportIterable ? 'final result = ' : 'return '}${needsCast ? '(' : ''}\$_invoke('${e.displayName}', [
+            ${e.formalParameters.map((p) => p.type.isDartCoreObject || p.type is TypeParameterType || p.type is DynamicType
+                ? wrapBridgeValue(ctx, p.name ?? '')
+                : wrapVar(ctx, p.type, p.name ?? '')).join(', ')}
           ])${needsCast ? 'as ${returnType.element!.name}$q)$q.cast()' : ''};
+          ${exportIterable ? 'return ${q.isEmpty ? '' : 'result == null ? null : '}TypedInterop.exportIterable<${returnType.typeArguments.single}>(result, runtime);' : ''}
         }
         ''';
       })
@@ -84,7 +94,7 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
 String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
   final properties = {
     if (ctx.implicitSupers)
-      for (var s in element.allSupertypes)
+      for (var s in element.allSupertypes.reversed)
         for (final p in s.element.fields) p.name: p,
     for (final p in element.fields) p.name: p,
   };
@@ -101,14 +111,14 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
       .map((e) {
         final type = e.type;
         if (type is InterfaceType &&
-            type.element.name == 'Iterator' &&
+            (type.element.name == 'Iterator' || type.isDartCoreIterable) &&
             type.element.library.uri.toString() == 'dart:core') {
           ctx.imports.add(
             'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
           );
           return '''
           @override
-          $type get ${e.displayName} => TypedInterop.exportIterator<${type.typeArguments.single}>(
+          $type get ${e.displayName} => TypedInterop.export${type.isDartCoreIterable ? 'Iterable' : 'Iterator'}<${type.typeArguments.single}>(
             \$getProperty(\$runtime, '${e.displayName}'), \$runtime);
           ''';
         }
@@ -118,7 +128,18 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
         $type get ${e.displayName} => \$_get('${e.displayName}');
         ''';
       })
-      .join('\n');
+      .join('\n') +
+      properties.values
+          .where((e) => !e.isPrivate && !e.isStatic && e.setter != null)
+          .where((e) => ctx.memberIncluded(e.name!, 'setter'))
+          .map((e) => '''
+            @override
+            set ${e.displayName}(${e.type} value) {
+              final runtime = \$runtime;
+              \$_set('${e.displayName}', ${wrapVar(ctx, e.type, 'value')});
+            }
+          ''')
+          .join('\n');
 }
 
 /// Renders [type] as a Dart type with type parameters erased to their bound

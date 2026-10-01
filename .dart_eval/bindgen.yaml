@@ -189,7 +189,7 @@ libraries:
           add:
             hook: streamControllerAdd
   - uri: dart:collection
-    typedefs: [IterableBase, IterableMixin]
+    typedefs: [IterableBase, IterableMixin, MapMixin, ListMixin]
     outDir: lib/src/eval/shared/stdlib/collection
     registry:
       file: lib/src/eval/shared/types.dart
@@ -218,9 +218,13 @@ libraries:
       IterableBase:
         include: false
       ListBase:
-        include: false
+        file: list_base.dart
+        mode: both
+        implicitSupers: true
+        imports: [dart:math]
       MapBase:
         file: map_base.dart
+        mode: both
       SetBase:
         include: false
       ListMixin:

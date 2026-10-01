@@ -18,4 +18,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 final sdkTypedefsSource = DartSource('dart:collection', r'''
 typedef IterableBase<E> = Iterable<E>;
 typedef IterableMixin<E> = Iterable<E>;
+typedef MapMixin<K, V> = MapBase<K, V>;
+typedef ListMixin<E> = ListBase<E>;
 ''');

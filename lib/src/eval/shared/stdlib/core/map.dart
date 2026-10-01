@@ -141,11 +141,14 @@ class $Map<K, V> implements Map<K, V>, $Instance {
           params: [
             BridgeParameter(
               'key',
-              BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object),
+                nullable: true,
+              ),
               false,
             ),
           ],
-          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('V'), nullable: true),
         ),
         isStatic: false,
       ),
@@ -611,7 +614,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final idx = (r as $Value?)!;
+    final idx = (r as $Value?) ?? const $null();
     final map = target!.$value as Map;
     return map[idx];
   }

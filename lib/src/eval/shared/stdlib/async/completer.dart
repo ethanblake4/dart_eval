@@ -42,6 +42,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $StreamTransformer,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Completer]
 class $Completer<T> implements $Instance {
@@ -205,7 +206,11 @@ class $Completer<T> implements $Instance {
       case 'future':
         final _future = $value.future;
         return $Future.wrap(
-          _future.then((e) => runtime.wrapAlways(e, recursive: true)),
+          _future.then(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
           runtime: runtime,
           runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
             runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??

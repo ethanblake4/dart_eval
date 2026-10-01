@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/collection/hash_set.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_map.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/linked_hash_set.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/map_base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/list_base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/list_queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/typedefs.dart';
@@ -43,7 +44,8 @@ class DartCollectionPlugin implements EvalPlugin {
     $HashMap.configureForCompile(registry);
     $HashSet.configureForCompile(registry);
     $LinkedHashSet.configureForCompile(registry);
-    $MapBase.configureForCompile(registry);
+    $MapBase$bridge.configureForCompile(registry);
+    $ListBase$bridge.configureForCompile(registry);
   }
 
   @override
@@ -55,6 +57,7 @@ class DartCollectionPlugin implements EvalPlugin {
     $HashMap.configureForRuntime(runtime);
     $HashSet.configureForRuntime(runtime);
     $LinkedHashSet.configureForRuntime(runtime);
-    $MapBase.configureForRuntime(runtime);
+    $MapBase$bridge.configureForRuntime(runtime);
+    $ListBase$bridge.configureForRuntime(runtime);
   }
 }

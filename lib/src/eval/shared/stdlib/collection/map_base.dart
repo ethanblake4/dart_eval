@@ -27,19 +27,31 @@ import 'package:dart_eval/stdlib/core.dart'
         $LinkedHashSet,
         $DoubleLinkedQueue,
         $DoubleLinkedQueueEntry,
+        $ListBase,
         $MapBase;
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-/// dart_eval wrapper binding for [MapBase]
-class $MapBase<K, V> implements $Instance {
+/// dart_eval bridge binding for [MapBase]
+class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
+  /// Forwarded constructor for [MapBase.new]
+  $MapBase$bridge();
+
   /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:collection',
+      'MapBase.',
+      $MapBase$bridge.$new,
+      isBridge: true,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:collection',
       'MapBase.mapToString',
-      $MapBase.$mapToString,
+      $MapBase$bridge.$mapToString,
     );
   }
 
@@ -48,10 +60,10 @@ class $MapBase<K, V> implements $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$MapBase]
+  /// Compile-time type specification of [$MapBase$bridge]
   static const $spec = BridgeTypeSpec('dart:collection', 'MapBase');
 
-  /// Compile-time type declaration of [$MapBase]
+  /// Compile-time type declaration of [$MapBase$bridge]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$MapBase]
@@ -556,9 +568,14 @@ class $MapBase<K, V> implements $Instance {
     },
     setters: {},
     fields: {},
-    wrap: true,
-    bridge: false,
+    wrap: false,
+    bridge: true,
   );
+
+  /// Proxy for the [MapBase.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $MapBase$bridge();
+  }
 
   /// Wrapper for the [MapBase.mapToString] method
   static $Value? $mapToString(
@@ -572,6 +589,436 @@ class $MapBase<K, V> implements $Instance {
     );
     return $String(value);
   }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    final runtime = $runtime;
+    switch (identifier) {
+      case 'entries':
+        final _entries = super.entries;
+        return $Iterable.wrap((_entries).map((e) => $MapEntry.wrap(e)));
+
+      case 'values':
+        final _values = super.values;
+        return $Iterable.wrap(
+          (_values).map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
+        );
+
+      case 'length':
+        final _length = super.length;
+        return $int(_length);
+
+      case 'isEmpty':
+        final _isEmpty = super.isEmpty;
+        return $bool(_isEmpty);
+
+      case 'isNotEmpty':
+        final _isNotEmpty = super.isNotEmpty;
+        return $bool(_isNotEmpty);
+      case 'cast':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.cast();
+          return wrapMap(
+            result,
+            (key, value) => MapEntry(
+              (key is List || key is Map || key is Set
+                  ? TypedInterop.boxExternal(key, runtime: runtime)!
+                  : runtime.wrapAlways(key)),
+              (value is List || value is Map || value is Set
+                  ? TypedInterop.boxExternal(value, runtime: runtime)!
+                  : runtime.wrapAlways(value)),
+            ),
+          );
+        });
+      case 'containsValue':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.containsValue(
+            TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+                as Object?,
+          );
+          return $bool(result);
+        });
+      case 'containsKey':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.containsKey(
+            TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+                as Object?,
+          );
+          return $bool(result);
+        });
+      case 'map':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.map((dynamic key, dynamic value) {
+            return TypedInterop.exportExternal(
+              ((r as $Value?)! as EvalCallable)(
+                runtime,
+                null,
+                (key is List || key is Map || key is Set
+                    ? TypedInterop.boxExternal(key, runtime: runtime)!
+                    : runtime.wrapAlways(key)),
+                (value is List || value is Map || value is Set
+                    ? TypedInterop.boxExternal(value, runtime: runtime)!
+                    : runtime.wrapAlways(value)),
+                2,
+              ),
+              runtime: runtime,
+            ) as MapEntry<dynamic, dynamic>;
+          });
+          return wrapMap(
+            result,
+            (key, value) => MapEntry(
+              (key is List || key is Map || key is Set
+                  ? TypedInterop.boxExternal(key, runtime: runtime)!
+                  : runtime.wrapAlways(key)),
+              (value is List || value is Map || value is Set
+                  ? TypedInterop.boxExternal(value, runtime: runtime)!
+                  : runtime.wrapAlways(value)),
+            ),
+          );
+        });
+      case 'addEntries':
+        return $Function((runtime, target, r, s, c) {
+          super.addEntries(
+            TypedInterop.exportIterable((r as $Value?), runtime),
+          );
+          return null;
+        });
+      case 'update':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.update(
+            TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+                as dynamic,
+            (dynamic value) {
+              return TypedInterop.exportExternal(
+                ((s as $Value?)! as EvalCallable)(
+                  runtime,
+                  null,
+                  (value is List || value is Map || value is Set
+                      ? TypedInterop.boxExternal(value, runtime: runtime)!
+                      : runtime.wrapAlways(value)),
+                  null,
+                  1,
+                ),
+                runtime: runtime,
+              ) as dynamic;
+            },
+            ifAbsent:
+                (c is List && (c as List).length > 0
+                            ? (c as List)[0] as $Value?
+                            : null) ==
+                        null ||
+                    (c is List && (c as List).length > 0
+                            ? (c as List)[0] as $Value?
+                            : null)
+                        is $null
+                ? null
+                : () {
+                    return TypedInterop.exportExternal(
+                      ((c is List && (c as List).length > 0
+                                  ? (c as List)[0] as $Value?
+                                  : null)!
+                              as EvalCallable?)
+                          ?.call(runtime, null, null, null, 0),
+                      runtime: runtime,
+                    ) as dynamic;
+                  },
+          );
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
+        });
+      case 'updateAll':
+        return $Function((runtime, target, r, s, c) {
+          super.updateAll((dynamic key, dynamic value) {
+            return TypedInterop.exportExternal(
+              ((r as $Value?)! as EvalCallable)(
+                runtime,
+                null,
+                (key is List || key is Map || key is Set
+                    ? TypedInterop.boxExternal(key, runtime: runtime)!
+                    : runtime.wrapAlways(key)),
+                (value is List || value is Map || value is Set
+                    ? TypedInterop.boxExternal(value, runtime: runtime)!
+                    : runtime.wrapAlways(value)),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          });
+          return null;
+        });
+      case 'removeWhere':
+        return $Function((runtime, target, r, s, c) {
+          super.removeWhere((dynamic key, dynamic value) {
+            return ((r as $Value?)! as EvalCallable)(
+                  runtime,
+                  null,
+                  (key is List || key is Map || key is Set
+                      ? TypedInterop.boxExternal(key, runtime: runtime)!
+                      : runtime.wrapAlways(key)),
+                  (value is List || value is Map || value is Set
+                      ? TypedInterop.boxExternal(value, runtime: runtime)!
+                      : runtime.wrapAlways(value)),
+                  2,
+                )?.$value
+                as bool;
+          });
+          return null;
+        });
+      case 'putIfAbsent':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.putIfAbsent(
+            TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+                as dynamic,
+            () {
+              return TypedInterop.exportExternal(
+                ((s as $Value?)! as EvalCallable)(runtime, null, null, null, 0),
+                runtime: runtime,
+              ) as dynamic;
+            },
+          );
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
+        });
+      case 'addAll':
+        return $Function((runtime, target, r, s, c) {
+          super.addAll(((r as $Value?)!.$reified as Map).cast());
+          return null;
+        });
+      case 'forEach':
+        return $Function((runtime, target, r, s, c) {
+          super.forEach((dynamic key, dynamic value) {
+            ((r as $Value?)! as EvalCallable)(
+              runtime,
+              null,
+              (key is List || key is Map || key is Set
+                  ? TypedInterop.boxExternal(key, runtime: runtime)!
+                  : runtime.wrapAlways(key)),
+              (value is List || value is Map || value is Set
+                  ? TypedInterop.boxExternal(value, runtime: runtime)!
+                  : runtime.wrapAlways(value)),
+              2,
+            );
+          });
+          return null;
+        });
+    }
+    return null;
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {}
+
+  @override
+  Iterable<MapEntry<K, V>> get entries =>
+      TypedInterop.exportIterable<MapEntry<K, V>>(
+        $getProperty($runtime, 'entries'),
+        $runtime,
+      );
+
+  @override
+  Iterable<K> get keys =>
+      TypedInterop.exportIterable<K>($getProperty($runtime, 'keys'), $runtime);
+
+  @override
+  Iterable<V> get values => TypedInterop.exportIterable<V>(
+    $getProperty($runtime, 'values'),
+    $runtime,
+  );
+
+  @override
+  int get length => $_get('length');
+
+  @override
+  bool get isEmpty => $_get('isEmpty');
+
+  @override
+  bool get isNotEmpty => $_get('isNotEmpty');
+
+  @override
+  Map<RK, RV> cast<RK, RV>() {
+    final runtime = $runtime;
+    return ($_invoke('cast', []) as Map).cast();
+  }
+
+  @override
+  bool containsValue(Object? value) {
+    final runtime = $runtime;
+    return $_invoke('containsValue', [
+      (value is List || value is Map || value is Set
+          ? TypedInterop.boxExternal(value, runtime: runtime)!
+          : runtime.wrapAlways(value)),
+    ]);
+  }
+
+  @override
+  bool containsKey(Object? key) {
+    final runtime = $runtime;
+    return $_invoke('containsKey', [
+      (key is List || key is Map || key is Set
+          ? TypedInterop.boxExternal(key, runtime: runtime)!
+          : runtime.wrapAlways(key)),
+    ]);
+  }
+
+  @override
+  V? operator [](Object? key) {
+    final runtime = $runtime;
+    return $_invoke('[]', [
+      (key is List || key is Map || key is Set
+          ? TypedInterop.boxExternal(key, runtime: runtime)!
+          : runtime.wrapAlways(key)),
+    ]);
+  }
+
+  @override
+  void operator []=(K key, V value) {
+    final runtime = $runtime;
+    $_invoke('[]=', [
+      (key is List || key is Map || key is Set
+          ? TypedInterop.boxExternal(key, runtime: runtime)!
+          : runtime.wrapAlways(key)),
+      (value is List || value is Map || value is Set
+          ? TypedInterop.boxExternal(value, runtime: runtime)!
+          : runtime.wrapAlways(value)),
+    ]);
+  }
+
+  @override
+  Map<K2, V2> map<K2, V2>(MapEntry<K2, V2> Function(K, V) transform) {
+    final runtime = $runtime;
+    return ($_invoke('map', [
+      $Function((runtime, target, r, s, c) {
+        final funcResult = transform(
+          (r as $Value?)!.$value,
+          (s as $Value?)!.$value,
+        );
+        return $MapEntry.wrap(funcResult);
+      }),
+    ]) as Map).cast();
+  }
+
+  @override
+  void addEntries(Iterable<MapEntry<K, V>> newEntries) {
+    final runtime = $runtime;
+    $_invoke('addEntries', [
+      $Iterable.wrap((newEntries).map((e) => $MapEntry.wrap(e))),
+    ]);
+  }
+
+  @override
+  V update(K key, V Function(V) update, {V Function()? ifAbsent}) {
+    final runtime = $runtime;
+    return $_invoke('update', [
+      (key is List || key is Map || key is Set
+          ? TypedInterop.boxExternal(key, runtime: runtime)!
+          : runtime.wrapAlways(key)),
+      $Function((runtime, target, r, s, c) {
+        final funcResult = update((r as $Value?)!.$value);
+        return runtime.wrapAlways(funcResult, recursive: true);
+      }),
+      ifAbsent == null
+          ? const $null()
+          : $Function((runtime, target, r, s, c) {
+              final funcResult = ifAbsent();
+              return runtime.wrapAlways(funcResult, recursive: true);
+            }),
+    ]);
+  }
+
+  @override
+  void updateAll(V Function(K, V) update) {
+    final runtime = $runtime;
+    $_invoke('updateAll', [
+      $Function((runtime, target, r, s, c) {
+        final funcResult = update(
+          (r as $Value?)!.$value,
+          (s as $Value?)!.$value,
+        );
+        return runtime.wrapAlways(funcResult, recursive: true);
+      }),
+    ]);
+  }
+
+  @override
+  void removeWhere(bool Function(K, V) test) {
+    final runtime = $runtime;
+    $_invoke('removeWhere', [
+      $Function((runtime, target, r, s, c) {
+        final funcResult = test((r as $Value?)!.$value, (s as $Value?)!.$value);
+        return $bool(funcResult);
+      }),
+    ]);
+  }
+
+  @override
+  V putIfAbsent(K key, V Function() ifAbsent) {
+    final runtime = $runtime;
+    return $_invoke('putIfAbsent', [
+      (key is List || key is Map || key is Set
+          ? TypedInterop.boxExternal(key, runtime: runtime)!
+          : runtime.wrapAlways(key)),
+      $Function((runtime, target, r, s, c) {
+        final funcResult = ifAbsent();
+        return runtime.wrapAlways(funcResult, recursive: true);
+      }),
+    ]);
+  }
+
+  @override
+  void addAll(Map<K, V> other) {
+    final runtime = $runtime;
+    $_invoke('addAll', [
+      wrapMap(
+        other,
+        (key, value) => MapEntry(
+          runtime.wrapAlways(key, recursive: true),
+          runtime.wrapAlways(value, recursive: true),
+        ),
+      ),
+    ]);
+  }
+
+  @override
+  V? remove(Object? key) {
+    final runtime = $runtime;
+    return $_invoke('remove', [
+      (key is List || key is Map || key is Set
+          ? TypedInterop.boxExternal(key, runtime: runtime)!
+          : runtime.wrapAlways(key)),
+    ]);
+  }
+
+  @override
+  void clear() {
+    final runtime = $runtime;
+    $_invoke('clear', []);
+  }
+
+  @override
+  void forEach(void Function(K, V) action) {
+    final runtime = $runtime;
+    $_invoke('forEach', [
+      $Function((runtime, target, r, s, c) {
+        action((r as $Value?)!.$value, (s as $Value?)!.$value);
+        return const $null();
+      }),
+    ]);
+  }
+}
+
+/// dart_eval lightweight wrapper binding for [MapBase]
+class $MapBase<K, V> implements $Instance {
+  /// Compile-time type specification of [$MapBase]
+  static const $spec = BridgeTypeSpec('dart:collection', 'MapBase');
+
+  /// Compile-time type declaration of [$MapBase]
+  static const $type = BridgeTypeRef($spec);
 
   final $Instance _superclass;
 
@@ -601,12 +1048,20 @@ class $MapBase<K, V> implements $Instance {
       case 'keys':
         final _keys = $value.keys;
         return $Iterable.wrap(
-          (_keys).map((e) => runtime.wrapAlways(e, recursive: true)),
+          (_keys).map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
         );
       case 'values':
         final _values = $value.values;
         return $Iterable.wrap(
-          (_values).map((e) => runtime.wrapAlways(e, recursive: true)),
+          (_values).map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          ),
         );
       case 'length':
         final _length = $value.length;
@@ -678,8 +1133,12 @@ class $MapBase<K, V> implements $Instance {
     return wrapMap(
       result,
       (key, value) => MapEntry(
-        runtime.wrapAlways(key, recursive: true),
-        runtime.wrapAlways(value, recursive: true),
+        (key is List || key is Map || key is Set
+            ? TypedInterop.boxExternal(key, runtime: runtime)!
+            : runtime.wrapAlways(key)),
+        (value is List || value is Map || value is Set
+            ? TypedInterop.boxExternal(value, runtime: runtime)!
+            : runtime.wrapAlways(value)),
       ),
     );
   }
@@ -722,7 +1181,9 @@ class $MapBase<K, V> implements $Instance {
     final result = self.$value[(r as $Value?)!.$reified];
     return result == null
         ? const $null()
-        : runtime.wrapAlways(result, recursive: true);
+        : (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
   }
 
   static const $Function __operatorIndexSet = $Function(_operatorIndexSet);
@@ -759,8 +1220,12 @@ class $MapBase<K, V> implements $Instance {
     return wrapMap(
       result,
       (key, value) => MapEntry(
-        runtime.wrapAlways(key, recursive: true),
-        runtime.wrapAlways(value, recursive: true),
+        (key is List || key is Map || key is Set
+            ? TypedInterop.boxExternal(key, runtime: runtime)!
+            : runtime.wrapAlways(key)),
+        (value is List || value is Map || value is Set
+            ? TypedInterop.boxExternal(value, runtime: runtime)!
+            : runtime.wrapAlways(value)),
       ),
     );
   }
@@ -817,7 +1282,9 @@ class $MapBase<K, V> implements $Instance {
                   ?.$value;
             },
     );
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __updateAll = $Function(_updateAll);
@@ -880,7 +1347,9 @@ class $MapBase<K, V> implements $Instance {
         0,
       )?.$value;
     });
-    return runtime.wrapAlways(result, recursive: true);
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
   }
 
   static const $Function __addAll = $Function(_addAll);
@@ -910,7 +1379,9 @@ class $MapBase<K, V> implements $Instance {
     final result = self.$value.remove((r as $Value?)!.$reified);
     return result == null
         ? const $null()
-        : runtime.wrapAlways(result, recursive: true);
+        : (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
   }
 
   static const $Function __clear = $Function(_clear);

@@ -95,13 +95,24 @@ void main() {
       int main(List<int> values, int index) => read(values, index);
     ''');
     final values = $List.wrap([$int(7), $int(11)]);
+    final runtime = Runtime.ofProgram(
+      Compiler().compile({
+        'typed': {'main.dart': 'void main() {}'},
+      }),
+    );
     expect(
-      TypedMachine.run(program, objectArguments: [values], intArguments: [1]),
+      TypedMachine.run(
+        program,
+        runtime: runtime,
+        objectArguments: [values],
+        intArguments: [1],
+      ),
       13,
     );
     expect(
       () => TypedMachine.run(
         program,
+        runtime: runtime,
         objectArguments: [values],
         intArguments: [-1],
       ),
@@ -183,12 +194,7 @@ void main() {
     final program = envelope.typedProgram;
     expect(
       opNames(program),
-      containsAll([
-        'NewList',
-        'listAppend',
-        'ListIndex',
-        'ListLength',
-      ]),
+      containsAll(['NewList', 'listAppend', 'ListIndex', 'ListLength']),
     );
     for (final (runtime, value, expected) in [
       (Runtime.ofProgram(envelope), 4, 13),

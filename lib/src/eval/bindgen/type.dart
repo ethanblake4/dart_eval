@@ -269,12 +269,16 @@ String? wrapType(
     // `recursive: true` preserves collection type witnesses (e.g. the
     // `Map<String, dynamic>` runtime type produced by `json.decode`), which
     // downstream `AssertType` conversions rely on.
-    return '${unionStr}runtime.wrapAlways($expr, recursive: true)';
+    return unionStr + (runtimeTypeOwner == 'bridge'
+        ? wrapBridgeValue(ctx, expr)
+        : 'runtime.wrapAlways($expr, recursive: true)');
   }
 
   // Erased type parameters of the generic wrapper — dispatch on runtime type.
   if (type is TypeParameterType) {
-    return '${unionStr}runtime.wrapAlways($expr, recursive: true)';
+    return unionStr + (runtimeTypeOwner != null
+        ? wrapBridgeValue(ctx, expr)
+        : 'runtime.wrapAlways($expr, recursive: true)');
   }
 
   if (type is FunctionType) {
@@ -471,6 +475,15 @@ String? wrapType(
   return null;
 }
 
+/// Box erased SDK values without copying collection aliases.
+/// Exported collection views already have an identity-preserving box cache.
+String wrapBridgeValue(BindgenContext ctx, String expr) {
+  ctx.imports.add('package:dart_eval/src/eval/runtime/typed/typed_interop.dart');
+  return '($expr is List || $expr is Map || $expr is Set '
+      '? TypedInterop.boxExternal($expr, runtime: runtime)! '
+      ': runtime.wrapAlways($expr))';
+}
+
 String _typeArgumentMetadata(
   BindgenContext ctx,
   String spec,
@@ -508,8 +521,13 @@ String? _runtimeTypeId(BindgenContext ctx, DartType type, String? owner) {
     if (owner == null || host is! InterfaceElement) return null;
     final index = host.typeParameters.indexOf(type.element);
     final receiver = owner == 'this' ? '' : '$owner.';
+    // The guest subclass can have different type parameters from its SDK
+    // superclass. The constructor records the substituted SDK type separately.
+    final ownerType = owner == 'bridge'
+        ? 'Runtime.bridgeData[this]!.\$runtimeType'
+        : '$receiver\$getRuntimeType(runtime)';
     final typeId =
-        'runtime.runtimeTypeArgumentAt($receiver\$getRuntimeType(runtime), $index) '
+        'runtime.runtimeTypeArgumentAt($ownerType, $index) '
         '?? runtime.lookupType(CoreTypes.dynamic)';
     return type.nullabilitySuffix == NullabilitySuffix.question
         ? 'runtime.nullableRuntimeType($typeId)'

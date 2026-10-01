@@ -504,17 +504,14 @@ final class TypedMember extends EvalFunction {
   }
 
   TypedClosure? _bindClosure() {
-    for (final descriptor in receiver.program.closures) {
-      if (descriptor.functionId == functionId && descriptor.boundReceiver) {
-        return TypedClosure.bind(
-          receiver.program,
-          descriptor,
-          receiver,
-          runtime: receiver.runtime,
-        );
-      }
-    }
-    return null;
+    final descriptor = receiver.program.boundReceiverDescriptor(functionId);
+    if (descriptor == null) return null;
+    return TypedClosure.bind(
+      receiver.program,
+      descriptor,
+      receiver,
+      runtime: receiver.runtime,
+    );
   }
 
   $Value? invokeClosure(

@@ -116,6 +116,23 @@ class TypedProgram {
   final List<TypedCompletionJump> completionJumps;
   final int entryFunction;
 
+  late final Map<int, TypedClosureDescriptor> _boundReceiverDescriptors =
+      _indexBoundReceiverDescriptors();
+
+  Map<int, TypedClosureDescriptor> _indexBoundReceiverDescriptors() {
+    final index = <int, TypedClosureDescriptor>{};
+    for (final descriptor in closures) {
+      if (descriptor.boundReceiver) {
+        index.putIfAbsent(descriptor.functionId, () => descriptor);
+      }
+    }
+    return index;
+  }
+
+  /// The first bound-receiver descriptor for a function, if one exists.
+  TypedClosureDescriptor? boundReceiverDescriptor(int functionId) =>
+      _boundReceiverDescriptors[functionId];
+
   ByteData write() => TypedCodec.write(this);
   factory TypedProgram.read(ByteBuffer buffer) => TypedCodec.read(buffer);
 

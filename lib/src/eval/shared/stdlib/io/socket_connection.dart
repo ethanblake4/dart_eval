@@ -60,6 +60,7 @@ import 'package:dart_eval/stdlib/io.dart'
         $HttpHeaders,
         $RedirectInfo,
         $Socket;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'socket_hooks.dart' as hooks;
 
@@ -2235,7 +2236,11 @@ class $Socket implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -2258,7 +2263,11 @@ class $Socket implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -2281,7 +2290,11 @@ class $Socket implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -2352,7 +2365,11 @@ class $Socket implements $Instance {
       )?.$value;
     });
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -2386,7 +2403,11 @@ class $Socket implements $Instance {
     final self = target! as $Socket;
     final result = self.$value.transform((r as $Value?)!.$value);
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -2439,7 +2460,11 @@ class $Socket implements $Instance {
       )?.$value;
     });
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -2575,7 +2600,11 @@ class $Socket implements $Instance {
     final self = target! as $Socket;
     final result = self.$value.cast();
     return $Stream.wrap(
-      result.map((e) => runtime.wrapAlways(e, recursive: true)),
+      result.map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
@@ -2641,7 +2670,11 @@ class $Socket implements $Instance {
     final self = target! as $Socket;
     final result = self.$value.drain((r is $Value ? r : null)?.$value);
     return $Future.wrap(
-      result.then((e) => runtime.wrapAlways(e, recursive: true)),
+      result.then(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
     );
   }
 
