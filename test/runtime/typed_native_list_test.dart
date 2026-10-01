@@ -8,8 +8,8 @@ import 'package:dart_eval/src/eval/runtime/typed/typed_native_list.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
-final class ObservedList extends $List<$Value?> {
-  ObservedList() : super.wrap([]);
+final class _ObservedList extends $List<$Value?> {
+  _ObservedList() : super.wrap([]);
 
   int reads = 0;
 
@@ -73,7 +73,7 @@ void main() {
           ),
         ),
       );
-      final observed = ObservedList();
+      final observed = _ObservedList();
       expect(observed, isNot(isA<TypedNativeList>()));
       expect(read(observed, $int(0)), 91);
       expect(observed.reads, 1);

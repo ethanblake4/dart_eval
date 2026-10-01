@@ -1197,15 +1197,14 @@ String familyOf(String name) {
   add('callVirtual', virtualCall, immediate: 'callSite', mayThrow: true);
   add(
     'callIndex',
-    r'''if (r is TypedNativeList || r is $MappedListView) {
-            final list = (r as $List).$value;
-            final value = list[(s as $Value?)?.$value as int] as $Value?;
-            r = value is $null ? null : value;
+    '''if (r is TypedNativeList || r is \$MappedListView) {
+            final list = (r as \$List).\$value;
+            final value = list[(s as \$Value?)?.\$value as int] as \$Value?;
+            r = value is \$null ? null : value;
             s = null; c = null;
           } else {
-          ''' +
-        virtualCall +
-        '\n          }',
+          $virtualCall
+          }''',
     immediate: 'callSite',
     mayThrow: true,
   );

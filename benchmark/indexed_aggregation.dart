@@ -22,8 +22,7 @@ int weightedTotal(List<int> amounts, List<int> weights) {
 ''';
 
 String sourceFor(String mode) =>
-    common +
-    '''
+    '''$common
 int main(int batches) {
   final amounts = <int>[3, 7, 5, 11, 2, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53];
   final weights = <int>[1, 3, 2, 5, 7, 2, 3, 1, 5, 7, 2, 3, 1, 5, 7, 2];
