@@ -34,11 +34,13 @@ import '../helpers/default_value.dart';
 import '../helpers/fpl.dart';
 import '../errors.dart';
 import '../type.dart';
-import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
+import 'package:dart_eval/dart_eval_bridge.dart'
+    show BridgeMethodDef, CoreTypes;
 import '../context.dart';
 import '../invocation/deferred.dart';
 import 'representation.dart';
 import 'primitive_optimization.dart';
+import '../member/member.dart';
 import '../member/member_name.dart';
 
 List<int> _defaultTypeArguments(CompilerContext context, int functionId) {
@@ -296,6 +298,7 @@ class TypedBackend {
           allocation.name,
           library: libraries[allocation.library]!,
           valueCount: allocation.valuesLength,
+          hasBridgeCallMethod: _hasBridgeCallMethod(allocation),
           getters: _classMembers(allocation, MemberKind.getter, indices),
           setters: _classMembers(allocation, MemberKind.setter, indices),
           methods: _classMembers(allocation, MemberKind.method, indices),
@@ -708,6 +711,31 @@ class TypedBackend {
       defaultValue: defaultValue,
       defaultThunk: defaultThunk < 0 ? -1 : indices[defaultThunk]!,
     );
+  }
+
+  bool _hasBridgeCallMethod(objects_ir.CreateClass allocation) {
+    final type =
+        context.visibleTypes[allocation.library]?[allocation.name] ??
+        context.types.find(allocation.library, allocation.name)?.rawType;
+    if (type == null) return false;
+    const method = MemberName('call', MemberKind.method);
+    const getter = MemberName('call', MemberKind.getter);
+    // Interface declarations promise a member but do not implement it.
+    for (final link in [type, ...context.typeSystem.superclassChain(type)]) {
+      final declaration =
+          nominalDeclOf(link) ?? context.types.find(link.file, link.name);
+      final member =
+          declaration?.declaredMember(method) ??
+          declaration?.declaredMember(getter);
+      if (member == null) continue;
+      // Stop at the nearest declaration: a callable field/getter is not
+      // an implicit call method, even if an ancestor declares a method.
+      return member is BridgeMember &&
+          member.name.kind == MemberKind.method &&
+          member.def is BridgeMethodDef &&
+          !member.isStatic;
+    }
+    return false;
   }
 
   Map<String, int> _classMembers(

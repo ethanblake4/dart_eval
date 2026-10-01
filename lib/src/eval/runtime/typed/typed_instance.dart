@@ -159,6 +159,7 @@ final class TypedInstance implements $Instance {
     List<String> namedNames = const [],
     String callerLibrary = '',
     List<int> typeArguments = const [],
+    bool implicitCall = false,
     Runtime? runtime,
   }) {
     final member = resolve(
@@ -191,13 +192,26 @@ final class TypedInstance implements $Instance {
         runtime: runtime,
       );
     }
-    final getter = resolve(
-      TypedMemberKind.getter,
-      name,
-      callerLibrary: callerLibrary,
-    );
+    // An implicit object call requires a method named call. Explicit member
+    // invocation may instead read a callable field or getter.
+    final getter = implicitCall
+        ? null
+        : resolve(TypedMemberKind.getter, name, callerLibrary: callerLibrary);
     if (getter != null) {
       final callable = getter.invoke(0, null, null, runtime: runtime);
+      if (callable is TypedInstance) {
+        // Dynamic member invocation forwards a getter result to its explicit
+        // call member; a function-expression invocation uses implicitCall.
+        return callable.invoke(
+          'call',
+          positionalCount,
+          first,
+          rest,
+          namedNames: namedNames,
+          typeArguments: typeArguments,
+          runtime: runtime,
+        );
+      }
       if (callable is TypedClosure) {
         if (!callable.acceptsTypeArguments(typeArguments)) {
           return _noSuchMethod(
@@ -272,7 +286,8 @@ final class TypedInstance implements $Instance {
     while (parent is TypedInstance) {
       parent = parent.superclass;
     }
-    if (parent != null) {
+    if (parent != null &&
+        (!implicitCall || dispatchRoot.descriptor.hasBridgeCallMethod)) {
       if (namedNames.isNotEmpty) {
         throw UnsupportedError('Named bridge method arguments');
       }

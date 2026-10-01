@@ -247,12 +247,32 @@ abstract final class TypedInterop {
       count,
       first,
       rest,
+      implicitCall: true,
       runtime: runtime,
     ),
+    $Bridge() => switch (bridgeGuest(receiver)) {
+      final TypedInstance guest => guest.invoke(
+        'call',
+        count,
+        first,
+        rest,
+        implicitCall: true,
+        runtime: runtime,
+      ),
+      _ => _runtime(
+        runtime,
+      ).invokeTypedObject(receiver, 'call', count, first, rest),
+    },
     _ => _runtime(
       runtime,
     ).invokeTypedObject(receiver, 'call', count, first, rest),
   };
+
+  /// Bridge constructors can expose the native wrapper of a guest subclass.
+  static TypedInstance? bridgeGuest($Bridge receiver) {
+    final guest = Runtime.bridgeData[receiver]?.subclass;
+    return guest is TypedInstance ? guest : null;
+  }
 
   @pragma('vm:never-inline')
   static $Value? invoke(

@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 130;
+  static const version = 131;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -284,6 +284,7 @@ abstract final class TypedCodec {
       string(type.name);
       string(type.library);
       u32(type.valueCount);
+      u32(type.hasBridgeCallMethod ? 1 : 0);
       members(type.methods);
       members(type.getters);
       members(type.setters);
@@ -465,7 +466,7 @@ abstract final class TypedCodec {
     }
 
     require(
-      classCount * 24 +
+      classCount * 28 +
           callSiteCount * 28 +
           exportCount * 20 +
           externalCallCount * 12 +
@@ -477,11 +478,17 @@ abstract final class TypedCodec {
     );
     final classes = <TypedClass>[];
     for (var i = 0; i < classCount; i++) {
+      final name = string(), library = string(), valueCount = u32();
+      final bridgeCall = u32();
+      if (bridgeCall > 1) {
+        throw const FormatException('Invalid typed bridge call flag');
+      }
       classes.add(
         TypedClass(
-          string(),
-          library: string(),
-          valueCount: u32(),
+          name,
+          library: library,
+          valueCount: valueCount,
+          hasBridgeCallMethod: bridgeCall != 0,
           methods: members(),
           getters: members(),
           setters: members(),

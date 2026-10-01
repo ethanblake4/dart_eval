@@ -1215,3 +1215,54 @@ branch or adapter is added to perturb this unrelated callback workload. Results
 are in cycle5-pass3-equality-aot, cycle5-pass3-callback-abba and
 cycle5-runtime-attribution-abba. The retained validation checkout is reused at
 c6838f2 for this attribution; all builds and measurements are serialized.
+
+## Cycle 5 correctness pass 4
+
+Implicit object invocation now requires a method named call. A callable field or
+getter is still valid for explicit member invocation, but it cannot make the
+object itself callable. The existing noSuchMethod path receives the original
+positional, named and generic arguments when the implicit call has no method.
+Successful guest methods retain their existing invocation path.
+
+Native bridge wrappers can expose guest subclasses through bridgeData. Implicit
+invocation now consults that guest instance, and a compiler class flag permits
+bridge fallback only when the nearest concrete call declaration is a bridge
+method. Interface promises do not count as implementations. Source overrides
+and folded mixins retain guest dispatch. The flag survives immutable program
+copies and serialization; strict codec version 131 includes and validates it.
+
+Dynamic member invocation through a getter result must remain distinct from a
+function-expression call. Native controls confirm that dynamic holder.item()
+may read the returned object's call getter, while (holder.item)() and statically
+typed holder.item() reject that object without reading its call getter. The
+guest getter-result forwarding path preserves this distinction, including named
+and generic method calls. Ordinary explicit recursive getter invocation remains
+unchanged.
+
+All 53 focused tests, both native oracles and scoped analysis pass. Every runnable
+variant of call/method_must_not_be_field and call/method_must_not_be_getter passes
+fresh and serialized, so both stale expectation entries are removed. Their
+negative variants retain the suite's skip policy. In particular, case 01 still
+needs a static compiler rejection and is staged as a separate compiler task.
+The ordinary suite passes with 2020 tests and 63 skips after updating two codec
+version assertions. SDK-full exits successfully with 2530 passing fixtures,
+239 compile errors, 111 runtime failures and 363 skipped outcomes. No new
+failures or stale expectations appear.
+
+The exact candidate completes all 22 AOT drivers at affinity mask 4 with 15
+samples. All 21 execution checksums match the accepted pass-3 executable; both
+compile-driver outputs are 1271 bytes. The larger initial mixed-dispatch and
+declared-direct virtual-call timing flags do not persist in longer reverse-ABBA
+runs. All three virtual-call cases improve about 1 to 2 percent. Object-reference
+dispatch varies between runs and averages 3.2 to 5.2 percent slower across its
+integer, double and mixed cases. This remains a performance control to investigate.
+
+At 500,000 base callback calls, captured-void improves 7.0 percent, captured-value
+is flat, default adapters improve 12.5 percent and bound members improve 8.4
+percent. The one-argument callback has a large candidate outlier, with run medians
+of 128.5 and 95.4 milliseconds, so its average cannot establish a stable change.
+No unrelated runtime change is added to alter AOT layout. These timing limits
+carry into the performance pass. Logs are cycle6-pass4-final-aot and
+cycle6-pass4-final-abba despite this checkpoint belonging to cycle 5. The exact
+accepted executable is cycle6-pass4-final.exe, SHA-256
+a14bb43b96c9d129568420ff7ccc602624e772954e81013fb1562655c3948afa.

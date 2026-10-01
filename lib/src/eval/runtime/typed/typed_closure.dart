@@ -495,14 +495,20 @@ final class TypedClosure extends EvalFunction {
         trusted: site.trusted,
       );
     }
-    if (receiver is TypedInstance) {
-      return receiver.invoke(
+    final guest = receiver is TypedInstance
+        ? receiver
+        : receiver is $Bridge
+        ? TypedInterop.bridgeGuest(receiver)
+        : null;
+    if (guest != null) {
+      return guest.invoke(
         'call',
         site.positionalCount,
         first,
         rest,
         namedNames: site.namedNames,
         typeArguments: typeArguments,
+        implicitCall: true,
         runtime: runtime,
       );
     }
