@@ -210,7 +210,7 @@ void main() {
                 'two': TestEnum.two,
               };
 
-              return map['two'];
+              return map['two']!;
             }
           ''',
         },
@@ -235,7 +235,7 @@ void main() {
         'example': {
           'main.dart': '''
             int main(Map<String, int> map) {
-              return map['hi'];
+              return map['hi']!;
             }
           ''',
         },

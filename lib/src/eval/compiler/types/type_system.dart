@@ -942,7 +942,14 @@ final class TypeSystem {
   );
 
   bool _isNonNullable(TypeRef type, [Set<TypeParameterDef>? visiting]) {
-    type = type.erasedExtensionType;
+    if (type is InterfaceTypeRef &&
+        type.decl.kind == TypeDeclKind.extensionType) {
+      return isAssignable(
+        type,
+        CoreTypes.object.ref(_ctx),
+        forceAllowDynamic: false,
+      );
+    }
     if (type.nullable ||
         type.isSpec(CoreTypes.nullType) ||
         type.isSpec(CoreTypes.dynamic) ||
@@ -1544,17 +1551,9 @@ final class TypeSystem {
       }
       return AssignmentConversion.runtimeCheck;
     }
-    if (from.nullable &&
-        !to.nullable &&
-        isAssignable(
-          from.withNullable(false),
-          to,
-          forceAllowDynamic: false,
-          allowDynamicParameterDowncast: true,
-        )) {
-      return AssignmentConversion.runtimeCheck;
-    }
-    if (from.isSpec(CoreTypes.int) && to.isSpec(CoreTypes.double)) {
+    if (!from.nullable &&
+        from.isSpec(CoreTypes.int) &&
+        to.isSpec(CoreTypes.double)) {
       return AssignmentConversion.intToDouble;
     }
     return isAssignable(

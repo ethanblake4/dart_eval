@@ -82,11 +82,8 @@ void _validateExtensionType(
     throw CompileError('Unsupported extension type representation parameter');
   }
   final representation = decl.extensionRepresentation!.erasedExtensionType;
-  if (!representation.isSpec(CoreTypes.nullType) &&
-      !(representation.isSpec(CoreTypes.object) && representation.nullable)) {
-    throw CompileError(
-      'Only Null and Object? extension representations are supported',
-    );
+  if (representation.isSpec(CoreTypes.voidType)) {
+    throw CompileError('Extension type representation cannot be void');
   }
 }
 

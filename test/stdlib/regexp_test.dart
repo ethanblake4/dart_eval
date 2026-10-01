@@ -71,7 +71,7 @@ void main() {
               
               var match = regExp.stringMatch(string);
               
-              return match;  
+              return match!;
             }
           ''',
         },

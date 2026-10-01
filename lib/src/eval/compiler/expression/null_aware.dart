@@ -86,10 +86,17 @@ Variable emitNullGuard(
     thenBranch: (ctx, rt) {
       // The receiver is provably non-null here: promote it so member and
       // extension resolution (`c1n?.ext` on `extension on C1`) see the
-      // non-nullable view.
+      // non-nullable view. Detach it from the binding so boxing cannot
+      // replace this view with the binding's nullable type.
       final V = body(
         narrow
-            ? target.copyWith(type: target.type.withNullable(false))
+            ? Variable.of(
+                ctx,
+                target.ssa,
+                target.type.withNullable(false),
+                rep: target.rep,
+                facts: target.facts,
+              )
             : target,
       ).boxIfNeeded(ctx);
       // `x?.m` can yield null only when `x` itself can be null — on a

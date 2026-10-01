@@ -61,21 +61,40 @@ void main() {
       ''', 1117);
     });
 
-    test('compound assignment keeps its implicit dynamic downcast', () {
-      expectDynamicValue('''
-        int main() {
-          int value = 1;
-          dynamic good = 2;
-          dynamic bad = 'bad';
-          value += good;
-          try {
-            value += bad;
-          } on TypeError {
-            return value;
-          }
-          return -1;
-        }
-      ''', 3);
+    test('numeric compound assignment rejects a num result for int', () {
+      expect(
+        () => Compiler().compile({
+          'dynamic_fixtures': {
+            'main.dart': '''
+              int main() {
+                int value = 1;
+                dynamic operand = 2;
+                value += operand;
+                return value;
+              }
+            ''',
+          },
+        }),
+        throwsA(isA<CompileError>()),
+      );
+    });
+
+    test('custom compound assignment retains its declared operator result', () {
+      expect(
+        () => Compiler().compile({
+          'dynamic_fixtures': {
+            'main.dart': '''
+              class C { Object operator +(dynamic value) => this; }
+              void main() {
+                C value = C();
+                dynamic operand = 1;
+                value += operand;
+              }
+            ''',
+          },
+        }),
+        throwsA(isA<CompileError>()),
+      );
     });
 
     test('collection construction and aliased writes keep element checks', () {

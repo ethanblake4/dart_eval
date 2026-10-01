@@ -31,7 +31,7 @@ Variable compileStringInterpolation(
       }
       if (!V.isConst) allConst = false;
       Variable vStr;
-      if (V.type.isSpec(CoreTypes.string)) {
+      if (!V.type.nullable && V.type.isSpec(CoreTypes.string)) {
         vStr = V;
       } else {
         vStr = CallResolver(ctx).invokeOperator(V, 'toString', []).result;

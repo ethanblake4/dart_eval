@@ -143,7 +143,7 @@ int main() {
   if (First().value == null) total++;
   if (make().value == null) total++;
   if ((dynamicMake() as First).value == null) total++;
-  return total + First(4).value as int;
+  return total + (First(4).value as int);
 }
 ''', 7);
   });

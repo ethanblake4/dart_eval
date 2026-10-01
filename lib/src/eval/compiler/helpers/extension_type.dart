@@ -13,6 +13,10 @@ TypeRef? extensionRepresentationField(
   TypeRef type,
   String name,
 ) {
+  if (type is TypeParameterTypeRef) {
+    type = ctx.typeSystem.throughTypeParameters(type);
+  }
+  if (type.nullable) return null;
   final decl = nominalDeclOf(type);
   if (decl is! SourceTypeDecl ||
       decl.extensionRepresentationParameter?.name?.lexeme != name ||

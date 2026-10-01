@@ -3,6 +3,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import '../context.dart';
 import '../type.dart';
 
+const contextualNumericOperators = {'+', '-', '*', '%'};
+
 bool _isNumericSubtype(
   CompilerContext ctx,
   TypeRef type,
@@ -12,12 +14,24 @@ bool _isNumericSubtype(
     !type.isSpec(CoreTypes.never) &&
     type.isAssignableTo(ctx, target.ref(ctx), forceAllowDynamic: false);
 
-/// The operand-dependent static result type of `num.remainder`.
-TypeRef? numericRemainderResultType(
+/// The primitive view justified for a yielding numeric operand.
+TypeRef? numericPrimitiveOperandType(CompilerContext ctx, TypeRef type) {
+  if (_isNumericSubtype(ctx, type, CoreTypes.int)) {
+    return CoreTypes.int.ref(ctx);
+  }
+  if (_isNumericSubtype(ctx, type, CoreTypes.double)) {
+    return CoreTypes.double.ref(ctx);
+  }
+  return null;
+}
+
+/// The operand-dependent result of arithmetic operators and `remainder`.
+TypeRef? numericArithmeticResultType(
   CompilerContext ctx,
   TypeRef receiver,
   TypeRef argument,
 ) {
+  if (receiver.isSpec(CoreTypes.never) && !receiver.nullable) return receiver;
   if (!_isNumericSubtype(ctx, receiver, CoreTypes.num)) return null;
   if (_isNumericSubtype(ctx, receiver, CoreTypes.double) ||
       _isNumericSubtype(ctx, argument, CoreTypes.double)) {

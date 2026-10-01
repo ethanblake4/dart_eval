@@ -101,4 +101,22 @@ void main() {
     ''');
     },
   );
+  test('unconstrained await infers integer arithmetic in generators', () async {
+    await _expectTrue('''
+      typedef Exactly<T> = T Function(T);
+      extension StaticType<T> on T {
+        T expectStaticType<R extends Exactly<T>>() => this;
+      }
+      Stream<int> values() async* {
+        final value = await new Future.value(10);
+        value.expectStaticType<Exactly<int>>();
+        yield value + 10;
+      }
+      Future<bool> main() async {
+        final value = await new Future.value(7);
+        value.expectStaticType<Exactly<int>>();
+        return value + 1 == 8 && await values().single == 20;
+      }
+    ''');
+  });
 }

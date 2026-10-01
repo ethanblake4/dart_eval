@@ -39,6 +39,29 @@ import 'intrinsics.dart';
 import 'numeric_types.dart';
 import 'targets.dart';
 
+const _nonNullReceiverOperators = {
+  '+',
+  '-',
+  '*',
+  '/',
+  '~/',
+  '%',
+  '<',
+  '>',
+  '<=',
+  '>=',
+  '&',
+  '|',
+  '^',
+  '<<',
+  '>>',
+  '>>>',
+  '~',
+  'unary-',
+  '[]',
+  '[]=',
+};
+
 /// Turns a [CallSite] into a [CallTarget] and emits the call. Resolution
 /// consults only the receiver's static type and facts plus the syntactic
 /// shape; arguments are compiled by the [ArgumentBinder].
@@ -1070,7 +1093,7 @@ final class CallResolver {
     final numericReturn = resolvedMember is BridgeMember && !isStatic
         ? switch (e.methodName.name) {
             'remainder' when argsPair.positional.length == 1 =>
-              numericRemainderResultType(
+              numericArithmeticResultType(
                 ctx,
                 L.type,
                 argsPair.positional.single.type,
@@ -1145,6 +1168,10 @@ final class CallResolver {
     };
   }
 
+  bool _needsNullableOperatorExtension(TypeRef receiver, String operator) =>
+      _nonNullReceiverOperators.contains(operator) &&
+      extensionLookupType(ctx, receiver).nullable;
+
   /// Operand context, with inherited and extension type arguments substituted.
   TypeRef? operatorParameterType(
     TypeRef receiver,
@@ -1152,19 +1179,21 @@ final class CallResolver {
     int index, {
     AstNode? source,
   }) {
-    try {
-      return ctx.memberLookup
-          .interfaceMember(
-            receiver,
-            MemberName.method(operator),
-            source: source,
-          )
-          .signature
-          .positional
-          .elementAtOrNull(index)
-          ?.type;
-    } on CompileError {
-      // An extension operator may apply instead.
+    if (!_needsNullableOperatorExtension(receiver, operator)) {
+      try {
+        return ctx.memberLookup
+            .interfaceMember(
+              receiver,
+              MemberName.method(operator),
+              source: source,
+            )
+            .signature
+            .positional
+            .elementAtOrNull(index)
+            ?.type;
+      } on CompileError {
+        // An extension operator may apply instead.
+      }
     }
     final found = resolveExtensionMember(
       ctx,
@@ -1198,9 +1227,57 @@ final class CallResolver {
     if (method == null) {
       return invokeFunctionValue(receiver, args, namedArgs);
     }
-    if (namedArgs == null || namedArgs.isEmpty) {
-      final intrinsic = Intrinsics(ctx).tryEmit(receiver, method, args);
-      if (intrinsic != null) return intrinsic;
+    final nullableOperator = _needsNullableOperatorExtension(
+      receiver.type,
+      method,
+    );
+    final numericResult =
+        (namedArgs == null || namedArgs.isEmpty) &&
+            contextualNumericOperators.contains(method) &&
+            args.length == 1
+        ? numericArithmeticResultType(ctx, receiver.type, args.single.type)
+        : null;
+    final arithmetic = contextualNumericOperators.contains(method);
+    final hasNeverOperand =
+        arithmetic &&
+        [receiver, ...args].any(
+          (value) => value.type.isSpec(CoreTypes.never) && !value.type.nullable,
+        );
+    if ((namedArgs == null || namedArgs.isEmpty) &&
+        !hasNeverOperand &&
+        !nullableOperator) {
+      Variable primitiveView(Variable value) {
+        if (!arithmetic) return value;
+        final primitive = numericPrimitiveOperandType(ctx, value.type);
+        if (primitive == null || sameDeclaration(value.type, primitive)) {
+          return value;
+        }
+        // The subtype proof chooses an unbox bank; the source binding keeps
+        // its nominal type and representation for later reads.
+        return Variable.of(
+          ctx,
+          value.ssa,
+          primitive,
+          rep: value.rep,
+          facts: value.facts,
+        );
+      }
+
+      final intrinsic = Intrinsics(ctx).tryEmit(
+        primitiveView(receiver),
+        method,
+        args.map(primitiveView).toList(),
+      );
+      if (intrinsic != null) {
+        return numericResult == null
+            ? intrinsic
+            : (
+                target: intrinsic.target,
+                result: intrinsic.result.copyWith(type: numericResult),
+                args: intrinsic.args,
+                namedArgs: intrinsic.namedArgs,
+              );
+      }
     }
     var recv = receiver;
     if ((namedArgs == null || namedArgs.isEmpty) &&
@@ -1226,10 +1303,11 @@ final class CallResolver {
       // A member the class doesn't declare may be an extension method (e.g.
       // `operator []=` defined in `extension on T`). Instance members win —
       // the extension only applies when instance lookup fails.
-      if (!ctx.memberLookup.hasInstanceMember(
-        recv.type,
-        MemberName.method(method),
-      )) {
+      if (nullableOperator ||
+          !ctx.memberLookup.hasInstanceMember(
+            recv.type,
+            MemberName.method(method),
+          )) {
         // `unary-` maps to the extension member `-` of positional arity 0.
         final found = resolveExtensionMember(
           ctx,
@@ -1250,11 +1328,15 @@ final class CallResolver {
         }
       }
     }
+    if (nullableOperator) {
+      throw CompileError('Cannot invoke operator $method on ${receiver.type}');
+    }
     return _invokeResolvedOperator(
       recv,
       method,
       args,
       namedArgs,
+      returnType: numericResult,
       lexicalSuper: lexicalSuper,
     );
   }
@@ -1316,6 +1398,20 @@ final class CallResolver {
         );
       } on CompileError {
         // Unresolvable operator targets retain the dynamic fallback.
+      }
+    }
+    if (_nonNullReceiverOperators.contains(method) &&
+        resolved?.member is BridgeMember) {
+      final parameters = resolved!.signature.positional;
+      for (var i = 0; i < prepared.length && i < parameters.length; i++) {
+        final argument = prepared[i].type;
+        final parameter = parameters[i].type;
+        if (argument.assignmentConversionTo(ctx, parameter) ==
+            AssignmentConversion.invalid) {
+          throw CompileError(
+            'Cannot assign operator argument of type $argument to $parameter',
+          );
+        }
       }
     }
     returnType ??=

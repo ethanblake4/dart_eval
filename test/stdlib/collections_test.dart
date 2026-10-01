@@ -258,8 +258,8 @@ void main() {
             bool main() {
               final testMap = <String, Map>{};
               testMap['a'] = {'b': 'c'};
-              testMap['a']['name'] = 'Jon';
-              return testMap['a'].length == 2;
+              testMap['a']!['name'] = 'Jon';
+              return testMap['a']!.length == 2;
             }
           ''',
         },
@@ -375,7 +375,7 @@ void main() {
               if (englishTitle != null && englishTitle.isNotEmpty) {
                 title = englishTitle;
               } else {
-                title = json['title'];
+                title = json['title']!;
               }
 
               return title;
@@ -454,7 +454,7 @@ void main() {
             int main() {
               final map = {'a': 1, 'b': 2};
               final castMap = map.cast<String, int>();
-              return castMap['a'];
+              return castMap['a']!;
             }
           ''',
         },

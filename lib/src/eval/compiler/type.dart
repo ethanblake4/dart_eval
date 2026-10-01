@@ -43,12 +43,31 @@ sealed class TypeRef {
 
   final bool nullable;
 
-  /// Source extension types can hold null without a `?` on their annotation.
-  bool get hasNullableRepresentation {
+  /// Whether the runtime value can be null, including erased representations
+  /// and type parameter bounds that lack a `?` on their annotation.
+  bool get hasNullableRepresentation => _hasNullableRepresentation();
+
+  bool _hasNullableRepresentation([Set<TypeParameterDef>? visiting]) {
     final type = erasedExtensionType;
-    return type.nullable ||
+    if (type.nullable ||
         type.isSpec(CoreTypes.nullType) ||
-        type.isSpec(CoreTypes.dynamic);
+        type.isSpec(CoreTypes.dynamic) ||
+        type.isSpec(CoreTypes.voidType)) {
+      return true;
+    }
+    if (type is TypeParameterTypeRef) {
+      final bound = type.effectiveBound;
+      final active = visiting ?? <TypeParameterDef>{};
+      return bound == null ||
+          !active.add(type.parameter) ||
+          bound._hasNullableRepresentation(active);
+    }
+    if (type.isSpec(AsyncTypes.futureOr)) {
+      final arguments = interfaceArgumentsOf(type);
+      return arguments.isEmpty ||
+          arguments.first._hasNullableRepresentation(visiting);
+    }
+    return false;
   }
 
   /// Erases only an outer extension type, preserving its representation's

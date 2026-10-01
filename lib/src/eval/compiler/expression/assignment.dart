@@ -13,6 +13,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import '../invocation/resolver.dart';
+import '../invocation/numeric_types.dart';
 import 'index.dart';
 
 Variable compileAssignmentExpression(
@@ -119,8 +120,7 @@ Variable _assignWithReference(
       // not join (the writes in it would spuriously demote locals).
       thenEdgeUnreachable: () =>
           ctx.soundFlowAnalysis(e) &&
-          !readValue!.type.nullable &&
-          !readValue!.type.isSpec(CoreTypes.dynamic),
+          !readValue!.type.hasNullableRepresentation,
       condition: (ctx) {
         readValue = L.getValue(ctx);
         return CallResolver(
@@ -146,6 +146,9 @@ Variable _assignWithReference(
         return StatementInfo();
       },
       elseBranch: (ctx, rt) {
+        // This edge observes a non-null lvalue. Join that promotion with the
+        // write edge so a non-null RHS leaves a nullable local promoted.
+        if (ctx.soundFlowAnalysis(e)) promoteNonNull(ctx, e.leftHandSide);
         final V = readValue!.boxIntoFreshSlot(ctx);
         ctx.pushOp(Assign(out.ssa, V.ssa));
         return StatementInfo();
@@ -182,19 +185,24 @@ Variable _assignWithReference(
   } else {
     final method = e.operator.type.binaryOperatorOfCompoundAssignment!.lexeme;
     // Dart evaluates the read of L (the getter / index call) before the RHS.
-    final V = L.getValue(ctx);
-    final R = compileExpression(e.rightHandSide, ctx, setterType());
-    var res = CallResolver(ctx).invokeOperator(V, method, [R]).result;
-    // Dart's compound-assignment rules retain the implicit downcast when the
-    // right operand is dynamic. The operator's declared return type alone
-    // (for example num from int.+) must not turn that valid runtime check into
-    // a static rejection.
-    if (R.type.isSpec(CoreTypes.dynamic)) {
-      res = res.copyWith(type: CoreTypes.dynamic.ref(ctx));
-    }
+    final V = L.getValue(ctx).copyIntoFreshSlot(ctx, 'compound_left');
+    final operandContext = contextualNumericOperators.contains(method)
+        ? numericArgumentContext(ctx, V.type, setterType()) ?? setterType()
+        : setterType();
+    final R = compileExpression(e.rightHandSide, ctx, operandContext);
+    final res = CallResolver(ctx).invokeOperator(V, method, [R]).result;
     final set = res.type != L.resolveType(ctx, forSet: true)
         ? res.boxIfNeeded(ctx)
         : res;
-    return L.setValue(ctx, set, e);
+    final stored = L.setValue(ctx, set, e);
+    // The store conversion checks the lvalue's type; the expression keeps the
+    // operator's result type, including a genuinely dynamic return type.
+    return Variable.of(
+      ctx,
+      stored.ssa,
+      res.type,
+      rep: stored.rep,
+      facts: stored.facts,
+    );
   }
 }

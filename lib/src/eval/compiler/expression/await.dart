@@ -31,18 +31,7 @@ Variable compileAwaitExpression(
       bound == null ||
           bound.isSpec(CoreTypes.dynamic) ||
           bound.isSpec(CoreTypes.voidType)
-      ? TypeParameterTypeRef(
-          ctx.typeParameterDefs.key(
-            TypeParameterOwner(
-              TypeParameterOwnerKind.callSite,
-              ctx.library,
-              'await',
-              e.offset,
-            ),
-            0,
-            '_',
-          ),
-        )
+      ? UnknownTypeRef.instance
       : bound;
   final subject = compileExpression(
     e.expression,

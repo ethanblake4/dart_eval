@@ -105,7 +105,7 @@ StatementInfo compileForLoop(
 
 /// The context type for the iterable expression of `for (v in it)`:
 /// `Iterable<T>` — or `Stream<T>` for `await for` — where `T` is the loop
-/// variable's declared type (`dynamic` for `var`), so `.member` shorthands
+/// variable's declared type (an inference hole for `var`), so `.member` shorthands
 /// and untyped collection literals in the iterable position resolve.
 TypeRef forEachIterableBound(
   CompilerContext ctx,
@@ -124,7 +124,7 @@ TypeRef forEachIterableBound(
   };
   return (await_ ? CoreTypes.stream : CoreTypes.iterable)
       .ref(ctx)
-      .copyWith(arguments: [elementType ?? CoreTypes.dynamic.ref(ctx)]);
+      .copyWith(arguments: [elementType ?? UnknownTypeRef.instance]);
 }
 
 /// Compiles the non-`await` form of `for (v in iterable)`: iterable type

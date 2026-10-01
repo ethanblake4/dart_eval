@@ -61,6 +61,7 @@ ValueRep repForType(TypeRef type, MachineRepresentation representation) {
 /// their own banks, raw natives for object-bank types. Ignores ABI
 /// boundary conventions; [Abi] owns those.
 ValueRep unboxedRepOf(TypeRef type) {
+  type = type.erasedExtensionType;
   final bank = representationForType(type);
   if (bank != MachineRepresentation.object) return repForType(type, bank);
   if (type.isDartCore) {

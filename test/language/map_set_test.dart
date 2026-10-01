@@ -23,8 +23,8 @@ void main() {
         final values = <String, int>{'a': 1, 'b': 2};
         values['a'] = 4;
         final hadSecond = values.containsKey('b');
-        final int removed = values.remove('b');
-        int result = values['a'];
+        final int removed = values.remove('b')!;
+        int result = values['a']!;
         result += removed;
         result += values.length;
         if (hadSecond) result += 10;
@@ -97,7 +97,7 @@ void main() {
         final equivalent = Key(7);
         final map = <Key, int>{first: 11};
         final set = <Key>{first, equivalent};
-        return map[equivalent] + set.length;
+        return map[equivalent]! + set.length;
       }
     ''');
     for (final (kind, runtime) in _runtimes(program)) {
@@ -108,7 +108,7 @@ void main() {
   test('host map and set adapters preserve identity and native values', () {
     final program = _compile('''
       Map<String, int> mutateMap(Map<String, int> values) {
-        values['added'] = values['base'] + 2;
+        values['added'] = values['base']! + 2;
         return values;
       }
 
@@ -118,7 +118,7 @@ void main() {
         return values;
       }
 
-      int readMap(Map<String, int> values) => values['host'];
+      int readMap(Map<String, int> values) => values['host']!;
       bool readSet(Set<int> values) => values.contains(8);
       Map<String, int> makeMap() => <String, int>{'guest': 7};
       Set<int> makeSet() => <int>{2, 3};

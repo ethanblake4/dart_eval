@@ -23,6 +23,7 @@ import '../../ir/types.dart' as types;
 export '../../ir/representation.dart';
 
 MachineRepresentation representationForType(TypeRef type) {
+  type = type.erasedExtensionType;
   if (type.nullable || !type.isDartCore) {
     return MachineRepresentation.object;
   }

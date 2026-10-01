@@ -1944,3 +1944,115 @@ their stale exclusions are removed. Final SDK-full exits 0 with 2421 passes,
 216 compile errors, 100 runtime failures and three reported skips, with no
 expectation mismatches. Genuine supported failures decrease from 319 to 316;
 language-floor skips remain separate. Evidence is retained in cycle8-pass3.
+
+## Cycle 8 correctness pass 4
+
+Bodyless nongeneric extension types now admit scalar, nominal, record and union
+representations. Source typing remains nominal: an int representation does not
+make its extension type assignable to Object or expose int operators. The
+compiler erases the representation when selecting parameter/result register
+banks, export metadata and runtime descriptors. Construction, projection and
+constructor tear-offs keep the underlying value without allocating a guest
+class. Tear-offs reuse the captureless closure cache and ordinary function ABI.
+Generic-bound projection follows the effective bound, and nullable extension
+annotations still reject unguarded representation-field access.
+
+Runtime nullability follows erased extension representations, FutureOr arguments
+and effective type-parameter bounds. Ordinary types do not allocate a visited
+set; recursive bounds are guarded only when traversed. Native witnesses confirm
+nullable union and generic-bound equality, assertions, selectors, coalescing and
+coalescing assignment. This predicate also determines reachable null branches,
+while source type joins continue to use nominal subtype rules.
+
+Arithmetic +, -, * and % infer their right operand from the uncontextualized
+left operand and the result context. A shared result rule handles int/double/num
+bounds and Never operands. Proven generic numeric operands use a detached
+primitive view for intrinsic selection; source bindings keep their nominal
+types. Compound assignment snapshots the left read before evaluating the right
+operand, checks storage against the lvalue and preserves the operator's result
+type on the expression.
+
+Native Dart rejects int += dynamic and a custom Object-returning operator
+assigned back into its narrower class. The old blanket dynamic-result relabel
+admitted both invalid cases, and is removed. Its invalid positive regression is
+replaced with compiler-negative evidence. Valid double/num and custom-class
+results retain their static types, and genuinely dynamic operator results retain
+dynamic expression typing after checked storage. Covariant collection writes
+still reject an incompatible result before modifying storage.
+
+No runtime, opcode, generated binding or stdlib changes are made. Native scalar
+and constructor tear-off witnesses pass, invalid nominal accesses are rejected,
+and focused scalar controls pass fresh and serialized.
+
+The first full ordinary run exposed two earlier inference defects hidden by
+permissive arithmetic typing. Untyped foreach variables supplied a concrete
+dynamic element context, turning an integer literal into List<dynamic>; they now
+supply a schema hole while retaining the outer Iterable/Stream context. Explicit
+declared loop types keep their checked conversions. Coalescing assignment now
+records the surviving lvalue's non-null promotion on its branch before joining
+it with the write branch. Nullable RHS and captured-write controls prevent
+overpromotion. These corrections preserve valid integer accumulation, HLC drift
+calculations and source_span offsets without weakening assignment checks.
+
+The negative controls also expose an older implicit nullable downcast in
+assignment conversion. Dart rejects int? assigned or returned as int; the
+compiler no longer substitutes a runtime assertion for that error. Dynamic
+downcasts retain their existing checks, and nullable sources do not qualify for
+literal int-to-double widening. Nullable receiver operators resolve applicable
+nullable extensions before rejecting ordinary dispatch; equality and nullable
+Object members keep their existing rules. These are compiler checks, with no
+additional bytecode on valid ordinary paths.
+
+Known bridge operators validate positional argument types against their
+substituted formals, matching the existing source-operator checks. This exposes
+nullable String interpolation being lowered directly as String concatenation.
+Only nonnullable Strings bypass toString now; nullable values use the existing
+conversion path. A changing getter control verifies that a preceding null check
+does not alter the later observed value or duplicate getter evaluation.
+
+The stricter checks exposed invalid positive fixtures that returned nullable
+map lookups or RegExp matches as nonnullable values, used nullable lookups in
+arithmetic, or cast an Object-valued factory field only after addition. Their
+sources now assert the known present values or cast the field before adding.
+The tested bridge, collection and redirect behavior is preserved. Native
+witnesses distinguish these source corrections from compiler regressions.
+
+Null-aware index writes also exposed a lost narrowing view: boxing consulted
+the original binding and restored its nullable type inside the guard. The
+guard now passes a detached view of the same SSA value, preserving its
+representation and facts without emitting another operation.
+
+Native index-write, map-return and redirect-default witnesses pass; the old
+nullable map-return controls are rejected by the native compiler. Scoped
+analysis is clean and formatting changes no Dart files. The final affected
+focus passes all 123 cases. The final ordinary suite exits 0 with 2124 passes,
+86 skips and no failures. The first SDK-full sweep exposed three inference
+regressions and four more stale exclusions. An uninformative await context now
+uses a schema hole rather than an artificial type parameter, so Future.value
+can infer int before arithmetic or yielding. Contextual bridge constructor
+arguments containing a schema hole must likewise complete argument inference
+before reaching runtime metadata. Focused static-type controls cover both paths.
+
+The four additional fixtures cover extension representation field promotion,
+extension pattern exhaustiveness, nullable interpolation through a mixin, and
+cyclic classes containing extension types. Their original sources pass native
+Dart with assertions and both fresh and serialized Eval execution. All four
+stale exclusions are removed, bringing this pass to seven removed entries.
+After the inference corrections, scoped analysis is clean, the final affected
+focus passes 98 cases, and the additional async, generator, shorthand,
+constructor, await and foreach controls pass 44 cases. All three SDK regressions
+pass fresh and serialized. The final SDK-full rerun exits 0 with 2428 passes,
+211 compile errors, 98 runtime failures and three reported skips, with no
+expectation mismatches. Genuine supported SDK failures decrease from 316 to
+309. The 2124-pass ordinary run precedes the final await/constructor corrections;
+the 98- and 44-case focused runs and final full SDK sweep validate those
+corrections. Evidence is retained under cycle8-pass4. No validation process
+remains running.
+
+The user requested a pause after this checkpoint. Resume at cycle 8 performance,
+then the simplification pass and Astra medium review. The read-only performance
+survey identified boxed integer index dispatch as a candidate; no runtime
+experiment or benchmark build has begun. Its local plan and pilot script remain
+under .dart_tool/improvement_loop/cycle8-int-index-plan.md and
+cycle8-int-index-performance. Fresh/serialized semantic controls and the full
+AOT sweep are required before accepting any runtime candidate.

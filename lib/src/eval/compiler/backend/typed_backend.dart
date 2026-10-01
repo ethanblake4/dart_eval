@@ -690,17 +690,18 @@ class TypedBackend {
       parameter,
       bound: type,
     );
-    if (defaultValue is int && type.isSpec(CoreTypes.double)) {
+    final runtimeType = type.erasedExtensionType;
+    if (defaultValue is int && runtimeType.isSpec(CoreTypes.double)) {
       defaultValue = defaultValue.toDouble();
     }
     return TypedExportParameter(
       parameter.name!.lexeme,
       isRequired: parameter.isRequired,
-      nullable: type.nullable || type.name == 'dynamic' || type.name == 'Null',
-      typeName: type.name,
+      nullable: runtimeType.hasNullableRepresentation,
+      typeName: runtimeType.name,
       typeLibrary:
           context.libraryMap.entries
-              .firstWhereOrNull((entry) => entry.value == type.file)
+              .firstWhereOrNull((entry) => entry.value == runtimeType.file)
               ?.key ??
           // Structural types (records, function types) carry file: -1.
           '',

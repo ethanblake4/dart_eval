@@ -175,11 +175,21 @@ Variable compileInstanceOf(
     // `Iterable<T>` keeps literal arguments at their natural type (`[1]` →
     // `List<int>`) and the unify below binds `T` from those types. Erasing
     // to `dynamic` here would clamp the literal to `List<dynamic>` first.
-    final argTypeParameters =
-        genericNames.isNotEmpty &&
-            interfaceArgumentsOf(instantiatedType).isEmpty
-        ? bridgeClassGenericParameters(ctx, staticType)
-        : const <String, TypeParameterTypeRef>{};
+    final appliedArguments = interfaceArgumentsOf(instantiatedType);
+    final placeholders = genericNames.isEmpty
+        ? const <String, TypeParameterTypeRef>{}
+        : bridgeClassGenericParameters(ctx, staticType);
+    final argTypeParameters = <String, TypeParameterTypeRef>{
+      for (var i = 0; i < genericNames.length; i++)
+        if (i >= appliedArguments.length ||
+            appliedArguments[i] is UnknownTypeRef)
+          genericNames[i]: placeholders[genericNames[i]]!,
+    };
+    final argumentTypes = <String, TypeRef>{
+      for (var i = 0; i < genericNames.length; i++)
+        genericNames[i]:
+            argTypeParameters[genericNames[i]] ?? appliedArguments[i],
+    };
     target = ConstructorCall(
       staticType: staticType,
       instantiatedType:
@@ -199,13 +209,12 @@ Variable compileInstanceOf(
         fnDescriptor,
         returnFallback: CoreTypes.dynamic.ref(ctx),
         owner: instantiatedType,
-        typeParameters: argTypeParameters.cast<String, TypeRef>(),
+        typeParameters: argumentTypes,
       ),
     );
     arguments = ArgumentBinder(ctx).bindBridgeTarget(target, argumentList);
 
-    if (genericNames.isNotEmpty &&
-        interfaceArgumentsOf(instantiatedType).isEmpty) {
+    if (argTypeParameters.isNotEmpty) {
       final bindings = <TypeParameterDef, TypeRef>{};
       // Bridge parameters carry no named flag; named args ride at the tail.
       final positionalParams = fnDescriptor.params;
@@ -217,7 +226,7 @@ Variable compileInstanceOf(
         final pattern = TypeRef.fromBridgeAnnotation(
           ctx,
           positionalParams[i].type,
-          typeParameters: argTypeParameters.cast<String, TypeRef>(),
+          typeParameters: argumentTypes,
         );
         final concrete =
             ctx.typeSystem.asInstanceOf(
@@ -230,8 +239,10 @@ Variable compileInstanceOf(
       instantiatedType = (instantiatedType as InterfaceTypeRef).copyWith(
         arguments: [
           for (var i = 0; i < genericNames.length; i++)
-            bindings[argTypeParameters[genericNames[i]]!.parameter] ??
-                CoreTypes.dynamic.ref(ctx),
+            argTypeParameters.containsKey(genericNames[i])
+                ? bindings[argTypeParameters[genericNames[i]]!.parameter] ??
+                      CoreTypes.dynamic.ref(ctx)
+                : appliedArguments[i],
         ],
       );
     }

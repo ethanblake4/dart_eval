@@ -24,6 +24,21 @@ CallSignature constructorTearOffSignature(
   ConstructorDeclaration? constructor,
 ) {
   final owner = nominalDeclOf(type)!;
+  if (owner is SourceTypeDecl && owner.kind == TypeDeclKind.extensionType) {
+    final parameter = owner.extensionRepresentationParameter!;
+    return CallSignature(
+      positional: [
+        ParameterSpec(
+          parameter.name!.lexeme,
+          owner.extensionRepresentation!,
+          isRequired: true,
+          node: parameter,
+        ),
+      ],
+      requiredPositional: 1,
+      returnType: type,
+    );
+  }
   final generic = interfaceArgumentsOf(type).isEmpty;
   final result = generic ? owner.thisType : type;
   final declared = constructor == null
@@ -65,11 +80,12 @@ Variable materializeConstructorTearOff(
       : CallSignature.forDeclaration(ctx, type.file, constructor);
   final parameters = [...signature.positional, ...signature.named];
   final declaredParameters = [...declared.positional, ...declared.named];
+  final extensionType = nominalDeclOf(type)?.kind == TypeDeclKind.extensionType;
   final abi = constructor == null
       ? CallableAbi.fromParameterTypes(
           [for (final parameter in declaredParameters) parameter.type],
           signature.returnType,
-          CallableKind.constructor,
+          extensionType ? CallableKind.function : CallableKind.constructor,
         )
       : CallableAbi.ofConstructor(ctx, constructor, [
           for (final parameter in declaredParameters) parameter.type,
@@ -124,27 +140,30 @@ Variable materializeConstructorTearOff(
           ),
         );
       }
-      final result =
-          ConstructorCall(
-            staticType: type,
-            instantiatedType: signature.returnType,
-            offset: DeferredOrOffset(file: type.file, name: key),
-            constructor: constructor,
-            implicitDefault: constructor == null,
-          ).emit(
-            ctx,
-            BoundCall(
-              positional: arguments.take(signature.positional.length).toList(),
-              named: [
-                for (var i = 0; i < signature.named.length; i++)
-                  (
-                    signature.named[i].name,
-                    arguments[signature.positional.length + i],
-                  ),
-              ],
-              returnType: signature.returnType,
-            ),
-          );
+      final result = extensionType
+          ? arguments.single.toRep(ctx, abi.result!).copyWith(type: type)
+          : ConstructorCall(
+              staticType: type,
+              instantiatedType: signature.returnType,
+              offset: DeferredOrOffset(file: type.file, name: key),
+              constructor: constructor,
+              implicitDefault: constructor == null,
+            ).emit(
+              ctx,
+              BoundCall(
+                positional: arguments
+                    .take(signature.positional.length)
+                    .toList(),
+                named: [
+                  for (var i = 0; i < signature.named.length; i++)
+                    (
+                      signature.named[i].name,
+                      arguments[signature.positional.length + i],
+                    ),
+                ],
+                returnType: signature.returnType,
+              ),
+            );
       ctx.pushOp(Return(result.ssa));
       ctx.endScope();
       ctx.finishMethod();

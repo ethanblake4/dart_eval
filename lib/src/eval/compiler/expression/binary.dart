@@ -20,6 +20,7 @@ import '../errors.dart';
 import 'expression.dart';
 import '../values/value_rep.dart';
 import '../invocation/resolver.dart';
+import '../invocation/numeric_types.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
 import '../member/member_name.dart';
@@ -104,6 +105,8 @@ Variable compileBinaryExpression(
             : boundType.withNullable(true),
       // Equality's bool result does not constrain either operand's type.
       TokenType.EQ_EQ || TokenType.BANG_EQ => null,
+      // Arithmetic determines its RHS context from the uncontextualized LHS.
+      _ when contextualNumericOperators.contains(method) => null,
       _ => boundType,
     },
   );
@@ -130,7 +133,10 @@ Variable compileBinaryExpression(
   // static type (e.g. `.foo` shorthands resolve against it).
   final rightBound = switch (e.operator.type) {
     TokenType.EQ_EQ || TokenType.BANG_EQ => L.type,
-    // Preserve the existing arithmetic context for primitive numeric operands.
+    _ when contextualNumericOperators.contains(method) =>
+      numericArgumentContext(ctx, L.type, boundType) ??
+          CallResolver(ctx).operatorParameterType(L.type, method, 0, source: e),
+    // Other numeric operators retain their existing operand context.
     _
         when L.type.isAssignableTo(
           ctx,
@@ -281,11 +287,7 @@ Variable _compileShortCircuit(
     thenEdgeUnreachable: () =>
         operator == '??' &&
         ctx.soundFlowAnalysis(left) &&
-        !L.type.nullable &&
-        !L.type.isSpec(CoreTypes.dynamic) &&
-        // `Null` isn't `nullable` but a Null LHS is always null — the
-        // RHS is the live arm, not the dead one.
-        !L.type.isSpec(CoreTypes.nullType),
+        !L.type.hasNullableRepresentation,
     // `Null ?? e` always evaluates `e` — the surviving-LHS edge never
     // routes to the join.
     elseEdgeUnreachable: () =>

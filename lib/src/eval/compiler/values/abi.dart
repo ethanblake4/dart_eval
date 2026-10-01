@@ -60,6 +60,7 @@ abstract final class Abi {
   /// Native representations for non-nullable scalar and String values at
   /// direct call boundaries. Type parameters keep the erased boxed convention.
   static ValueRep unboxedAcrossCalls(TypeRef type) {
+    type = type.erasedExtensionType;
     if (type.nullable || type.isTypeParameter) return ValueRep.boxed;
     if (!type.isDartCore) return ValueRep.boxed;
     return switch (type.name) {
