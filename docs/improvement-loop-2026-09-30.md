@@ -1536,3 +1536,55 @@ confirms all nine fixtures skip for the minimum-version reasons.
 Runtime/compiler source is
 unchanged by this policy checkpoint, so the frozen performance baseline remains
 valid.
+
+## Cycle 6 runtime performance
+
+Repeated Map indexing still resolves a member and creates a closure before
+reading canonical storage. callIndex now reads the backing map directly for
+the final internal TypedNativeMap wrapper. VM Map boxing and the existing lazy
+host boxing/adoption boundaries construct that wrapper. It adds no instance
+fields or extra allocations, backing copies or adapters. The List branch stays
+first; ordinary public Map wrappers and guest MapBase implementations retain the
+shared virtual-call fallback. Null keys and null/missing results use the same
+normalization as the original adapter; checked writes and runtime ownership
+are unchanged. Generator output is regenerated, with no opcode/codec change.
+
+The new inventory_pricing benchmark prices weighted purchase baskets against
+a host feed, a guest contract-price view, or alternating rows. Seven lookups
+cover named SKU prices, a null freight key, a discontinued null value and a
+missing SKU. All twelve native controls and twelve fresh/serialized evaluator
+controls match an independent numeric oracle. New runtime tests cover VM
+boxing through export-cache restoration, nulls, identity, host aliases,
+custom dispatch, defining-runtime metadata and invalid writes. Guest hashing
+can throw through the fast read, be caught, and allow a later successful query.
+All 65 focused Map/List checks pass; scoped analysis and generator check pass.
+
+The exact 23-driver baseline FFAE7E15 precedes runtime changes. Candidate
+49EFA1E6 uses the same benchmark sources. The initial 64-run pilot improves
+native inventory by 31-35%, configuration validation by 13.4% and template
+rendering by 9.0%; numeric-field and telemetry controls are flat. A subsequent
+48-run ABBA and reverse BAAB check uses 100000 baskets and fifteen samples:
+native fresh/serialized improve 36.7%/36.9%, mixed improves 5.9%/6.0%, and guest
+costs 2.7%/2.6%. At 200000 dynamic iterations, the initial 10-15% flags reduce
+to 2-4% costs; ordinary and virtual-call controls are flat. Those modest costs
+are retained as a tradeoff for the repeated Map-read gains. Raw pilot, long
+controls and oracle evidence are in cycle6-performance-baseline.
+The final full 23-driver AOT sweep matches all 22 execution checksums and the
+1271-byte compile output. Native inventory improves 35-36%, configuration
+validation 16.1% and template rendering 12.0%. Large timing changes in unrelated
+dispatch/call cases are not attributed to this Map change. The sweep raises
+25.5% overflow-argument and 22-24% exception flags, so a bounded ABBA/BAAB repeat
+uses the same exact binaries at 500000 call iterations and 100000 exception
+iterations, with fifteen samples. Overflow arguments are flat at -0.3%; noTry
+is +0.1% and handledThrow -3.6%. Other controls range from -2.1% to +3.4%.
+The first call process is an outlier; the reverse order is flat. The large
+flags do not reproduce, and no timing cause is established. All sixteen repeat
+processes match their checksums. The small measured costs remain accepted.
+
+Ordinary tests pass with 2053 tests and 86 skips. SDK-full satisfies every
+expectation, recording 2404 passing fixtures, 230 compile errors, 103 runtime
+failures and three reported unsupported skips. There are no new failures or
+stale assertions. The 333 supported compile/runtime failures replace the prior
+342 after the nine policy exclusions; this runtime pass adds no correctness
+fixes. Full sweep, bounded repeat and broad logs are retained alongside the
+earlier controls in cycle6-performance-baseline.

@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart'
 import 'package:dart_eval/stdlib/core.dart';
 import 'typed_interop.dart';
 import 'typed_native_list.dart';
+import 'typed_native_map.dart';
 
 /// Lazy boundary views preserve aliases, cycles, and mutation in both directions.
 abstract final class TypedHostCollections {
@@ -46,7 +47,7 @@ abstract final class TypedHostCollections {
         );
       case Map<Object?, Object?>():
         backing = _MapView(collection, read, write, write, write);
-        wrapper = $Map.wrap(
+        wrapper = TypedNativeMap.wrap(
           backing as Map<Object?, Object?>,
           runtimeTypeId: runtimeTypeId,
           runtime: runtime,
@@ -108,7 +109,7 @@ abstract final class TypedHostCollections {
           (candidate) => check(candidate, 0),
           (candidate) => check(candidate, 1),
         );
-        wrapper = $Map.wrap(
+        wrapper = TypedNativeMap.wrap(
           backing as Map<Object?, Object?>,
           runtimeTypeId: runtimeTypeId,
           runtime: runtime,

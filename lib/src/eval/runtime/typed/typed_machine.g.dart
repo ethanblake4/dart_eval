@@ -5,6 +5,7 @@ import 'typed_frame.dart';
 import 'typed_interop.dart';
 import 'typed_instance.dart';
 import 'typed_native_list.dart';
+import 'typed_native_map.dart';
 import 'typed_late_field.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
@@ -806,7 +807,7 @@ abstract final class TypedMachine {
                   callableTypeArguments: frame.effectiveTypeArguments,
                   typeEnvironment: frame.typeEnvironment,
                 );
-          r = $Map.wrap(
+          r = TypedNativeMap.wrap(
             r as Map<Object?, Object?>,
             runtimeTypeId: runtimeTypeId,
             runtime: runtime,
@@ -1012,6 +1013,10 @@ abstract final class TypedMachine {
            if (r is TypedNativeList || r is $MappedListView) {
             final list = (r as $List).$value;
             final value = list[(s as $Value?)?.$value as int] as $Value?;
+            r = value is $null ? null : value;
+            s = null; c = null;
+          } else if (r is TypedNativeMap) {
+            final value = r.$value[(s as $Value?) ?? const $null()] as $Value?;
             r = value is $null ? null : value;
             s = null; c = null;
           } else {
@@ -1515,7 +1520,7 @@ abstract final class TypedMachine {
                   callableTypeArguments: frame.effectiveTypeArguments,
                   typeEnvironment: frame.typeEnvironment,
                 );
-          s = $Map.wrap(
+          s = TypedNativeMap.wrap(
             s as Map<Object?, Object?>,
             runtimeTypeId: runtimeTypeId,
             runtime: runtime,
@@ -1704,7 +1709,7 @@ abstract final class TypedMachine {
                   callableTypeArguments: frame.effectiveTypeArguments,
                   typeEnvironment: frame.typeEnvironment,
                 );
-          c = $Map.wrap(
+          c = TypedNativeMap.wrap(
             c as Map<Object?, Object?>,
             runtimeTypeId: runtimeTypeId,
             runtime: runtime,
