@@ -199,8 +199,7 @@ StatementInfo _compileTry(
   if (finallyBlock != null) {
     // Jumps originating in this finally do not execute it a second time.
     final crossingJumps = [
-      for (final (states, start) in pendingJumps)
-        (states, states.skip(start).toList()),
+      for (final (states, start) in pendingJumps) ...states.skip(start),
     ];
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [finallyBlock], parent);
     restoreBindings();
@@ -208,10 +207,8 @@ StatementInfo _compileTry(
     finalInfo = compileFinally!();
     if (completes(finalInfo)) {
       finallyExitState = ctx.saveState();
-      for (final (_, snapshots) in crossingJumps) {
-        for (final state in snapshots) {
-          state.applyFinallyWrites(finallyEntryState, finallyExitState);
-        }
+      for (final state in crossingJumps) {
+        state.applyFinallyWrites(finallyEntryState, finallyExitState);
       }
       final normalCompletion =
           completes(bodyInfo) || catchBlock != null && completes(catchInfo);

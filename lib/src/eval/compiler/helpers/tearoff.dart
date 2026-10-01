@@ -124,6 +124,7 @@ Variable materializeTearOff(
   };
   if (memberTypeParameters == null &&
       memberExt == null &&
+      memberParams.isNotEmpty &&
       implicitReceiver != null &&
       memberHost is Declaration) {
     final owner = ctx.types.find(

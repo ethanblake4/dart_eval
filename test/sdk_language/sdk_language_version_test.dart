@@ -5,15 +5,15 @@ import 'package:test/test.dart';
 
 import 'sdk_language.dart';
 
-SuiteConfig config([String minimum = "min_sdk: '3.0'"]) =>
+SuiteConfig _config([String minimum = "min_sdk: '3.0'"]) =>
     SuiteConfig.fromYaml('sdk_commit: fixture\ncore: []\n$minimum\n');
 
 void main() {
   test(
     'minimum version defaults to Dart 3 and compares numeric components',
     () {
-      expect(config('').minSdk, (major: 3, minor: 0));
-      final minimum = config("min_sdk: '3.9'");
+      expect(_config('').minSdk, (major: 3, minor: 0));
+      final minimum = _config("min_sdk: '3.9'");
       expect(
         minimum.unsupportedLanguageVersion('// @dart=3.10\nvoid main() {}'),
         isNull,
@@ -36,7 +36,7 @@ void main() {
       'true',
     ]) {
       expect(
-        () => config('min_sdk: $value'),
+        () => _config('min_sdk: $value'),
         throwsFormatException,
         reason: value,
       );
@@ -44,7 +44,7 @@ void main() {
   });
 
   test('only recognized leading language overrides affect classification', () {
-    final minimum = config();
+    final minimum = _config();
     for (final source in [
       'void main() {}',
       '// @dart=3.0\nvoid main() {}',
@@ -87,7 +87,7 @@ void main() {
 
     setUp(() {
       checkout = Directory.systemTemp.createTempSync('sdk-language-version-');
-      suite = SdkSuite(config(), checkout);
+      suite = SdkSuite(_config(), checkout);
     });
 
     tearDown(() => checkout.deleteSync(recursive: true));

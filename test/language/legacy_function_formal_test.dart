@@ -1,7 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
-const source = '''
+const _source = '''
 T identityGeneric<T>(T value) => value;
 Object identity(Object value) => value;
 Object foo(f(Object a), Object a) => f(a);
@@ -91,7 +91,7 @@ bool rejectedSuper() {
 void main() {
   test('omitted-return legacy callback formals retain their signatures', () {
     final program = Compiler().compile({
-      'legacy': {'main.dart': source},
+      'legacy': {'main.dart': _source},
     });
     for (final runtime in [
       Runtime.ofProgram(program),

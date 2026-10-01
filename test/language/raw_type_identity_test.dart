@@ -1,7 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
-const source = '''
+const _source = '''
 class Base<T> { Type get type => T; }
 class Contractive<T> extends Base<Contractive<T>> {}
 class FixedInner<T> extends Base<FixedInner<FixedInner<int>>> {}
@@ -40,7 +40,7 @@ void main() {
     'nested raw types share the identity of their default instantiation',
     () {
       final program = Compiler().compile({
-        'types': {'main.dart': source},
+        'types': {'main.dart': _source},
       });
       for (final runtime in [
         Runtime.ofProgram(program),

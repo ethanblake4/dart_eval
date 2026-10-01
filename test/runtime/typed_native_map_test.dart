@@ -9,8 +9,8 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart'
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
-final class ObservedMap extends $Map<$Value?, $Value?> {
-  ObservedMap() : super.wrap({});
+final class _ObservedMap extends $Map<$Value?, $Value?> {
+  _ObservedMap() : super.wrap({});
   int reads = 0;
 
   @override
@@ -71,14 +71,16 @@ void main() {
       );
       final item =
           runtime.executeLib('package:native_map/main.dart', 'make') as $Value;
-      final literal = TypedHostCollections.box(
-        runtime.executeLib(
-          'package:native_map/main.dart',
-          'literal',
-          arguments: {'item': item},
-        ),
-        runtime,
-      ) as $Map;
+      final literal =
+          TypedHostCollections.box(
+                runtime.executeLib(
+                  'package:native_map/main.dart',
+                  'literal',
+                  arguments: {'item': item},
+                ),
+                runtime,
+              )
+              as $Map;
       // Export returns a cached host view that restores this VM-owned wrapper.
       expect(literal, isA<TypedNativeMap>());
       expect(read(literal, null), same(item));
@@ -96,7 +98,7 @@ void main() {
       expect(read(trusted, $int(2)), isNull);
       expect(read(trusted, $int(3)), isNull);
       expect(read(trusted, $String('wrong type')), isNull);
-      final observed = ObservedMap();
+      final observed = _ObservedMap();
       expect(observed, isNot(isA<TypedNativeMap>()));
       expect(read(observed, null), 73);
       expect(observed.reads, 1);

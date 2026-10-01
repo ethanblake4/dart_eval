@@ -1588,3 +1588,19 @@ stale assertions. The 333 supported compile/runtime failures replace the prior
 342 after the nine policy exclusions; this runtime pass adds no correctness
 fixes. Full sweep, bounded repeat and broad logs are retained alongside the
 earlier controls in cycle6-performance-baseline.
+
+## Cycle 6 cleanup
+
+The cleanup skips the tear-off declaring-class view lookup when there are no
+class parameters to substitute. Finalizer bookkeeping stores one eager list
+of crossing jump snapshots instead of retaining unused list-owner tuples and
+nesting another loop. Test-only source, configuration and Map wrapper helpers
+are private. Runtime behavior and generated output are unchanged.
+
+The requested Astra medium review finds no actionable issues across cycle 6
+and this cleanup. It confirms String and Iterable edits follow the explicit
+hand-maintained binding exceptions and machine output has matching generator
+changes. All 110 focused compiler, flow, runtime and SDK harness checks pass;
+scoped analysis and diff checks are clean. Evidence is in cycle6-cleanup. The
+runtime performance checkpoint already passed its full AOT gate; this cleanup
+does not change runtime source and requires no additional sweep.
