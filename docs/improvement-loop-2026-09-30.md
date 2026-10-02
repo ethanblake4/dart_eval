@@ -2114,3 +2114,13 @@ The review also identified a likely extension-type projection bug in
 `extensionRepresentationField`: retaining the extension receiver's binding can
 restore its nominal type during boxing. That concern belongs in the next
 correctness pass, with a targeted witness before changing the compiler.
+
+## Cycle 9 correctness pass 1: extension representation fields
+
+The review witness reproduced a compile error: reading `I.value` from an
+extension-type parameter appeared to have type `int`, but boxing followed its
+local binding and restored type `I` before a numeric operator checked its
+argument. Representation field reads now use a detached view of the same SSA
+value, retaining its representation and value facts. This emits no bytecode.
+The witness passes fresh and serialized execution; the existing extension
+representation identity tests and scoped analysis also pass.

@@ -224,7 +224,16 @@ sealed class GetTarget {
         name,
       );
       if (representation != null) {
-        return ReceiverGet(receiver.withType(representation));
+        // The representation is a value view, not the extension local's type.
+        return ReceiverGet(
+          Variable.of(
+            ctx,
+            receiver.ssa,
+            representation,
+            rep: receiver.rep,
+            facts: receiver.facts,
+          ),
+        );
       }
     }
     if ((name == 'isEmpty' || name == 'isNotEmpty') &&
