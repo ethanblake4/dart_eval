@@ -335,7 +335,6 @@ expect_fail:
   - path: 'type_promotion/logical_and_test.dart'
   - path: 'type_promotion/multiple_runtime_test.dart'
   - path: 'type_promotion/parameter_runtime_test.dart'
-  - path: 'type_variable/initializer_test.dart'
   - path: 'typedef/aliased_constructor_tear_off_test.dart'
   - path: 'typedef/aliased_type_literal_instantiation_test.dart'
   - path: 'unsorted/checked_method_error_order_test.dart'

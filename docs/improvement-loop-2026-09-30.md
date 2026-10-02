@@ -2338,3 +2338,19 @@ field fixtures, all removed. With those entries removed, SDK-full passes with
 and three skips. The final 23-driver AOT sweep against the cycle 10 pass 2
 host matched all 22 execution checksums before commit; evidence is under
 `.dart_tool/improvement_loop/cycle10-pass4/`.
+
+## Cycle 10 correctness pass 5: generic Map factories
+
+The hand-maintained `Map` bridge constructed wrappers without the runtime's
+resolved constructor type id. Thus `Map<T, T>()` inside `A<T>` appeared as
+`Map<dynamic, dynamic>` even for `A<int>`, including an inherited initializer
+in `B<int>`. All four factory wrappers now retain that id, following the
+existing `Set` bridge pattern. A fresh/serialized regression covers unnamed,
+`from`, `of`, and `fromEntries` factories through an inherited generic class.
+The pinned initializer fixture passes and its stale `expect_fail` entry was
+removed. SDK-full passes with 2,451 actual passes, 194 expected compile errors,
+92 expected runtime failures, and three skips. The 23-driver AOT sweep against
+the cycle 10 pass 4 host matched all 22 execution checksums; evidence is under
+`.dart_tool/improvement_loop/cycle10-pass5/`.
+The ordinary language and runtime suites pass all 950 tests, and scoped
+analysis of the bridge and regression is clean.

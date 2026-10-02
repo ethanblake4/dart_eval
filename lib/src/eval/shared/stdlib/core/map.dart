@@ -490,19 +490,31 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   );
 
   static $Value? _$Map$new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $Map.wrap({});
+    return $Map.wrap(
+      {},
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
   }
 
   static $Value? _$Map$from(Runtime runtime, Object? r, Object? s, Object? c) {
     final other = (r as $Value?)?.$value as Map;
 
-    return $Map.wrap(Map.from(other));
+    return $Map.wrap(
+      Map.from(other),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
   }
 
   static $Value? _$Map$of(Runtime runtime, Object? r, Object? s, Object? c) {
     final other = (r as $Value?)?.$value as Map;
 
-    return $Map.wrap(Map.of(other));
+    return $Map.wrap(
+      Map.of(other),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
   }
 
   static $Value? _$Map$fromEntries(
@@ -518,6 +530,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
           (entry) => (entry is $Value ? entry.$reified : entry) as MapEntry,
         ),
       ),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
     );
   }
 
