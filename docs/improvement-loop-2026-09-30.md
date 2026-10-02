@@ -2737,3 +2737,24 @@ four stale expect-fail entries that now pass: this fixture,
 The clean SDK-full rerun passed with 2481 runnable passes, 183 expected compile
 failures, 73 expected runtime failures, and three skips. The ordinary
 language/runtime gate passed all 986 tests.
+
+## Cycle 14 performance: plain captured-closure entry
+
+The existing `closures` and real-world `event_bus` benchmarks showed repeated
+captured calls spending time writing empty type context onto cached frames.
+A closure now records whether it has captures but no bound receiver, default
+type arguments, or defining type context. Those calls enter a cached frame by
+setting only its return address and captures; `leave` already clears its type
+context. All other closures keep the existing entry path.
+
+Pinned AOT runs at 500,000 iterations and 25 samples moved captured calls
+from 81.638/82.093 ms to 79.274/80.694 ms. A paired 60,000-event run moved
+event-bus dispatch from 68.032/68.161 ms to 66.684/66.116 ms. The final
+23-driver, 15-sample AOT sweep matched all benchmark results; its captured
+call and event-bus medians improved about 2–3%. Exact closure functional
+tests, SDK-full (2481 passes), and all 986 ordinary language/runtime tests
+passed. Logs are under
+`.dart_tool/improvement_loop/cycle14-performance/closure-captured-only/`.
+
+Inlining closure resolution and typed-global helpers had mixed or regressed
+paired AOT results, so those experiments were reverted.

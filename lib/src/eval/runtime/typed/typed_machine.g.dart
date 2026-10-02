@@ -663,7 +663,9 @@ abstract final class TypedMachine {
           if (closure != null) {
             final function = closure.function;
             if (!closure.descriptor.hasEnvironment) r = closure.captures.single;
-            frame = frame.enterClosure(
+            frame = closure.plainCapturedEntry && callTypeArguments.isEmpty
+                ? frame.enterClosurePlain(function, pc, closure.captures)
+                : frame.enterClosure(
               function,
               pc,
               closure.captures,

@@ -346,6 +346,20 @@ class TypedFrame {
     return child;
   }
 
+  /// Capturing closures without type context reuse the child's cleared type
+  /// fields and supply only their capture environment.
+  @pragma('vm:prefer-inline')
+  TypedFrame enterClosurePlain(
+    TypedFunction callee,
+    int pc,
+    List<Object?> captures,
+  ) {
+    final child = _childFor(callee);
+    child.returnPc = pc;
+    child.environment = captures;
+    return child;
+  }
+
   @pragma('vm:never-inline')
   Object? captureAt(int index) => environment[index];
 

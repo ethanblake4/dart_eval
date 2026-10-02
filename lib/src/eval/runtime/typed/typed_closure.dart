@@ -35,6 +35,13 @@ final class TypedClosure extends EvalFunction {
     this.definingTypeEnvironment,
     this._runtimeTypeIdOverride,
   ]) : definingTypeArguments = List.unmodifiable(definingTypeArguments),
+       plainCapturedEntry =
+           descriptor.captureCount > 0 &&
+           !descriptor.boundReceiver &&
+           descriptor.defaultTypeArguments.isEmpty &&
+           definingTypeEnvironmentReceiver == null &&
+           definingTypeArguments.isEmpty &&
+           definingTypeEnvironment == null,
        function = program.functions[descriptor.functionId];
 
   final TypedProgram program;
@@ -45,6 +52,7 @@ final class TypedClosure extends EvalFunction {
   final Object? definingTypeEnvironmentReceiver;
   final List<int> definingTypeArguments;
   final TypedTypeEnvironment? definingTypeEnvironment;
+  final bool plainCapturedEntry;
   final int? _runtimeTypeIdOverride;
   int? _resolvedRuntimeTypeId;
   List<int>? _resolvedDefaultTypeArguments;
