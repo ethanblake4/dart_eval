@@ -225,6 +225,7 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   if (expression is SetOrMapLiteral) {
     final isMap =
         expression.typeArguments?.arguments.length == 2 ||
+        (expression.typeArguments == null && expression.elements.isEmpty) ||
         expression.elements.any((e) => e is MapLiteralEntry);
     if (!isMap) {
       return _collectionType(ctx, library, CoreTypes.set, expression.elements);

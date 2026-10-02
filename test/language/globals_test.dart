@@ -15,6 +15,25 @@ void main() {
       return encoded ? Program.read(result.write().buffer) : result;
     }
 
+    test('empty inferred globals are maps, encoded=$encoded', () {
+      final runtime = Runtime.ofProgram(
+        program('''
+        var empty = {};
+        var constant = const {};
+        final forwarded = constant;
+        var elements = <int>{};
+        int readMap(Map value) => value.length;
+        int main() {
+          empty['key'] = 7;
+          if (empty['key'] != 7 || readMap(forwarded) != 0) return -1;
+          if (elements is! Set<int>) return -2;
+          return readMap(constant);
+        }
+      '''),
+      );
+      expect(runtime.executeLib(_library, 'main'), 0);
+    });
+
     test('lazy globals initialize once, encoded=$encoded', () {
       final p = program('''int count = 0; int value = initialize();
         int initialize() { count++; return 9; }

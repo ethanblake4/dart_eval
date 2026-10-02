@@ -201,6 +201,16 @@ Variable compileFunctionExpression(
             type = p.isNamed
                 ? bound.signature.named[p.name!.lexeme]?.type ?? type
                 : bound.signature.positional.elementAtOrNull(i) ?? type;
+            // Bottom-type contexts infer Object? for unannotated parameters.
+            if (type is! UnknownTypeRef &&
+                !type.hasInferenceVariables &&
+                type.isAssignableTo(
+                  ctx,
+                  CoreTypes.nullType.ref(ctx),
+                  forceAllowDynamic: false,
+                )) {
+              type = CoreTypes.object.ref(ctx).withNullable(true);
+            }
           }
           ctx.functionParameterTypes[fnOffset]![i] = type;
           parameterTypes[p] = type;

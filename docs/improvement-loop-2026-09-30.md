@@ -2124,3 +2124,25 @@ argument. Representation field reads now use a detached view of the same SSA
 value, retaining its representation and value facts. This emits no bytecode.
 The witness passes fresh and serialized execution; the existing extension
 representation identity tests and scoped analysis also pass.
+
+## Cycle 9 correctness pass 2: contextual closures and empty globals
+
+Unannotated closure parameters in a `Null` or `Never` downward context now
+weaken to `Object?`, including bounded type parameters. Explicit annotations
+and unresolved inference variables keep their existing behavior. A new test
+covers positional, named, bounded and dynamic calls in fresh and serialized
+execution; the pinned closure fixture passes, so its stale exclusion is gone.
+
+Global type inference previously treated a bare empty `{}` as `Set`, while
+literal compilation and Dart treat it as `Map`. The inference helper now
+classifies empty untyped literals as maps. Mutable, const and forwarded globals
+pass fresh and serialized regression tests; explicitly typed empty sets stay
+sets. Both affected deferred SDK fixtures pass and their exclusions are gone.
+These are compiler-only changes with no added runtime operations.
+
+The first full SDK sweep exposed two more stale exclusions after the empty-map
+fix: the constant-map fixture and a regression using a top-level empty map.
+Both pass when selected individually. Their exclusions were removed as well,
+for five removed entries in this pass.
+The final SDK-full rerun passes with 2,433 actual passes, 207 expected compile
+errors, 97 expected runtime failures, and three reported skips.
