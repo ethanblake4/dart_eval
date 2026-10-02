@@ -2686,3 +2686,13 @@ description from its actual runtime type. The exact `mixin/super_2_test.dart`
 fixture and five focused tests pass, including fresh and serialized execution
 through repeated mixin layers. The stale expect-fail entry is removed. The
 extra IR is emitted only for lexical calls resolved to Object's `toString`.
+
+## Cycle 14 pass 2: conjunction promotion state
+
+Several type tests in a conjunction can save promotions before applying them.
+The later test replaced an earlier, narrower saved type, so a `C && B` test
+could lose `C`'s members. Saved promotion now narrows only when the new type
+is a subtype of the saved type. The exact
+`type_promotion/local_runtime_test.dart` fixture and ten focused tests pass,
+including fresh and serialized execution. Its stale expect-fail entry is
+removed. This is a compiler-only change with no new runtime checks.

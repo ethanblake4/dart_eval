@@ -10,7 +10,7 @@ import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart' show LoadNull;
 
 import 'errors.dart';
-import 'helpers/promotion.dart' show promotionView;
+import 'helpers/promotion.dart' show isPromotionSubtype, promotionView;
 import 'member/call_signature.dart';
 import 'values/abi.dart';
 
@@ -373,7 +373,13 @@ class Variable {
       final locals = ctx.typeInferenceSaveStates.last.locals;
       final saved = locals[b.frameIndex][b.name];
       if (member == null) {
-        saved?.promote(promotionView(this.type, type));
+        // A conjunction can record several tests before applying any of
+        // them. Narrow the saved view rather than replacing an earlier,
+        // more specific promotion with a superclass or unrelated type.
+        if (saved != null &&
+            isPromotionSubtype(ctx, type, saved.current.type)) {
+          saved.promote(promotionView(saved.current.type, type));
+        }
       } else {
         saved?.promoteMember(member, type);
       }
