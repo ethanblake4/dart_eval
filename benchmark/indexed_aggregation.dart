@@ -21,11 +21,11 @@ int weightedTotal(List<int> amounts, List<int> weights) {
 }
 ''';
 
-String sourceFor(String mode) =>
+String sourceFor(String mode, int width) =>
     '''$common
 int main(int batches) {
-  final amounts = <int>[3, 7, 5, 11, 2, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53];
-  final weights = <int>[1, 3, 2, 5, 7, 2, 3, 1, 5, 7, 2, 3, 1, 5, 7, 2];
+  final amounts = <int>[for (var i = 0; i < $width; i++) i + 1];
+  final weights = <int>[for (var i = 0; i < $width; i++) i % 7 + 1];
   final adjusted = AdjustedList(amounts, 1);
   var result = 0;
   for (var batch = 0; batch < batches; batch++) {
@@ -43,10 +43,12 @@ int main(int batches) {
 
 void main(List<String> args) {
   final mode = args.length > 2 ? args[2] : 'native';
+  final width = args.length > 3 ? int.parse(args[3]) : 16;
+  if (width < 1) throw ArgumentError.value(width, 'width');
   runComparison(
     args.take(2).toList(),
     name: 'indexed_aggregation_$mode',
-    source: sourceFor(mode),
+    source: sourceFor(mode, width),
     parameter: 'batches',
     unit: 'batch',
     iterations: 5000,

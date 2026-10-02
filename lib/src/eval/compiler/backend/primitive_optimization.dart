@@ -97,6 +97,16 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
         } else if (left is memory.LoadInt && left.value == 1) {
           code[i] = alu.Increment(op.writesTo!, op.right);
         }
+      } else if (op is objects.InvokeDynamic &&
+          op.name == '[]' &&
+          op.args.length == 1 &&
+          op.positionalCount == 1 &&
+          op.namedNames.isEmpty &&
+          op.typeArguments.isEmpty) {
+        final box = definition(op.args.single);
+        if (box is primitives.BoxInt) {
+          code[i] = op.withUnboxedIndex(box.source);
+        }
       }
     }
   }

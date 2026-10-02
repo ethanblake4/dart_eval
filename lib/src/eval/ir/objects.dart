@@ -365,6 +365,7 @@ final class InvokeDynamic extends Operation {
   final List<int> typeArguments;
   final List<int> argumentTypes;
   final int returnTypeId;
+  final bool unboxedIndex;
 
   InvokeDynamic(
     this.target,
@@ -377,7 +378,22 @@ final class InvokeDynamic extends Operation {
     this.typeArguments = const [],
     this.argumentTypes = const [],
     this.returnTypeId = -1,
+    this.unboxedIndex = false,
   }) : positionalCount = positionalCount ?? args.length;
+
+  InvokeDynamic withUnboxedIndex(SSA index) => InvokeDynamic(
+    target,
+    object,
+    name,
+    [index],
+    positionalCount: positionalCount,
+    namedNames: namedNames,
+    callerLibrary: callerLibrary,
+    typeArguments: typeArguments,
+    argumentTypes: argumentTypes,
+    returnTypeId: returnTypeId,
+    unboxedIndex: true,
+  );
 
   @override
   Set<SSA> get readsFrom => {...args, object};
@@ -400,7 +416,8 @@ final class InvokeDynamic extends Operation {
       callerLibrary == other.callerLibrary &&
       typeArguments == other.typeArguments &&
       argumentTypes == other.argumentTypes &&
-      returnTypeId == other.returnTypeId;
+      returnTypeId == other.returnTypeId &&
+      unboxedIndex == other.unboxedIndex;
 
   @override
   int get hashCode =>
@@ -424,6 +441,7 @@ final class InvokeDynamic extends Operation {
       typeArguments: typeArguments,
       argumentTypes: argumentTypes,
       returnTypeId: returnTypeId,
+      unboxedIndex: unboxedIndex,
     );
   }
 }

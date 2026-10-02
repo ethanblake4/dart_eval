@@ -257,6 +257,7 @@ abstract final class TypedOp {
   static const jumpNotGteFGShort = 220;
   static const ext = 221;
   static const callPlain = 222;
+  static const callIndexInt = 223;
   static const extendedBase = 256;
   static const callExternal = 256;
   static const rNewBridgeSuperShim = 257;
@@ -647,7 +648,7 @@ abstract final class TypedOp {
     TypedInstruction('jumpNotGteFGShort', [2, 3], [], TypedImmediate.shortBranch, false, false, false, 'jumpNotGteFGShort'),
     TypedInstruction('ext', [], [], TypedImmediate.none, false, false, false, 'ext'),
     TypedInstruction('callPlain', [], [], TypedImmediate.function, true, false, false, 'callPlain'),
-    TypedInstruction('reserved223', [], [], TypedImmediate.none, false, false, false, 'reserved223'),
+    TypedInstruction('callIndexInt', [6, 0], [], TypedImmediate.callSite, true, false, false, 'callIndexInt'),
     TypedInstruction('reserved224', [], [], TypedImmediate.none, false, false, false, 'reserved224'),
     TypedInstruction('reserved225', [], [], TypedImmediate.none, false, false, false, 'reserved225'),
     TypedInstruction('reserved226', [], [], TypedImmediate.none, false, false, false, 'reserved226'),

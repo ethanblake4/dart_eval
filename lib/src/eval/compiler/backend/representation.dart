@@ -315,6 +315,14 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         output(operation, integer);
       case types.SetTypeEnvironment():
         inputs(operation, integer);
+      case objects.InvokeDynamic(
+        :final object,
+        :final args,
+        unboxedIndex: true,
+      ):
+        constrain(object, MachineRepresentation.object);
+        constrain(args.single, MachineRepresentation.integer);
+        output(operation, MachineRepresentation.object);
       case objects.InvokeDynamic() ||
           bridge.InvokeExternal() ||
           closures.InvokeClosure():

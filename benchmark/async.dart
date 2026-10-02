@@ -16,7 +16,11 @@ Program _compile() {
       _bridge,
       'nativeCompleted',
       BridgeFunctionDef(
-        returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+        returns: BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.future, [
+            BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          ]),
+        ),
         params: [
           BridgeParameter(
             'value',
@@ -68,7 +72,7 @@ Program _compile() {
         Future<int> awaitCallback(int n, Function callback) async {
           var sum = 0;
           for (var i = 0; i < n; i++) {
-            sum += await callback(i);
+            sum += (await callback(i)) as int;
           }
           return sum;
         }

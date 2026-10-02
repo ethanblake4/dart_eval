@@ -1812,6 +1812,20 @@ String familyOf(String name) {
     immediate: 'function',
     mayThrow: true,
   );
+  add(
+    'callIndexInt',
+    '''if (r is TypedNativeList || r is \$MappedListView) {
+            final value = (r as \$List).\$value[a] as \$Value?;
+            r = value is \$null ? null : value;
+            s = null; c = null;
+          } else {
+            s = \$int(a);
+            $virtualCall
+          }''',
+    inputs: [6, 0],
+    immediate: 'callSite',
+    mayThrow: true,
+  );
   // AOT allocation follows the numeric case order. Keep simple register-only
   // operations ahead of handlers with decoding, calls and exceptional edges.
   final originalOrder = {for (var i = 0; i < ops.length; i++) ops[i]: i};

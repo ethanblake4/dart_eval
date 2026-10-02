@@ -209,9 +209,9 @@ int checksum(Object? v) {
     for (final e in v) { n += checksum(e); }
     return n;
   }
-  if (v is Map) {
+  if (v is Map<String, Object?>) {
     var n = v.length;
-    v.forEach((k, e) { n += k.length + checksum(e); });
+    v.forEach((String k, Object? e) { n += k.length + checksum(e); });
     return n;
   }
   if (v is String) return v.length;

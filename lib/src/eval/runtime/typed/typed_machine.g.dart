@@ -1242,6 +1242,44 @@ abstract final class TypedMachine {
            frame = frame.enterStaticPlain(program, index, pc);
           pc = frame.function.entry;
            continue dispatch;
+        case TypedOp.callIndexInt:
+           final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+           if (r is TypedNativeList || r is $MappedListView) {
+            final value = (r as $List).$value[a] as $Value?;
+            r = value is $null ? null : value;
+            s = null; c = null;
+          } else {
+            s = $int(a);
+            final member = TypedDispatch.resolve(program, r, index, runtime, s, c);
+          if (member != null) {
+            final function = member.function;
+            r = member.receiver;
+            frame = frame.enter(
+              function,
+              pc,
+              typeEnvironmentReceiver: member.receiver,
+            );
+            pc = function.entry;
+          } else {
+            final site = program.callSites[index];
+            final callTypeArguments = runtime == null
+                ? site.typeArguments
+                : runtime.resolveTypedCallTypeArguments(
+                    site.typeArguments,
+                    actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+                    callableTypeArguments: frame.effectiveTypeArguments,
+                    typeEnvironment: frame.typeEnvironment,
+                  );
+            r = TypedDispatch.invoke(
+              program, runtime, r, s, c, index, callTypeArguments,
+            );
+            r = TypedInterop.annotateBridgeFuture(
+              runtime, r, site.returnTypeId, frame,
+            );
+            s = null; c = null;
+          }
+          }
+           continue dispatch;
         default: throw StateError('Invalid typed opcode at byte ${pc - 1}');
       }
     }

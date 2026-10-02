@@ -27,6 +27,7 @@ void main() {
       'main.dart': '''
         int accept(List<int> values) => values.length;
         dynamic read(dynamic values, dynamic index) => values[index];
+        dynamic readInt(dynamic values, int index) => values[index];
         class Item {}
         Item make() => Item();
         int main() => 0;
@@ -35,6 +36,10 @@ void main() {
   });
 
   test('compiled dynamic indexing retains native and overridden behavior', () {
+    expect(
+      program.typedProgram.instructions.map((entry) => entry.$2.name),
+      contains('callIndexInt'),
+    );
     for (final runtime in [
       Runtime.ofProgram(program),
       Runtime(program.write().buffer),
@@ -43,6 +48,11 @@ void main() {
       Object? read($List values, $Value index) => runtime.executeLib(
         'package:native_list/main.dart',
         'read',
+        arguments: {'values': values, 'index': index},
+      );
+      Object? readInt($List values, int index) => runtime.executeLib(
+        'package:native_list/main.dart',
+        'readInt',
         arguments: {'values': values, 'index': index},
       );
       final item =
@@ -89,11 +99,13 @@ void main() {
             value == null || value == -1 ? const $null() : $int(value as int),
       );
       expect(read(mapped, $int(0)), 8);
+      expect(readInt(mapped, 0), 8);
       host[0] = 9;
-      expect(read(mapped, $int(0)), 9);
+      expect(readInt(mapped, 0), 9);
       expect(read(mapped, $int(1)), isNull);
+      expect(readInt(mapped, 1), isNull);
       host[0] = -1;
-      expect(read(mapped, $int(0)), isNull);
+      expect(readInt(mapped, 0), isNull);
     }
   });
   final core = program.bridgeLibraryMappings['dart:core']!;

@@ -2049,10 +2049,45 @@ the 98- and 44-case focused runs and final full SDK sweep validate those
 corrections. Evidence is retained under cycle8-pass4. No validation process
 remains running.
 
-The user requested a pause after this checkpoint. Resume at cycle 8 performance,
-then the simplification pass and Astra medium review. The read-only performance
-survey identified boxed integer index dispatch as a candidate; no runtime
-experiment or benchmark build has begun. Its local plan and pilot script remain
-under .dart_tool/improvement_loop/cycle8-int-index-plan.md and
-cycle8-int-index-performance. Fresh/serialized semantic controls and the full
-AOT sweep are required before accepting any runtime candidate.
+The user paused after this checkpoint. The read-only performance survey
+identified boxed integer index dispatch as a candidate and recorded its plan
+under `.dart_tool/improvement_loop/cycle8-int-index-plan.md`.
+
+## Cycle 8 runtime performance pass
+
+Dynamic indexed reads now keep a compiler-proven integer index in the integer
+register. The private `InvokeDynamic` marker selects a generated `callIndexInt`
+opcode only when its single index argument comes from `BoxInt` through SSA
+copies. Native and mapped lists read with that integer. Maps, guest operators,
+and other wrappers box the index on the cold branch and use the existing member
+dispatch. Dead-use cleanup removes the original box when nothing else needs it.
+The bytecode version is 135; the new opcode sits after existing regular opcodes
+to preserve their IDs.
+
+The paired AOT pilot used eight ABBA/BAAB runs with 15 samples per run and
+matched every checksum. Native indexed aggregation improved 9.4% at 16 columns
+and 12.4% at 1024 columns. Mixed receivers improved 5.8% and 6.6%; guest-only
+receivers improved 3.4% and 3.9%. The longer width exercises indexes beyond
+the small boxed-integer cache. Existing virtual-call and inventory-pricing
+controls moved less than 2% in that pilot.
+
+The final 23-driver AOT sweep compared executables from baseline `e5730760`
+and the candidate with identical benchmark sources. All 22 execution checksums
+matched. Short runs contained large outliers in unrelated call, closure,
+dispatch and exception cases. Longer reversed-order repeats reduced the
+overflow-call difference to 1.9%, global access to 1.2%, handled throws to
+0.4%, and closure direct/overflow cases to at most 2.2%. The longer double
+object-reference dispatch control was 6.7% slower, while default-adapter
+closures were 9.1% faster. Logs and executable hashes are under
+`.dart_tool/improvement_loop/cycle8-int-index-performance/`, especially
+`pilot-tail`, `full23-aot-tail`, `repeat-outliers-1`, and `repeat-tail-2`.
+
+The async, dynamic-call, and JSON benchmarks had source types that the current
+compiler correctly rejected. Their callback results now carry explicit integer
+types or casts; both benchmark executables use the same corrected sources.
+Focused index, mapped-list, guest override, bounds and codec checks pass fresh
+and serialized. SDK-full still passes all harness expectations with 2428 actual
+passes, 211 expected compile errors and 98 expected runtime failures. The
+serial ordinary run has one failure: `http_native_test.dart` uses the HTTP
+bridge directory whose three tracked files were already deleted in the working
+tree. Full analysis reports only the existing path-dependency warning.

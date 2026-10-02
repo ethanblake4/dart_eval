@@ -40,7 +40,7 @@ const _cases = [
     int main(int n) {
       dynamic receiver = A();
       var sum = 0;
-      for (var i = 0; i < n; i++) { sum += receiver.apply(i); }
+      for (var i = 0; i < n; i++) { sum += receiver.apply(i) as int; }
       return sum;
     }
   '''),
@@ -53,7 +53,7 @@ const _cases = [
       var sum = 0;
       for (var i = 0; i < n; i++) {
         dynamic receiver = i.isEven ? first : second;
-        sum += receiver.apply(i);
+        sum += receiver.apply(i) as int;
       }
       return sum;
     }
@@ -67,7 +67,7 @@ const _cases = [
       dynamic receiver = A();
       var sum = 0;
       for (var i = 0; i < n; i++) {
-        sum += receiver.apply(i, scale: 2);
+        sum += receiver.apply(i, scale: 2) as int;
       }
       return sum;
     }

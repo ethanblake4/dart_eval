@@ -1204,9 +1204,16 @@ class _LoweringSession {
         ),
       _ => throw StateError('Unreachable member operation'),
     };
+    final unboxedIndex = op is objects_ir.InvokeDynamic && op.unboxedIndex;
     final (registerArguments, argumentRegisters) = _marshalArguments(
       [receiver, ...arguments],
-      List.filled(arguments.length + 1, TypedArgumentKind.object),
+      [
+        TypedArgumentKind.object,
+        for (var i = 0; i < arguments.length; i++)
+          unboxedIndex && i == 0
+              ? TypedArgumentKind.integer
+              : TypedArgumentKind.object,
+      ],
       out,
       temporaryPrefix: 'virtualOutgoing',
     );
@@ -1245,7 +1252,9 @@ class _LoweringSession {
     out.add(
       TypedOperation(
         b._named([
-          b._callSites[siteIndex].isIndexRead
+          unboxedIndex
+              ? 'callIndexInt'
+              : b._callSites[siteIndex].isIndexRead
               ? 'callIndex'
               : b._callSites[siteIndex].isListAppend
               ? 'callAppend'

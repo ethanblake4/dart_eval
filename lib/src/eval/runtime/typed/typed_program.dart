@@ -658,7 +658,8 @@ class TypedProgram {
         }
         if (last.immediate == TypedImmediate.callSite) {
           final site = callSites[index];
-          if (opcode == TypedOp.callIndex && !site.isIndexRead) {
+          if ((opcode == TypedOp.callIndex || opcode == TypedOp.callIndexInt) &&
+              !site.isIndexRead) {
             throw const FormatException('Invalid indexed-read call site');
           }
           if (opcode == TypedOp.callAppend && !site.isListAppend) {
