@@ -2450,3 +2450,24 @@ newly passing, so both stale expect-fail entries were removed. The final
 checksums. SDK-full passed with 2458 actual passes, 192 expected compile
 failures, 87 expected runtime failures, and three skips. All 959 ordinary
 language and runtime tests passed.
+
+## Cycle 11 runtime performance: alternating child frames
+
+The first two experiments did not justify a change: string-specific
+`StringBuffer.write` matched the generic path in alternating AOT runs, and
+inlining global or dispatch helpers gave noisy or slower results. They were
+reverted.
+
+Calls alternating between two callees made a parent frame retarget its one
+cached child on every call. A second inactive child slot now lets the parent
+reuse each callee's frame and its spill arrays; suspended children still
+detach before reuse. The existing frame-reuse test covers alternating storage,
+clearing, recursion, exceptions, and suspension. In paired 15-sample AOT runs,
+`json_codec` improved from 267.48/267.74 ms to 258.76/256.15 ms (about 4%).
+`event_bus` improved from 73.35/73.68 ms to 72.20/70.59 ms in the same
+alternating process order. The full 23-driver sweep matched all 22 execution
+checksums. Raw measurements are under
+`.dart_tool/improvement_loop/cycle11-performance/`.
+SDK-full remained at 2458 actual passes, 192 expected compile failures, 87
+expected runtime failures, and three skips. All 959 ordinary language and
+runtime tests passed.

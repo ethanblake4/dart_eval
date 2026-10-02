@@ -29,7 +29,7 @@ void main() {
       expect(runtime.executeLib(_library, 'main'), 290, reason: kind);
     }
   });
-  test('inactive leaf storage grows, clears, and survives retargeting', () {
+  test('alternating child frames clear storage and reuse by callee', () {
     const small = TypedFunction(
       0,
       intSpillCount: 1,
@@ -46,6 +46,7 @@ void main() {
     );
     final root = TypedFrame(small);
     final child = root.enter(small, 10);
+    final smallInts = child.intSpills;
     final retained = Object();
     child.objectSpills[0] = retained;
     child.objectOutgoing[0] = retained;
@@ -58,7 +59,7 @@ void main() {
     expect(child.objectOutgoing, everyElement(isNull));
 
     final grown = root.enter(large, 20);
-    expect(grown, same(child));
+    expect(grown, isNot(same(child)));
     expect(grown.function, same(large));
     expect(grown.intSpills.length, greaterThanOrEqualTo(4));
     expect(grown.doubleSpills.length, greaterThanOrEqualTo(3));
@@ -80,16 +81,20 @@ void main() {
     final shrunk = root.enter(small, 30);
     expect(shrunk, same(child));
     expect(shrunk.function, same(small));
-    expect(shrunk.intSpills, same(ints));
-    expect(shrunk.doubleSpills, same(doubles));
-    expect(shrunk.boolSpills, same(booleans));
-    expect(shrunk.objectSpills, same(objects));
-    expect(shrunk.objectOutgoing, same(outgoing));
+    expect(shrunk.intSpills, same(smallInts));
     expect(shrunk.objectSpills, everyElement(isNull));
     expect(shrunk.objectOutgoing, everyElement(isNull));
     shrunk.leave();
 
     final suspended = root.enter(large, 40);
+    expect(suspended, same(grown));
+    expect(suspended.intSpills, same(ints));
+    expect(suspended.doubleSpills, same(doubles));
+    expect(suspended.boolSpills, same(booleans));
+    expect(suspended.objectSpills, same(objects));
+    expect(suspended.objectOutgoing, same(outgoing));
+    expect(suspended.objectSpills, everyElement(isNull));
+    expect(suspended.objectOutgoing, everyElement(isNull));
     suspended.detachAsync();
     expect(suspended.parent, isNull);
     expect(suspended.returnPc, -1);

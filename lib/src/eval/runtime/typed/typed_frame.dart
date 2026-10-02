@@ -262,7 +262,14 @@ class TypedFrame {
     if (child == null) {
       child = _child = TypedFrame(callee, this);
     } else if (!identical(child.function, callee)) {
-      if (child._child == null) {
+      final alternate = _alternateChild;
+      if (alternate != null && identical(alternate.function, callee)) {
+        _alternateChild = child;
+        child = _child = alternate;
+      } else if (alternate == null) {
+        _alternateChild = child;
+        child = _child = TypedFrame(callee, this);
+      } else if (child._child == null) {
         if (callee.needsFrameStorage) {
           child._retarget(callee);
         } else {
@@ -419,6 +426,7 @@ class TypedFrame {
   TypedAsyncGenerator? asyncGenerator;
   TypedFrame? parent;
   TypedFrame? _child;
+  TypedFrame? _alternateChild;
   int returnPc = -1;
 
   /// A suspended invocation must never be reused by its former caller.
@@ -427,7 +435,10 @@ class TypedFrame {
   void detachAsync() {
     final caller = parent;
     if (caller != null) {
-      if (identical(caller._child, this)) caller._child = null;
+      if (identical(caller._child, this)) {
+        caller._child = caller._alternateChild;
+        caller._alternateChild = null;
+      }
       if (caller.objectOutgoing.isNotEmpty) {
         caller.objectOutgoing.fillRange(0, caller.objectOutgoing.length, null);
       }
