@@ -2521,6 +2521,12 @@ SDK-full passed with 2473 actual passes, 188 expected compile failures,
 76 expected runtime failures, and three skips. All 979 ordinary language,
 runtime, forwarding tear-off, and adjacent-directive tests passed.
 
+## Cycle 13 cleanup
+
+The Astra medium review and local simplification pass found no further
+actionable changes. The cycle's compiler fixes, SDK harness update, runtime
+fast path, and benchmark follow the existing conventions.
+
 ## Cycle 12 pass 2: forwarding method tear-offs
 
 An inherited method body can have a wider bound tear-off signature when its
