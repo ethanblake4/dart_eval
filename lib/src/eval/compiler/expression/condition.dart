@@ -29,6 +29,8 @@ import '../helpers/assigned_locals.dart';
   final parent = ctx.builder;
   final initialState = ctx.saveState();
   recordConditionPromotions(ctx, expression, true);
+  final assigned = assignedLocalNames([expression]);
+  final assignedTrueTypes = <String, Set<TypeRef>>{};
 
   (bool, bool) emit(
     Expression expression,
@@ -123,19 +125,8 @@ import '../helpers/assigned_locals.dart';
     // skips RHS assignments or calls. The SSA pass still joins their values.
     ctx.resolveBranchStateDiscontinuity(initialState);
     final leafState = ctx.saveState();
-    ctx.pushOp(JumpIfFalse(value.ssa, no.label!));
-    final tail = ctx.flushBlock();
-    ctx.builder.link(tail, yes);
-    ctx.builder.link(tail, no);
-    ctx.restoreState(initialState);
-    ctx.mergeBranchState([leafState]);
-    // A statically-folded leaf still links both edges (the builder requires
-    // them); the reachability flags tell the join to drop the dead arm's
-    // flow state.
-    // Before sound flow analysis, a type test's statically known result
-    // still contributes both branches to the flow join. Keep the folded
-    // runtime value without applying the newer reachability rule. Tests
-    // against Never have always made the matching branch unreachable.
+    // Before sound flow analysis, folded type tests still contribute both
+    // flow edges. Never tests have always made one edge unreachable.
     final staticOutcome =
         expression is IsExpression &&
             !ctx.soundFlowAnalysis(expression) &&
@@ -146,6 +137,35 @@ import '../helpers/assigned_locals.dart';
             ).isSpec(CoreTypes.never)
         ? null
         : compiledValue.facts.constBool;
+    for (final (destination, outcome) in [(yes, true), (no, false)]) {
+      if (reachable &&
+          identical(destination, whenTrue) &&
+          staticOutcome != !outcome &&
+          assigned.isNotEmpty) {
+        // A write on this edge can establish a new promotion. The saved
+        // enclosing condition predates the write, so retain its successful
+        // edge type rather than restoring the old type in the body.
+        applyConditionPromotions(ctx, expression, outcome);
+        for (final name in assigned) {
+          final binding = ctx.lookupBinding(name);
+          if (binding != null) {
+            assignedTrueTypes
+                .putIfAbsent(name, () => <TypeRef>{})
+                .add(binding.current.type);
+          }
+        }
+        ctx.restoreState(leafState);
+      }
+    }
+    ctx.pushOp(JumpIfFalse(value.ssa, no.label!));
+    final tail = ctx.flushBlock();
+    ctx.builder.link(tail, yes);
+    ctx.builder.link(tail, no);
+    ctx.restoreState(initialState);
+    ctx.mergeBranchState([leafState]);
+    // A statically-folded leaf still links both edges (the builder requires
+    // them); the reachability flags tell the join to drop the dead arm's
+    // flow state.
     return (
       reachable && staticOutcome != false,
       reachable && staticOutcome != true,
@@ -158,6 +178,13 @@ import '../helpers/assigned_locals.dart';
     whenFalse,
     const [],
   );
+  for (final entry in assignedTrueTypes.entries) {
+    final binding = ctx.lookupBinding(entry.key);
+    if (binding == null) continue;
+    final saved =
+        ctx.typeInferenceSaveStates.last.locals[binding.frameIndex][entry.key];
+    saved?.promote(TypeRef.commonBaseType(ctx, entry.value));
+  }
   return (
     BasicBlockBuilder(ctx.activeGraph, [whenTrue, whenFalse], parent),
     yesReachable,

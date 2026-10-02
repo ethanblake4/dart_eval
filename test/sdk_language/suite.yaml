@@ -308,7 +308,6 @@ expect_fail:
   - path: 'type_object/first_class_types_literals_runtime_test.dart'
   - path: 'type_object/futureor_tostring_test.dart'
   - path: 'type_object/literal_type_literal_test.dart'
-  - path: 'type_promotion/logical_and_test.dart'
   - path: 'type_promotion/multiple_runtime_test.dart'
   - path: 'type_promotion/parameter_runtime_test.dart'
   - path: 'typedef/aliased_constructor_tear_off_test.dart'

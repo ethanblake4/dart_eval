@@ -2696,3 +2696,14 @@ is a subtype of the saved type. The exact
 `type_promotion/local_runtime_test.dart` fixture and ten focused tests pass,
 including fresh and serialized execution. Its stale expect-fail entry is
 removed. This is a compiler-only change with no new runtime checks.
+
+## Cycle 14 pass 3: assignments in logical conditions
+
+A successful `&&` edge can write a local after an earlier type test. The
+condition's saved inference state still held the pre-write type and overwrote
+the assignment's promoted type in the body. Condition lowering now joins the
+assigned locals' types across reachable true edges before restoring that
+saved view. The exact `type_promotion/logical_and_test.dart` fixture and 27
+focused condition and promotion tests pass. The regression covers fresh and
+serialized execution and a skipped `||` assignment. The stale expect-fail
+entry is removed; this change emits no new runtime checks.
