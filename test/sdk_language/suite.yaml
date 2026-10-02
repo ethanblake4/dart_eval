@@ -69,7 +69,6 @@ exclude:
 expect_fail:
   - path: 'nnbd/extreme_bounds/glb_futureor_test.dart'
     reason: 'generic-call downward inference for FutureOr glb not implemented'
-  - path: 'assert/with_message_test.dart'
   - path: 'async/await_user_defined_future_soundness_test.dart'
   - path: 'async/derive_future_type_test.dart'
     reason: '\$Future bridge lacks catchError/whenComplete; await on Future-implementing classes unsupported'

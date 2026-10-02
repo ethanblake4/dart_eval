@@ -10,6 +10,8 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/enum.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/errors.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/error_hooks.dart'
+    as assertion_hooks;
 import 'package:dart_eval/src/eval/shared/stdlib/core/exceptions.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/identical.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
@@ -43,6 +45,7 @@ class DartCorePlugin implements EvalPlugin {
     configurePrintForCompile(registry);
     configureIdenticalForCompile(registry);
     registry.defineBridgeClass($dynamicCls);
+    assertion_hooks.configureAssertionForCompile(registry);
     registry.defineBridgeClass($voidCls);
     registry.defineBridgeClass($neverCls);
     registry.defineBridgeClass($recordCls);
@@ -107,6 +110,7 @@ class DartCorePlugin implements EvalPlugin {
     $Set.configureForRuntime(runtime);
     $RegExp.configureForRuntime(runtime);
     $AssertionError.configureForRuntime(runtime);
+    assertion_hooks.configureAssertionForRuntime(runtime);
     $StringBuffer.configureForRuntime(runtime);
     $RangeError.configureForRuntime(runtime);
     $Symbol.configureForRuntime(runtime);

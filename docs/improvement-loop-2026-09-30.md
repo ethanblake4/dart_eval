@@ -2423,3 +2423,16 @@ holes after inference. Focused bridge tear-off and generic callback tests pass
 in fresh and serialized runtimes. The SDK const-set fixture and its related
 `unsorted/bottom_test.dart` regression pass. The stale expect-fail entry was
 removed.
+
+## Cycle 11 pass 4: assertion messages
+
+The assertion bridge eagerly stringified guest message objects and lost their
+identity. Assertion statements now use an internal bridge entry that preserves
+guest messages and gives null-message assertion failures the expected text;
+direct `AssertionError()` retains its constructor behavior. The exact SDK
+fixture and a fresh/serialized regression pass, and its stale expect-fail
+entry was removed. SDK-full passed with 2456 actual passes, 192 expected compile
+failures, 89 expected runtime failures, and three skips. All 958 ordinary
+language and runtime tests passed. The final 23-driver AOT sweep matched all
+22 execution checksums; measurements are under
+`.dart_tool/improvement_loop/cycle11-final/full23-aot/`.

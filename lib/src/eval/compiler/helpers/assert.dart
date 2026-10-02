@@ -18,8 +18,8 @@ Variable compileAssertionError(CompilerContext ctx, Variable message) {
     ctx,
     InvokeExternal(
       ctx.svar('assertion_error'),
-      ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']]![
-          'AssertionError.']!,
+      ctx.bridgeStaticFunctionIndices[ctx
+          .libraryMap['dart:core']]!['dart_eval_assertionFailure']!,
       [argument.ssa],
     ),
     TypeRef.fromBridgeTypeRef(ctx, BridgeTypeRef(CoreTypes.assertionError)),
