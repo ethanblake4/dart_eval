@@ -473,6 +473,8 @@ class $num<T extends num> implements $Instance {
         return $Closure(__mul.func, this);
       case '/':
         return $Closure(__div.func, this);
+      case '~/':
+        return $Closure(__truncatediv.func, this);
 
       case '%':
         return $Closure(__mod.func, this);
@@ -629,6 +631,15 @@ class $num<T extends num> implements $Instance {
 
     throw UnimplementedError();
   }
+
+  static const $Function __truncatediv = $Function(_truncatediv);
+  static $Value? _truncatediv(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $int(target!.$value ~/ (r as $Value).$value);
 
   static const $Function __mod = $Function(_mod);
 

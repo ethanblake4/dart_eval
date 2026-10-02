@@ -2209,3 +2209,26 @@ The full SDK suite passes with 2,442 actual passes, 199 expected compile
 errors, 96 expected runtime failures, and three reported skips. The
 `unsorted/core_type_check_test.dart` exclusion also became stale and was
 removed.
+
+## Cycle 9 correctness pass 5: callable enums and double division
+
+Calls written directly on enum constants now resolve the constant and bind its
+instance `call` method through the ordinary source-method path. Explicit and
+inferred type arguments, named arguments, optional defaults, and typedef
+access pass fresh and serialized tests. The broader enhanced-enum SDK fixture
+still fails at its separate enum `super` representation: enum instances do not
+have the superclass object chain expected by `LoadSuper`. A small attempt to
+admit `super` in enum methods was reverted after a `Null.index` failure.
+
+The hand-maintained `num` wrapper declared truncating division but did not
+expose it on double values. Its direct bridge method now uses Dart's `~/`
+operator. The focused global-initializer and expression regression passes in
+fresh and serialized runtimes; the pinned compile-time-constant SDK fixture
+passes and its stale exclusion is removed. SDK-full passes with 2,443 actual
+passes, 199 expected compile errors, 95 expected runtime failures, and three
+reported skips. The ordinary language and runtime suites pass all 943 tests,
+and scoped analysis is clean. Because the `num` bridge has a runtime change,
+the full 23-driver AOT sweep compared the current candidate against the saved
+cycle 8 cleanup executable before commit. All 22 execution checksums matched;
+the compiler driver completed separately. Results are under
+`.dart_tool/improvement_loop/cycle9-pass5/full23-aot/`.

@@ -85,7 +85,6 @@ expect_fail:
   - path: 'closure/partial_instantiation_eager_bounds_check_test.dart'
   - path: 'closure/tearoff_dynamic_test.dart'
   - path: 'closure/type_arguments_test.dart'
-  - path: 'compile_time_constant/compile_time_constant3_test.dart'
   - path: 'const/factory_member_test.dart'
   - path: 'const/inference_test.dart'
   - path: 'constructor/constructor_test.dart'

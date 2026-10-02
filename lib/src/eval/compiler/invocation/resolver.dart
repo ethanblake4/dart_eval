@@ -417,6 +417,15 @@ final class CallResolver {
         MemberKind.method,
       );
       if (staticMember == null) {
+        final enumValue =
+            ctx.enumValueIndices[type.file]?[type.name]?[staticMemberName];
+        if (enumValue != null) {
+          return _invokeEnumConstant(
+            IdentifierReference(L, staticMemberName).getValue(ctx, e),
+            e,
+            bound,
+          );
+        }
         // A member invoked on a `Type` literal may still be an extension
         // member on `Type` — `C.expectStaticType<Exactly<Type>>()`.
         final found = resolveExtensionMember(
@@ -707,7 +716,9 @@ final class CallResolver {
     required bool isStatic,
     required TypeRef? staticType,
     required TypeRef? bound,
+    String? invokedName,
   }) {
+    final methodName = invokedName ?? e.methodName.name;
     TypeRef? mReturnType;
     BoundCall argsPair;
     final CallTarget target;
@@ -757,7 +768,7 @@ final class CallResolver {
       if (explicitArguments != null && fd.generics.isNotEmpty) {
         if (explicitArguments.length != fd.generics.length) {
           throw CompileError(
-            'Expected ${fd.generics.length} type arguments for ${e.methodName.name}',
+            'Expected ${fd.generics.length} type arguments for $methodName',
             e,
           );
         }
@@ -778,7 +789,7 @@ final class CallResolver {
                 TypeParameterOwner(
                   TypeParameterOwnerKind.callSite,
                   ctx.library,
-                  e.methodName.name,
+                  methodName,
                   e.offset,
                 ),
                 index,
@@ -819,7 +830,7 @@ final class CallResolver {
         },
       );
       final bridgeTargetName = isStatic
-          ? '${staticType!.name}.${ctorNameOf(e.methodName.name)}'
+          ? '${staticType!.name}.${ctorNameOf(methodName)}'
           : null;
       final externalIndex = bridgeTargetName == null
           ? null
@@ -835,7 +846,7 @@ final class CallResolver {
           ? br is BridgeConstructorDef
                 ? ConstructorCall(
                     staticType: staticType!,
-                    name: ctorNameOf(e.methodName.name),
+                    name: ctorNameOf(methodName),
                     externalIndex: externalIndex,
                     classBridge: resolvedMember.ownerDecl is BridgeTypeDecl
                         ? (resolvedMember.ownerDecl as BridgeTypeDecl).classDef
@@ -853,19 +864,19 @@ final class CallResolver {
                   )
           : BridgeCall(
               receiver: L,
-              name: e.methodName.name,
+              name: methodName,
               member: resolvedMember,
               signature: signature,
             );
       final numericContexts =
           !isStatic &&
-              const {'remainder', 'clamp'}.contains(e.methodName.name) &&
+              const {'remainder', 'clamp'}.contains(methodName) &&
               L.type.isAssignableTo(
                 ctx,
                 CoreTypes.num.ref(ctx),
                 forceAllowDynamic: false,
               )
-          ? switch (e.methodName.name) {
+          ? switch (methodName) {
               'remainder' => [numericArgumentContext(ctx, L.type, bound)],
               'clamp' => [
                 numericClampArgumentContext(ctx, L.type, bound),
@@ -909,7 +920,7 @@ final class CallResolver {
         namedArgTypes: argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
       );
       if (!isStatic &&
-          e.methodName.name == 'then' &&
+          methodName == 'then' &&
           ownerType.isSpec(CoreTypes.future) &&
           argsPair.positional.isNotEmpty) {
         // The bridge `then` signature declares a raw `Future` return and a
@@ -959,7 +970,7 @@ final class CallResolver {
             extensionLookupType(ctx, L.type).isSpec(CoreTypes.dynamic)) {
       target = DynamicCall(
         receiver: L.copyIntoFreshSlot(ctx, 'dynamic_receiver'),
-        name: e.methodName.name,
+        name: methodName,
       );
       argsPair = ArgumentBinder(ctx).bindSuppliedOnly(
         target,
@@ -985,7 +996,7 @@ final class CallResolver {
                   ctx,
                   staticType!.file,
                   staticType.name,
-                  e.methodName.name,
+                  methodName,
                 ),
                 member: sourceMember,
               )
@@ -993,7 +1004,7 @@ final class CallResolver {
             ? Devirtualizer(ctx).refineSuper(
                 VirtualCall(
                   receiver: L,
-                  name: e.methodName.name,
+                  name: methodName,
                   member: sourceMember,
                   signature: resolved.signatureOverride,
                 ),
@@ -1001,14 +1012,14 @@ final class CallResolver {
             : Devirtualizer(ctx).refine(
                 VirtualCall(
                   receiver: L,
-                  name: e.methodName.name,
+                  name: methodName,
                   member: sourceMember,
                   signature: resolved.signatureOverride,
                 ),
               );
         if (e.target is SuperExpression && target is VirtualCall) {
           throw CompileError(
-            'Cannot resolve a direct target for super.${e.methodName.name}',
+            'Cannot resolve a direct target for super.$methodName',
             e,
           );
         }
@@ -1048,12 +1059,12 @@ final class CallResolver {
           instantiatedType: interfaceArgumentsOf(instantiatedType).isEmpty
               ? null
               : instantiatedType,
-          name: ctorNameOf(e.methodName.name),
+          name: ctorNameOf(methodName),
           offset: DeferredOrOffset.lookupStatic(
             ctx,
             staticType.file,
             staticType.name,
-            ctorNameOf(e.methodName.name),
+            ctorNameOf(methodName),
           ),
           constructor: declaration,
           isConst: e.inConstantContext,
@@ -1074,7 +1085,7 @@ final class CallResolver {
             ctx,
             staticType!.file,
             staticType.name,
-            ctorNameOf(e.methodName.name),
+            ctorNameOf(methodName),
           ),
           member: sourceMember,
         );
@@ -1091,7 +1102,7 @@ final class CallResolver {
     }
 
     final numericReturn = resolvedMember is BridgeMember && !isStatic
-        ? switch (e.methodName.name) {
+        ? switch (methodName) {
             'remainder' when argsPair.positional.length == 1 =>
               numericArithmeticResultType(
                 ctx,
@@ -1114,7 +1125,7 @@ final class CallResolver {
         memberCallResultType(
           ctx,
           isStatic ? staticType! : L.type,
-          ctorNameOf(e.methodName.name),
+          ctorNameOf(methodName),
           [for (final arg in argsPair.positional) arg.type],
           {for (final (name, arg) in argsPair.named) name: arg.type},
           $static: isStatic,
@@ -1138,6 +1149,29 @@ final class CallResolver {
             : null,
       ),
     );
+  }
+
+  /// Bind an enum constant invocation through its ordinary instance `call`.
+  Variable _invokeEnumConstant(
+    Variable value,
+    MethodInvocation invocation,
+    TypeRef? context,
+  ) {
+    final resolved = ctx.memberLookup.interfaceMember(
+      value.type,
+      MemberName.method('call'),
+      source: invocation,
+    );
+    final (target, arguments) = _bindMethod(
+      value,
+      invocation,
+      resolved: resolved,
+      isStatic: false,
+      staticType: null,
+      bound: context,
+      invokedName: 'call',
+    );
+    return target.emit(ctx, arguments);
   }
 
   /// Bind receiver class parameters in the selected implementation's scope.
