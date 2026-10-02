@@ -370,10 +370,10 @@ extension TypedRuntimeInterop on Runtime {
     final namedOffset = 5 + positional;
     final fieldIds = _recordFieldTypeIds..length = 0;
     var matchesTemplate = templateDescriptor[1] == 0;
-    // Positional fields are stored first (record literals are
-    // positionals-before-named by grammar), so index == ordinal.
+    // Fields retain literal source order, which can mix positional and
+    // named fields. Resolve each positional field through its layout key.
     for (var i = 0; i < positional; i++) {
-      final fieldType = _recordFieldType(fields[i]);
+      final fieldType = _recordFieldType(fields[mapping['\$${i + 1}']!]);
       fieldIds.add(fieldType);
       matchesTemplate &= fieldType == templateDescriptor[5 + i];
     }

@@ -369,8 +369,6 @@ expect_fail:
   - path: 'wildcard_variables/declarations/extension_type_test.dart'
   - path: 'wildcard_variables/initializing_formal_parameters/super_test.dart'
   - path: 'wildcard_variables/non_binding/top_level_typedef_test.dart'
-  - path: 'records/simple/runtime_type_test.dart'
-    reason: 'pre-existing failure — untriaged'
   - path: 'const/instantiated_function_constant_test.dart'
     reason: 'runtime generic-function instantiation of closures with optional params unsupported'
   - path: 'extension_methods/null_aware_promotion_test.dart'

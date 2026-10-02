@@ -2295,3 +2295,14 @@ match a later tear-off of `identical`. The compiler now shares one forwarding
 body per bridged function index. This removes duplicate generated functions
 without adding runtime work or bytecode. The focused SDK fixture and ordinary
 tear-off tests pass; its stale `expect_fail` entry was removed.
+
+## Cycle 10 correctness pass 2: interleaved record field types
+
+Record literals retain field values in source order, including interleaved
+named fields, while the runtime type builder assumed positional values came
+first. It now uses the record layout mapping to locate each positional value.
+Fresh and serialized regressions cover different field types, reordered
+labels, null and nested records. The pinned SDK runtime-type fixture passes,
+and its stale `expect_fail` entry was removed. The 23-driver AOT sweep against
+the cycle 9 cleanup host matched all 22 execution checksums before commit;
+evidence is under `.dart_tool/improvement_loop/cycle10-pass2/`.
