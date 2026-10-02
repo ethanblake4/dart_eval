@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/ir/collection.dart';
 import 'package:dart_eval/src/eval/ir/logic.dart';
 import 'package:dart_eval/src/eval/ir/memory.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
+import 'package:dart_eval/src/eval/ir/types.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
@@ -671,6 +672,23 @@ final class CallResolver {
       staticType: staticType,
       bound: bound,
     );
+    if (e.target is SuperExpression &&
+        e.methodName.name == 'toString' &&
+        resolved?.member is BridgeMember &&
+        resolved!.member.ownerDecl?.thisType.isSpec(CoreTypes.object) == true) {
+      // Source instances have no Object link. Its lexical default still uses
+      // the real receiver's type, bypassing any overridden toString/runtimeType.
+      final type = Variable.ssa(
+        ctx,
+        LoadRuntimeType(ctx.svar('object_type'), ctx.lookupLocal('#this')!.ssa),
+        CoreTypes.type.ref(ctx),
+      );
+      final name = invokeOperator(type, 'toString', const []).result;
+      final prefix = BuiltinValue(stringval: "Instance of '").push(ctx);
+      final suffix = BuiltinValue(stringval: "'").push(ctx);
+      final description = invokeOperator(prefix, '+', [name]).result;
+      return invokeOperator(description, '+', [suffix]).result;
+    }
     if (resolved?.member is BridgeMember &&
         !isStatic &&
         e.typeArguments == null &&

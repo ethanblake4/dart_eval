@@ -2676,3 +2676,13 @@ unconstrained `var` literals and explicitly typed literals retain their
 precise types. The exact `type_object/first_class_types_test.dart` fixture and
 fresh/serialized regression pass, and its stale expect-fail entry was
 removed. This compiler-only change adds no runtime checks or bytecode.
+
+## Cycle 14 pass 1: lexical Object.toString from mixins
+
+Source instances have no Object superclass link, so a lexical
+`super.toString()` reached null and produced `B(null)`. A call resolved to
+Object's default `toString` now builds the receiver's ordinary instance
+description from its actual runtime type. The exact `mixin/super_2_test.dart`
+fixture and five focused tests pass, including fresh and serialized execution
+through repeated mixin layers. The stale expect-fail entry is removed. The
+extra IR is emitted only for lexical calls resolved to Object's `toString`.
