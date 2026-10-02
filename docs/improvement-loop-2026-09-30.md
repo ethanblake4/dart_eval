@@ -2558,3 +2558,24 @@ The exact `no_such_method/no_such_method2_test.dart` fixture, a native witness,
 and fresh/serialized guest and host getter regressions pass. Its stale
 expect-fail entry was removed. No runtime dispatch code changed. The combined
 SDK, ordinary, and AOT results above include this fix.
+
+## Cycle 12 performance: frame object cleanup
+
+Call-heavy benchmarks pointed to object register and spill cleanup at function
+return. `TypedFrame.leave()` now clears its three object storage lists with a
+small indexed loop instead of three `fillRange` calls. The frame still clears
+every retained object reference before caching; no bytecode or interpreter
+dispatch changes are needed.
+
+The 23-driver, 15-sample full AOT sweep against the pass-5 baseline matched
+all 22 execution checksums. In that run, `event_bus` fell from 71.106 to
+67.211 ms, `json_codec` from 261.392 to 238.703 ms, and `callbacks` from
+2.586 to 2.327 ms. A reverse-order paired rerun confirmed the call-path
+effect: method calls fell from 8.388/8.404 to 7.656/7.564 ms, boxed arguments
+from 13.476/13.588 to 12.282/12.252 ms, and event bus from 75.022/71.628
+to 67.667/67.108 ms. The primitive call path was flat. The complete sweep
+and per-driver logs are under
+`.dart_tool/improvement_loop/cycle12-performance/frame-clear-loop/full23-aot/`.
+SDK-full then passed with 2466 actual passes, 191 expected compile failures,
+80 expected runtime failures, and three skips. All 970 ordinary language,
+runtime, and forwarding tear-off tests passed.

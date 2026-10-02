@@ -367,16 +367,23 @@ class TypedFrame {
     pendingTypeArguments = const [];
     // Cached inactive frames must not retain arbitrary application objects.
     if (objectSpills.isNotEmpty) {
-      objectSpills.fillRange(0, objectSpills.length, null);
+      _clearObjects(objectSpills);
     }
     if (objectOutgoing.isNotEmpty) {
-      objectOutgoing.fillRange(0, objectOutgoing.length, null);
+      _clearObjects(objectOutgoing);
     }
     final caller = parent!;
     if (caller.objectOutgoing.isNotEmpty) {
-      caller.objectOutgoing.fillRange(0, caller.objectOutgoing.length, null);
+      _clearObjects(caller.objectOutgoing);
     }
     return caller;
+  }
+
+  @pragma('vm:prefer-inline')
+  static void _clearObjects(List<Object?> values) {
+    for (var i = 0; i < values.length; i++) {
+      values[i] = null;
+    }
   }
 
   /// Host callbacks may retain their argument list or reenter the interpreter.
