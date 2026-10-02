@@ -2091,3 +2091,26 @@ passes, 211 expected compile errors and 98 expected runtime failures. The
 serial ordinary run has one failure: `http_native_test.dart` uses the HTTP
 bridge directory whose three tracked files were already deleted in the working
 tree. Full analysis reports only the existing path-dependency warning.
+
+## Cycle 8 cleanup and review
+
+Astra reviewed the integer-index lowering, generated handler, codec validation,
+and benchmark inputs. Its one performance finding was that the new integer-index
+handler still used virtual dispatch for native maps. The generator now reads
+native-map keys directly with a boxed integer, matching the existing index
+handler. The generated machine was regenerated from its source.
+
+The cleanup candidate passed the final 23-driver AOT sweep, with matching
+checksums for all 22 execution drivers. Its paired, 15-sample index pilot
+improved native indexing by 7.4% at width 16 and 11.7% at width 1024. Mixed
+receivers improved 6.5% and 7.3%; guest receivers improved 4.0% and 5.7%.
+Virtual-call and inventory-pricing controls were within 1.2%. A short dynamic
+row in the full sweep varied by 39%; an eight-run, 15-sample repeat put the
+steady baseline and candidate medians at about 850 and 845 microseconds.
+Evidence is under `.dart_tool/improvement_loop/cycle8-int-index-performance/`
+in `full23-aot-cleanup` and `pilot-cleanup`.
+
+The review also identified a likely extension-type projection bug in
+`extensionRepresentationField`: retaining the extension receiver's binding can
+restore its nominal type during boxing. That concern belongs in the next
+correctness pass, with a targeted witness before changing the compiler.

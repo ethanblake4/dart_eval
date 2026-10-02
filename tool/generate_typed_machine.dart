@@ -1818,6 +1818,10 @@ String familyOf(String name) {
             final value = (r as \$List).\$value[a] as \$Value?;
             r = value is \$null ? null : value;
             s = null; c = null;
+          } else if (r is TypedNativeMap) {
+            final value = r.\$value[\$int(a)] as \$Value?;
+            r = value is \$null ? null : value;
+            s = null; c = null;
           } else {
             s = \$int(a);
             $virtualCall
