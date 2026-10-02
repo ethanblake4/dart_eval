@@ -2471,3 +2471,22 @@ checksums. Raw measurements are under
 SDK-full remained at 2458 actual passes, 192 expected compile failures, 87
 expected runtime failures, and three skips. All 959 ordinary language and
 runtime tests passed.
+
+## Cycle 11 cleanup review
+
+The Astra review identified three small duplications. Invocation binding now
+builds the generic context-hole substitution once and shares its application
+between argument compilation and coercion. Method tear-offs share signature
+setup for declared and bridge methods. The guest-pattern split loop appends
+its trailing substring in one place. None changes runtime dispatch.
+
+The review also found that the five nonempty List constructors could stamp a
+type onto elements that bypassed their erased host-list checks. They now
+validate elements as each constructor consumes them. A native Dart witness
+confirmed that formatting an assertion error does not invoke the message
+object's `toString`; the assertion regression now checks that behavior too.
+SDK-full remained at 2458 actual passes, 192 expected compile failures, 87
+expected runtime failures, and three skips. All 961 ordinary language and
+runtime tests passed. The final 23-driver AOT sweep matched all 22 execution
+checksums; measurements are under
+`.dart_tool/improvement_loop/cycle11-cleanup/full23-aot/`.

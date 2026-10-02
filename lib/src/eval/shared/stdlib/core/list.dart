@@ -1893,9 +1893,13 @@ class $List<E> implements List<E>, $Instance {
     final length = (r as $Value?)?.$value as int;
     final fill = s as $Value?;
     final growable = (c as $Value?)?.$value as bool? ?? false;
+    final runtimeTypeId = runtime.bridgeConstructorTypeId;
+    if (runtimeTypeId != null) {
+      runtime.assertTypedTypeArgument(fill, runtimeTypeId, 0);
+    }
     return $List.wrap(
       List.filled(length, fill, growable: growable),
-      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
   }
@@ -1917,19 +1921,27 @@ class $List<E> implements List<E>, $Instance {
   static $Value? _$List$from(Runtime runtime, Object? r, Object? s, Object? c) {
     final elements = (r as $Value?)?.$value as Iterable;
     final growable = (s as $Value?)?.$value as bool? ?? true;
+    final runtimeTypeId = runtime.bridgeConstructorTypeId;
     return $List.wrap(
-      List.from(elements, growable: growable),
-      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      List.from(
+        _checkedConstructorElements(runtime, elements, runtimeTypeId),
+        growable: growable,
+      ),
+      runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
   }
 
   static $Value? _$List$of(Runtime runtime, Object? r, Object? s, Object? c) {
-    final elements = (r as $Value?)?.$value;
+    final elements = (r as $Value?)?.$value as Iterable;
     final growable = (s as $Value?)?.$value as bool? ?? true;
+    final runtimeTypeId = runtime.bridgeConstructorTypeId;
     return $List.wrap(
-      List.of(elements, growable: growable),
-      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      List.of(
+        _checkedConstructorElements(runtime, elements, runtimeTypeId),
+        growable: growable,
+      ),
+      runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
   }
@@ -1943,13 +1955,16 @@ class $List<E> implements List<E>, $Instance {
     final length = (r as $Value?)?.$value as int;
     final generator = s as EvalCallable;
     final growable = (c as $Value?)?.$value as bool? ?? true;
+    final runtimeTypeId = runtime.bridgeConstructorTypeId;
     return $List.wrap(
-      List.generate(
-        length,
-        (index) => generator.call(runtime, null, $int(index), null, 1),
-        growable: growable,
-      ),
-      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      List.generate(length, (index) {
+        final value = generator.call(runtime, null, $int(index), null, 1);
+        if (runtimeTypeId != null) {
+          runtime.assertTypedTypeArgument(value, runtimeTypeId, 0);
+        }
+        return value;
+      }, growable: growable),
+      runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
   }
@@ -1961,12 +1976,26 @@ class $List<E> implements List<E>, $Instance {
     Object? c,
   ) {
     final elements = (r as $Value?)?.$value as Iterable;
+    final runtimeTypeId = runtime.bridgeConstructorTypeId;
     return $List.wrap(
-      List.unmodifiable(elements),
-      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      List.unmodifiable(
+        _checkedConstructorElements(runtime, elements, runtimeTypeId),
+      ),
+      runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
   }
+
+  static Iterable _checkedConstructorElements(
+    Runtime runtime,
+    Iterable elements,
+    int? runtimeTypeId,
+  ) => runtimeTypeId == null
+      ? elements
+      : elements.map((value) {
+          runtime.assertTypedTypeArgument(value, runtimeTypeId, 0);
+          return value;
+        });
 
   @override
   bool any(bool Function(E element) test) => $value.any(test);

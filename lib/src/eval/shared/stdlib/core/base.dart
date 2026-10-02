@@ -1338,13 +1338,11 @@ class $String implements $Instance {
     var previousIndex = 0;
     while (true) {
       if (startIndex == length || !moveNext()) {
-        result.add($String(source.substring(previousIndex)));
         break;
       }
       final match = iterator.$getProperty(runtime, 'current')! as $Instance;
       final matchStart = (match.$getProperty(runtime, 'start') as $int).$value;
       if (matchStart == length) {
-        result.add($String(source.substring(previousIndex)));
         break;
       }
       final matchEnd = (match.$getProperty(runtime, 'end') as $int).$value;
@@ -1355,6 +1353,7 @@ class $String implements $Instance {
       result.add($String(source.substring(previousIndex, matchStart)));
       startIndex = previousIndex = matchEnd;
     }
+    result.add($String(source.substring(previousIndex)));
     return result;
   }
 

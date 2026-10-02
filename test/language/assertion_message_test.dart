@@ -30,6 +30,7 @@ void main() {
           assert(false, message);
           return false;
         } on AssertionError catch (error) {
+          error.toString();
           return !message.stringified && identical(error.message, message);
         }
       }

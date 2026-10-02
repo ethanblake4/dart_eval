@@ -424,10 +424,11 @@ sealed class GetTarget {
     // calls through the result stay typed.
     final TypeRef fieldType;
     final CallSignature? methodSignature;
-    if (isDeclaredMethod) {
+    if (isDeclaredMethod || isBridgeMethod) {
       methodSignature = member!.signature;
       fieldType = methodSignature.toFunctionType(ctx);
-      if (boundContext is FunctionTypeRef &&
+      if (isDeclaredMethod &&
+          boundContext is FunctionTypeRef &&
           methodSignature.typeParameters.isNotEmpty) {
         final target = Devirtualizer(ctx).refine(
           VirtualCall(receiver: receiver, name: name, member: member.member),
@@ -436,9 +437,6 @@ sealed class GetTarget {
           return ContextualMethodTearOff(target, boundContext, typeArguments);
         }
       }
-    } else if (isBridgeMethod) {
-      methodSignature = member!.signature;
-      fieldType = methodSignature.toFunctionType(ctx);
     } else {
       fieldType = resolvedField ?? CoreTypes.dynamic.ref(ctx);
       methodSignature = null;
@@ -472,7 +470,8 @@ sealed class GetTarget {
             ? decl.parent?.parent
             : null;
         final needsLink =
-            fieldIndex != null || fieldDecl is FieldDeclaration ||
+            fieldIndex != null ||
+            fieldDecl is FieldDeclaration ||
             ctx.memberLookup.needsOwnerLink(
               link,
               MemberName(name, MemberKind.getter),

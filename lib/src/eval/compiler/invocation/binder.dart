@@ -213,7 +213,13 @@ final class ArgumentBinder {
           });
     final ownParameters =
         declaredSignature?.typeParameters.toSet() ?? const <TypeParameterDef>{};
+    final contextHoles = Substitution.of({
+      for (final parameter in ownParameters) parameter: UnknownTypeRef.instance,
+    });
     final inferredArguments = <TypeParameterDef, Set<TypeRef>>{};
+    TypeRef contextualType(TypeRef type) => type
+        .substituteTypeParameters(substitutions)
+        .substituteTypeParameters(contextHoles);
     TypeRef formalType(TypeRef type) {
       final instantiated = type.substituteTypeParameters(substitutions);
       return declaredSignature != null &&
@@ -254,14 +260,9 @@ final class ArgumentBinder {
       // Unbound parameters are context holes, including inside collections:
       // `f<T>(Set<T> x)` must let `{1}` infer Set<int>. Coercion still uses
       // the erased boundary type.
-      final context = declaredType
-          ?.substituteTypeParameters(substitutions)
-          .substituteTypeParameters(
-            Substitution.of({
-              for (final parameter in ownParameters)
-                parameter: UnknownTypeRef.instance,
-            }),
-          );
+      final context = declaredType == null
+          ? null
+          : contextualType(declaredType);
       var argument = _compileArg(ctx, source, context);
       if (declaredType != null &&
           site.shape.typeArguments == null &&
@@ -282,14 +283,7 @@ final class ArgumentBinder {
       }
       if (parameterType != null) {
         final originalType = argument.type;
-        final coercionContext = declaredType!
-            .substituteTypeParameters(substitutions)
-            .substituteTypeParameters(
-              Substitution.of({
-                for (final parameter in ownParameters)
-                  parameter: UnknownTypeRef.instance,
-              }),
-            );
+        final coercionContext = contextualType(declaredType!);
         argument = convertForAssignment(
           ctx,
           argument,

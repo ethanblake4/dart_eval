@@ -1,7 +1,84 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
+import '../support/dynamic_fixtures.dart';
+
 void main() {
+  test(
+    'typed list constructors reject invalid elements during construction',
+    () {
+      const source = '''
+      int main() {
+        dynamic wrong = 'wrong';
+        var calls = 0;
+        try {
+          List<int>.generate(3, (i) {
+            calls++;
+            return i == 1 ? wrong : i;
+          });
+          return -1;
+        } catch (_) {}
+        if (calls != 2) return -2;
+        try {
+          List<int>.unmodifiable(<dynamic>[1, wrong]);
+          return -3;
+        } catch (_) {}
+        dynamic missing = null;
+        try {
+          List<int>.generate(1, (i) => missing);
+          return -4;
+        } catch (_) {}
+        try {
+          List<int>.unmodifiable(<dynamic>[missing]);
+          return -5;
+        } catch (_) {}
+        try {
+          List<int>.filled(1, wrong);
+          return -6;
+        } catch (_) {}
+        try {
+          List<int>.from(<dynamic>[wrong]);
+          return -7;
+        } catch (_) {}
+        dynamic elements = <dynamic>[wrong];
+        try {
+          List<int>.of(elements);
+          return -8;
+        } catch (_) {}
+        return 0;
+      }
+    ''';
+      for (final (mode, result) in runDynamicFixture(source)) {
+        expect(result, const DynamicFixtureResult.value(0), reason: mode);
+      }
+    },
+  );
+
+  test('typed list constructors accept nullable and subtype elements', () {
+    const source = '''
+      int main() {
+        final generated = List<num?>.generate(
+          3, (i) => i == 0 ? null : i, growable: false);
+        final immutable = List<num?>.unmodifiable(<dynamic>[null, 1, 2.5]);
+        if (generated is! List<num?> || immutable is! List<num?>) return -1;
+        if (generated[0] != null || generated[2] != 2 ||
+            immutable[0] != null || immutable[2] != 2.5) return -2;
+        try {
+          generated.add(3);
+          return -3;
+        } catch (_) {}
+        try {
+          immutable[1] = 3;
+          return -4;
+        } catch (_) {}
+        return 0;
+      }
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(0), reason: mode);
+    }
+  });
+
   test('list constructors retain explicit and receiver type arguments', () {
     final program = Compiler().compile({
       'list_constructor_type': {
