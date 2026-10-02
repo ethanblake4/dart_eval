@@ -56,6 +56,14 @@ Variable compileListLiteral(
           : boundType.lowerTypeParameters(ctx);
     }
   }
+  if (bound != null &&
+      (sameDeclaration(bound, CoreTypes.list.ref(ctx)) ||
+          sameDeclaration(bound, CoreTypes.iterable.ref(ctx))) &&
+      interfaceArgumentsOf(bound).isEmpty) {
+    // A raw collection context supplies dynamic instead of leaving the
+    // literal unconstrained to infer its element type from the entries.
+    boundType = CoreTypes.dynamic.ref(ctx);
+  }
   TypeRef? listSpecifiedType;
   final typeArgs = l.typeArguments;
   if (typeArgs != null) {

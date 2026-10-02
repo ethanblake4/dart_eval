@@ -308,7 +308,6 @@ expect_fail:
   - path: 'type_object/first_class_types_literals_runtime_1_test.dart'
   - path: 'type_object/first_class_types_literals_runtime_2_test.dart'
   - path: 'type_object/first_class_types_literals_runtime_test.dart'
-  - path: 'type_object/first_class_types_test.dart'
   - path: 'type_object/futureor_tostring_test.dart'
   - path: 'type_object/literal_type_literal_test.dart'
   - path: 'type_promotion/local_runtime_test.dart'

@@ -2631,3 +2631,14 @@ The exact
 `type_object/runtime_type_test.dart` SDK fixture and a focused fresh and
 serialized regression pass. Its stale expect-fail entry was removed. This is
 compiler-only and adds no runtime checks.
+
+## Cycle 13 pass 5: raw list literal context
+
+A raw `List` or `Iterable` declaration provides `dynamic` as the list
+literal's element context. The compiler had treated the absent type argument
+as no context and inferred `int` from the entries, so `List l = [1, 2]`
+held a `List<int>` at runtime. Raw collection contexts now supply `dynamic`;
+unconstrained `var` literals and explicitly typed literals retain their
+precise types. The exact `type_object/first_class_types_test.dart` fixture and
+fresh/serialized regression pass, and its stale expect-fail entry was
+removed. This compiler-only change adds no runtime checks or bytecode.
