@@ -2620,3 +2620,14 @@ required a nonempty first literal. It now accepts an empty one. The exact
 execution, and focused harness tests cover all three directives plus an
 unsupported import. Its stale expect-fail entry was removed. No compiler or
 runtime implementation code changed.
+
+## Cycle 13 pass 4: runtime type of Type objects
+
+Type literals carry a compile-time fact naming the class they denote. A
+`runtimeType` read through a local alias reused that fact as if the receiver
+were an instance of the denoted class, returning null instead of the runtime
+type of the `Type` object. Local reads now drop the static denotation fact.
+The exact
+`type_object/runtime_type_test.dart` SDK fixture and a focused fresh and
+serialized regression pass. Its stale expect-fail entry was removed. This is
+compiler-only and adds no runtime checks.

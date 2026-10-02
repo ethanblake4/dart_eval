@@ -191,7 +191,14 @@ final class LocalDenotation extends Denotation {
     AstNode? source,
     TypeRef? boundContext,
     List<TypeRef>? typeArguments,
-  }) => binding.read(ctx);
+  }) {
+    final value = binding.read(ctx);
+    // A local holding a Type object is a value, not the static namespace of
+    // the class it denotes. Its denotation facts belong to the initializer.
+    return value.denotedType == null
+        ? value
+        : value.withFacts(ValueFacts.none);
+  }
 
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
