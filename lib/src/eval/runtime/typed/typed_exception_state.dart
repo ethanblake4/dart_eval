@@ -121,11 +121,10 @@ final class TypedExceptionState {
 
   /// Box a host error surfacing through an async boundary (future error,
   /// stream error) for delivery into guest `catch`/`onError` handlers.
-  static $Value? boxException(Object error, Runtime? runtime) =>
-      _boxException(
-        error is WrappedException ? error.exception : error,
-        runtime,
-      );
+  static $Value? boxException(Object error, Runtime? runtime) => _boxException(
+    error is WrappedException ? error.exception : error,
+    runtime,
+  );
 
   static $Value? _boxException(Object error, Runtime? runtime) {
     if (error is $Value) return error;
@@ -185,6 +184,17 @@ abstract final class TypedExceptions {
     StackTrace trace,
     Runtime? runtime,
   ) {
+    final thrown = error is WrappedException ? error.exception : error;
+    if (thrown is Error) {
+      final hostError = thrown is $Value ? (thrown as $Value).$value : thrown;
+      if (hostError is Error && hostError.stackTrace == null) {
+        // Guest throws wrap bridge errors, so the VM has not yet recorded
+        // the original error's first throw trace.
+        try {
+          Error.throwWithStackTrace(hostError, trace);
+        } catch (_) {}
+      }
+    }
     while (true) {
       final target = frame.exceptions?.handle(error, trace, runtime) ?? -1;
       if (target >= 0) return TypedExceptionTransfer(frame, target);

@@ -2535,3 +2535,14 @@ expected runtime failures, and three skips after the three cycle 12 fixes.
 All 970 ordinary language/runtime and closure tests passed. The combined
 23-driver AOT sweep matched all 22 execution checksums against pass 2;
 measurements are under `.dart_tool/improvement_loop/cycle12-pass3-5/full23-aot/`.
+
+## Cycle 12 pass 4: bridged Error stack traces
+
+Guest throws wrap a bridged host `Error`, so the VM records a trace on the
+wrapper and leaves the original error's `stackTrace` null. Exception transfer
+now initializes the original error's first trace before guest catch or async
+delivery, preserving object identity and any previously recorded trace. The
+exact `stack_trace/error_runtime_test.dart` fixture and fresh/serialized
+regressions pass. Its stale expect-fail entry was removed. This change is on
+the exception path; the interpreter loop is unchanged. The combined SDK,
+ordinary, and AOT results above include this fix.

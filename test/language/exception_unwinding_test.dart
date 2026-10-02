@@ -32,6 +32,40 @@ Iterable<(String, Runtime)> _runtimes(Program program) sync* {
 }
 
 void main() {
+  test('bridge errors retain their first throw stack trace', () {
+    final program = _compile('''
+      void fail(ArgumentError error) { throw error; }
+
+      int main() {
+        final error = ArgumentError('failure');
+        if (error.stackTrace != null) return -1;
+        String? firstTrace;
+        try {
+          fail(error);
+        } on ArgumentError catch (caught, trace) {
+          if (!identical(caught, error)) return -2;
+          if (caught.stackTrace == null) return -3;
+          firstTrace = caught.stackTrace.toString();
+          if (firstTrace != trace.toString()) return -4;
+        }
+        try {
+          throw error;
+        } on ArgumentError catch (caught) {
+          if (caught.stackTrace.toString() != firstTrace) return -5;
+        }
+        try {
+          fail(ArgumentError('without catch trace'));
+        } on ArgumentError catch (caught) {
+          if (caught.stackTrace == null) return -6;
+        }
+        return 1;
+      }
+    ''');
+    for (final (kind, runtime) in _runtimes(program)) {
+      expect(runtime.executeLib(_library, 'main'), 1, reason: kind);
+    }
+  });
+
   test('source throws select a typed catch and expose a stack trace', () {
     final program = _compile('''
       class Marker implements Exception {

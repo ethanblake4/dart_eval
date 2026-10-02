@@ -293,7 +293,6 @@ expect_fail:
   - path: 'spread_collections/const_test.dart'
   - path: 'spread_collections/map_set_ambiguity_test.dart'
   - path: 'stack_trace/demangle_ctors_test.dart'
-  - path: 'stack_trace/error_runtime_test.dart'
   - path: 'stack_trace/rethrow_error_test.dart'
   - path: 'stack_trace/rethrow_nonerror_test.dart'
   - path: 'stack_trace/stack_trace_test.dart'
