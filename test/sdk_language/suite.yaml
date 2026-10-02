@@ -208,7 +208,6 @@ expect_fail:
   - path: 'library/library5_test.dart'
   - path: 'list/list_test.dart'
   - path: 'main/no_main_test.dart'
-  - path: 'map/literal7_test.dart'
   - path: 'method/external_effect_test.dart'
   - path: 'mixin/class_from_core_library_test.dart'
   - path: 'mixin/super_2_test.dart'

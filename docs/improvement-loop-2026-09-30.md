@@ -2490,3 +2490,13 @@ expected runtime failures, and three skips. All 961 ordinary language and
 runtime tests passed. The final 23-driver AOT sweep matched all 22 execution
 checksums; measurements are under
 `.dart_tool/improvement_loop/cycle11-cleanup/full23-aot/`.
+
+## Cycle 12 pass 1: raw Map literal context
+
+A raw `Map` declaration supplies `dynamic` for both type arguments of a map
+literal. The compiler had treated that context as absent and inferred the
+literal's key and value types from its entries. It now uses the raw context,
+while `var` inference and an explicit `Map<String, int>` context remain
+precise. A native Dart witness, the exact `map/literal7_test.dart` fixture,
+and a fresh/serialized regression pass. The stale expect-fail entry was
+removed. This compiler-only change adds no runtime checks or bytecode.

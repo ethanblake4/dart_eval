@@ -59,6 +59,9 @@ Variable compileSetOrMapLiteral(
     if (hasMapContext && boundArgs.length == 2) {
       boundKey = constrains(boundArgs[0]);
       boundValue = constrains(boundArgs[1]);
+    } else if (hasMapContext && boundArgs.isEmpty) {
+      // A raw Map context supplies dynamic for both type arguments.
+      boundKey = boundValue = CoreTypes.dynamic.ref(ctx);
     } else if (iterableBound != null &&
         interfaceArgumentsOf(iterableBound).length == 1) {
       boundKey = constrains(interfaceArgumentsOf(iterableBound).first);
