@@ -10,6 +10,11 @@ class $num<T extends num> implements $Instance {
     BridgeClassType(
       BridgeTypeRef(CoreTypes.num),
       $extends: BridgeTypeRef(CoreTypes.object),
+      $implements: [
+        BridgeTypeRef(CoreTypes.comparable, [
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.num)),
+        ]),
+      ],
       isAbstract: true,
     ),
     constructors: {},

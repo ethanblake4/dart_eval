@@ -20,7 +20,7 @@ import 'redirect_constructor.dart';
 T withDefaultExpressionScope<T>(
   CompilerContext ctx,
   int library,
-  Expression expression,
+  AstNode expression,
   T Function() body,
 ) {
   Declaration? owner;

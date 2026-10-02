@@ -73,7 +73,7 @@ Variable compileSetOrMapLiteral(
       : null;
   // The literal's kind comes from its leaf elements in document order:
   // a `key: value` leaf makes it a Map, an expression leaf a Set, and a
-  // literal of only spreads infers from the first spread's type.
+  // literal of only spreads uses static Map evidence when available.
   final leaves = [
     for (final element in literal.elements) ..._leavesOf(element),
   ];
@@ -82,20 +82,28 @@ Variable compileSetOrMapLiteral(
     (element) => element is Expression || element is NullAwareElement,
   );
   final firstSpreadElement = leaves.whereType<SpreadElement>().firstOrNull;
-  final inferFromSpread =
+  final needsSpreadInference =
       annotations == null &&
       !hasEntryLeaf &&
       !hasExprLeaf &&
       !hasMapContext &&
       iterableBound == null &&
       firstSpreadElement != null;
+  final hasMapSpread =
+      needsSpreadInference &&
+      leaves.whereType<SpreadElement>().any(
+        (spread) => _hasMapSpreadType(ctx, literal, spread),
+      );
+  final inferFromSpread = needsSpreadInference && !hasMapSpread;
   var isMap =
       explicitValue != null ||
       (annotations == null &&
           (literal.elements.isEmpty
               // An Iterable context selects a Set for a bare `{}`.
               ? iterableBound == null
-              : hasEntryLeaf || (!hasExprLeaf && hasMapContext)));
+              : hasEntryLeaf ||
+                    hasMapSpread ||
+                    (!hasExprLeaf && hasMapContext)));
   final keyTypes = <TypeRef>{};
   final valueTypes = <TypeRef>{};
   final target = ctx.svar(isMap ? 'map' : 'set');
@@ -214,6 +222,40 @@ Iterable<CollectionElement> _leavesOf(CollectionElement element) sync* {
   } else {
     yield element;
   }
+}
+
+/// Recognizes Map evidence without emitting expression evaluation. Loop and
+/// pattern bindings aren't in scope yet, so leave their spreads to compilation.
+bool _hasMapSpreadType(
+  CompilerContext ctx,
+  SetOrMapLiteral literal,
+  SpreadElement spread,
+) {
+  for (var parent = spread.parent; parent != literal; parent = parent.parent) {
+    if (parent == null ||
+        parent is ForElement ||
+        parent is IfElement && parent.caseClause != null) {
+      return false;
+    }
+  }
+  TypeRef? typeOf(Expression expression) => switch (expression) {
+    SimpleIdentifier(:final name) => ctx.lookupBinding(name)?.declaredType,
+    ParenthesizedExpression(:final expression) => typeOf(expression),
+    AsExpression(:final type) => TypeRef.fromAnnotation(ctx, ctx.library, type),
+    SetOrMapLiteral(:final typeArguments, :final elements)
+        when typeArguments?.arguments.length == 2 ||
+            elements.any((element) => element is MapLiteralEntry) =>
+      CoreTypes.map.ref(ctx),
+    _ => null,
+  };
+  return typeOf(spread.expression)
+          ?.withNullable(false)
+          .isAssignableTo(
+            ctx,
+            CoreTypes.map.ref(ctx),
+            forceAllowDynamic: false,
+          ) ??
+      false;
 }
 
 CollectionElementResult _compileElement(

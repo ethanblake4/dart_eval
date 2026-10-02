@@ -1045,7 +1045,11 @@ final class EnumValueDenotation extends Denotation {
   final String name;
 
   @override
-  TypeRef readType(CompilerContext ctx, {AstNode? source}) => enumType;
+  TypeRef readType(CompilerContext ctx, {AstNode? source}) =>
+      ctx.topLevelDeclarationsMap[enumType.file]?[enumType.name]?.declaration
+          is EnumDeclaration
+      ? resolveEnumValueType(ctx, enumType, name)
+      : enumType;
 
   @override
   Variable _read(
@@ -1056,7 +1060,7 @@ final class EnumValueDenotation extends Denotation {
   }) => Variable.ssa(
     ctx,
     LoadGlobal(ctx.svar(name), index),
-    enumType,
+    readType(ctx, source: source),
     rep: ValueRep.boxed,
   );
 

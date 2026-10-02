@@ -2179,3 +2179,33 @@ SDK-full then passes with 2,440 actual passes, 200 expected compile errors,
 97 expected runtime failures, and three reported skips.
 The ordinary language and runtime suites pass all 937 tests, and scoped
 analysis is clean.
+
+## Cycle 9 correctness pass 4: spread evidence and primitive interfaces
+
+For all-spread literals, an emission-free prepass now finds statically known
+Map spreads after an earlier dynamic spread. This selects Map before compiling
+any spread, preserving guard and loop evaluation order. The prepass handles
+local declared types, parentheses, casts, and explicit map literals; scoped
+loop and pattern bindings retain the guarded fallback. Focused fresh and
+serialized tests pass, including a bytecode-count comparison showing no extra
+operations. The SDK collection groups retain their configured passing status.
+
+The hand-maintained `num` bridge declaration now records the SDK's
+`Comparable<num>` interface. This makes integer and double values assignable
+to `Comparable` without a compiler special case or runtime change. The pinned
+intersection fixture and a fresh/serialized primitive subtype regression pass;
+its stale exclusion is removed.
+
+Generic enum constants now retain explicit or inferred type arguments through
+constructor binding, global type metadata and static reads. A generic enum
+constant referenced before its declaration compiles its initializer once in a
+saved compiler scope; ordinary enum compilation reuses that result. Redirecting
+enum constructors also forward their synthetic index and name arguments.
+Fresh, serialized and native witnesses cover forward references, bounds,
+named and redirecting constructors, and constant references from another
+initializer. The broader enhanced-enum SDK fixture advances past its generic
+type errors but still fails at a separate callable-enum expression.
+The full SDK suite passes with 2,442 actual passes, 199 expected compile
+errors, 96 expected runtime failures, and three reported skips. The
+`unsorted/core_type_check_test.dart` exclusion also became stale and was
+removed.

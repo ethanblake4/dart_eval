@@ -472,6 +472,7 @@ final class CallSignature {
     final host = dec.thisOrAncestorMatching(
       (node) =>
           node is ClassDeclaration ||
+          node is EnumDeclaration ||
           node is MixinDeclaration ||
           node is ClassTypeAlias ||
           node is ExtensionDeclaration,

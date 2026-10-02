@@ -342,6 +342,7 @@ void compileConstructorDeclaration(
     final V = Variable.ssa(
       ctx,
       Call(offset, [
+        if (isEnum) ...[SSA('arg_0'), SSA('arg_1')],
         ...result.vector(),
         runtimeTypeArgument!,
       ], result: ctx.svar('redirected')),

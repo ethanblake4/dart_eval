@@ -5,6 +5,9 @@ import '../invocation/targets.dart';
 import '../member/call_signature.dart';
 import '../helpers/const.dart';
 import '../helpers/global.dart';
+import '../helpers/constructor_type.dart';
+import '../helpers/default_value.dart';
+import '../errors.dart';
 import '../values/value_rep.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -25,7 +28,66 @@ import 'package:dart_eval/src/eval/ir/primitives.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/ir/string.dart';
 
-void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
+final _resolvingEnumValues = Expando<Set<int>>();
+
+/// Resolves a constant's instantiation even when its enum follows the caller.
+TypeRef resolveEnumValueType(CompilerContext ctx, TypeRef type, String name) {
+  if (nominalDeclOf(type)!.typeParameters.isEmpty) return type;
+  final index = ctx.enumValueIndices[type.file]![type.name]![name]!;
+  if (!ctx.runtimeGlobalInitializerMap.containsKey(index)) {
+    final declaration =
+        ctx.topLevelDeclarationsMap[type.file]![type.name]!.declaration
+            as EnumDeclaration;
+    final constantIndex = declaration.body.constants.indexWhere(
+      (constant) => constant.name.lexeme == name,
+    );
+    final constant = declaration.body.constants[constantIndex];
+    final active = _resolvingEnumValues[ctx] ??= {};
+    if (!active.add(index)) {
+      throw CompileError('Cyclic enum constant ${type.name}.$name', constant);
+    }
+    final outer = NestedFunctionState(ctx);
+    try {
+      ctx.blockCode = [];
+      ctx.labels.clear();
+      ctx.caughtExceptionTargets.clear();
+      ctx.exceptionDepth = 0;
+      ctx.finishMethod();
+      withDefaultExpressionScope(ctx, type.file, constant, () {
+        ctx.withTypeParameters(
+          type.file,
+          TypeParameterOwner(
+            TypeParameterOwnerKind.classLike,
+            type.file,
+            type.name,
+          ),
+          declaration.namePart.typeParameters?.typeParameters,
+          () =>
+              _compileEnumValue(ctx, type, type.name, constant, constantIndex),
+        );
+        ctx.finishMethod();
+      });
+    } finally {
+      active.remove(index);
+      outer.restore();
+    }
+  }
+  return ctx.topLevelVariableInferredTypes[type.file]!['${type.name}.$name']!;
+}
+
+void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) =>
+    ctx.withTypeParameters(
+      ctx.library,
+      TypeParameterOwner(
+        TypeParameterOwnerKind.classLike,
+        ctx.library,
+        d.namePart.typeName.lexeme,
+      ),
+      d.namePart.typeParameters?.typeParameters,
+      () => _compileEnumDeclaration(ctx, d),
+    );
+
+void _compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
   final type = TypeRef.lookupDeclaration(ctx, ctx.library, d);
   final clsName = d.namePart.typeName.lexeme;
   ctx.instanceDeclarationPositions[ctx.library]![clsName] = {
@@ -177,6 +239,9 @@ void _compileEnumValue(
   int valueIndex,
 ) {
   final cName = constant.name.lexeme;
+  final name = '$clsName.$cName';
+  final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
+  if (ctx.runtimeGlobalInitializerMap.containsKey(index)) return;
 
   final pos = ctx.beginFunction('$cName*i');
   ctx.functionSignatures[pos] = const MachineFunctionSignature(
@@ -199,9 +264,18 @@ void _compileEnumValue(
 
   final dec = cstr?.declaration;
   final constructor = dec is ConstructorDeclaration ? dec : null;
+  final explicitArguments = constant.arguments?.typeArguments;
+  final instantiatedType = explicitArguments == null
+      ? null
+      : (type as InterfaceTypeRef).copyWith(
+          arguments: [
+            for (final argument in explicitArguments.arguments)
+              TypeRef.fromAnnotation(ctx, ctx.library, argument),
+          ],
+        );
   final target = ConstructorCall(
     staticType: type,
-    instantiatedType: type,
+    instantiatedType: instantiatedType,
     offset: offset,
     constructor: constructor,
     implicitDefault: constructor == null,
@@ -214,17 +288,20 @@ void _compileEnumValue(
   if (constructor == null) {
     bound = null;
   } else if (constant.arguments case final arguments?) {
-    bound = ArgumentBinder(
-      ctx,
-    ).bindSourceTarget(target, arguments.argumentList, source: constant);
+    bound = ArgumentBinder(ctx).bindSourceTarget(
+      target,
+      arguments.argumentList,
+      typeArguments: explicitArguments,
+      source: constant,
+    );
   } else {
     // `a` uses the selected constructor's optional defaults just as `a()`
     // does, although it has no ArgumentList node to pass to bindSourceTarget.
-    bound = ArgumentBinder(ctx).bindParameterList(
-      null,
+    bound = ArgumentBinder(ctx).bindDeclaration(
       ctx.library,
-      target.signature!,
       constructor,
+      null,
+      targetSignature: target.signature,
       source: constant,
       fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
     );
@@ -235,15 +312,20 @@ void _compileEnumValue(
       positional: bound?.positional ?? const [],
       named: bound?.named ?? const [],
       vectorOverride: bound?.vector(),
-      returnType: type,
+      returnType: bound == null
+          ? type
+          : inferredConstructorType(
+              ctx,
+              instantiatedType ?? type,
+              nominalDeclOf(type)!.typeParameters,
+              bound.typeArguments,
+            ),
     ),
   );
-  final name = '$clsName.$cName';
-  final index = ctx.topLevelGlobalIndices[ctx.library]![name]!;
   ctx.globalRepresentations[index] = MachineRepresentation.object;
   ctx.globalsFinal.add(index);
   ctx.globalNames[index] = name;
-  ctx.topLevelVariableInferredTypes[ctx.library]![name] = type;
+  ctx.topLevelVariableInferredTypes[ctx.library]![name] = V.type;
   ctx.runtimeGlobalInitializerMap[index] = pos;
   ctx.pushOp(Return(V.ssa));
 }
