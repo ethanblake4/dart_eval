@@ -2285,3 +2285,13 @@ and SDK-full retains 2,443 actual passes with its expected-failure counts.
 The final 23-driver AOT sweep compares the cleanup executable against the
 performance checkpoint; all 22 execution checksums match. Evidence is under
 `.dart_tool/improvement_loop/cycle9-cleanup/`.
+
+## Cycle 10 correctness pass 1: bridged function identity
+
+The pinned compile-time-constant fixture exposed repeated tear-offs of the
+same bridged function producing distinct forwarding function bodies. Runtime
+constant interning uses that body identity, so an alias of `identical` did not
+match a later tear-off of `identical`. The compiler now shares one forwarding
+body per bridged function index. This removes duplicate generated functions
+without adding runtime work or bytecode. The focused SDK fixture and ordinary
+tear-off tests pass; its stale `expect_fail` entry was removed.

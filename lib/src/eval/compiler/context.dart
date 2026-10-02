@@ -242,6 +242,9 @@ class CompilerContext with ScopeContext {
   /// `f<T>` torn off at separate call sites forwards through the same
   /// adapter, so identical instantiations canonicalize to one closure.
   final Map<String, int> instantiatedAdapterIds = {};
+
+  /// One forwarding body per bridged function, shared by its tear-offs.
+  final Map<int, int> bridgeTearOffAdapterIds = {};
   final Map<int, TypeRef> functionRuntimeTypes = {};
   int? currentFunctionId;
   int _nextFunctionId = 0;

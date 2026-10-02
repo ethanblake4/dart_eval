@@ -413,8 +413,6 @@ expect_fail:
     reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
   - path: 'sound_flow_analysis/try_finally_layering_test.dart'
     reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
-  - path: 'compile_time_constant/compile_time_constant10_test.dart'
-    reason: 'baseline: constant identity assertions fail'
   - path: 'control_flow_collections/map_set_ambiguity_error_test.dart'
     reason: 'baseline: Set default constructor is unresolved'
   - path: 'implicit_creation/implicit_const_context_not_test.dart'

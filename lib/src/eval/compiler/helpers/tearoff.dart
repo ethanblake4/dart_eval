@@ -353,38 +353,40 @@ Variable _bridgeTearOff(
   ).toFunctionType(ctx);
   final positional = functionDef.params;
   final named = functionDef.namedParams;
-  final outer = NestedFunctionState(ctx);
-  late final int functionId;
-  try {
-    ctx.finishMethod();
-    outer.resumeAfterFlush();
-    ctx.labels.clear();
-    ctx.caughtExceptionTargets.clear();
-    functionId = ctx.beginFunction('<bridge function adapter>');
-    ctx.locals = [];
-    ctx.exceptionDepth = 0;
-    ctx.beginScope();
-    ctx.functionSignatures[functionId] = MachineFunctionSignature(
-      List.filled(
-        positional.length + named.length,
+  final functionId = ctx.bridgeTearOffAdapterIds.putIfAbsent(externalIndex, () {
+    final outer = NestedFunctionState(ctx);
+    try {
+      ctx.finishMethod();
+      outer.resumeAfterFlush();
+      ctx.labels.clear();
+      ctx.caughtExceptionTargets.clear();
+      final functionId = ctx.beginFunction('<bridge function adapter>');
+      ctx.locals = [];
+      ctx.exceptionDepth = 0;
+      ctx.beginScope();
+      ctx.functionSignatures[functionId] = MachineFunctionSignature(
+        List.filled(
+          positional.length + named.length,
+          MachineRepresentation.object,
+        ),
         MachineRepresentation.object,
-      ),
-      MachineRepresentation.object,
-    );
-    final args = <SSA>[];
-    for (var i = 0; i < positional.length + named.length; i++) {
-      final arg = SSA('arg_$i');
-      ctx.pushOp(ir.Parameter(arg, i));
-      args.add(arg);
+      );
+      final args = <SSA>[];
+      for (var i = 0; i < positional.length + named.length; i++) {
+        final arg = SSA('arg_$i');
+        ctx.pushOp(ir.Parameter(arg, i));
+        args.add(arg);
+      }
+      final result = ctx.svar('bridge_result');
+      ctx.pushOp(InvokeExternal(result, externalIndex, args));
+      ctx.pushOp(Return(result));
+      ctx.endScope();
+      ctx.finishMethod();
+      return functionId;
+    } finally {
+      outer.restore();
     }
-    final result = ctx.svar('bridge_result');
-    ctx.pushOp(InvokeExternal(result, externalIndex, args));
-    ctx.pushOp(Return(result));
-    ctx.endScope();
-    ctx.finishMethod();
-  } finally {
-    outer.restore();
-  }
+  });
   final created = Variable.ssa(
     ctx,
     CreateClosure(
