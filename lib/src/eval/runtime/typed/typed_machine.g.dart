@@ -1284,6 +1284,9 @@ abstract final class TypedMachine {
           }
           }
            continue dispatch;
+        case TypedOp.cNewStringMap:
+           c = <Object?, Object?>{};
+           continue dispatch;
         default: throw StateError('Invalid typed opcode at byte ${pc - 1}');
       }
     }

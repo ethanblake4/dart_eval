@@ -258,6 +258,7 @@ abstract final class TypedOp {
   static const ext = 221;
   static const callPlain = 222;
   static const callIndexInt = 223;
+  static const cNewStringMap = 224;
   static const extendedBase = 256;
   static const callExternal = 256;
   static const rNewBridgeSuperShim = 257;
@@ -650,7 +651,7 @@ abstract final class TypedOp {
     TypedInstruction('ext', [], [], TypedImmediate.none, false, false, false, 'ext'),
     TypedInstruction('callPlain', [], [], TypedImmediate.function, true, false, false, 'callPlain'),
     TypedInstruction('callIndexInt', [6, 0], [], TypedImmediate.callSite, true, false, false, 'callIndexInt'),
-    TypedInstruction('reserved224', [], [], TypedImmediate.none, false, false, false, 'reserved224'),
+    TypedInstruction('cNewStringMap', [], [8], TypedImmediate.none, false, false, false, 'NewStringMap'),
     TypedInstruction('reserved225', [], [], TypedImmediate.none, false, false, false, 'reserved225'),
     TypedInstruction('reserved226', [], [], TypedImmediate.none, false, false, false, 'reserved226'),
     TypedInstruction('reserved227', [], [], TypedImmediate.none, false, false, false, 'reserved227'),

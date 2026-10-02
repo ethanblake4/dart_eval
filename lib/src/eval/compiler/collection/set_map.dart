@@ -209,6 +209,12 @@ Variable compileSetOrMapLiteral(
     type: resultType,
     facts: ValueFacts(exact: resultType),
   );
+  if (isMap &&
+      !literal.isConst &&
+      resultType.arguments.first.isSpec(CoreTypes.string) &&
+      !resultType.arguments.first.nullable) {
+    allocationCode[allocationIndex] = NewMap(target, stringKeys: true);
+  }
   return literal.isConst ? internConst(ctx, result, result.type) : result;
 }
 

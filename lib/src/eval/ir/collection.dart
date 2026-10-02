@@ -71,7 +71,10 @@ final class NewMap extends Operation {
   /// never invoked for `const {k: v}` literals.
   final bool constBacking;
 
-  NewMap(this.target, {this.constBacking = false});
+  /// String keys use their wrapper's native equality and hash code.
+  final bool stringKeys;
+
+  NewMap(this.target, {this.constBacking = false, this.stringKeys = false});
 
   @override
   SSA? get writesTo => target;
@@ -83,14 +86,19 @@ final class NewMap extends Operation {
   bool operator ==(Object other) =>
       other is NewMap &&
       target == other.target &&
-      constBacking == other.constBacking;
+      constBacking == other.constBacking &&
+      stringKeys == other.stringKeys;
 
   @override
-  int get hashCode => target.hashCode ^ constBacking.hashCode;
+  int get hashCode => Object.hash(target, constBacking, stringKeys);
 
   @override
   Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
-    return NewMap(writesTo ?? target, constBacking: constBacking);
+    return NewMap(
+      writesTo ?? target,
+      constBacking: constBacking,
+      stringKeys: stringKeys,
+    );
   }
 }
 

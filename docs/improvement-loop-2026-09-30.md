@@ -2354,3 +2354,24 @@ the cycle 10 pass 4 host matched all 22 execution checksums; evidence is under
 `.dart_tool/improvement_loop/cycle10-pass5/`.
 The ordinary language and runtime suites pass all 950 tests, and scoped
 analysis of the bridge and regression is clean.
+
+## Cycle 10 runtime performance pass: string-key maps
+
+The frame-entry inlining experiments were reverted. Moving all entry helpers
+out of the dispatch caused a large default-adapter call regression. Outlining
+only frame reuse showed about 1.4% slower primitive calls and 2.2% slower exact
+closures in alternating 15-sample AOT runs, with little dispatch benefit.
+
+String-key map literals can use the host map's ordinary key equality because
+`$String` already compares and hashes by value. The compiler now selects a
+one-byte `NewStringMap` opcode for non-nullable String keys; other maps retain
+the guest equality/hash backing. The opcode was appended to the hot instruction
+table without renumbering existing opcodes or adding per-access checks. Fresh
+and serialized tests cover distinct equal String wrappers and guest object
+keys. In alternating 15-sample AOT runs, `config_validation` improved from
+about 91.70 to 88.07 ms (4.0%); `json_codec` was roughly flat at 273.26 versus
+272.26 ms. The 23-driver AOT sweep matched all 22 execution checksums. Raw
+measurements are under `.dart_tool/improvement_loop/cycle10-performance/`.
+SDK-full finished with 2451 actual passes, 194 expected compile failures, 92
+expected runtime failures, and three skips. The ordinary language and runtime
+suites passed all 951 tests.

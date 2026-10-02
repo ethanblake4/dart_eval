@@ -33,10 +33,24 @@ void main() {
     ''');
     expect(
       _opNames(program),
-      containsAll(['NewMap', 'mapSet', 'MapIndex', 'BoxMap']),
+      containsAll(['NewStringMap', 'mapSet', 'MapIndex', 'BoxMap']),
     );
     for (final (kind, runtime) in _runtimes(program)) {
       expect(runtime.executeLib(_library, 'main'), 17, reason: kind);
+    }
+  });
+
+  test('string-key maps compare separately created strings by value', () {
+    final program = _compile('''
+      int main() {
+        final values = <String, int>{};
+        values[String.fromCharCodes([97, 98])] = 7;
+        return values[String.fromCharCodes([97, 98])] ?? -1;
+      }
+    ''');
+    expect(_opNames(program), contains('NewStringMap'));
+    for (final (kind, runtime) in _runtimes(program)) {
+      expect(runtime.executeLib(_library, 'main'), 7, reason: kind);
     }
   });
 
@@ -100,6 +114,7 @@ void main() {
         return map[equivalent]! + set.length;
       }
     ''');
+    expect(_opNames(program), contains('NewMap'));
     for (final (kind, runtime) in _runtimes(program)) {
       expect(runtime.executeLib(_library, 'main'), 12, reason: kind);
     }

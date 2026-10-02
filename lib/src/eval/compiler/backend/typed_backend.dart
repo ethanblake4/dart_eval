@@ -1916,8 +1916,12 @@ class _LoweringSession {
             [object],
             immediate: typeId,
           ),
-          collection.NewMap(:final constBacking) => make([
-            constBacking ? 'cNewConstMap' : 'cNewMap',
+          collection.NewMap(:final constBacking, :final stringKeys) => make([
+            constBacking
+                ? 'cNewConstMap'
+                : stringKeys
+                ? 'cNewStringMap'
+                : 'cNewMap',
           ], []),
           collection.NewSet(:final constBacking) => make([
             constBacking ? 'cNewConstSet' : 'cNewSet',

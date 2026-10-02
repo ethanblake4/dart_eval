@@ -1853,6 +1853,7 @@ String familyOf(String name) {
     mayThrow: true,
     extended: true,
   );
+  add('cNewStringMap', 'c = <Object?, Object?>{};', output: 8);
   return (ops: ops, extended: extendedOps);
 }
 
