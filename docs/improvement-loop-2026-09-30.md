@@ -2436,3 +2436,17 @@ failures, 89 expected runtime failures, and three skips. All 958 ordinary
 language and runtime tests passed. The final 23-driver AOT sweep matched all
 22 execution checksums; measurements are under
 `.dart_tool/improvement_loop/cycle11-final/full23-aot/`.
+
+## Cycle 11 pass 5: generic List constructors
+
+Six hand-maintained List factory wrappers discarded the resolved constructor
+type ID. Lists created through `List.empty`, `filled`, `from`, `of`, `generate`,
+and `unmodifiable` now retain that ID and their owning runtime, matching the
+Map and Set wrappers. The `list/is_test.dart` SDK fixture passes; a direct and
+serialized regression covers explicit type arguments, generic receivers, and
+wrong-type dynamic writes. SDK-full also found `generic/instanceof_test.dart`
+newly passing, so both stale expect-fail entries were removed. The final
+23-driver AOT candidate included this change and matched all 22 execution
+checksums. SDK-full passed with 2458 actual passes, 192 expected compile
+failures, 87 expected runtime failures, and three skips. All 959 ordinary
+language and runtime tests passed.

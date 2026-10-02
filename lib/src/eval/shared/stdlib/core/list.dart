@@ -1893,7 +1893,11 @@ class $List<E> implements List<E>, $Instance {
     final length = (r as $Value?)?.$value as int;
     final fill = s as $Value?;
     final growable = (c as $Value?)?.$value as bool? ?? false;
-    return $List.wrap(List.filled(length, fill, growable: growable));
+    return $List.wrap(
+      List.filled(length, fill, growable: growable),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
   }
 
   static $Value? _$List$empty(
@@ -1903,19 +1907,31 @@ class $List<E> implements List<E>, $Instance {
     Object? c,
   ) {
     final growable = (r as $Value?)?.$value as bool? ?? false;
-    return $List.wrap(List.empty(growable: growable));
+    return $List.wrap(
+      List.empty(growable: growable),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
   }
 
   static $Value? _$List$from(Runtime runtime, Object? r, Object? s, Object? c) {
     final elements = (r as $Value?)?.$value as Iterable;
     final growable = (s as $Value?)?.$value as bool? ?? true;
-    return $List.wrap(List.from(elements, growable: growable));
+    return $List.wrap(
+      List.from(elements, growable: growable),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
   }
 
   static $Value? _$List$of(Runtime runtime, Object? r, Object? s, Object? c) {
     final elements = (r as $Value?)?.$value;
     final growable = (s as $Value?)?.$value as bool? ?? true;
-    return $List.wrap(List.of(elements, growable: growable));
+    return $List.wrap(
+      List.of(elements, growable: growable),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
   }
 
   static $Value? _$List$generate(
@@ -1933,6 +1949,8 @@ class $List<E> implements List<E>, $Instance {
         (index) => generator.call(runtime, null, $int(index), null, 1),
         growable: growable,
       ),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
     );
   }
 
@@ -1943,7 +1961,11 @@ class $List<E> implements List<E>, $Instance {
     Object? c,
   ) {
     final elements = (r as $Value?)?.$value as Iterable;
-    return $List.wrap(List.unmodifiable(elements));
+    return $List.wrap(
+      List.unmodifiable(elements),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
   }
 
   @override
