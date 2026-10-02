@@ -79,8 +79,8 @@ libraries:
         file: errors.dart
         implementsSdk: true
       Invocation:
-        file: errors.dart
-        implementsSdk: true
+        handMaintained: true
+        file: invocation.dart
       Exception:
         file: exceptions.dart
         implementsSdk: true

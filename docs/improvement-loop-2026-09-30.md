@@ -2546,3 +2546,15 @@ exact `stack_trace/error_runtime_test.dart` fixture and fresh/serialized
 regressions pass. Its stale expect-fail entry was removed. This change is on
 the exception path; the interpreter loop is unchanged. The combined SDK,
 ordinary, and AOT results above include this fix.
+
+## Cycle 12 pass 5: subclassable Invocation binding
+
+The SDK's `Invocation` has factory constructors and can be subclassed, but
+its generated wrapper exposed only the factory side. The binding is now a
+hand-maintained exception that keeps the SDK-derived declaration and
+factory wrappers together with a subclassable bridge. The bindgen config
+routes `Invocation` to that file, so stdlib regeneration preserves it.
+The exact `no_such_method/no_such_method2_test.dart` fixture, a native witness,
+and fresh/serialized guest and host getter regressions pass. Its stale
+expect-fail entry was removed. No runtime dispatch code changed. The combined
+SDK, ordinary, and AOT results above include this fix.

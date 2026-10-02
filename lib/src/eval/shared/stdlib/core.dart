@@ -15,6 +15,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/error_hooks.dart'
 import 'package:dart_eval/src/eval/shared/stdlib/core/exceptions.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/identical.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterator.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/invocation.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/iterable_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';

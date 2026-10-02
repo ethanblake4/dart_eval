@@ -231,7 +231,6 @@ expect_fail:
   - path: 'nnbd/type_equality/futureOr_normalization_test.dart'
   - path: 'nnbd/type_promotion/assignment_test.dart'
   - path: 'no_such_method/mock_test.dart'
-  - path: 'no_such_method/no_such_method2_test.dart'
   - path: 'no_such_method/no_such_method_non_nullable_optional_test.dart'
   - path: 'nonfunction_type_aliases/generic_usage_object_test.dart'
   - path: 'nonfunction_type_aliases/private_names/private_name_types_test.dart'

@@ -4,6 +4,7 @@ library;
 export '../src/eval/shared/stdlib/core/base.dart';
 export '../src/eval/shared/stdlib/core/collection.dart';
 export '../src/eval/shared/stdlib/core/iterator.dart';
+export '../src/eval/shared/stdlib/core/invocation.dart';
 export '../src/eval/shared/stdlib/core/comparable.dart';
 export '../src/eval/shared/stdlib/core/date_time.dart';
 export '../src/eval/shared/stdlib/core/duration.dart';
