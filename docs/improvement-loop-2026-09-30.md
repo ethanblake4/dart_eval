@@ -2601,8 +2601,7 @@ The broad SDK gate exposed a shadowed-field case after reversing the mixin
 layers: the initializer cache used field names, so the mixin's `foo` replaced
 the applying class's `foo`. The cache now keys each declaration separately.
 The exact base-mixin typedef fixture and fresh/serialized shadowing regression
-pass. The unrelated type-object regression fixture also passes in isolation;
-the broad SDK gate is being rerun after this correction.
+pass.
 
 ## Cycle 13 pass 2: generator context inference
 
@@ -2637,7 +2636,9 @@ type of the `Type` object. Local reads now drop the static denotation fact.
 The exact
 `type_object/runtime_type_test.dart` SDK fixture and a focused fresh and
 serialized regression pass. Its stale expect-fail entry was removed. This is
-compiler-only and adds no runtime checks.
+compiler-only and adds no runtime checks. The broad SDK gate also found that
+`regress/regress42954_test.dart`, which compares Type literal values and hash
+codes, now passes; its stale expect-fail entry was removed as well.
 
 ## Cycle 13 pass 5: raw list literal context
 
