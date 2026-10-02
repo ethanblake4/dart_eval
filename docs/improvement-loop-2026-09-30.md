@@ -2410,3 +2410,16 @@ showed `lazy/static8_test.dart` passing; both stale expect-fail entries were
 removed. The full 23-driver AOT sweep completed with all
 22 execution checksums matching the previous candidate; measurements are in
 `.dart_tool/improvement_loop/cycle11-pass2/full23-aot/`.
+
+## Cycle 11 pass 3: typed bridge tear-offs and collection inference
+
+The `set_literals/const_set_literal_test.dart` fixture first exposed that a
+bridge method tear-off was typed as bare `Function`, losing the method's
+signature. Preserving that signature exposed a second issue: a generic
+callable argument received its erased bound as collection context, making a
+set literal infer `Set<dynamic>` instead of `Set<int>`. Unbound type parameters
+now remain inference holes in that context, and closure metadata closes those
+holes after inference. Focused bridge tear-off and generic callback tests pass
+in fresh and serialized runtimes. The SDK const-set fixture and its related
+`unsorted/bottom_test.dart` regression pass. The stale expect-fail entry was
+removed.

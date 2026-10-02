@@ -178,10 +178,13 @@ Variable compileFunctionExpression(
         final boundReturnType = contextualReturn?.isTypeParameter == true
             ? declaredClosureReturnType
             : contextualReturn ?? declaredClosureReturnType;
+        final runtimeReturnType = boundReturnType == null
+            ? null
+            : ctx.typeSystem.closeSchemaHoles(boundReturnType);
         final generator = b.isGenerator
             ? setupGenerator(
                 ctx,
-                returnType: boundReturnType,
+                returnType: runtimeReturnType,
                 asynchronous: b.isAsynchronous,
               )
             : null;
@@ -201,6 +204,7 @@ Variable compileFunctionExpression(
             type = p.isNamed
                 ? bound.signature.named[p.name!.lexeme]?.type ?? type
                 : bound.signature.positional.elementAtOrNull(i) ?? type;
+            type = ctx.typeSystem.closeSchemaHoles(type);
             // Bottom-type contexts infer Object? for unannotated parameters.
             if (type is! UnknownTypeRef &&
                 !type.hasInferenceVariables &&
@@ -239,7 +243,7 @@ Variable compileFunctionExpression(
         // sync closures too despite the name).
         final collectsReturns = b.isAsynchronous || b is BlockFunctionBody;
         final beginAsync = b.isAsynchronous && !b.isGenerator
-            ? setupAsyncFunction(ctx, returnType: boundReturnType)
+            ? setupAsyncFunction(ctx, returnType: runtimeReturnType)
             : null;
         if (collectsReturns) {
           ctx.asyncClosureReturnTypes.add(<TypeRef>[]);
@@ -305,7 +309,9 @@ Variable compileFunctionExpression(
           // A context return still carrying call-site inference
           // placeholders is not a usable result — prefer the inferred type.
           final boundResolved =
-              boundReturnType != null && !boundReturnType.hasInferenceVariables
+              boundReturnType != null &&
+                  !boundReturnType.hasInferenceVariables &&
+                  !boundReturnType.hasSchemaHoles
               ? boundReturnType
               : null;
           inferredClosureReturnType = b.isGenerator
@@ -436,6 +442,7 @@ Variable compileFunctionExpression(
     final shouldInfer =
         declaredReturn.isSpec(CoreTypes.dynamic) ||
         declaredReturn.isTypeParameter ||
+        declaredReturn.hasSchemaHoles ||
         // A `FutureOr<X>` context return degrades to `Object?` in the
         // runtime descriptor — the inferred return is strictly more precise
         // and is always a subtype of the union when inference succeeded.

@@ -293,7 +293,6 @@ expect_fail:
   - path: 'regress/regress60409_test.dart'
   - path: 'regress/regress61222_test.dart'
   - path: 'regress/regress9949_test.dart'
-  - path: 'set_literals/const_set_literal_test.dart'
   - path: 'set_literals/set_literal_test.dart'
   - path: 'sound_flow_analysis/pattern_matching_non_nullable_test.dart'
   - path: 'sound_flow_analysis/pattern_not_matching_null_test.dart'

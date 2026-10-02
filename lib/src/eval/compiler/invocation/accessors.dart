@@ -437,8 +437,8 @@ sealed class GetTarget {
         }
       }
     } else if (isBridgeMethod) {
-      fieldType = CoreTypes.function.ref(ctx);
-      methodSignature = member?.signature;
+      methodSignature = member!.signature;
+      fieldType = methodSignature.toFunctionType(ctx);
     } else {
       fieldType = resolvedField ?? CoreTypes.dynamic.ref(ctx);
       methodSignature = null;

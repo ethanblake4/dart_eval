@@ -251,15 +251,17 @@ final class ArgumentBinder {
       final parameterType = declaredType == null
           ? null
           : formalType(declaredType);
-      // A formal that is itself an unbound inference variable carries no
-      // context information (`f<T>(T x)` gives its argument context `_`, not
-      // `T`), so the argument compiles context-free; coercion still uses
+      // Unbound parameters are context holes, including inside collections:
+      // `f<T>(Set<T> x)` must let `{1}` infer Set<int>. Coercion still uses
       // the erased boundary type.
-      final context =
-          parameterType is TypeParameterTypeRef &&
-              ownParameters.contains(parameterType.parameter)
-          ? null
-          : parameterType;
+      final context = declaredType
+          ?.substituteTypeParameters(substitutions)
+          .substituteTypeParameters(
+            Substitution.of({
+              for (final parameter in ownParameters)
+                parameter: UnknownTypeRef.instance,
+            }),
+          );
       var argument = _compileArg(ctx, source, context);
       if (declaredType != null &&
           site.shape.typeArguments == null &&
