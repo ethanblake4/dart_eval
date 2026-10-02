@@ -89,6 +89,7 @@ final class TypedInstance implements $Instance {
   final List<Object?> values;
   TypedInstance? _dispatchRoot;
   final int? runtimeTypeId;
+  // Most short-lived receivers use at most two members.
   Map<TypedMemberKind, Map<String, TypedMember?>>? _members;
   TypedMemberKind? _firstMemberKind;
   String? _firstMemberKey;
@@ -162,17 +163,11 @@ final class TypedInstance implements $Instance {
           root._secondMember;
       (members[kind] ??= {})[cacheKey] = member;
       root._members = members;
-      root._firstMemberKind = null;
-      root._firstMemberKey = null;
-      root._firstMember = null;
-      root._secondMemberKind = null;
-      root._secondMemberKey = null;
-      root._secondMember = null;
     }
     return member;
   }
 
-  /// Lookup before creating a cache for short-lived receivers.
+  /// Lookup without consulting or populating the member cache.
   TypedMember? _resolveUncached(
     TypedMemberKind kind,
     String name, {

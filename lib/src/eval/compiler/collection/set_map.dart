@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/const.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/global.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
@@ -239,9 +240,14 @@ bool _hasMapSpreadType(
     }
   }
   TypeRef? typeOf(Expression expression) => switch (expression) {
-    SimpleIdentifier(:final name) => ctx.lookupBinding(name)?.declaredType,
+    SimpleIdentifier(:final name) =>
+      ctx.lookupBinding(name)?.declaredType ??
+          inferStaticExpressionType(ctx, ctx.library, expression),
     ParenthesizedExpression(:final expression) => typeOf(expression),
     AsExpression(:final type) => TypeRef.fromAnnotation(ctx, ctx.library, type),
+    MethodInvocation(target: null, :final methodName)
+        when ctx.lookupBinding(methodName.name) == null =>
+      inferStaticExpressionType(ctx, ctx.library, expression),
     SetOrMapLiteral(:final typeArguments, :final elements)
         when typeArguments?.arguments.length == 2 ||
             elements.any((element) => element is MapLiteralEntry) =>

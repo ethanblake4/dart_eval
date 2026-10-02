@@ -9,6 +9,7 @@ import 'constructor_tearoff.dart';
 import '../context.dart';
 import '../type.dart';
 import '../values/abi.dart';
+import '../member/member_name.dart';
 
 final _resolving = Expando<Set<(int, String)>>();
 
@@ -84,6 +85,13 @@ TypeRef _record(CompilerContext ctx, int library, String name, TypeRef type) {
   }
   return type;
 }
+
+/// Conservative expression type inference without emitting bytecode.
+TypeRef inferStaticExpressionType(
+  CompilerContext ctx,
+  int library,
+  Expression? expression,
+) => _infer(ctx, library, expression);
 
 TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   if (expression is IntegerLiteral) return CoreTypes.int.ref(ctx);
@@ -164,6 +172,17 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
         ctx.visibleDeclarations[library]?[expression.name]?.declaration;
     if (declaration?.declaration is VariableDeclaration) {
       return resolveGlobalType(ctx, declaration!.sourceLib, expression.name);
+    }
+    final getterDeclaration = ctx
+        .visibleDeclarations[library]?[MemberName.getter(expression.name).key]
+        ?.declaration;
+    if (getterDeclaration?.declaration case FunctionDeclaration getter
+        when getter.isGetter && getter.returnType != null) {
+      return TypeRef.fromAnnotation(
+        ctx,
+        getterDeclaration!.sourceLib,
+        getter.returnType!,
+      );
     }
   }
   if (expression is ConditionalExpression) {

@@ -2265,3 +2265,23 @@ candidate matches all 22 execution checksums. Its short overflow-call and
 protected-no-throw rows varied; longer, 15-sample ABBA/BAAB repeats put the
 overflow call near 21–22 ms on both sides and handled throws near 114 ms.
 Polymorphic calls improved from roughly 14.2 to 12.9 ms in that repeat.
+
+## Cycle 9 cleanup and review
+
+Astra reviewed the cycle's compiler, bridge and runtime changes. Its actionable
+finding was that all-spread Map inference still missed later statically typed
+top-level calls, getters and globals after an initial dynamic spread. The
+prepass now reuses the compiler's conservative expression-type inference for
+those forms, without evaluating an expression or emitting bytecode. A focused
+fresh/serialized regression also checks that a local function shadowing a
+top-level Map producer does not supply false Map evidence.
+
+The two-slot typed member cache retains its inline fields, which avoid new
+allocations in the measured short-lived object pattern. Six redundant slot
+clears after promotion to the map were removed, and the uncached lookup comment
+now describes both its early and promoted-map uses.
+The focused spread and instance-dispatch tests pass, scoped analysis is clean,
+and SDK-full retains 2,443 actual passes with its expected-failure counts.
+The final 23-driver AOT sweep compares the cleanup executable against the
+performance checkpoint; all 22 execution checksums match. Evidence is under
+`.dart_tool/improvement_loop/cycle9-cleanup/`.

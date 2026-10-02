@@ -54,4 +54,33 @@ void main() {
       expect(runtime.executeLib('package:spread_kind/main.dart', 'main'), 0);
     }
   });
+  test('later typed calls and globals determine map spread kind', () {
+    final program = Compiler().compile({
+      'spread_kind': {
+        'main.dart': '''
+          Map<int, int> global = {2: 3};
+          Map<int, int> get getter => {3: 4};
+          Map<int, int> makeMap() => {4: 5};
+          int main() {
+            dynamic first = <int, int>{1: 2};
+            final fromGlobal = {...first, ...global};
+            final fromGetter = {...first, ...getter};
+            final fromCall = {...first, ...makeMap()};
+            dynamic makeMap = () => <int>{6};
+            final shadowed = {...<int>{5}, ...makeMap()};
+            return fromGlobal[2] == 3 &&
+                    fromGetter[3] == 4 &&
+                    fromCall[4] == 5 &&
+                    shadowed is Set<int> && shadowed.contains(6) ? 0 : -1;
+          }
+        ''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(runtime.executeLib('package:spread_kind/main.dart', 'main'), 0);
+    }
+  });
 }
