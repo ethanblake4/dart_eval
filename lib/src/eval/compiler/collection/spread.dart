@@ -65,8 +65,21 @@ List<TypeRef> compileCollectionSpread(
     }
   }
   StatementInfo append(CompilerContext ctx, TypeRef? _) {
-    final nonNull = collection
-        .copyWith(type: collection.type.withNullable(false))
+    // Dynamic spread sources need a shape check before reading `iterator`.
+    // Element checks below still validate their key and value types.
+    final checked =
+        sourceType.assignmentConversionTo(ctx, requiredType) ==
+            AssignmentConversion.runtimeCheck
+        ? convertForAssignment(
+            ctx,
+            collection,
+            requiredType,
+            representation: MachineRepresentation.object,
+            source: element,
+          )
+        : collection;
+    final nonNull = checked
+        .copyWith(type: checked.type.withNullable(false))
         .boxIfNeeded(ctx);
     final iterable = isMap ? GetTarget.read(ctx, nonNull, 'entries') : nonNull;
     final iterator = GetTarget.read(ctx, iterable, 'iterator');

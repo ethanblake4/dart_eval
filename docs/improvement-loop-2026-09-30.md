@@ -2520,3 +2520,18 @@ actual passes, 192 expected compile failures, 82 expected runtime failures,
 and three skips. All 966 ordinary language/runtime and new closure tests
 passed. The final 23-driver AOT sweep matched all 22 execution checksums;
 measurements are under `.dart_tool/improvement_loop/cycle12-pass2/full23-aot/`.
+
+## Cycle 12 pass 3: dynamic spread sources
+
+Spreading a dynamic non-collection tried to read `iterator` or `entries`,
+raising `NoSuchMethodError` where Dart requires a type error. A dynamic spread
+source now receives one collection-shape check inside the existing null-aware
+guard, before iteration. Static sources keep their existing path, and element
+checks still validate entries. The exact `spread_collections/runtime_error`
+SDK fixture and a fresh/serialized regression pass. Its expect-fail entry was
+removed.
+SDK-full passed with 2466 actual passes, 191 expected compile failures, 80
+expected runtime failures, and three skips after the three cycle 12 fixes.
+All 970 ordinary language/runtime and closure tests passed. The combined
+23-driver AOT sweep matched all 22 execution checksums against pass 2;
+measurements are under `.dart_tool/improvement_loop/cycle12-pass3-5/full23-aot/`.
