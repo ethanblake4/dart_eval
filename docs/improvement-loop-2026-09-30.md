@@ -2375,3 +2375,15 @@ measurements are under `.dart_tool/improvement_loop/cycle10-performance/`.
 SDK-full finished with 2451 actual passes, 194 expected compile failures, 92
 expected runtime failures, and three skips. The ordinary language and runtime
 suites passed all 951 tests.
+
+## Cycle 10 cleanup
+
+An Astra medium review found that constructor field initialization still
+carried an unused late-field option and a duplicate fallback compilation path.
+Removed both, made the evaluated initializer map required, and kept the field
+index advancing for every declaration. Extracted the late getter initializer
+and abstract operator forwarding predicate from their nested body compilers.
+These are compiler-only refactors; no runtime or generated opcode changed.
+Focused tests and scoped analysis passed. SDK-full remained at 2451 actual
+passes, 194 expected compile failures, 92 expected runtime failures, and three
+skips; all 951 ordinary language and runtime tests passed.

@@ -240,23 +240,7 @@ int compileMethodDeclaration(
           } else if (b is EmptyFunctionBody) {
             // An abstract operator on a concrete class with noSuchMethod
             // still has a checked callable boundary before forwarding.
-            final forwardsOperator =
-                d.isOperator &&
-                // Object's concrete identity operator remains inherited.
-                methodName != '==' &&
-                parent is ClassDeclaration &&
-                parent.abstractKeyword == null &&
-                ctx.memberLookup.implementationOwner(
-                      TypeRef.$this(ctx)!,
-                      MemberName('noSuchMethod', MemberKind.method),
-                    ) !=
-                    null &&
-                ctx.memberLookup.implementationOwner(
-                      TypeRef.$this(ctx)!,
-                      MemberName(methodName, MemberKind.method),
-                    ) ==
-                    null;
-            if (!forwardsOperator) {
+            if (!_forwardsAbstractOperator(d, ctx, parent)) {
               ctx.endScope();
               return null;
             }
@@ -330,6 +314,32 @@ int compileMethodDeclaration(
   }
 
   return pos;
+}
+
+bool _forwardsAbstractOperator(
+  MethodDeclaration method,
+  CompilerContext ctx,
+  Declaration parent,
+) {
+  // Object's concrete identity operator remains inherited.
+  if (!method.isOperator ||
+      method.name.lexeme == '==' ||
+      parent is! ClassDeclaration ||
+      parent.abstractKeyword != null) {
+    return false;
+  }
+  final receiver = TypeRef.$this(ctx)!;
+  final lookup = ctx.memberLookup;
+  return lookup.implementationOwner(
+            receiver,
+            MemberName('noSuchMethod', MemberKind.method),
+          ) !=
+          null &&
+      lookup.implementationOwner(
+            receiver,
+            MemberName(method.name.lexeme, MemberKind.method),
+          ) ==
+          null;
 }
 
 /// Extension parameters belong to the extension's own scope, not the

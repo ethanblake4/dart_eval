@@ -88,42 +88,14 @@ void compileFieldDeclaration(
       ctx.pushOp(Parameter(receiver, 0));
       final hasLateInitializer = d.fields.isLate && field.initializer != null;
       if (hasLateInitializer) {
-        ctx.beginScope();
-        ctx.setLocal(
-          '#this',
-          Variable.of(ctx, receiver, TypeRef.$this(ctx)!, rep: ValueRep.boxed),
-        );
-        macroBranch(
+        _compileLateFieldInitializer(
           ctx,
-          null,
-          condition: (ctx) => Variable.ssa(
-            ctx,
-            IsUninitializedField(
-              ctx.svar('uninitialized'),
-              receiver,
-              fieldIndex0,
-            ),
-            CoreTypes.bool.ref(ctx),
-            rep: ValueRep.bool,
-          ),
-          thenBranch: (ctx, _) {
-            final value = compileFieldInitializer(ctx, d, field);
-            ctx.inferredFieldTypes
-                .putIfAbsent(ctx.library, () => {})
-                .putIfAbsent(parentName, () => {})[fieldName] = ctx.typeFactory
-                .widenedInferredType(value.type);
-            ctx.pushOp(
-              SetPropertyStatic(
-                receiver,
-                fieldIndex0,
-                value.ssa,
-                isLateFinal: field.isFinal,
-              ),
-            );
-            return StatementInfo();
-          },
+          d,
+          field,
+          parentName,
+          receiver,
+          fieldIndex0,
         );
-        ctx.endScope();
         if (d.fields.type == null) {
           fieldType =
               ctx.inferredFieldTypes[ctx.library]?[parentName]?[fieldName] ??
@@ -181,4 +153,47 @@ void compileFieldDeclaration(
       fieldIndex0++;
     }
   }
+}
+
+void _compileLateFieldInitializer(
+  CompilerContext ctx,
+  FieldDeclaration declaration,
+  VariableDeclaration field,
+  String parentName,
+  SSA receiver,
+  int fieldIndex,
+) {
+  ctx.beginScope();
+  ctx.setLocal(
+    '#this',
+    Variable.of(ctx, receiver, TypeRef.$this(ctx)!, rep: ValueRep.boxed),
+  );
+  macroBranch(
+    ctx,
+    null,
+    condition: (ctx) => Variable.ssa(
+      ctx,
+      IsUninitializedField(ctx.svar('uninitialized'), receiver, fieldIndex),
+      CoreTypes.bool.ref(ctx),
+      rep: ValueRep.bool,
+    ),
+    thenBranch: (ctx, _) {
+      final value = compileFieldInitializer(ctx, declaration, field);
+      ctx.inferredFieldTypes
+          .putIfAbsent(ctx.library, () => {})
+          .putIfAbsent(parentName, () => {})[field.name.lexeme] = ctx
+          .typeFactory
+          .widenedInferredType(value.type);
+      ctx.pushOp(
+        SetPropertyStatic(
+          receiver,
+          fieldIndex,
+          value.ssa,
+          isLateFinal: field.isFinal,
+        ),
+      );
+      return StatementInfo();
+    },
+  );
+  ctx.endScope();
 }

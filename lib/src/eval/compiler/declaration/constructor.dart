@@ -364,10 +364,8 @@ void compileConstructorDeclaration(
   final evaluatedFieldInits = _evalFieldInitializers(
     ctx,
     fields,
-    usedNames,
     memberLibraries,
     parent,
-    isLate: false,
   );
   final pendingFieldInits = <({int index, SSA ssa})>[];
   for (final init in otherInitializers) {
@@ -481,8 +479,6 @@ void compileConstructorDeclaration(
     usedNames,
     inst.ssa,
     isEnum ? 2 : 0,
-    memberLibraries,
-    parent,
     evaluatedFieldInits,
   );
 
@@ -575,10 +571,8 @@ void compileDefaultConstructor(
   final evaluatedFieldInits = _evalFieldInitializers(
     ctx,
     fields,
-    const {},
     memberLibraries,
     parent,
-    isLate: false,
   );
 
   final $extends = parent is EnumDeclaration
@@ -640,8 +634,6 @@ void compileDefaultConstructor(
     parent is EnumDeclaration ? {'index', 'name'} : {},
     inst,
     parent is EnumDeclaration ? 2 : 0,
-    memberLibraries,
-    parent,
     evaluatedFieldInits,
   );
 
@@ -760,19 +752,14 @@ Variable _compileFieldDeclarationInitializer(
 Map<String, Variable> _evalFieldInitializers(
   CompilerContext ctx,
   List<FieldDeclaration> fields,
-  Set<String> usedNames,
   Map<ClassMember, int> memberLibraries,
-  Declaration? parent, {
-  bool isLate = false,
-}) {
+  Declaration? parent,
+) {
   final evaluated = <String, Variable>{};
   for (final fd in fields) {
-    if (fd.fields.isLate != isLate) continue;
+    if (fd.fields.isLate) continue;
     for (final field in fd.fields.variables) {
-      if (field.initializer == null ||
-          (fd.fields.isLate && usedNames.contains(field.name.lexeme))) {
-        continue;
-      }
+      if (field.initializer == null) continue;
       // Non-late declaration initializers run even when the constructor
       // replaces their value. _compileUnusedFields suppresses that store.
       evaluated[field.name.lexeme] = _compileFieldDeclarationInitializer(
@@ -791,36 +778,26 @@ void _compileUnusedFields(
   CompilerContext ctx,
   List<FieldDeclaration> fields,
   Set<String> usedNames,
-  SSA inst, [
-  int fieldIdx = 0,
-  Map<ClassMember, int> memberLibraries = const {},
-  Declaration? parent,
-  Map<String, Variable> evaluated = const {},
-]) {
+  SSA inst,
+  int fieldIdx,
+  Map<String, Variable> evaluated,
+) {
   var fieldIdx0 = fieldIdx;
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
-      if (!usedNames.contains(field.name.lexeme) &&
-          fd.fields.isLate) {
-        final marker = ctx.svar('uninitialized_field');
-        ctx.pushOp(LoadUninitializedField(marker));
-        ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, marker));
-      }
-      if (!usedNames.contains(field.name.lexeme) &&
-          !fd.fields.isLate &&
-          field.initializer != null) {
-        final V = evaluated[field.name.lexeme];
-        if (V != null) {
-          ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, V.ssa));
-        } else {
-          final value = _compileFieldDeclarationInitializer(
-            ctx,
-            fd,
-            field,
-            memberLibraries,
-            parent,
+      if (!usedNames.contains(field.name.lexeme)) {
+        if (fd.fields.isLate) {
+          final marker = ctx.svar('uninitialized_field');
+          ctx.pushOp(LoadUninitializedField(marker));
+          ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, marker));
+        } else if (field.initializer != null) {
+          ctx.pushOp(
+            SetPropertyStatic(
+              inst,
+              fieldIdx0,
+              evaluated[field.name.lexeme]!.ssa,
+            ),
           );
-          ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, value.ssa));
         }
       }
       fieldIdx0++;
@@ -1237,7 +1214,6 @@ void compileAliasForwardingConstructor(
   final evaluatedFieldInits = _evalFieldInitializers(
     ctx,
     fields,
-    const {},
     memberLibraries,
     parent,
   );
@@ -1269,16 +1245,7 @@ void compileAliasForwardingConstructor(
     ),
     parentType,
   );
-  _compileUnusedFields(
-    ctx,
-    fields,
-    {},
-    inst.ssa,
-    0,
-    memberLibraries,
-    parent,
-    evaluatedFieldInits,
-  );
+  _compileUnusedFields(ctx, fields, {}, inst.ssa, 0, evaluatedFieldInits);
   ctx.pushOp(Return(inst.ssa));
   ctx.endScope();
 }
