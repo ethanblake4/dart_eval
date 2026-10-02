@@ -61,7 +61,6 @@ class $Invocation$bridge extends Invocation with $Bridge<Invocation> {
 /// dart_eval wrapper binding for [Invocation]
 class $Invocation implements Invocation, $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:core',

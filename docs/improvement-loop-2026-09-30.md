@@ -2579,3 +2579,9 @@ and per-driver logs are under
 SDK-full then passed with 2466 actual passes, 191 expected compile failures,
 80 expected runtime failures, and three skips. All 970 ordinary language,
 runtime, and forwarding tear-off tests passed.
+
+## Cycle 12 cleanup
+
+The Astra medium review found one duplicate comment in the hand-maintained
+`Invocation` binding; it is removed. The review found no other actionable
+style, correctness, or performance issues in the cycle 12 changes.
