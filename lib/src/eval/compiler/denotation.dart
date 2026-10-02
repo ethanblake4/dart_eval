@@ -101,7 +101,11 @@ sealed class Receiver {
   Receiver withValue(Variable value) => switch (this) {
     ValueReceiver() => ValueReceiver(value),
     SuperReceiver() => SuperReceiver(value),
-    TypeLiteralReceiver(:final type) => TypeLiteralReceiver(type, value),
+    TypeLiteralReceiver(:final type, :final alias) => TypeLiteralReceiver(
+      type,
+      value,
+      alias,
+    ),
     ExtensionApplicationReceiver(:final ext, :final onBindings) =>
       ExtensionApplicationReceiver(ext, onBindings, value),
     ExtensionNamespaceReceiver() => this,
@@ -129,7 +133,10 @@ final class SuperReceiver extends Receiver {
 /// `Type` object itself, needed when the denotation is a type parameter
 /// (`T.name` dispatches dynamically on the runtime Type).
 final class TypeLiteralReceiver extends Receiver {
-  const TypeLiteralReceiver(this.type, [this.value]);
+  const TypeLiteralReceiver(this.type, [this.value, this.alias]);
+
+  /// Bare alias constructor tear-offs bind the alias's own parameters.
+  final ({TypeRef type, List<TypeParameterDef> parameters})? alias;
 
   final TypeRef type;
   @override
@@ -1450,7 +1457,7 @@ Denotation resolveMemberAccess(
         );
       }
       return ExtensionMemberDenotation(ext, member);
-    case TypeLiteralReceiver(:final type, :final value):
+    case TypeLiteralReceiver(:final type, :final value, :final alias):
       // A type literal sharing its name with an extension still resolves
       // members through the extension namespace.
       final ext = extensionForType(ctx, type);
@@ -1494,7 +1501,12 @@ Denotation resolveMemberAccess(
         return _StaticBridgeDenotation(decOrBridge, type, name);
       }
       final fqName = '${type.name}.${ctorNameOf(name)}';
-      return _TypeMemberDenotation(type, fqName, name);
+      return _TypeMemberDenotation(
+        alias?.type ?? type,
+        fqName,
+        name,
+        alias?.parameters,
+      );
   }
 }
 
@@ -1572,7 +1584,14 @@ final class _StaticBridgeDenotation extends Denotation {
 /// getters, methods (tear-offs), static fields, and constructor
 /// tear-offs.
 final class _TypeMemberDenotation extends Denotation {
-  const _TypeMemberDenotation(this.type, this.fqName, this.name);
+  const _TypeMemberDenotation(
+    this.type,
+    this.fqName,
+    this.name, [
+    this.aliasParameters,
+  ]);
+
+  final List<TypeParameterDef>? aliasParameters;
 
   final TypeRef type;
   final String fqName;
@@ -1594,6 +1613,7 @@ final class _TypeMemberDenotation extends Denotation {
         ctx,
         type,
         member as ConstructorDeclaration?,
+        aliasParameters: aliasParameters,
       ).toFunctionType(ctx);
     }
     if (member is MethodDeclaration && !member.isGetter && !member.isSetter) {
@@ -1639,6 +1659,7 @@ final class _TypeMemberDenotation extends Denotation {
         type,
         fqName,
         memberDecl as ConstructorDeclaration?,
+        aliasParameters: aliasParameters,
         boundContext: boundContext,
       );
     }
@@ -1720,6 +1741,30 @@ Receiver compileReceiver(
     if (denotation is PrefixDenotation) return PrefixReceiver(denotation);
     if (denotation is ExtensionNamespaceDenotation) {
       return ExtensionNamespaceReceiver(denotation.ext);
+    }
+    // Keep the alias binder until the constructor reference is instantiated.
+    if (denotation is TypeLiteralDenotation &&
+        denotation.declaration is GenericTypeAlias) {
+      final alias = denotation.declaration! as GenericTypeAlias;
+      final library = ctx.typeAliasFiles[alias] ?? ctx.library;
+      final type = ctx.typeFactory.resolveTypeAlias(
+        library,
+        alias,
+        rawParams: true,
+      );
+      final parameters = ctx.typeParameterDefs.declare(
+        TypeParameterOwner(
+          TypeParameterOwnerKind.typeAlias,
+          library,
+          alias.name.lexeme,
+        ),
+        alias.typeParameters?.typeParameters ?? const [],
+      );
+      return TypeLiteralReceiver(
+        denotation.type,
+        denotation.read(ctx, source: target, boundContext: bound),
+        (type: type, parameters: parameters),
+      );
     }
     if (denotation != null) {
       return receiverOf(

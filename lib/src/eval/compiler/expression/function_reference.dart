@@ -8,10 +8,34 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import '../variable/value_facts.dart';
 import '../errors.dart';
+import 'identifier.dart';
 
 /// Handles `List<num>`, `Map<String, int>` etc. as expressions.
 Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
   final typeArguments = e.typeArguments?.arguments;
+  // Applying alias arguments must expand its body, including nested or
+  // reordered arguments, rather than replacing the target class arguments.
+  if (typeArguments != null && e.function is Identifier) {
+    final reference = compileIdentifierAsReference(
+      e.function as Identifier,
+      ctx,
+    );
+    final denotation = switch (reference) {
+      IdentifierReference() => reference.denotation(ctx, source: e),
+      PrefixedIdentifierReference() => reference.denotation(ctx, source: e),
+      _ => null,
+    };
+    if (denotation is TypeLiteralDenotation &&
+        denotation.declaration is GenericTypeAlias) {
+      final alias = denotation.declaration! as GenericTypeAlias;
+      final type = ctx.typeFactory.resolveTypeAlias(
+        ctx.typeAliasFiles[alias] ?? ctx.library,
+        alias,
+        typeArgs: typeArguments,
+      );
+      return typeLiteral(ctx, type, '${type.name}.');
+    }
+  }
   Variable? read;
   if (typeArguments != null &&
       (e.function is Identifier || e.function is PropertyAccess)) {

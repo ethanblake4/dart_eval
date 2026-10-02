@@ -15,14 +15,16 @@ import '../../ir/closures.dart';
 import '../../ir/flow.dart';
 import '../../ir/function.dart' as ir;
 import 'const.dart';
+import 'callable_inference.dart';
 import 'default_value.dart';
 import 'tearoff.dart';
 
 CallSignature constructorTearOffSignature(
   CompilerContext ctx,
   TypeRef type,
-  ConstructorDeclaration? constructor,
-) {
+  ConstructorDeclaration? constructor, {
+  List<TypeParameterDef>? aliasParameters,
+}) {
   final owner = nominalDeclOf(type)!;
   if (owner is SourceTypeDecl && owner.kind == TypeDeclKind.extensionType) {
     final parameter = owner.extensionRepresentationParameter!;
@@ -39,7 +41,7 @@ CallSignature constructorTearOffSignature(
       returnType: type,
     );
   }
-  final generic = interfaceArgumentsOf(type).isEmpty;
+  final generic = aliasParameters == null && interfaceArgumentsOf(type).isEmpty;
   final result = generic ? owner.thisType : type;
   final declared = constructor == null
       ? CallSignature.returnOnly(result)
@@ -50,7 +52,8 @@ CallSignature constructorTearOffSignature(
         owner.typeParameters[i]: interfaceArgumentsOf(type)[i],
   });
   return CallSignature(
-    typeParameters: generic ? owner.typeParameters : const [],
+    typeParameters:
+        aliasParameters ?? (generic ? owner.typeParameters : const []),
     positional: [
       for (final parameter in declared.positional)
         parameter.substitute(substitution),
@@ -72,8 +75,29 @@ Variable materializeConstructorTearOff(
   String key,
   ConstructorDeclaration? constructor, {
   TypeRef? boundContext,
+  List<TypeParameterDef>? aliasParameters,
 }) {
-  final signature = constructorTearOffSignature(ctx, type, constructor);
+  var signature = constructorTearOffSignature(
+    ctx,
+    type,
+    constructor,
+    aliasParameters: aliasParameters,
+  );
+  // Contextual and explicit instantiation share the same constructor wrapper.
+  if (signature.typeParameters.isNotEmpty &&
+      boundContext is FunctionTypeRef &&
+      boundContext.signature.typeParameters.isEmpty) {
+    type = signature.returnType.substituteTypeParameters(
+      Substitution.of(
+        inferCallableTypeArguments(
+          ctx,
+          signature.toFunctionType(ctx),
+          boundContext,
+        ),
+      ),
+    );
+    signature = constructorTearOffSignature(ctx, type, constructor);
+  }
   final functionType = signature.toFunctionType(ctx);
   final declared = constructor == null
       ? signature

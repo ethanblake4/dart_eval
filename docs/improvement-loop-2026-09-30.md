@@ -2707,3 +2707,15 @@ saved view. The exact `type_promotion/logical_and_test.dart` fixture and 27
 focused condition and promotion tests pass. The regression covers fresh and
 serialized execution and a skipped `||` assignment. The stale expect-fail
 entry is removed; this change emits no new runtime checks.
+
+## Cycle 14 pass 4: aliased constructor tear-offs
+
+Bare generic aliases were instantiated to bounds before constructor tear-off
+resolution, losing the alias's own type parameters. Explicit alias arguments
+were also substituted directly onto the target class rather than through the
+alias body. Constructor references now retain and expand the alias binder;
+contextual and explicit instantiation use the canonical wrapper. The exact
+`typedef/aliased_constructor_tear_off_test.dart` fixture passes in fresh and
+serialized runtimes, along with 20 focused tests covering nested and
+reordered alias arguments. Its stale expect-fail entry is removed. The fix is
+compiler-only.
