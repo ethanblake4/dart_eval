@@ -2321,3 +2321,20 @@ unsigned-shift fixture passes and its stale `expect_fail` entry was removed.
 SDK-full found no execution regression after the equality refinement; its
 four expected-failure mismatches are newly passing late-field cases from the
 parallel pass, whose entries are removed with that checkpoint.
+
+## Cycle 10 correctness pass 4: lazy instance field initializers
+
+Late instance initializers were evaluated during construction, before `this`
+was bound, and could neither defer work nor retry after a throw. Constructors
+now leave late slots uninitialized. A generated getter evaluates its initializer
+on the first read and stores only a successful result. One appended typed opcode
+tests the existing late-field sentinel; existing opcode numbers and ordinary
+field access stay unchanged. The machine sources were regenerated from their
+generator. Focused fresh/serialized tests cover `this`, inheritance, mixins,
+single evaluation, assignment before read, retry after throw and cached null.
+The SDK-full run found four stale expected-failure entries for related late
+field fixtures, all removed. With those entries removed, SDK-full passes with
+2,450 actual passes, 194 expected compile errors, 93 expected runtime failures,
+and three skips. The final 23-driver AOT sweep against the cycle 10 pass 2
+host matched all 22 execution checksums before commit; evidence is under
+`.dart_tool/improvement_loop/cycle10-pass4/`.

@@ -5,6 +5,10 @@ abstract final class TypedLateField {
   static const uninitialized = Object();
 
   @pragma('vm:never-inline')
+  static bool isUninitialized(Object? receiver, int index) =>
+      identical((receiver as TypedInstance).values[index], uninitialized);
+
+  @pragma('vm:never-inline')
   static Object? read(Object? receiver, int index) {
     final value = (receiver as TypedInstance).values[index];
     if (identical(value, uninitialized)) {

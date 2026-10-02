@@ -1935,6 +1935,10 @@ abstract final class TypedMachine {
     case 417:
        r = (r as String).substring(a);
        break;
+    case 421:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       e = TypedLateField.isUninitialized(r, index);
+       break;
     default: throw StateError('Invalid extended typed opcode');
     }
     st.pc = pc;

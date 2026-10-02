@@ -472,7 +472,7 @@ sealed class GetTarget {
             ? decl.parent?.parent
             : null;
         final needsLink =
-            fieldIndex != null ||
+            fieldIndex != null || fieldDecl is FieldDeclaration ||
             ctx.memberLookup.needsOwnerLink(
               link,
               MemberName(name, MemberKind.getter),

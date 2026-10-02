@@ -404,17 +404,6 @@ void compileConstructorDeclaration(
     }
   }
 
-  evaluatedFieldInits.addAll(
-    _evalFieldInitializers(
-      ctx,
-      fields,
-      usedNames,
-      memberLibraries,
-      parent,
-      isLate: true,
-    ),
-  );
-
   final $extends = parent is EnumDeclaration
       ? null
       : classLikeClauses(parent).$1;
@@ -589,6 +578,7 @@ void compileDefaultConstructor(
     const {},
     memberLibraries,
     parent,
+    isLate: false,
   );
 
   final $extends = parent is EnumDeclaration
@@ -693,7 +683,7 @@ void compileDefaultConstructor(
 /// Compiles a field initializer with the declared type as inference context
 /// and applies initializer conversion (int → double widening, conformance
 /// checks), then boxes for the object field store.
-Variable _compileFieldInitializer(
+Variable compileFieldInitializer(
   CompilerContext ctx,
   FieldDeclaration fd,
   VariableDeclaration field,
@@ -734,7 +724,7 @@ Variable _compileFieldDeclarationInitializer(
   final Variable value;
   try {
     if (memberLibrary == null || parent == null) {
-      value = _compileFieldInitializer(ctx, fd, field);
+      value = compileFieldInitializer(ctx, fd, field);
     } else {
       value = ctx.withTypeParameters(memberLibrary, null, const [], () {
         ctx
@@ -749,7 +739,7 @@ Variable _compileFieldDeclarationInitializer(
                   ) ??
                   const {},
             );
-        return _compileFieldInitializer(ctx, fd, field);
+        return compileFieldInitializer(ctx, fd, field);
       });
     }
   } finally {
@@ -773,11 +763,11 @@ Map<String, Variable> _evalFieldInitializers(
   Set<String> usedNames,
   Map<ClassMember, int> memberLibraries,
   Declaration? parent, {
-  bool? isLate,
+  bool isLate = false,
 }) {
   final evaluated = <String, Variable>{};
   for (final fd in fields) {
-    if (isLate != null && fd.fields.isLate != isLate) continue;
+    if (fd.fields.isLate != isLate) continue;
     for (final field in fd.fields.variables) {
       if (field.initializer == null ||
           (fd.fields.isLate && usedNames.contains(field.name.lexeme))) {
@@ -811,13 +801,14 @@ void _compileUnusedFields(
   for (final fd in fields) {
     for (final field in fd.fields.variables) {
       if (!usedNames.contains(field.name.lexeme) &&
-          fd.fields.isLate &&
-          field.initializer == null) {
+          fd.fields.isLate) {
         final marker = ctx.svar('uninitialized_field');
         ctx.pushOp(LoadUninitializedField(marker));
         ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, marker));
       }
-      if (!usedNames.contains(field.name.lexeme) && field.initializer != null) {
+      if (!usedNames.contains(field.name.lexeme) &&
+          !fd.fields.isLate &&
+          field.initializer != null) {
         final V = evaluated[field.name.lexeme];
         if (V != null) {
           ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, V.ssa));

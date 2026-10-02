@@ -1844,6 +1844,15 @@ String familyOf(String name) {
     final r = rank(a).compareTo(rank(b));
     return r != 0 ? r : originalOrder[a]!.compareTo(originalOrder[b]!);
   });
+  add(
+    'eIsUninitializedFieldR',
+    'e = TypedLateField.isUninitialized(r, index);',
+    inputs: [6],
+    output: 4,
+    immediate: 'field',
+    mayThrow: true,
+    extended: true,
+  );
   return (ops: ops, extended: extendedOps);
 }
 

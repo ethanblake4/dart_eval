@@ -69,8 +69,6 @@ exclude:
 expect_fail:
   - path: 'nnbd/extreme_bounds/glb_futureor_test.dart'
     reason: 'generic-call downward inference for FutureOr glb not implemented'
-  - path: 'anonymous_methods/expression/this_access_test.dart'
-    reason: "'this' in late field initializers not supported"
   - path: 'assert/with_message_test.dart'
   - path: 'async/await_user_defined_future_soundness_test.dart'
   - path: 'async/derive_future_type_test.dart'
@@ -205,7 +203,6 @@ expect_fail:
   - path: 'inference_update_2/no_such_method_restriction_stack_trace_test.dart'
   - path: 'inference_update_2/promotion_makes_new_extension_available_test.dart'
   - path: 'inference_update_2/promotion_makes_new_extension_available_via_non_nullability_test.dart'
-  - path: 'inference_update_2/top_level_type_inference_test.dart'
   - path: 'inference_using_bounds/restricting_choices_using_bounds_test.dart'
   - path: 'interceptor/interceptor_test.dart'
   - path: 'lazy/static3_test.dart'
@@ -237,7 +234,6 @@ expect_fail:
   - path: 'nnbd/normalization/type_object_normalization_test.dart'
   - path: 'nnbd/resolution/null_assertion_null_type_test.dart'
   - path: 'nnbd/static_errors/super_equals_allows_null_test.dart'
-  - path: 'nnbd/syntax/late_modifier_bug_39658_test.dart'
   - path: 'nnbd/syntax/late_modifier_edge_cases_test.dart'
   - path: 'nnbd/syntax/late_modifier_runtime_error_test.dart'
   - path: 'nnbd/type_equality/futureOr_normalization_test.dart'
@@ -415,8 +411,6 @@ expect_fail:
     reason: 'baseline: Set default constructor is unresolved'
   - path: 'implicit_creation/implicit_const_context_not_test.dart'
     reason: 'baseline: constant versus nonconstant identity assertions fail'
-  - path: 'nnbd/static_errors/this_reference_in_late_field_test.dart'
-    reason: 'case 01: late field initializer resolves this outside class context'
   - path: 'nnbd/static_errors/unchecked_use_of_nullable_test.dart'
     reason: 'cases 15, 59, 99 and 179: noSuchMethod tearoff resolution fails on int or Null'
   - path: 'nosuchmethod_forwarding/nosuchmethod_forwarding_test.dart'

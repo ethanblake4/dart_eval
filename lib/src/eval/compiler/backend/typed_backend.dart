@@ -2099,6 +2099,11 @@ class _LoweringSession {
             ['eEqRS'],
             [left, right],
           ),
+          objects_ir.IsUninitializedField(:final object, :final index) => make(
+            ['eIsUninitializedFieldR'],
+            [object],
+            immediate: index,
+          ),
           memory.IsNull(:final object) => make(
             [
               for (final r in ['R', 'S', 'C']) 'eIsNull$r',

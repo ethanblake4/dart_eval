@@ -81,6 +81,7 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       logic.LogicalAnd() ||
       logic.LogicalOr() ||
       memory.IsNull() ||
+      objects.IsUninitializedField() ||
       objects.DynamicEquals() ||
       collection.IsNativeList() ||
       collection.IsNativeSet() ||
@@ -301,7 +302,8 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         constrain(condition, object);
       case memory.IsNull():
         output(operation, boolean);
-      case objects.DynamicEquals() ||
+      case objects.IsUninitializedField() ||
+          objects.DynamicEquals() ||
           types.IsType() ||
           collection.IsNativeList() ||
           collection.IsNativeSet() ||

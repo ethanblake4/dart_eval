@@ -12,6 +12,10 @@ import 'package:dart_eval/src/eval/ir/function.dart';
 import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import '../values/abi.dart';
+import '../variable.dart';
+import '../macros/branch.dart';
+import '../statement/statement.dart';
+import 'constructor.dart' show compileFieldInitializer;
 
 void compileFieldDeclaration(
   int fieldIndex,
@@ -72,7 +76,7 @@ void compileFieldDeclaration(
             storageType;
       }
     } else {
-      final fieldType = d.fields.type == null
+      var fieldType = d.fields.type == null
           ? (ctx.inferredFieldTypes[ctx.library]?[parentName]?[fieldName] ??
                 CoreTypes.dynamic.ref(ctx))
           : TypeRef.fromAnnotation(ctx, ctx.library, d.fields.type!);
@@ -82,6 +86,50 @@ void compileFieldDeclaration(
       ], MachineRepresentation.object);
       final receiver = SSA('arg_0');
       ctx.pushOp(Parameter(receiver, 0));
+      final hasLateInitializer = d.fields.isLate && field.initializer != null;
+      if (hasLateInitializer) {
+        ctx.beginScope();
+        ctx.setLocal(
+          '#this',
+          Variable.of(ctx, receiver, TypeRef.$this(ctx)!, rep: ValueRep.boxed),
+        );
+        macroBranch(
+          ctx,
+          null,
+          condition: (ctx) => Variable.ssa(
+            ctx,
+            IsUninitializedField(
+              ctx.svar('uninitialized'),
+              receiver,
+              fieldIndex0,
+            ),
+            CoreTypes.bool.ref(ctx),
+            rep: ValueRep.bool,
+          ),
+          thenBranch: (ctx, _) {
+            final value = compileFieldInitializer(ctx, d, field);
+            ctx.inferredFieldTypes
+                .putIfAbsent(ctx.library, () => {})
+                .putIfAbsent(parentName, () => {})[fieldName] = ctx.typeFactory
+                .widenedInferredType(value.type);
+            ctx.pushOp(
+              SetPropertyStatic(
+                receiver,
+                fieldIndex0,
+                value.ssa,
+                isLateFinal: field.isFinal,
+              ),
+            );
+            return StatementInfo();
+          },
+        );
+        ctx.endScope();
+        if (d.fields.type == null) {
+          fieldType =
+              ctx.inferredFieldTypes[ctx.library]?[parentName]?[fieldName] ??
+              fieldType;
+        }
+      }
       final value = ctx.svar('field');
       ctx.pushOp(
         LoadPropertyStatic(
@@ -97,9 +145,11 @@ void compileFieldDeclaration(
             fieldName,
           )] =
           pos;
-      ctx.instanceGetterIndices[ctx.enclosingLibrary ??
-              ctx.library]![parentName]![fieldName] =
-          fieldIndex0;
+      if (!hasLateInitializer) {
+        ctx.instanceGetterIndices[ctx.enclosingLibrary ??
+                ctx.library]![parentName]![fieldName] =
+            fieldIndex0;
+      }
 
       if (!(field.isFinal || field.isConst) ||
           (d.fields.isLate && field.initializer == null)) {

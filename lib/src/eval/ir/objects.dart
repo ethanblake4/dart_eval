@@ -12,6 +12,25 @@ final class LoadUninitializedField extends Operation {
       LoadUninitializedField(writesTo ?? target);
 }
 
+/// Tests a late storage slot without reading its value or invoking a getter.
+final class IsUninitializedField extends Operation {
+  IsUninitializedField(this.target, this.object, this.index);
+  final SSA target;
+  final SSA object;
+  final int index;
+  @override
+  SSA get writesTo => target;
+  @override
+  Set<SSA> get readsFrom => {object};
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      IsUninitializedField(
+        writesTo ?? target,
+        readsFrom?.single ?? object,
+        index,
+      );
+}
+
 final class CreateClass extends Operation {
   final SSA target;
   final int library;
