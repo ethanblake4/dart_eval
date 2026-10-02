@@ -554,8 +554,7 @@ extension TypedRuntimeInterop on Runtime {
     }
     // VM-built host-function adapters carry no signature — accept them
     // wherever a function type is expected (the host side enforces itself).
-    if (value is TypedHostFunction &&
-        isTypedFunctionTypeDescriptor(expected)) {
+    if (value is TypedHostFunction && isTypedFunctionTypeDescriptor(expected)) {
       return true;
     }
     final actual = (value as $Value).$getRuntimeType(this);
@@ -604,22 +603,33 @@ extension TypedRuntimeInterop on Runtime {
     int? actualOwnerType,
     List<int> callableTypeArguments = const [],
     TypedTypeEnvironment? typeEnvironment,
-  }) => typeArguments.isEmpty
-      ? const <int>[]
-      : [
-          for (final type in typeArguments)
-            callableTypeArguments.isEmpty && typeEnvironment == null
-                ? resolveTypedEnvironmentType(
-                    type,
-                    actualOwnerType: actualOwnerType,
-                  )
-                : _resolveEnvironmentType(
-                    type,
-                    actualOwnerType,
-                    callableTypeArguments,
-                    _TypeResolution(typeEnvironment),
-                  ),
-        ];
+  }) {
+    if (typeArguments.isEmpty) return const <int>[];
+    // Concrete descriptors cannot refer to the caller's type environment.
+    // Program metadata vectors are immutable, so reuse one without copying.
+    var needsResolution = false;
+    for (final type in typeArguments) {
+      if (_requiresTypeEnvironment(type)) {
+        needsResolution = true;
+        break;
+      }
+    }
+    if (!needsResolution) return typeArguments;
+    return [
+      for (final type in typeArguments)
+        callableTypeArguments.isEmpty && typeEnvironment == null
+            ? resolveTypedEnvironmentType(
+                type,
+                actualOwnerType: actualOwnerType,
+              )
+            : _resolveEnvironmentType(
+                type,
+                actualOwnerType,
+                callableTypeArguments,
+                _TypeResolution(typeEnvironment),
+              ),
+    ];
+  }
 
   /// Resolves a descriptor before it is retained by a value allocated in the
   /// active callable and class type environment.

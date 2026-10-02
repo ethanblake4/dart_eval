@@ -2501,6 +2501,26 @@ precise. A native Dart witness, the exact `map/literal7_test.dart` fixture,
 and a fresh/serialized regression pass. The stale expect-fail entry was
 removed. This compiler-only change adds no runtime checks or bytecode.
 
+## Cycle 13 performance: concrete generic call arguments
+
+The initial object-argument copy/clear fusion had no reliable gain in the
+23-driver AOT sweep and was reverted. A new `fixed_generic_calls` benchmark
+isolates repeated calls to a small generic helper with a concrete type at the
+call site. Runtime type-argument resolution previously rebuilt a list even
+when every descriptor was independent of the caller's type environment. It
+now reuses the program-owned vector in that case and retains substitution for
+environment-dependent descriptors.
+
+In a pinned AOT ABBA run of 100,000 calls and 15 samples per side, the new
+benchmark moved from 11.510/11.209 ms to 9.880/9.763 ms with identical
+checksums. The existing generic reducer benchmark was roughly flat, as its
+dynamic call and checked arithmetic dominate. The final 23-driver,
+15-sample AOT sweep matched all 22 execution checksums; complete logs are
+under `.dart_tool/improvement_loop/cycle13-performance/generic-fixed-full23/`.
+SDK-full passed with 2473 actual passes, 188 expected compile failures,
+76 expected runtime failures, and three skips. All 979 ordinary language,
+runtime, forwarding tear-off, and adjacent-directive tests passed.
+
 ## Cycle 12 pass 2: forwarding method tear-offs
 
 An inherited method body can have a wider bound tear-off signature when its
