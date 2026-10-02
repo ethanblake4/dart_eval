@@ -2306,3 +2306,18 @@ labels, null and nested records. The pinned SDK runtime-type fixture passes,
 and its stale `expect_fail` entry was removed. The 23-driver AOT sweep against
 the cycle 9 cleanup host matched all 22 execution checksums before commit;
 evidence is under `.dart_tool/improvement_loop/cycle10-pass2/`.
+
+## Cycle 10 correctness pass 3: abstract operator forwarding
+
+An abstract operator declared by a concrete source class with a source
+`noSuchMethod` had no compiled entry, so dynamic calls reached the handler
+without checking the operator's argument and return types. The compiler now
+emits a checked forwarder only when the class has no inherited concrete
+operator implementation. A focused fresh/serialized regression verifies
+argument rejection before handler side effects, return checking, invocation
+shape, and inherited concrete behavior. Object's concrete equality operator
+also stays inherited when a class declares abstract `==`. The pinned
+unsigned-shift fixture passes and its stale `expect_fail` entry was removed.
+SDK-full found no execution regression after the equality refinement; its
+four expected-failure mismatches are newly passing late-field cases from the
+parallel pass, whose entries are removed with that checkpoint.

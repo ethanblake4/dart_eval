@@ -421,8 +421,6 @@ expect_fail:
     reason: 'cases 15, 59, 99 and 179: noSuchMethod tearoff resolution fails on int or Null'
   - path: 'nosuchmethod_forwarding/nosuchmethod_forwarding_test.dart'
     reason: 'case 06: noSuchMethod forwarding assertion fails'
-  - path: 'operator/unsigned_right_shift_test.dart'
-    reason: 'baseline: overridden unsigned shift or noSuchMethod assertion fails'
   - path: 'regress/regress32660_test.dart'
     reason: 'cases 04 and 05: interface member and deferred call arity resolution fail'
   - path: 'spread_collections/map_set_ambiguity_error_test.dart'

@@ -20,6 +20,8 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import '../values/abi.dart';
 import '../member/member_name.dart';
+import '../invocation/bound_call.dart';
+import '../invocation/targets.dart';
 
 int compileMethodDeclaration(
   MethodDeclaration d,
@@ -236,8 +238,45 @@ int compileMethodDeclaration(
             );
             ctx.endScope();
           } else if (b is EmptyFunctionBody) {
-            ctx.endScope();
-            return null;
+            // An abstract operator on a concrete class with noSuchMethod
+            // still has a checked callable boundary before forwarding.
+            final forwardsOperator =
+                d.isOperator &&
+                // Object's concrete identity operator remains inherited.
+                methodName != '==' &&
+                parent is ClassDeclaration &&
+                parent.abstractKeyword == null &&
+                ctx.memberLookup.implementationOwner(
+                      TypeRef.$this(ctx)!,
+                      MemberName('noSuchMethod', MemberKind.method),
+                    ) !=
+                    null &&
+                ctx.memberLookup.implementationOwner(
+                      TypeRef.$this(ctx)!,
+                      MemberName(methodName, MemberKind.method),
+                    ) ==
+                    null;
+            if (!forwardsOperator) {
+              ctx.endScope();
+              return null;
+            }
+            final forwarded = NoSuchMethodCall(name: methodName).emit(
+              ctx,
+              BoundCall(
+                positional: [
+                  for (var index = 0; index < resolvedParams.length; index++)
+                    Variable.of(
+                      ctx,
+                      SSA('arg_${index + 1}'),
+                      parameterTypes[index],
+                      rep: abi.parameters[index + 1],
+                    ),
+                ],
+                named: const [],
+                returnType: CoreTypes.dynamic.ref(ctx),
+              ),
+            );
+            stInfo = doReturn(ctx, expectedReturnType, forwarded);
           } else {
             throw CompileError('Unknown function body type ${b.runtimeType}');
           }
