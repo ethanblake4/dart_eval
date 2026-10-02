@@ -2758,3 +2758,15 @@ passed. Logs are under
 
 Inlining closure resolution and typed-global helpers had mixed or regressed
 paired AOT results, so those experiments were reverted.
+
+## Cycle 14 cleanup
+
+The requested Astra medium review found one alias-scope bug: explicit type
+arguments on an imported constructor alias were resolved in the alias's
+library. They now resolve in the caller's library, with a fresh/serialized
+cross-file regression. A separate formatting check found nullable function
+Type display appended `?` to the return type; it now parenthesizes the full
+function signature, matching the pinned Dart SDK. The focused regressions and
+SDK-full gate pass. A final 23-driver, 15-sample AOT sweep on the complete
+cleanup diff matched every benchmark result; logs are under
+`.dart_tool/improvement_loop/cycle14-cleanup/final-full23/`.

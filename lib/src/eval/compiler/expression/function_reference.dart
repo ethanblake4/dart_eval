@@ -29,7 +29,7 @@ Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
         denotation.declaration is GenericTypeAlias) {
       final alias = denotation.declaration! as GenericTypeAlias;
       final type = ctx.typeFactory.resolveTypeAlias(
-        ctx.typeAliasFiles[alias] ?? ctx.library,
+        ctx.library,
         alias,
         typeArgs: typeArguments,
       );

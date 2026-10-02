@@ -729,8 +729,9 @@ class Runtime {
           if (named.isNotEmpty) '{${named.join(', ')}}',
         ];
         final typeParameters = count == 0 ? '' : '<${generics.join(', ')}>';
-        return '$typeParameters(${parameters.join(', ')})'
-            ' => ${format(descriptor[3])}$suffix';
+        final function = '$typeParameters(${parameters.join(', ')})'
+            ' => ${format(descriptor[3])}';
+        return suffix.isEmpty ? function : '($function)$suffix';
       case RuntimeTypeDescriptorTag.typeParameter:
         final names = binders[descriptor[3]];
         if (names != null && descriptor[4] < names.length) {

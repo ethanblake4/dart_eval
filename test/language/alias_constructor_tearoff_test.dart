@@ -2,8 +2,32 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
 import '../sdk_language/sdk_language.dart';
+import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('explicit alias arguments resolve in the importing library', () {
+    final results = runDynamicPackages({
+      'alias_scope': {
+        'alias.dart': '''
+          class Box<T> {
+            Box(this.value);
+            final T value;
+          }
+          typedef Alias<T> = Box<T>;
+        ''',
+        'main.dart': '''
+          import 'alias.dart' as source;
+          class LocalType {}
+          bool main() => source.Alias<LocalType>.new(LocalType()).value
+              is LocalType;
+        ''',
+      },
+    }, entrypoint: 'package:alias_scope/main.dart');
+    for (final (mode, result) in results) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
   test(
     'pinned aliased constructor tear-offs run fresh and serialized',
     () async {
