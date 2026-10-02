@@ -2719,3 +2719,21 @@ contextual and explicit instantiation use the canonical wrapper. The exact
 serialized runtimes, along with 20 focused tests covering nested and
 reordered alias arguments. Its stale expect-fail entry is removed. The fix is
 compiler-only.
+
+## Cycle 14 pass 5: function Type display
+
+Function Type objects printed modern source syntax such as
+`int Function(bool)`, while the pinned Dart SDK prints `(bool) => int`.
+The runtime's cold Type display formatter now uses Dart's arrow notation,
+including optional and named parameter groups. The exact
+`type_object/literal_type_literal_test.dart` fixture, fresh/serialized display
+regression, and override type-inference tests pass. A full 23-driver,
+15-sample AOT sweep against the previous runtime build had matching results
+for every driver, with no consistent timing change. The SDK-full gate found
+four stale expect-fail entries that now pass: this fixture,
+`type_promotion/multiple_runtime_test.dart`,
+`type_promotion/parameter_runtime_test.dart`, and
+`typedef/aliased_type_literal_instantiation_test.dart`; all are removed.
+The clean SDK-full rerun passed with 2481 runnable passes, 183 expected compile
+failures, 73 expected runtime failures, and three skips. The ordinary
+language/runtime gate passed all 986 tests.

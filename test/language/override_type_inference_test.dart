@@ -146,13 +146,13 @@ void main() {
         runtime.runtimeTypeToString(
           (closures[0] as $Value).$getRuntimeType(runtime),
         ),
-        'int Function(num)',
+        '(num) => int',
       );
       expect(
         runtime.runtimeTypeToString(
           (closures[1] as $Value).$getRuntimeType(runtime),
         ),
-        'void Function(int)',
+        '([int]) => void',
       );
     }
   });

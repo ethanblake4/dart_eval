@@ -719,15 +719,18 @@ class Runtime {
         final named = [
           for (var i = offset + descriptor[5]; i < descriptor.length; i += 3)
             '${descriptor[i + 1] == 0 ? '' : 'required '}'
-                '${_constantPool[descriptor[i]]}: '
-                '${format(descriptor[i + 2])}',
+                '${format(descriptor[i + 2])} ${_constantPool[descriptor[i]]}',
         ];
-        if (count > 0) {
-          return '<${generics.join(', ')}>(${[...positional, ...named].join(', ')})'
-              ' => ${format(descriptor[3])}$suffix';
-        }
-        return '${format(descriptor[3])} '
-            'Function(${[...positional, ...named].join(', ')})$suffix';
+        final required = positional.take(descriptor[4]);
+        final optional = positional.skip(descriptor[4]);
+        final parameters = [
+          ...required,
+          if (optional.isNotEmpty) '[${optional.join(', ')}]',
+          if (named.isNotEmpty) '{${named.join(', ')}}',
+        ];
+        final typeParameters = count == 0 ? '' : '<${generics.join(', ')}>';
+        return '$typeParameters(${parameters.join(', ')})'
+            ' => ${format(descriptor[3])}$suffix';
       case RuntimeTypeDescriptorTag.typeParameter:
         final names = binders[descriptor[3]];
         if (names != null && descriptor[4] < names.length) {
