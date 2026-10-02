@@ -31,13 +31,17 @@ void main() {
         }),
       );
       expect(
-        (runtime.invokeTypedObject(instance, 'add', 1, $int(5), null) as $int).$value,
+        (runtime.invokeTypedObject(instance, 'add', 1, $int(5), null) as $int)
+            .$value,
         12,
       );
       expect((instance.$getProperty(runtime, 'value') as $int).$value, 12);
       instance.$setProperty(runtime, 'value', $int(19));
       expect((instance.getProperty('value') as $int).$value, 19);
-      expect(identical(instance.invoke('echo', 1, instance, null), instance), isTrue);
+      expect(
+        identical(instance.invoke('echo', 1, instance, null), instance),
+        isTrue,
+      );
     },
   );
 
@@ -82,7 +86,10 @@ void main() {
     final boxed = $int(42);
     expect(receiver, isA<$Instance>());
     expect(identical(receiver.invoke('echo', 1, boxed, null), boxed), isTrue);
-    expect(identical(receiver.invoke('echo', 1, receiver, null), receiver), isTrue);
+    expect(
+      identical(receiver.invoke('echo', 1, receiver, null), receiver),
+      isTrue,
+    );
     expect(identical(TypedInterop.boxExternal(receiver), receiver), isTrue);
     expect(identical(TypedInterop.exportExternal(receiver), receiver), isTrue);
     expect(() => receiver.invoke('echo', 0, null, null), throwsArgumentError);
@@ -120,7 +127,10 @@ void main() {
     );
     final method = TypedInterop.getProperty(null, receiver, 'echo');
     final value = $String('kept boxed');
-    expect(identical(TypedInterop.call(null, method, 1, value, null), value), isTrue);
+    expect(
+      identical(TypedInterop.call(null, method, 1, value, null), value),
+      isTrue,
+    );
     expect(TypedInterop.equals(null, receiver, receiver), isTrue);
     expect(
       TypedInterop.equals(null, receiver, TypedInstance(receiver.program, 0)),
@@ -142,6 +152,15 @@ void main() {
     );
     final inherited = root.resolve(TypedMemberKind.method, 'echo');
     expect(identical(inherited!.receiver, base), isTrue);
+    expect(root.resolve(TypedMemberKind.getter, 'value'), isNotNull);
+    expect(
+      identical(root.resolve(TypedMemberKind.method, 'self'), target),
+      isTrue,
+    );
+    expect(
+      identical(root.resolve(TypedMemberKind.method, 'echo'), inherited),
+      isTrue,
+    );
     expect((base.invoke('self', 0, null, null) as $int).$value, 73);
     expect(TypedInterop.equals(null, root, base), isTrue);
   });

@@ -2232,3 +2232,36 @@ the full 23-driver AOT sweep compared the current candidate against the saved
 cycle 8 cleanup executable before commit. All 22 execution checksums matched;
 the compiler driver completed separately. Results are under
 `.dart_tool/improvement_loop/cycle9-pass5/full23-aot/`.
+
+## Cycle 9 runtime performance pass
+
+The typed instance member cache was allocating two maps for each newly
+constructed receiver even when that receiver used only a few methods. A
+32-handler record-processing benchmark exposed that cost. Typed instances now
+retain the first two resolved members in inline slots and allocate the member
+maps only when a third distinct member is used. The slots preserve member
+identity, including base views of derived objects, and are copied into the map
+at promotion. Bytecode, calling conventions, boxing and the interpreter loop
+are unchanged.
+
+Several alternatives were measured and reverted: lazily creating the original
+map, inlining `TypedDispatch.resolve`, and a weak call-site cache. Each lost
+throughput or gave no stable benefit on the rotating-handler benchmark. Removing
+member caching entirely improved that benchmark but slowed repeated-receiver
+dynamic calls by roughly 25–30%, so the two-slot design keeps both patterns
+fast.
+
+The paired 15-sample AOT pilot used ABBA/BAAB ordering and matched all
+checksums. The median of four process medians moved from about 20.3 to 17.4 ms
+for one handler (-14.1%) and 24.8 to 22.2 ms for 32 handlers (-10.8%) over
+30,000 records. Repeated-receiver dynamic calls also improved in that pilot;
+the stable-receiver row fell about 12.6% and alternating receivers about 8.2%.
+Evidence is under `.dart_tool/improvement_loop/cycle9-performance/`.
+The final ordinary language and runtime suites pass all 943 tests, including
+the base-view member-identity regression. SDK-full retains 2,443 actual passes,
+199 expected compile errors, 95 expected runtime failures, and three reported
+skips. Scoped analysis is clean. The final 23-driver AOT sweep on the exact
+candidate matches all 22 execution checksums. Its short overflow-call and
+protected-no-throw rows varied; longer, 15-sample ABBA/BAAB repeats put the
+overflow call near 21–22 ms on both sides and handled throws near 114 ms.
+Polymorphic calls improved from roughly 14.2 to 12.9 ms in that repeat.

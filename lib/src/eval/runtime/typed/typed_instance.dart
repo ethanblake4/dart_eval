@@ -89,7 +89,13 @@ final class TypedInstance implements $Instance {
   final List<Object?> values;
   TypedInstance? _dispatchRoot;
   final int? runtimeTypeId;
-  final _members = <TypedMemberKind, Map<String, TypedMember?>>{};
+  Map<TypedMemberKind, Map<String, TypedMember?>>? _members;
+  TypedMemberKind? _firstMemberKind;
+  String? _firstMemberKey;
+  TypedMember? _firstMember;
+  TypedMemberKind? _secondMemberKind;
+  String? _secondMemberKey;
+  TypedMember? _secondMember;
 
   // Single-entry memo for $getRuntimeType, keyed on the runtime and the
   // dispatch root identity (the root can change when a subclass instance
@@ -121,10 +127,58 @@ final class TypedInstance implements $Instance {
     String callerLibrary = '',
   }) {
     final root = dispatchRoot;
-    final cache = root._members[kind] ??= {};
     final cacheKey = name.startsWith('_') ? '$callerLibrary::$name' : name;
-    final cached = cache[cacheKey];
-    if (cached != null || cache.containsKey(cacheKey)) return cached;
+    if (root._members case final members?) {
+      final cache = members[kind] ??= {};
+      final cached = cache[cacheKey];
+      if (cached != null || cache.containsKey(cacheKey)) return cached;
+      return cache[cacheKey] = _resolveUncached(
+        kind,
+        name,
+        callerLibrary: callerLibrary,
+      );
+    }
+    if (root._firstMemberKind == kind && root._firstMemberKey == cacheKey) {
+      return root._firstMember;
+    }
+    if (root._secondMemberKind == kind && root._secondMemberKey == cacheKey) {
+      return root._secondMember;
+    }
+    final member = _resolveUncached(kind, name, callerLibrary: callerLibrary);
+    if (root._firstMemberKind == null) {
+      root._firstMemberKind = kind;
+      root._firstMemberKey = cacheKey;
+      root._firstMember = member;
+    } else if (root._secondMemberKind == null) {
+      root._secondMemberKind = kind;
+      root._secondMemberKey = cacheKey;
+      root._secondMember = member;
+    } else {
+      final members = <TypedMemberKind, Map<String, TypedMember?>>{};
+      members[root._firstMemberKind!] = {
+        root._firstMemberKey!: root._firstMember,
+      };
+      (members[root._secondMemberKind!] ??= {})[root._secondMemberKey!] =
+          root._secondMember;
+      (members[kind] ??= {})[cacheKey] = member;
+      root._members = members;
+      root._firstMemberKind = null;
+      root._firstMemberKey = null;
+      root._firstMember = null;
+      root._secondMemberKind = null;
+      root._secondMemberKey = null;
+      root._secondMember = null;
+    }
+    return member;
+  }
+
+  /// Lookup before creating a cache for short-lived receivers.
+  TypedMember? _resolveUncached(
+    TypedMemberKind kind,
+    String name, {
+    String callerLibrary = '',
+  }) {
+    final root = dispatchRoot;
     var owner = root;
     while (true) {
       final members = switch (kind) {
@@ -139,10 +193,10 @@ final class TypedInstance implements $Instance {
                     : null)
           : members[name];
       if (function != null) {
-        return cache[cacheKey] = TypedMember(owner, function);
+        return TypedMember(owner, function);
       }
       final parent = owner.superclass;
-      if (parent is! TypedInstance) return cache[cacheKey] = null;
+      if (parent is! TypedInstance) return null;
       owner = parent;
     }
   }
