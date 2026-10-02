@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 135;
+  static const version = 136;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -288,6 +288,11 @@ abstract final class TypedCodec {
       members(type.methods);
       members(type.getters);
       members(type.setters);
+      u32(type.methodRuntimeTypes.length);
+      for (final entry in type.methodRuntimeTypes.entries) {
+        u32(entry.key);
+        u32(entry.value);
+      }
     }
     for (final site in program.callSites) {
       string(site.name);
@@ -462,13 +467,27 @@ abstract final class TypedCodec {
       return values;
     }
 
+    Map<int, int> methodRuntimeTypes() {
+      final count = u32();
+      require(count * 8);
+      final values = <int, int>{};
+      for (var i = 0; i < count; i++) {
+        final function = u32();
+        if (values.containsKey(function)) {
+          throw const FormatException('Duplicate typed method runtime type');
+        }
+        values[function] = u32();
+      }
+      return values;
+    }
+
     List<String> callSiteStrings() {
       final count = u32();
       return List.generate(count, (_) => string(), growable: false);
     }
 
     require(
-      classCount * 28 +
+      classCount * 32 +
           callSiteCount * 28 +
           exportCount * 20 +
           externalCallCount * 12 +
@@ -494,6 +513,7 @@ abstract final class TypedCodec {
           methods: members(),
           getters: members(),
           setters: members(),
+          methodRuntimeTypes: methodRuntimeTypes(),
         ),
       );
     }

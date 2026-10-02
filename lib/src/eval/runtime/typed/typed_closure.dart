@@ -33,6 +33,7 @@ final class TypedClosure extends EvalFunction {
     this.definingTypeEnvironmentReceiver,
     List<int> definingTypeArguments, [
     this.definingTypeEnvironment,
+    this._runtimeTypeIdOverride,
   ]) : definingTypeArguments = List.unmodifiable(definingTypeArguments),
        function = program.functions[descriptor.functionId];
 
@@ -44,6 +45,7 @@ final class TypedClosure extends EvalFunction {
   final Object? definingTypeEnvironmentReceiver;
   final List<int> definingTypeArguments;
   final TypedTypeEnvironment? definingTypeEnvironment;
+  final int? _runtimeTypeIdOverride;
   int? _resolvedRuntimeTypeId;
   List<int>? _resolvedDefaultTypeArguments;
   Runtime? _defaultTypeRuntime;
@@ -152,6 +154,7 @@ final class TypedClosure extends EvalFunction {
     TypedClosureDescriptor descriptor,
     Object receiver, {
     Runtime? runtime,
+    int? runtimeTypeId,
   }) => TypedClosure._(
     program,
     descriptor,
@@ -159,6 +162,8 @@ final class TypedClosure extends EvalFunction {
     runtime,
     receiver,
     const [],
+    null,
+    runtimeTypeId,
   );
   static final _defaultArguments = Expando<List<$Value?>>();
 
@@ -865,7 +870,7 @@ final class TypedClosure extends EvalFunction {
 
   int _resolveRuntimeType(Runtime runtime) {
     return runtime.resolveTypedEnvironmentType(
-      descriptor.runtimeTypeId,
+      _runtimeTypeIdOverride ?? descriptor.runtimeTypeId,
       actualOwnerType: _typeEnvironmentOwnerType(runtime),
       typeEnvironment: definingTypeEnvironment,
       // Legacy callers without owner metadata retain positional lookup.

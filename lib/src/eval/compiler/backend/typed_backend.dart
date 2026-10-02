@@ -440,6 +440,72 @@ class TypedBackend {
         );
       }
     }
+    // Inherited bodies share a function id, but an implementing subclass can
+    // contribute covariance that changes its bound method's runtime signature.
+    final boundSignatures = <int, Set<int>>{};
+    for (final descriptor in _closures) {
+      if (descriptor.boundReceiver) {
+        boundSignatures
+            .putIfAbsent(descriptor.functionId, () => <int>{})
+            .add(descriptor.runtimeTypeId);
+      }
+    }
+    for (
+      var i = 0;
+      boundSignatures.isNotEmpty && i < classAllocations.length;
+      i++
+    ) {
+      final allocation = classAllocations[i];
+      final type = classes[i];
+      final overrides = <int, int>{};
+      final receiverType =
+          context.visibleTypes[allocation.library]?[allocation.name];
+      final methods = <String, int>{};
+      if (receiverType != null) {
+        for (final owner in [
+          receiverType,
+          ...context.typeSystem.superclassChain(receiverType),
+        ]) {
+          final declared =
+              context.instanceDeclarationPositions[owner.file]?[owner
+                  .name]?[MemberKind.method];
+          if (declared == null) continue;
+          for (final entry in declared.entries) {
+            methods.putIfAbsent(entry.key, () => entry.value);
+          }
+        }
+      }
+      for (final entry in methods.entries) {
+        final id = entry.value;
+        if (id < 0) continue;
+        final functionId = indices[id]!;
+        final signatures = boundSignatures[functionId];
+        if (signatures == null) continue;
+        final signature = context.memberLookup.tearOffRuntimeSignature(
+          receiverType,
+          entry.key,
+          MemberKind.method,
+          context.functionRuntimeTypes[id] ?? CoreTypes.function.ref(context),
+          context.functionParameters[id] ?? const <FormalParameter>[],
+          context.functionParameterTypes[id],
+        );
+        final runtimeTypeId = context.runtimeTypes.idOf(signature);
+        if (signatures.any((id) => id != runtimeTypeId)) {
+          overrides[functionId] = runtimeTypeId;
+        }
+      }
+      if (overrides.isEmpty) continue;
+      classes[i] = TypedClass(
+        type.name,
+        library: type.library,
+        valueCount: type.valueCount,
+        hasBridgeCallMethod: type.hasBridgeCallMethod,
+        methods: type.methods,
+        getters: type.getters,
+        setters: type.setters,
+        methodRuntimeTypes: overrides,
+      );
+    }
     final bytes = BytesBuilder();
     final functions = <TypedFunction>[];
     for (var index = 0; index < compiled.length; index++) {

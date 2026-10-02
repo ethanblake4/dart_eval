@@ -48,6 +48,7 @@ class TypedProgram {
              library: type.library,
              valueCount: type.valueCount,
              hasBridgeCallMethod: type.hasBridgeCallMethod,
+             methodRuntimeTypes: type.methodRuntimeTypes,
              methods: type.methods,
              getters: type.getters,
              setters: type.setters,
@@ -170,6 +171,9 @@ class TypedProgram {
     }
     for (final call in closureCalls) {
       yield* call.typeArguments;
+    }
+    for (final type in classes) {
+      yield* type.methodRuntimeTypes.values;
     }
     for (final site in callSites) {
       yield* site.typeArguments;
@@ -302,6 +306,13 @@ class TypedProgram {
                   function.argumentKinds.length != 2)) {
             throw const FormatException('Invalid typed member signature');
           }
+        }
+      }
+    }
+    for (final type in classes) {
+      for (final entry in type.methodRuntimeTypes.entries) {
+        if (entry.key < 0 || entry.key >= functions.length || entry.value < 0) {
+          throw const FormatException('Invalid typed method runtime type');
         }
       }
     }

@@ -2500,3 +2500,23 @@ while `var` inference and an explicit `Map<String, int>` context remain
 precise. A native Dart witness, the exact `map/literal7_test.dart` fixture,
 and a fresh/serialized regression pass. The stale expect-fail entry was
 removed. This compiler-only change adds no runtime checks or bytecode.
+
+## Cycle 12 pass 2: forwarding method tear-offs
+
+An inherited method body can have a wider bound tear-off signature when its
+receiver implements a covariant interface. One closure descriptor was shared
+by the base and implementing classes, so the latter kept the base signature.
+The backend now emits sparse receiver-specific signature IDs where they
+differ. A bound `TypedMember` selects the receiver's ID; lexical `super`
+tear-offs keep their declaring signature. The new metadata is encoded in
+typed programs (codec version 136). Ordinary method dispatch and the
+interpreter loop are unchanged.
+
+Both forwarding-stub SDK fixtures and two related `regress31596` fixtures now
+pass, so all four stale expect-fail entries were removed. Fresh/serialized
+regressions cover generic and explicit interfaces, named arguments, sibling
+classes, allocation order, and `super` tear-offs. SDK-full passed with 2463
+actual passes, 192 expected compile failures, 82 expected runtime failures,
+and three skips. All 966 ordinary language/runtime and new closure tests
+passed. The final 23-driver AOT sweep matched all 22 execution checksums;
+measurements are under `.dart_tool/improvement_loop/cycle12-pass2/full23-aot/`.

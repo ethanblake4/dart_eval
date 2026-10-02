@@ -575,6 +575,8 @@ final class TypedMember extends EvalFunction {
       descriptor,
       receiver,
       runtime: receiver.runtime,
+      runtimeTypeId:
+          receiver.dispatchRoot.descriptor.methodRuntimeTypes[functionId],
     );
   }
 

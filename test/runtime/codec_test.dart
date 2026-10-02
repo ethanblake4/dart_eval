@@ -794,12 +794,14 @@ void main() {
 
   test('codec preserves immutable classes, call sites and result kinds', () {
     final methods = <String, int>{'read': 0};
+    final methodRuntimeTypes = <int, int>{0: 17};
     final classes = [
       TypedClass(
         'Counter',
         library: 'package:test/counter.dart',
         valueCount: 2,
         methods: methods,
+        methodRuntimeTypes: methodRuntimeTypes,
       ),
     ];
     final sites = [const TypedCallSite('read', argumentCount: 0)];
@@ -812,6 +814,7 @@ void main() {
       ],
     );
     methods.clear();
+    methodRuntimeTypes.clear();
     classes.clear();
     sites.clear();
     final restored = TypedProgram.read(p.write().buffer);
@@ -819,6 +822,11 @@ void main() {
     expect(restored.classes.single.library, 'package:test/counter.dart');
     expect(restored.classes.single.valueCount, 2);
     expect(restored.classes.single.methods, {'read': 0});
+    expect(restored.classes.single.methodRuntimeTypes, {0: 17});
+    expect(
+      () => restored.classes.single.methodRuntimeTypes.clear(),
+      throwsUnsupportedError,
+    );
     expect(restored.callSites.single.name, 'read');
     expect(restored.callSites.single.argumentCount, 0);
     expect(restored.callSites.single.kind, TypedMemberKind.method);
@@ -891,6 +899,18 @@ void main() {
       TypedClass('C', library: 'test', valueCount: 65537),
       TypedClass('C', library: 'test', valueCount: 0, methods: {'m': 1}),
       TypedClass('C', library: 'test', valueCount: 0, setters: {'m': 0}),
+      TypedClass(
+        'C',
+        library: 'test',
+        valueCount: 0,
+        methodRuntimeTypes: {1: 0},
+      ),
+      TypedClass(
+        'C',
+        library: 'test',
+        valueCount: 0,
+        methodRuntimeTypes: {0: -1},
+      ),
     ]) {
       expect(() => program(classes: [type]), throwsFormatException);
     }
