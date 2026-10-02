@@ -205,8 +205,6 @@ expect_fail:
   - path: 'inference_update_2/promotion_makes_new_extension_available_via_non_nullability_test.dart'
   - path: 'inference_using_bounds/restricting_choices_using_bounds_test.dart'
   - path: 'interceptor/interceptor_test.dart'
-  - path: 'lazy/static3_test.dart'
-  - path: 'lazy/static8_test.dart'
   - path: 'library/env_test.dart'
   - path: 'library/juxtaposition_test.dart'
   - path: 'library/library5_test.dart'

@@ -25,9 +25,6 @@ final class TypedGlobalState {
   @pragma('vm:never-inline')
   Object? _initialize(int index) {
     final descriptor = program.globals[index];
-    if (_states[index] == 1) {
-      throw StateError('Cyclic initialization of global ${descriptor.name}');
-    }
     if (descriptor.initializerFunction < 0) {
       if (descriptor.isLate) {
         throw StateError('Global ${descriptor.name} has not been initialized');
@@ -42,6 +39,13 @@ final class TypedGlobalState {
         entryFunction: descriptor.initializerFunction,
         runtime: runtime,
       );
+      // Recursive evaluation may have initialized a final global already.
+      // Mutable globals instead retain the outermost initializer's result.
+      if (descriptor.isFinal && _states[index] == 2) {
+        throw StateError(
+          'Global ${descriptor.name} has already been initialized',
+        );
+      }
       values[index] = value;
       _states[index] = 2;
       return value;

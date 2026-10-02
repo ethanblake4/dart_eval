@@ -2397,3 +2397,16 @@ String patterns still use the host split path; guest patterns now invoke
 the expected `RangeError` for a malformed match range. The exact SDK fixture
 and a fresh/serialized regression passed, and the stale `string/split_test`
 expect-fail entry was removed.
+
+## Cycle 11 pass 2: recursive global initialization
+
+The typed global state rejected every recursive initializer call. Dart permits
+bounded reentry for mutable globals; the outer initializer writes its eventual
+result. A final global instead rejects the outer write when an inner call has
+already stored a value. The state helper now follows those rules, with no
+change to the initialized-global load path. Native Dart witnesses, direct and
+serialized global regressions, and `lazy/static3_test.dart` pass. SDK-full also
+showed `lazy/static8_test.dart` passing; both stale expect-fail entries were
+removed. The full 23-driver AOT sweep completed with all
+22 execution checksums matching the previous candidate; measurements are in
+`.dart_tool/improvement_loop/cycle11-pass2/full23-aot/`.

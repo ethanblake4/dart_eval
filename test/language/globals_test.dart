@@ -127,19 +127,45 @@ void main() {
       },
     );
     test(
-      'cyclic initialization throws and can retry after a write, encoded=$encoded',
+      'recursive final initialization fails after the inner store, encoded=$encoded',
       () {
         final runtime = Runtime.ofProgram(
-          program('''int first = second + 1;
-        int second = first + 1;
-        int main() => first; void repair() { second = 4; }
+          program('''int depth = 0;
+        final int value = ++depth > 3 ? depth : value + 1;
+        int lateDepth = 0;
+        late final int deferred = ++lateDepth > 3 ? lateDepth : deferred + 1;
+        int main() => value; int calls() => depth;
+        int lateMain() => deferred; int lateCalls() => lateDepth;
       '''),
         );
         expect(() => runtime.executeLib(_library, 'main'), throwsA(anything));
-        runtime.executeLib(_library, 'repair');
-        expect(runtime.executeLib(_library, 'main'), 5);
+        expect(runtime.executeLib(_library, 'calls'), 4);
+        expect(runtime.executeLib(_library, 'main'), 4);
+        expect(
+          () => runtime.executeLib(_library, 'lateMain'),
+          throwsA(anything),
+        );
+        expect(runtime.executeLib(_library, 'lateCalls'), 4);
+        expect(runtime.executeLib(_library, 'lateMain'), 4);
       },
     );
+    test('mutable globals re-enter their initializer, encoded=$encoded', () {
+      final runtime = Runtime.ofProgram(
+        program('''int depth = 0;
+        int value = ++depth > 3 ? depth : value + 1;
+        int lateDepth = 0;
+        late int deferred = ++lateDepth > 3 ? lateDepth : deferred + 1;
+        int main() => value; int calls() => depth;
+        int lateMain() => deferred; int lateCalls() => lateDepth;
+      '''),
+      );
+      expect(runtime.executeLib(_library, 'main'), 7);
+      expect(runtime.executeLib(_library, 'calls'), 4);
+      expect(runtime.executeLib(_library, 'lateMain'), 7);
+      expect(runtime.executeLib(_library, 'lateCalls'), 4);
+      expect(runtime.executeLib(_library, 'main'), 7);
+      expect(runtime.executeLib(_library, 'calls'), 4);
+    });
     test(
       'failed initializer retries without an explicit slot write, encoded=$encoded',
       () {
