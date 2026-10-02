@@ -2387,3 +2387,13 @@ These are compiler-only refactors; no runtime or generated opcode changed.
 Focused tests and scoped analysis passed. SDK-full remained at 2451 actual
 passes, 194 expected compile failures, 92 expected runtime failures, and three
 skips; all 951 ordinary language and runtime tests passed.
+
+## Cycle 11 pass 1: guest patterns in String.split
+
+The String bridge cast every split pattern to `$String`, so a guest class
+implementing `Pattern` threw a type error before its matches were read.
+String patterns still use the host split path; guest patterns now invoke
+`allMatches` and apply the SDK's checked substring loop. This also surfaces
+the expected `RangeError` for a malformed match range. The exact SDK fixture
+and a fresh/serialized regression passed, and the stale `string/split_test`
+expect-fail entry was removed.

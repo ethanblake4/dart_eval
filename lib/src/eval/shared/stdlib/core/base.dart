@@ -1,5 +1,7 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
@@ -1297,10 +1299,63 @@ class $String implements $Instance {
     Object? c,
   ) {
     target as $String;
-    final pattern = (r as $Value?) as $String;
+    final pattern = r as $Value;
+    if (pattern is TypedInstance) {
+      return $List.wrap(_splitGuestPattern(runtime, target.$value, pattern));
+    }
+    final hostPattern = pattern is $String
+        ? pattern.$value
+        : pattern.$reified as Pattern;
     return $List.wrap(
-      target.$value.split(pattern.$value).map((e) => $String(e)).toList(),
+      target.$value.split(hostPattern).map((e) => $String(e)).toList(),
     );
+  }
+
+  static List<$String> _splitGuestPattern(
+    Runtime runtime,
+    String source,
+    $Value pattern,
+  ) {
+    final matches =
+        runtime.invokeTypedObject(
+              pattern,
+              'allMatches',
+              1,
+              $String(source),
+              null,
+            )!
+            as $Instance;
+    final iterator = matches.$getProperty(runtime, 'iterator')! as $Instance;
+    bool moveNext() =>
+        (runtime.invokeTypedObject(iterator, 'moveNext', 0, null, null)
+                as $bool)
+            .$value;
+
+    final length = source.length;
+    if (length == 0 && moveNext()) return [];
+    final result = <$String>[];
+    var startIndex = 0;
+    var previousIndex = 0;
+    while (true) {
+      if (startIndex == length || !moveNext()) {
+        result.add($String(source.substring(previousIndex)));
+        break;
+      }
+      final match = iterator.$getProperty(runtime, 'current')! as $Instance;
+      final matchStart = (match.$getProperty(runtime, 'start') as $int).$value;
+      if (matchStart == length) {
+        result.add($String(source.substring(previousIndex)));
+        break;
+      }
+      final matchEnd = (match.$getProperty(runtime, 'end') as $int).$value;
+      if (startIndex == matchEnd && matchEnd == previousIndex) {
+        ++startIndex;
+        continue;
+      }
+      result.add($String(source.substring(previousIndex, matchStart)));
+      startIndex = previousIndex = matchEnd;
+    }
+    return result;
   }
 
   static const $Function __substring = $Function(_substring);

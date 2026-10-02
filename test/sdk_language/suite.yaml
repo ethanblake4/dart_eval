@@ -312,7 +312,6 @@ expect_fail:
   - path: 'static_weak_reference_function_apply_test.dart'
   - path: 'static_weak_reference_test.dart'
   - path: 'string/interpolation_and_buffer_test.dart'
-  - path: 'string/split_test.dart'
   - path: 'subtyping_static/type_parameter_vs_futureor_test.dart'
   - path: 'symbol/private_symbol_literal_test.dart'
   - path: 'sync_star/yield_star_downwards_inference_test.dart'
