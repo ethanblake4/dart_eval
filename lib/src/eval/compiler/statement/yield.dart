@@ -34,7 +34,17 @@ StatementInfo compileYield(
   final expectedType = delegated
       ? container.ref(ctx).copyWith(arguments: [elementType])
       : elementType;
-  final value = compileExpression(statement.expression, ctx, expectedType);
+  // `yield*` has no downward context when the generator's return context
+  // is dynamic or its element context is still unknown.
+  final yieldContext =
+      delegated &&
+          (expectedReturnType == null ||
+              expectedReturnType.isSpec(CoreTypes.dynamic) ||
+              expectedReturnType.hasSchemaHoles ||
+              expectedReturnType.hasInferenceVariables)
+      ? null
+      : expectedType;
+  final value = compileExpression(statement.expression, ctx, yieldContext);
   if (value.type.isSpec(CoreTypes.never)) return markNeverTerminates(ctx);
 
   if (node.parent is FunctionExpression &&
@@ -48,7 +58,7 @@ StatementInfo compileYield(
   final boxed = convertForAssignment(
     ctx,
     value,
-    expectedType,
+    ctx.typeSystem.closeSchemaHoles(expectedType),
     source: statement.expression,
     description: 'Cannot yield ${value.type} (expected: $expectedType)',
   ).boxIfNeeded(ctx);

@@ -117,6 +117,44 @@ Variable compileFunctionExpression(
                     as TypeParameterTypeRef)
                 .parameter,
         ];
+        var reboundContext = bound;
+        // A generic context binds its own parameters. Rebind its component
+        // types to this closure before using them to compile the body.
+        if (bound case FunctionTypeRef context
+            when typeParameters.isNotEmpty &&
+                context.signature.typeParameters.length ==
+                    typeParameters.length) {
+          final signature = context.signature;
+          final parameters = ctx.functionTypeParameters[fnOffset]!;
+          final substitution = Substitution.of({
+            for (var i = 0; i < parameters.length; i++)
+              signature.typeParameters[i]: TypeParameterTypeRef(parameters[i]),
+          });
+          reboundContext = context.copyWith(
+            signature: FunctionSignature(
+              typeParameters: parameters,
+              positional: [
+                for (final type in signature.positional)
+                  type.substituteTypeParameters(substitution),
+              ],
+              requiredPositional: signature.requiredPositional,
+              named: {
+                for (final entry in signature.named.entries)
+                  entry.key: (
+                    type: entry.value.type.substituteTypeParameters(
+                      substitution,
+                    ),
+                    required: entry.value.required,
+                  ),
+              },
+              returnType: signature.returnType.substituteTypeParameters(
+                substitution,
+              ),
+            ),
+          );
+        }
+
+        final bodyBound = reboundContext;
 
         ctx.locals = [];
         ctx.exceptionDepth = 0;
@@ -172,8 +210,8 @@ Variable compileFunctionExpression(
           ),
           _ => null,
         };
-        final contextualReturn = bound is FunctionTypeRef
-            ? bound.signature.returnType
+        final contextualReturn = bodyBound is FunctionTypeRef
+            ? bodyBound.signature.returnType
             : null;
         final boundReturnType = contextualReturn?.isTypeParameter == true
             ? declaredClosureReturnType
@@ -200,10 +238,10 @@ Variable compileFunctionExpression(
               ctx.library,
               p,
             );
-          } else if (bound is FunctionTypeRef) {
+          } else if (bodyBound is FunctionTypeRef) {
             type = p.isNamed
-                ? bound.signature.named[p.name!.lexeme]?.type ?? type
-                : bound.signature.positional.elementAtOrNull(i) ?? type;
+                ? bodyBound.signature.named[p.name!.lexeme]?.type ?? type
+                : bodyBound.signature.positional.elementAtOrNull(i) ?? type;
             type = ctx.typeSystem.closeSchemaHoles(type);
             // Bottom-type contexts infer Object? for unannotated parameters.
             if (type is! UnknownTypeRef &&

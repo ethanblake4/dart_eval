@@ -2596,3 +2596,16 @@ while preserving source order within each group. The exact `mixin/super_test`
 SDK fixture and nine focused tests, including fresh/serialized field-order
 coverage, pass. Its stale expect-fail entry was removed. This change adds no
 runtime checks or bytecode.
+
+## Cycle 13 pass 2: generator context inference
+
+Generic function literals were compiling their body against the outer
+context's type parameters rather than their own binders. Generator return
+checks now use a rebound contextual signature. Separately, `yield*` no
+longer supplies a downward `Stream<dynamic>` context when the generator
+return is dynamic or still has inference holes; the eventual assignment
+check closes those holes. The exact
+`inference/returning_generator_return_type_test.dart` and
+`async_star/yield_star_downwards_inference_test.dart` SDK fixtures pass in
+fresh and serialized execution, as do 17 focused generator tests. Both stale
+expect-fail entries were removed. These are compiler-only changes.
