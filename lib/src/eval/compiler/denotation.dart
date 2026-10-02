@@ -1,4 +1,5 @@
 import 'helpers/global.dart';
+import 'declaration/enum.dart';
 import 'helpers/deferred_import.dart';
 import 'builtins.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
@@ -1292,6 +1293,10 @@ Denotation resolveIdentifier(
           ctx.library,
           currentDecl,
         );
+        if (name == 'values') {
+          ensureEnumValuesRegistered(ctx, enumType);
+          return GlobalDenotation(enumType.file, '${enumType.name}.values');
+        }
         final gIndex = ctx.enumValueIndices[ctx.library]?[enumType.name]?[name];
         if (gIndex != null) {
           return EnumValueDenotation(enumType, gIndex, name);
@@ -1462,6 +1467,12 @@ Denotation resolveMemberAccess(
       if (!forSet &&
           superclass != null &&
           superclass.isSpec(CoreTypes.enumType)) {
+        if (name == 'values' &&
+            ctx.topLevelDeclarationsMap[type.file]?[type.name]?.declaration
+                is EnumDeclaration) {
+          ensureEnumValuesRegistered(ctx, type);
+          return GlobalDenotation(type.file, '${type.name}.values');
+        }
         final gIndex = ctx.enumValueIndices[type.file]?[type.name]?[name];
         if (gIndex != null) {
           return EnumValueDenotation(type, gIndex, name);

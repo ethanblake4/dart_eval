@@ -220,13 +220,31 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     return CoreTypes.dynamic.ref(ctx);
   }
   if (expression is ListLiteral) {
+    final annotations = expression.typeArguments;
+    if (annotations != null) {
+      return _annotatedCollectionType(
+        ctx,
+        library,
+        CoreTypes.list,
+        annotations,
+      );
+    }
     return _collectionType(ctx, library, CoreTypes.list, expression.elements);
   }
   if (expression is SetOrMapLiteral) {
+    final annotations = expression.typeArguments;
     final isMap =
-        expression.typeArguments?.arguments.length == 2 ||
-        (expression.typeArguments == null && expression.elements.isEmpty) ||
+        annotations?.arguments.length == 2 ||
+        (annotations == null && expression.elements.isEmpty) ||
         expression.elements.any((e) => e is MapLiteralEntry);
+    if (annotations != null) {
+      return _annotatedCollectionType(
+        ctx,
+        library,
+        isMap ? CoreTypes.map : CoreTypes.set,
+        annotations,
+      );
+    }
     if (!isMap) {
       return _collectionType(ctx, library, CoreTypes.set, expression.elements);
     }
@@ -299,6 +317,20 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   }
   return CoreTypes.dynamic.ref(ctx);
 }
+
+TypeRef _annotatedCollectionType(
+  CompilerContext ctx,
+  int library,
+  BridgeTypeSpec core,
+  TypeArgumentList annotations,
+) => core
+    .ref(ctx)
+    .copyWith(
+      arguments: [
+        for (final type in annotations.arguments)
+          TypeRef.fromAnnotation(ctx, library, type),
+      ],
+    );
 
 TypeRef? _constructorTearOffType(
   CompilerContext ctx,

@@ -3,7 +3,11 @@ import '../invocation/binder.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
 import '../member/call_signature.dart';
+import '../helpers/const.dart';
+import '../helpers/global.dart';
+import '../values/value_rep.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/constructor.dart';
@@ -11,6 +15,9 @@ import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import '../invocation/deferred.dart';
 import '../member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/ir/collection.dart';
+import 'package:dart_eval/src/eval/ir/globals.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
@@ -57,8 +64,53 @@ void compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
     _compileEnumValue(ctx, type, clsName, constant, idx);
     idx++;
   }
+  _compileEnumValues(ctx, type);
 
   ctx.currentClass = null;
+}
+
+/// Registers the synthesized const list before its initializer is compiled.
+/// Generic enums use their bounds, independently of the accessing type literal.
+int ensureEnumValuesRegistered(CompilerContext ctx, TypeRef type) {
+  final name = '${type.name}.values';
+  ensureGlobalRegistered(ctx, type.file, name);
+  final index = ctx.topLevelGlobalIndices[type.file]![name]!;
+  final declaration = ctx.types.find(type.file, type.name)!;
+  ctx.topLevelVariableInferredTypes[type.file]![name] = CoreTypes.list
+      .ref(ctx)
+      .copyWith(
+        arguments: [declaration.instantiate(declaration.defaultTypeArguments)],
+      );
+  ctx.globalRepresentations[index] = MachineRepresentation.object;
+  ctx.globalsFinal.add(index);
+  ctx.globalsConst.add(index);
+  ctx.globalNames[index] = name;
+  return index;
+}
+
+void _compileEnumValues(CompilerContext ctx, TypeRef type) {
+  final index = ensureEnumValuesRegistered(ctx, type);
+  final pos = ctx.beginFunction('${type.name}.values*i');
+  ctx.functionSignatures[pos] = const MachineFunctionSignature(
+    [],
+    MachineRepresentation.object,
+  );
+  final listType =
+      ctx.topLevelVariableInferredTypes[type.file]!['${type.name}.values']!;
+  final values = Variable.ssa(
+    ctx,
+    NewList(ctx.svar('enum_values')),
+    listType,
+    rep: ValueRep.nativeList,
+  );
+  for (final entry in ctx.enumValueIndices[type.file]![type.name]!.entries) {
+    final value = ctx.svar(entry.key);
+    ctx.pushOp(LoadGlobal(value, entry.value));
+    ctx.pushOp(ListAppend(values.ssa, value));
+  }
+  final list = internConst(ctx, values, listType).boxIfNeeded(ctx);
+  ctx.runtimeGlobalInitializerMap[index] = pos;
+  ctx.pushOp(Return(list.ssa));
 }
 
 /// Generates the trivial `index`/`name` getter: `return this.<field>`.

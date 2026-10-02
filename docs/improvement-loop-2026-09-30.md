@@ -2146,3 +2146,36 @@ Both pass when selected individually. Their exclusions were removed as well,
 for five removed entries in this pass.
 The final SDK-full rerun passes with 2,433 actual passes, 207 expected compile
 errors, 97 expected runtime failures, and three reported skips.
+
+## Cycle 9 correctness pass 3: collection shape, enums, and global arguments
+
+Collection literals that infer Set or Map from a spread now compile that spread
+inside its original `if` or `for` guard. The compiler changes the allocation
+operation already emitted before the guard when the spread establishes Map
+shape; it emits no extra runtime operations. Both `if` branches contribute
+shape evidence. Fresh and serialized tests cover skipped spreads, evaluation
+order, repeated loop evaluation, and a map entry in the alternate branch.
+
+Source enums now synthesize one const `values` list global in declaration
+order. Qualified, typedef, and bare reads share its identity. Existing
+collection operations and const interning supply the implementation, with no
+runtime change. The new enum test covers generic bounds, enhanced enum
+fields, list identity and immutability. The pinned duplicate enum fixture
+passes, so its stale exclusion is removed. The broader enhanced enum fixture
+still reaches a separate generic enum constant typing failure.
+
+The setter fixtures exposed a top-level inference error: `<dynamic>[Child()]`
+was recorded as `List<Child>`, because global type inference discarded explicit
+collection type arguments. List, Set and Map global literals now preserve those
+arguments. This lets dynamic field writes use their existing runtime type
+checks without adding a new dispatch path. The two setter SDK fixtures pass;
+their stale exclusions are removed. A fresh and serialized regression covers
+all three collection kinds and the runtime field check.
+
+The first full SDK sweep found four more newly passing fixtures: an enum
+`values` equality regression and three tests with top-level `<dynamic>` lists.
+All four pass in a focused rerun, and their stale exclusions are removed.
+SDK-full then passes with 2,440 actual passes, 200 expected compile errors,
+97 expected runtime failures, and three reported skips.
+The ordinary language and runtime suites pass all 937 tests, and scoped
+analysis is clean.

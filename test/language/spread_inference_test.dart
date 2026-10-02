@@ -71,6 +71,44 @@ int main() {
 ''';
 
 void main() {
+  test('guarded spread inference preserves evaluation order', () {
+    final program = Compiler().compile({
+      'spread_inference': {
+        'main.dart': '''
+          int calls = 0;
+          Map<int, int> mapping() { calls++; return {calls: calls}; }
+          Iterable<int> elements() { calls++; return [calls]; }
+          bool condition() { calls += 10; return true; }
+          int main() {
+            final skippedMap = {if (false) ...mapping()};
+            final skippedSet = {for (int i = 0; i < 0; i++) ...elements()};
+            if (calls != 0 || skippedMap.isNotEmpty || skippedSet.isNotEmpty) return -1;
+            final ordered = {if (condition()) ...mapping()};
+            if (calls != 11 || ordered[11] != 11) return -2;
+            final repeated = {for (int i = 0; i < 2; i++) ...elements()};
+            if (calls != 13 || !repeated.contains(12) || !repeated.contains(13)) return -3;
+            dynamic unknown = <int, int>{1: 2};
+            final fromElse = {if (true) ...unknown else 3: 4};
+            if (fromElse[1] != 2 || fromElse is! Map) return -4;
+            final loopScoped = {for (final value in [<int>[7], <int>[8]]) ...value};
+            if (loopScoped.length != 2 || !loopScoped.contains(8)) return -5;
+            final loopMaps = {for (final value in [<int, int>{7: 8}]) ...value};
+            if (loopMaps[7] != 8) return -6;
+            return 0;
+          }
+        ''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib('package:spread_inference/main.dart', 'main'),
+        0,
+      );
+    }
+  });
   test(
     'spread inference views source interfaces and keeps downward context',
     () {

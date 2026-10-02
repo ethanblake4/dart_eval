@@ -74,38 +74,28 @@ Variable compileSetOrMapLiteral(
   // The literal's kind comes from its leaf elements in document order:
   // a `key: value` leaf makes it a Map, an expression leaf a Set, and a
   // literal of only spreads infers from the first spread's type.
-  final leaves = [for (final element in literal.elements) _leafOf(element)];
+  final leaves = [
+    for (final element in literal.elements) ..._leavesOf(element),
+  ];
   final hasEntryLeaf = leaves.any((element) => element is MapLiteralEntry);
   final hasExprLeaf = leaves.any(
     (element) => element is Expression || element is NullAwareElement,
   );
   final firstSpreadElement = leaves.whereType<SpreadElement>().firstOrNull;
-  Variable? firstSpread;
-  if (annotations == null &&
+  final inferFromSpread =
+      annotations == null &&
       !hasEntryLeaf &&
       !hasExprLeaf &&
       !hasMapContext &&
       iterableBound == null &&
-      firstSpreadElement != null) {
-    firstSpread = compileExpression(firstSpreadElement.expression, ctx);
-  }
-  final isMap =
+      firstSpreadElement != null;
+  var isMap =
       explicitValue != null ||
       (annotations == null &&
           (literal.elements.isEmpty
               // An Iterable context selects a Set for a bare `{}`.
               ? iterableBound == null
-              : hasEntryLeaf ||
-                    (!hasExprLeaf &&
-                        (hasMapContext ||
-                            (firstSpread?.type
-                                    .withNullable(false)
-                                    .isAssignableTo(
-                                      ctx,
-                                      CoreTypes.map.ref(ctx),
-                                      forceAllowDynamic: false,
-                                    ) ??
-                                false)))));
+              : hasEntryLeaf || (!hasExprLeaf && hasMapContext)));
   final keyTypes = <TypeRef>{};
   final valueTypes = <TypeRef>{};
   final target = ctx.svar(isMap ? 'map' : 'set');
@@ -116,7 +106,11 @@ Variable compileSetOrMapLiteral(
       if (isMap) explicitValue ?? UnknownTypeRef.instance,
     ],
   );
-  final collection = Variable.ssa(
+  // Keep the allocation before any guards. Its kind is finalized when the
+  // first spread compiles in its own branch, without evaluating it early.
+  final allocationCode = ctx.blockCode;
+  final allocationIndex = allocationCode.length;
+  var collection = Variable.ssa(
     ctx,
     isMap
         ? NewMap(target, constBacking: literal.isConst)
@@ -125,18 +119,53 @@ Variable compileSetOrMapLiteral(
     rep: isMap ? ValueRep.nativeMap : ValueRep.nativeSet,
     facts: ValueFacts(exact: exactCollectionType),
   );
-  for (final element in literal.elements) {
-    final elementResult = _compileElement(
+  CollectionElementResult compileElement(CollectionElement element) {
+    if (element is IfElement) {
+      return compileIfElement(element, ctx, compileElement);
+    }
+    if (element is ForElement) {
+      return compileForElement(element, ctx, compileElement);
+    }
+    Variable? source;
+    if (inferFromSpread && identical(element, firstSpreadElement)) {
+      source = compileExpression(firstSpreadElement.expression, ctx);
+      isMap = source.type
+          .withNullable(false)
+          .isAssignableTo(
+            ctx,
+            CoreTypes.map.ref(ctx),
+            forceAllowDynamic: false,
+          );
+      if (isMap) {
+        final type = CoreTypes.map
+            .ref(ctx)
+            .copyWith(
+              arguments: [UnknownTypeRef.instance, UnknownTypeRef.instance],
+            );
+        collection = collection.copyWith(
+          type: type,
+          rep: ValueRep.nativeMap,
+          facts: ValueFacts(exact: type),
+        );
+        allocationCode[allocationIndex] = NewMap(
+          target,
+          constBacking: literal.isConst,
+        );
+      }
+    }
+    return _compileElement(
       element,
       collection,
       ctx,
       isMap: isMap,
       explicitKey: explicitKey,
       explicitValue: explicitValue,
-      peekedSpread: firstSpreadElement != null && firstSpread != null
-          ? (firstSpreadElement, firstSpread)
-          : null,
+      spreadSource: source,
     );
+  }
+
+  for (final element in literal.elements) {
+    final elementResult = compileElement(element);
     // Abrupt evaluation is separate from bottom-type contributions.
     if (!elementResult.completesNormally) {
       return Variable.never(ctx);
@@ -174,13 +203,18 @@ Variable compileSetOrMapLiteral(
   return literal.isConst ? internConst(ctx, result, result.type) : result;
 }
 
-/// The first leaf of [element] — itself, unless it is an `if`/`for`
-/// element wrapping a nested body.
-CollectionElement _leafOf(CollectionElement element) => switch (element) {
-  IfElement(:final thenElement) => _leafOf(thenElement),
-  ForElement(:final body) => _leafOf(body),
-  _ => element,
-};
+Iterable<CollectionElement> _leavesOf(CollectionElement element) sync* {
+  if (element is IfElement) {
+    yield* _leavesOf(element.thenElement);
+    if (element.elseElement case final alternate?) {
+      yield* _leavesOf(alternate);
+    }
+  } else if (element is ForElement) {
+    yield* _leavesOf(element.body);
+  } else {
+    yield element;
+  }
+}
 
 CollectionElementResult _compileElement(
   CollectionElement element,
@@ -189,7 +223,7 @@ CollectionElementResult _compileElement(
   required bool isMap,
   required TypeRef? explicitKey,
   required TypeRef? explicitValue,
-  (SpreadElement, Variable)? peekedSpread,
+  Variable? spreadSource,
 }) {
   final target = collection.ssa;
   if (element is SpreadElement) {
@@ -200,24 +234,10 @@ CollectionElementResult _compileElement(
         ctx,
         isMap: isMap,
         isSet: !isMap,
-        source: peekedSpread != null && identical(peekedSpread.$1, element)
-            ? peekedSpread.$2
-            : null,
+        source: spreadSource,
       ),
     );
   }
-  CollectionElementResult nested(CollectionElement child) => _compileElement(
-    child,
-    collection,
-    ctx,
-    isMap: isMap,
-    explicitKey: explicitKey,
-    explicitValue: explicitValue,
-    peekedSpread: peekedSpread,
-  );
-  if (element is IfElement) return compileIfElement(element, ctx, nested);
-  if (element is ForElement) return compileForElement(element, ctx, nested);
-
   if (isMap && element is MapLiteralEntry) {
     CollectionElementResult append(Variable key, Variable value) {
       final storedKey = explicitKey == null
