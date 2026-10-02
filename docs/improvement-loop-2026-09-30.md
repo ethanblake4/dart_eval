@@ -2597,6 +2597,13 @@ SDK fixture and nine focused tests, including fresh/serialized field-order
 coverage, pass. Its stale expect-fail entry was removed. This change adds no
 runtime checks or bytecode.
 
+The broad SDK gate exposed a shadowed-field case after reversing the mixin
+layers: the initializer cache used field names, so the mixin's `foo` replaced
+the applying class's `foo`. The cache now keys each declaration separately.
+The exact base-mixin typedef fixture and fresh/serialized shadowing regression
+pass. The unrelated type-object regression fixture also passes in isolation;
+the broad SDK gate is being rerun after this correction.
+
 ## Cycle 13 pass 2: generator context inference
 
 Generic function literals were compiling their body against the outer

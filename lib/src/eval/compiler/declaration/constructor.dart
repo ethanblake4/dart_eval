@@ -749,13 +749,13 @@ Variable _compileFieldDeclarationInitializer(
 /// Evaluates declaration initializers before the superconstructor invocation.
 /// Non-late expressions run even when a constructor supplies another value.
 /// [_compileUnusedFields] stores only the values the constructor has not replaced.
-Map<String, Variable> _evalFieldInitializers(
+Map<VariableDeclaration, Variable> _evalFieldInitializers(
   CompilerContext ctx,
   List<FieldDeclaration> fields,
   Map<ClassMember, int> memberLibraries,
   Declaration? parent,
 ) {
-  final evaluated = <String, Variable>{};
+  final evaluated = <VariableDeclaration, Variable>{};
   // Folded fields retain their storage order, but constructor execution walks
   // from the applying class through the last mixin to the first. Keep source
   // order within each declaration's fields.
@@ -772,7 +772,7 @@ Map<String, Variable> _evalFieldInitializers(
       if (field.initializer == null) continue;
       // Non-late declaration initializers run even when the constructor
       // replaces their value. _compileUnusedFields suppresses that store.
-      evaluated[field.name.lexeme] = _compileFieldDeclarationInitializer(
+      evaluated[field] = _compileFieldDeclarationInitializer(
         ctx,
         fd,
         field,
@@ -790,7 +790,7 @@ void _compileUnusedFields(
   Set<String> usedNames,
   SSA inst,
   int fieldIdx,
-  Map<String, Variable> evaluated,
+  Map<VariableDeclaration, Variable> evaluated,
 ) {
   var fieldIdx0 = fieldIdx;
   for (final fd in fields) {
@@ -801,13 +801,7 @@ void _compileUnusedFields(
           ctx.pushOp(LoadUninitializedField(marker));
           ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, marker));
         } else if (field.initializer != null) {
-          ctx.pushOp(
-            SetPropertyStatic(
-              inst,
-              fieldIdx0,
-              evaluated[field.name.lexeme]!.ssa,
-            ),
-          );
+          ctx.pushOp(SetPropertyStatic(inst, fieldIdx0, evaluated[field]!.ssa));
         }
       }
       fieldIdx0++;

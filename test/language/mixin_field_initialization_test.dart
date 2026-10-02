@@ -3,6 +3,35 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('shadowed mixin fields retain their own initializer values', () {
+    const source = '''
+      String log = '';
+      int record(String name, int value) { log += name; return value; }
+      base mixin BaseMixin {
+        int foo = record('mixin;', 0);
+      }
+      typedef BaseMixinTypeDef = BaseMixin;
+      base class A with BaseMixinTypeDef {
+        int foo = record('class;', 1);
+      }
+      mixin First {
+        int foo = record('first;', 2);
+      }
+      mixin Last {
+        int foo = record('last;', 3);
+      }
+      class Alias = Object with First, Last;
+      bool main() {
+        if (A().foo != 1 || log != 'class;mixin;') return false;
+        log = '';
+        return Alias().foo == 3 && log == 'last;first;';
+      }
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
   test(
     'mixin field initializers follow constructor layers in source order',
     () {
