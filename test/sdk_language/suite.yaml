@@ -209,7 +209,6 @@ expect_fail:
   - path: 'method/external_effect_test.dart'
   - path: 'mixin/class_from_core_library_test.dart'
   - path: 'mixin/super_2_test.dart'
-  - path: 'mixin/super_test.dart'
   - path: 'mixin/with_named_import_test.dart'
   - path: 'mixin_declaration/mixin_declaration_subtype_test.dart'
   - path: 'mixin_declaration/mixin_declaration_syntax_test.dart'

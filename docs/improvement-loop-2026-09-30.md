@@ -2585,3 +2585,14 @@ runtime, and forwarding tear-off tests passed.
 The Astra medium review found one duplicate comment in the hand-maintained
 `Invocation` binding; it is removed. The review found no other actionable
 style, correctness, or performance issues in the cycle 12 changes.
+
+## Cycle 13 pass 1: mixin field initializer order
+
+Folded mixin fields had retained storage order as intended, but their
+initializers ran from the first mixin to the last. Dart's nested constructor
+layers initialize the applying class, then the last mixin through the first,
+then the superclass. The compiler now reverses contiguous declaration groups
+while preserving source order within each group. The exact `mixin/super_test`
+SDK fixture and nine focused tests, including fresh/serialized field-order
+coverage, pass. Its stale expect-fail entry was removed. This change adds no
+runtime checks or bytecode.

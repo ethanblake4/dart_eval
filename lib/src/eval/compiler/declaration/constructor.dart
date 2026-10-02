@@ -756,7 +756,17 @@ Map<String, Variable> _evalFieldInitializers(
   Declaration? parent,
 ) {
   final evaluated = <String, Variable>{};
+  // Folded fields retain their storage order, but constructor execution walks
+  // from the applying class through the last mixin to the first. Keep source
+  // order within each declaration's fields.
+  final layers = <List<FieldDeclaration>>[];
   for (final fd in fields) {
+    if (layers.isEmpty || !identical(layers.last.last.parent, fd.parent)) {
+      layers.add([]);
+    }
+    layers.last.add(fd);
+  }
+  for (final fd in layers.reversed.expand((layer) => layer)) {
     if (fd.fields.isLate) continue;
     for (final field in fd.fields.variables) {
       if (field.initializer == null) continue;
