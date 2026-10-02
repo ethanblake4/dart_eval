@@ -2609,3 +2609,14 @@ check closes those holes. The exact
 `async_star/yield_star_downwards_inference_test.dart` SDK fixtures pass in
 fresh and serialized execution, as do 17 focused generator tests. Both stale
 expect-fail entries were removed. These are compiler-only changes.
+
+## Cycle 13 pass 3: adjacent directive URI literals
+
+The SDK harness skipped dependencies when an import, export, or part URI
+started with an empty string literal and continued with an adjacent literal.
+The compiler already handled the URI; source collection's directive pattern
+required a nonempty first literal. It now accepts an empty one. The exact
+`library/juxtaposition_test.dart` fixture passes in fresh and serialized
+execution, and focused harness tests cover all three directives plus an
+unsupported import. Its stale expect-fail entry was removed. No compiler or
+runtime implementation code changed.

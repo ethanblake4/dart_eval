@@ -439,7 +439,7 @@ class SdkSuite {
   };
 
   static final _directivePattern = RegExp(
-    r'''^\s*(?:import|export|part)\s+(?:deferred\s+)?['"][^'"]+['"][^;]*;''',
+    r'''^\s*(?:import|export|part)\s+(?:deferred\s+)?['"][^'"]*['"][^;]*;''',
     multiLine: true,
   );
 

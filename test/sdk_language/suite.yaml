@@ -200,7 +200,6 @@ expect_fail:
   - path: 'inference_using_bounds/restricting_choices_using_bounds_test.dart'
   - path: 'interceptor/interceptor_test.dart'
   - path: 'library/env_test.dart'
-  - path: 'library/juxtaposition_test.dart'
   - path: 'library/library5_test.dart'
   - path: 'list/list_test.dart'
   - path: 'main/no_main_test.dart'
