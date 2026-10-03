@@ -2035,6 +2035,21 @@ class _LoweringSession {
               ],
               [string, ?argument],
             ),
+          PrimitiveToString(:final input, :final representation) => make(
+            [
+              switch (representation) {
+                MachineRepresentation.integer => 'rIntToStringA',
+                MachineRepresentation.doublePrecision => 'rDoubleToStringF',
+                MachineRepresentation.boolean => 'rBoolToStringE',
+                _ => throw StateError('Invalid primitive string conversion'),
+              },
+            ],
+            [input],
+          ),
+          StringConcat3(:final first, :final second, :final third) => make(
+            ['rStringConcat3SC'],
+            [first, second, third],
+          ),
           StringSubstring(:final string, :final start, :final end) => make(
             ['rStringSubRAB', 'sStringSubSAB', 'cStringSubCAB'],
             [string, start, end],

@@ -259,6 +259,10 @@ abstract final class TypedOp {
   static const callPlain = 222;
   static const callIndexInt = 223;
   static const cNewStringMap = 224;
+  static const rStringConcat3SC = 225;
+  static const rIntToStringA = 226;
+  static const rDoubleToStringF = 227;
+  static const rBoolToStringE = 228;
   static const extendedBase = 256;
   static const callExternal = 256;
   static const rNewBridgeSuperShim = 257;
@@ -663,10 +667,10 @@ abstract final class TypedOp {
     TypedInstruction('callPlain', [], [], TypedImmediate.function, true, false, false, 'callPlain'),
     TypedInstruction('callIndexInt', [6, 0], [], TypedImmediate.callSite, true, false, false, 'callIndexInt'),
     TypedInstruction('cNewStringMap', [], [8], TypedImmediate.none, false, false, false, 'NewStringMap'),
-    TypedInstruction('reserved225', [], [], TypedImmediate.none, false, false, false, 'reserved225'),
-    TypedInstruction('reserved226', [], [], TypedImmediate.none, false, false, false, 'reserved226'),
-    TypedInstruction('reserved227', [], [], TypedImmediate.none, false, false, false, 'reserved227'),
-    TypedInstruction('reserved228', [], [], TypedImmediate.none, false, false, false, 'reserved228'),
+    TypedInstruction('rStringConcat3SC', [6, 7, 8], [6], TypedImmediate.none, true, false, false, 'StringConcat3'),
+    TypedInstruction('rIntToStringA', [0], [6], TypedImmediate.none, false, false, false, 'IntToString'),
+    TypedInstruction('rDoubleToStringF', [2], [6], TypedImmediate.none, false, false, false, 'DoubleToString'),
+    TypedInstruction('rBoolToStringE', [4], [6], TypedImmediate.none, false, false, false, 'BoolToString'),
     TypedInstruction('reserved229', [], [], TypedImmediate.none, false, false, false, 'reserved229'),
     TypedInstruction('reserved230', [], [], TypedImmediate.none, false, false, false, 'reserved230'),
     TypedInstruction('reserved231', [], [], TypedImmediate.none, false, false, false, 'reserved231'),

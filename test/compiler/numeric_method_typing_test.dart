@@ -31,4 +31,48 @@ void main() {
       1,
     );
   });
+
+  test('primitive toString preserves formatting and values across calls', () {
+    final program = Compiler().compile({
+      'numeric_to_string': {
+        'main.dart': r'''
+String format(int integer, double fraction, bool flag) {
+  final integerAlias = integer;
+  final fractionAlias = fraction;
+  final flagAlias = flag;
+  final integerText = integer.toString();
+  final fractionText = fraction.toString();
+  final flagText = flag.toString();
+  return '$integerText|$fractionText|$flagText|' +
+      '${integerAlias.toString()}|${fractionAlias.toString()}|${flagAlias.toString()}';
+}
+''',
+      },
+    });
+    final cases = [
+      (integer: -0x8000000000000000, fraction: -0.0, flag: false),
+      (integer: 0x7fffffffffffffff, fraction: double.nan, flag: true),
+      (integer: 42, fraction: double.infinity, flag: false),
+      (integer: -42, fraction: double.negativeInfinity, flag: true),
+      (integer: 0, fraction: 0.125, flag: false),
+      (integer: 1, fraction: 1e-7, flag: true),
+      (integer: -1, fraction: 1e20, flag: false),
+    ];
+
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      for (final (:integer, :fraction, :flag) in cases) {
+        expect(
+          runtime.executeLib(
+            'package:numeric_to_string/main.dart',
+            'format',
+            arguments: {'integer': integer, 'fraction': fraction, 'flag': flag},
+          ),
+          '$integer|$fraction|$flag|$integer|$fraction|$flag',
+        );
+      }
+    }
+  });
 }

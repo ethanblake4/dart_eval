@@ -4272,3 +4272,53 @@ All three originals and the earlier five trace fixtures pass fresh and serialize
 execution. Twenty-seven exception tests pass, including explicitly supplied prior
 guest traces across a native callback. Analyzer and generator checks are clean.
 The four broad-gate regressions are fixed; final full gates will confirm totals.
+
+### Cycle 26 performance: native primitive formatting and concat triples
+
+The new audit_event_render benchmark renders mixed String/int/bool audit events
+with 6, 12 or 24 fields, short or long messages, and an equivalent StringBuffer
+control. Setup runs before timing; every fresh and serialized sample checks
+against a native checksum. The long 24-field renderer initially contained 48
+binary concatenations and ten primitive-format virtual calls.
+
+Single-consumer concatenation pairs now fuse within a block without crossing
+calls or unknown effects. Exact non-nullable core int, double and bool toString
+use native Dart formatting directly. num, dynamic, nullable, generic and extension
+type receivers retain existing dispatch. Four appended opcodes preserve earlier
+opcode IDs; unpublished codec version 140 covers the new format.
+
+The renderer now has 24 triple concats and no primitive-format virtual calls,
+removing eight BoxInt, two BoxBool and ten UnboxString operations. Its bytecode
+shrinks from the concat-only prototype's 385 bytes to 345; object spills remain
+12, compared with 11 before concat fusion. Concat alone improved long 12/24-field
+events about 10?17% in paired AOT measurements. Native formatting improved the
+concat prototype another 35?40% in representative pairs. Direct final comparisons
+against correctness checkpoint ebd1fd00, 15,000 events and 31 samples, show:
+
+| Long-event width | Fresh old/new ms, forward | Serialized old/new ms, forward | Fresh old/new ms, reverse | Serialized old/new ms, reverse |
+| --- | --- | --- | --- | --- |
+| 6 | 21.138 / 10.597 | 20.529 / 10.338 | 19.681 / 10.047 | 24.825 / 9.863 |
+| 12 | 41.180 / 22.610 | 40.803 / 23.602 | 39.818 / 23.252 | 39.223 / 22.155 |
+| 24 | 95.651 / 51.468 | 108.109 / 53.021 | 100.486 / 50.976 | 96.009 / 48.649 |
+
+Both directions of the full 23-driver, 15-sample AOT sweep match all 22 execution
+checksums. The compiler case emits 1350 versus 1354 bytes. Initial callback and
+dynamic regressions were investigated with 31-sample paired repeats: bound-member
+callbacks shifted +4.2% / -0.3%, and final dynamic repeats at the sweep's 10,000
+iterations showed no subcase over 5% slower in both directions. Some unaffected
+cases still vary a few percent; no universal speedup is claimed. All timing and
+compilation were serialized, with affinity mask 4 during measurement.
+
+ARM64 AOT dispatch inspection uses the runtime_probe snapshot and Capstone because
+the installed AMD llvm-objdump lacks an AArch64 target. Dispatch grows from 52,820
+to 54,012 bytes. The prologue, initial register assignments and 352-byte Dart stack
+frame remain unchanged. Frame-relative memory operands grow from 3213 to 3281
+across the complete function, including new handlers. Triple concat allocates an
+argument array before _StringBase._interpolate: it avoids the intermediate prefix
+String and copy, but fewer total allocations are not proven.
+
+Generator verification, scoped analysis and 27 focused tests pass. Aggregate
+coverage checks native numeric formatting, preserved aliases, conversion order,
+mutable captures, throwing toString, nullable values, Unicode, long text and
+constant identity in fresh and serialized execution. No SDK fixture was copied.
+Artifacts are under .dart_tool/improvement_loop/cycle26/.

@@ -117,6 +117,7 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
     }
   }
   _reuseNativeFieldReads(graph, definitions);
+  _fuseStringConcatenations(graph);
   // Catch edges can leave before a block's last definition has executed.
   // Normal block dominance is sufficient only without these edges.
   if (!operations().any((op) => op is exceptions.EnterTry)) {
@@ -148,6 +149,70 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
         op is memory.LoadInt,
   );
   hoistLoopInvariants(graph);
+}
+
+/// Combines a single-consumer concatenation pair without moving its operands'
+/// evaluations or conversions. Calls and unknown operations end a candidate's
+/// lifetime, and a fused triple cannot become another pair's first operation.
+void _fuseStringConcatenations(cfg.ControlFlowGraph graph) {
+  final hasPair = graph.graph.vertices.any((id) {
+    var count = 0;
+    for (final op in graph[id]!.code) {
+      if (op is StringOperation &&
+          op.operator == StringOperator.concatenate &&
+          ++count == 2) {
+        return true;
+      }
+    }
+    return false;
+  });
+  if (!hasPair) return;
+  final consumers = <cfg.SSA, int>{};
+  for (final id in graph.graph.vertices) {
+    for (final op in graph[id]!.code) {
+      for (final input in op.readsFrom) {
+        consumers.update(input, (count) => count + 1, ifAbsent: () => 1);
+      }
+    }
+  }
+  for (final id in graph.graph.vertices) {
+    final code = graph[id]!.code;
+    final candidates = <cfg.SSA, (int, StringOperation)>{};
+    final removed = <int>{};
+    for (var i = 0; i < code.length; i++) {
+      final op = code[i];
+      if (op is StringOperation &&
+          op.operator == StringOperator.concatenate &&
+          op.argument != null) {
+        final previous = candidates.remove(op.string);
+        if (previous != null &&
+            consumers[op.string] == 1 &&
+            op.argument != op.string) {
+          final (index, first) = previous;
+          code[i] = StringConcat3(
+            op.target,
+            first.string,
+            first.argument!,
+            op.argument!,
+          );
+          removed.add(index);
+        } else {
+          candidates[op.target] = (i, op);
+        }
+      } else if (!_preservesNativeFieldReads(op)) {
+        candidates.clear();
+      }
+    }
+    if (removed.isNotEmpty) {
+      final rewritten = [
+        for (var i = 0; i < code.length; i++)
+          if (!removed.contains(i)) code[i],
+      ];
+      code
+        ..clear()
+        ..addAll(rewritten);
+    }
+  }
 }
 
 /// Reuses a numeric or bool slot read while no intervening operation can mutate
@@ -189,7 +254,9 @@ bool _preservesNativeFieldReads(cfg.Operation op) => switch (op) {
   primitives.BoxString() ||
   primitives.BoxNull() ||
   StringOperation() ||
-  StringSubstring() => true,
+  StringSubstring() ||
+  StringConcat3() ||
+  PrimitiveToString() => true,
   _ => isNonThrowingPrimitive(op),
 };
 

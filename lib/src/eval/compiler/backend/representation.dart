@@ -59,7 +59,9 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
         StringOperator.substringFrom ||
         StringOperator.indexAt => MachineRepresentation.string,
       },
-      StringSubstring() => MachineRepresentation.string,
+      StringSubstring() ||
+      StringConcat3() ||
+      PrimitiveToString() => MachineRepresentation.string,
       NumericBinary(:final resultRepresentation) => resultRepresentation,
       IntToDouble() => MachineRepresentation.doublePrecision,
       memory.LoadInt() ||
@@ -205,6 +207,12 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           );
         }
         output(operation, outputBankOf(operation)!);
+      case PrimitiveToString(:final input, :final representation):
+        constrain(input, representation);
+        output(operation, string);
+      case StringConcat3():
+        inputs(operation, string);
+        output(operation, string);
       case StringSubstring(:final string, :final start, :final end):
         constrain(string, MachineRepresentation.string);
         constrain(start, integer);

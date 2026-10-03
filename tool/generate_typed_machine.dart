@@ -1862,6 +1862,16 @@ String familyOf(String name) {
     extended: true,
   );
   add('cNewStringMap', 'c = <Object?, Object?>{};', output: 8);
+  add(
+    'rStringConcat3SC',
+    r"r = '${r as String}${s as String}${c as String}';",
+    inputs: [6, 7, 8],
+    output: 6,
+    mayThrow: true,
+  );
+  add('rIntToStringA', 'r = a.toString();', inputs: [0], output: 6);
+  add('rDoubleToStringF', 'r = f.toString();', inputs: [2], output: 6);
+  add('rBoolToStringE', 'r = e.toString();', inputs: [4], output: 6);
   // Loop-version guards run once, so keep their type checks off hot dispatch.
   for (final recv in [6, 7, 8]) {
     final rn = names[recv];

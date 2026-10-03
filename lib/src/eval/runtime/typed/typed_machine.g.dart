@@ -1296,6 +1296,18 @@ abstract final class TypedMachine {
         case TypedOp.cNewStringMap:
            c = <Object?, Object?>{};
            continue dispatch;
+        case TypedOp.rStringConcat3SC:
+           r = '${r as String}${s as String}${c as String}';
+           continue dispatch;
+        case TypedOp.rIntToStringA:
+           r = a.toString();
+           continue dispatch;
+        case TypedOp.rDoubleToStringF:
+           r = f.toString();
+           continue dispatch;
+        case TypedOp.rBoolToStringE:
+           r = e.toString();
+           continue dispatch;
         default: throw StateError('Invalid typed opcode at byte ${pc - 1}');
       }
     }

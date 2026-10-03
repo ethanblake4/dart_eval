@@ -50,6 +50,33 @@ final class Intrinsics {
   ) {
     final type = receiver.type;
     final boolType = CoreTypes.bool.ref(ctx);
+    if (method == 'toString' && args.isEmpty && !type.nullable) {
+      final representation = type.isSpec(CoreTypes.int)
+          ? MachineRepresentation.integer
+          : type.isSpec(CoreTypes.double)
+          ? MachineRepresentation.doublePrecision
+          : type.isSpec(CoreTypes.bool)
+          ? MachineRepresentation.boolean
+          : null;
+      if (representation != null) {
+        final value = receiver.unboxIfNeeded(ctx, false);
+        return (
+          target: value,
+          result: Variable.ssa(
+            ctx,
+            PrimitiveToString(
+              ctx.svar('primitive_string'),
+              value.ssa,
+              representation,
+            ),
+            CoreTypes.string.ref(ctx),
+            rep: ValueRep.string,
+          ),
+          args: const [],
+          namedArgs: const {},
+        );
+      }
+    }
     if (method == 'write' &&
         args.length == 1 &&
         receiver.exactType?.isSpec(CoreTypes.stringBuffer) == true) {
