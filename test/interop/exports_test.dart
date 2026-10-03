@@ -398,7 +398,9 @@ void main() {
   );
 
   test('configured entrypoint libraries share one linked function table', () {
-    final compiler = Compiler()..entrypoints.add('/second.dart');
+    final compiler = Compiler()
+      ..enableLeafInlining = false
+      ..entrypoints.add('/second.dart');
     final program = compiler.compile({
       'typed': {
         'main.dart': "import 'shared.dart'; int main(int n) => twice(n);",

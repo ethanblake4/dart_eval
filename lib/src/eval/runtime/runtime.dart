@@ -445,9 +445,9 @@ class Runtime {
   final _importedRuntimeTypes = <Runtime, Map<int, int>>{};
 
   /// Canonical `const` values, bucketed by hash of (typeId, key parts).
-  /// Each entry records the key parts and whether they compare loosely
+  /// Each entry records the type, key parts and whether they compare loosely
   /// (host `==`) instead of by identity.
-  final _constIntern = <int, List<(List<Object?>, Object?, bool)>>{};
+  final _constIntern = <int, List<(int, List<Object?>, Object?, bool)>>{};
 
   /// Canonical `String` instances for interned const keys: equal const
   /// strings built at different sites share a key part, mirroring the

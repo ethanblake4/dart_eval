@@ -79,8 +79,11 @@ extension TypedRuntimeInterop on Runtime {
             for (final part in key) identityHashCode(part),
           ]);
     final bucket = _constIntern.putIfAbsent(hash, () => []);
-    for (final (existingKey, existing, existingLoose) in bucket) {
-      if (existingLoose != loose || existingKey.length != key.length) {
+    for (final (existingTypeId, existingKey, existing, existingLoose)
+        in bucket) {
+      if (existingTypeId != keyTypeId ||
+          existingLoose != loose ||
+          existingKey.length != key.length) {
         continue;
       }
       var equal = true;
@@ -95,7 +98,7 @@ extension TypedRuntimeInterop on Runtime {
       }
       if (equal) return existing;
     }
-    bucket.add((key, v, loose));
+    bucket.add((keyTypeId, key, v, loose));
     return v;
   }
 

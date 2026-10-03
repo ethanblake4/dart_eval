@@ -3074,3 +3074,28 @@ arguments from 192.85 to 50.95. The 23-driver AOT sweep matched all 22
 execution checksums; its compile driver reported 1,241 rather than 1,249
 code bytes, as expected from inlining. Logs are under
 `.dart_tool/improvement_loop/cycle17-leaf-inline-full23/`.
+
+## Cycle 17 cleanup
+
+The full repository test gate found an interop test that counts linked
+functions. It now disables leaf inlining so that the count continues to test
+function table sharing. An analyzer subprocess in a bindgen test needs up to a
+minute under a busy test run, and that test now has an explicit timeout. The
+native `package:http` test now obtains its dependency from the root test
+package, since the HTTP bridge package was removed. Running this test exposed
+a compiler lookup bug: an inherited source field was ignored as a concrete
+getter or setter when checking interface conformance. The lookup now includes
+field declarations for the relevant accessor kind.
+
+Astra's cleanup review found that const intern buckets compared key parts but
+not type IDs. Distinct types with colliding bucket hashes could therefore
+share a canonical object. Bucket entries now include the type ID, and a
+regression uses an actual host hash collision to check type isolation and
+same-type reuse. One inert `expect_fail` entry for
+`nnbd/type_promotion/assignment_test.dart` was removed: its only materialized
+case is an expected compile-time error rather than a runnable failure.
+The full default gate passed 2,216 tests with configured skips. SDK-full
+passed all 2,511 runnable cases with 173 expected compile errors and 53
+expected runtime failures. The final 23-driver AOT sweep matched all 23
+baseline results, including the compile driver's 1,241 code bytes; logs are
+under `.dart_tool/improvement_loop/cycle17-cleanup-full23/`.

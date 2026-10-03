@@ -23,17 +23,7 @@ void main() {
 
       try {
         final url = 'http://127.0.0.1:${server.port}/hello';
-        final fixtureDirectory = Directory('packages/dart_eval_http_bridge');
-        final configFile = File(
-          '${fixtureDirectory.path}/.dart_tool/package_config.json',
-        );
-        if (!configFile.existsSync()) {
-          final result = await Process.run(Platform.resolvedExecutable, [
-            'pub',
-            'get',
-          ], workingDirectory: fixtureDirectory.path);
-          expect(result.exitCode, 0, reason: result.stderr.toString());
-        }
+        final configFile = File('.dart_tool/package_config.json');
         final packageConfig =
             jsonDecode(configFile.readAsStringSync()) as Map<String, dynamic>;
         final packages = (packageConfig['packages'] as List)

@@ -65,7 +65,7 @@ $mixinSource
       0,
       reason: '${analysis.stdout}\n${analysis.stderr}',
     );
-  });
+  }, timeout: const Timeout(Duration(minutes: 1)));
 
   test(
     'discovers supporting signature types without their member APIs',

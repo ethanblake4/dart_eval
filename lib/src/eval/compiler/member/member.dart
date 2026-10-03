@@ -372,7 +372,8 @@ final class SourceMember extends Member {
                 signature.returnType
           : signature.returnType,
       // An inherited return type constrains calls just like an annotation.
-      returnAnnotated: signature.returnAnnotated ||
+      returnAnnotated:
+          signature.returnAnnotated ||
           (needsReturn && (inherited != null || paired != null)),
       returnOverride: signature.returnOverride,
     );
@@ -573,8 +574,11 @@ extension TypeDeclMembers on TypeDecl {
               privateLibraryUri: name.privateLibraryUri,
             ).key,
           );
-          if (found == null && !forImplementation) {
-            found = probe(name.nameKey);
+          if (found == null) {
+            final bare = probe(name.nameKey);
+            if (!forImplementation || bare is VariableDeclaration) {
+              found = bare;
+            }
           }
         case MemberKind.setter:
           found = probe(
@@ -584,8 +588,15 @@ extension TypeDeclMembers on TypeDecl {
               privateLibraryUri: name.privateLibraryUri,
             ).key,
           );
-          if (found == null && !forImplementation) {
-            found = probe(name.nameKey);
+          if (found == null) {
+            final bare = probe(name.nameKey);
+            if (!forImplementation ||
+                (bare is VariableDeclaration &&
+                    (!(bare.isFinal || bare.isConst) ||
+                        ((bare.parent as VariableDeclarationList).isLate &&
+                            bare.initializer == null)))) {
+              found = bare;
+            }
           }
         case MemberKind.constructor:
           found = null;

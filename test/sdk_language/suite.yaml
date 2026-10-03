@@ -206,7 +206,6 @@ expect_fail:
   - path: 'nnbd/static_errors/super_equals_allows_null_test.dart'
   - path: 'nnbd/syntax/late_modifier_edge_cases_test.dart'
   - path: 'nnbd/syntax/late_modifier_runtime_error_test.dart'
-  - path: 'nnbd/type_promotion/assignment_test.dart'
   - path: 'no_such_method/mock_test.dart'
   - path: 'no_such_method/no_such_method_non_nullable_optional_test.dart'
   - path: 'nonfunction_type_aliases/generic_usage_object_test.dart'
