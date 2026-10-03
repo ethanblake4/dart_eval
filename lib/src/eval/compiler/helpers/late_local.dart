@@ -17,7 +17,7 @@ import 'conversion.dart';
 
 /// A late initializer retains the original AST and lexical captures, just
 /// like a source closure, while exposing a boxed zero-argument result.
-(Variable, TypeRef) compileLateLocalInitializer(
+(Variable, TypeRef, TypeRef) compileLateLocalInitializer(
   CompilerContext ctx,
   VariableDeclaration declaration,
   TypeRef? bound,
@@ -44,6 +44,7 @@ import 'conversion.dart';
   final outer = NestedFunctionState(ctx);
   late int target;
   late TypeRef resultType;
+  late TypeRef initializerType;
   try {
     ctx.labels.clear();
     ctx.caughtExceptionTargets.clear();
@@ -66,7 +67,9 @@ import 'conversion.dart';
         Variable.of(
           ctx,
           loaded,
-          original.declaredType,
+          analysis.assignedDeclarations.contains(original.captureDeclaration)
+              ? original.declaredType
+              : original.current.type,
           rep: values[entry.key]!.rep,
           facts: original.current.facts,
         ),
@@ -88,6 +91,7 @@ import 'conversion.dart';
     Variable result;
     try {
       result = compileExpression(declaration.initializer!, ctx, bound);
+      initializerType = result.type;
       resultType = bound ?? ctx.typeFactory.widenedInferredType(result.type);
       result = convertForAssignment(
         ctx,
@@ -118,5 +122,5 @@ import 'conversion.dart';
     CoreTypes.function.ref(ctx),
     rep: ValueRep.boxed,
   );
-  return (closure, resultType);
+  return (closure, resultType, initializerType);
 }

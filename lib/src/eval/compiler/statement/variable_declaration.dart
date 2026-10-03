@@ -59,14 +59,21 @@ void compileVariableDeclarationList(
       binding.storage = LateLocalStorage(cell);
       binding.captureDeclaration = li;
       if (init != null) {
-        final (initializer, inferred) = compileLateLocalInitializer(
-          ctx,
-          li,
-          type,
-        );
+        final (initializer, inferred, initializerType) =
+            compileLateLocalInitializer(ctx, li, type);
         binding.declaredType = inferred;
         binding.rebind(binding.current.withType(inferred));
         ctx.pushOp(SetLateLocalInitializer(cell, initializer.ssa));
+        // Deferred mutable initializers have the same assignment promotion
+        // as eager initializers; conversion must not erase their value type.
+        if (type != null &&
+            type.nullable &&
+            !l.isFinal &&
+            !binding.writeCaptured &&
+            !initializerType.isSpec(CoreTypes.dynamic) &&
+            initializerType.isAssignableTo(ctx, type.withNullable(false))) {
+          binding.rebind(binding.current.withType(type.withNullable(false)));
+        }
       }
       continue;
     }
