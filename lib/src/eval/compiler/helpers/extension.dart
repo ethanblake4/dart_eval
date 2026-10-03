@@ -120,7 +120,9 @@ bool _unifyOnPattern(
   List<TypeRef?> bound,
 ) {
   if (pattern.isTypeParameter) {
-    final index = (pattern as TypeParameterTypeRef).parameter.index;
+    final parameter = pattern as TypeParameterTypeRef;
+    actual = ctx.typeSystem.typeParameterEvidence(parameter, actual);
+    final index = parameter.parameter.index;
     final previous = bound[index];
     if (previous == null) {
       // Infer from the lexical parameter, erasing its promotion intersection.

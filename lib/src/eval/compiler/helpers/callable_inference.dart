@@ -26,7 +26,12 @@ Map<TypeParameterDef, TypeRef> inferCallableTypeArguments(
         }
         (covariant ? upper : lower)
             .putIfAbsent(pattern.parameter, () => {})
-            .add(pattern.nullable ? actual.withNullable(false) : actual);
+            .add(
+              ctx.typeSystem.typeParameterEvidence(
+                pattern,
+                pattern.nullable ? actual.withNullable(false) : actual,
+              ),
+            );
       }
       return;
     }

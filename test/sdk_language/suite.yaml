@@ -172,7 +172,6 @@ expect_fail:
   - path: 'generic_methods/generic_invocation_all_subexpression_types_test.dart'
   - path: 'import/collection_no_prefix_test.dart'
     reason: 'dart:collection types (SplayTreeMap) not bound in stdlib'
-  - path: 'inference/dynamic_nullable_test.dart'
   - path: 'inference/issue_33298_test.dart'
   - path: 'inference_update_2/field_promotion_and_no_such_method_test.dart'
   - path: 'inference_update_2/field_promotion_and_object_pattern_test.dart'

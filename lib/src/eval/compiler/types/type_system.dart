@@ -130,6 +130,15 @@ final class TypeSystem {
     return null;
   }
 
+  /// When T? matches dynamic or void, only their non-null Object portion
+  /// constrains T; the pattern already admits null.
+  TypeRef typeParameterEvidence(TypeParameterTypeRef pattern, TypeRef actual) =>
+      pattern.nullable &&
+          (actual.isSpec(CoreTypes.dynamic) ||
+              actual.isSpec(CoreTypes.voidType))
+      ? CoreTypes.object.ref(_ctx)
+      : actual;
+
   /// Unifies [pattern] against [concrete] positionally, recording the
   /// binding for each type-parameter slot encountered (unifying `List~X~`
   /// with `List~num~` binds X to num). Replaces
@@ -141,7 +150,11 @@ final class TypeSystem {
   ) {
     if (pattern is UnknownTypeRef || concrete is UnknownTypeRef) return;
     if (pattern.isTypeParameter) {
-      substitutions[(pattern as TypeParameterTypeRef).parameter] = concrete;
+      final parameter = pattern as TypeParameterTypeRef;
+      substitutions[parameter.parameter] = typeParameterEvidence(
+        parameter,
+        concrete,
+      );
       return;
     }
     // `FutureOr<S>` unifies through whichever branch matches the concrete's

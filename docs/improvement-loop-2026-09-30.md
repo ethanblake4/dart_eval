@@ -3110,3 +3110,13 @@ binding, so the check does not impose the loop variable's element type on the
 whole iterable. The pinned `for_dynamic_null_strong_test.dart` and
 `for_runtime_error_test.dart` fixtures pass, as do the existing loop,
 inference, and pattern tests. Both stale `expect_fail` entries were removed.
+
+## Cycle 18 pass 2: nullable generic inference
+
+Matching `T?` against `dynamic` or `void` previously inferred those top types
+directly for `T`. Dart instead infers `Object` from the non-null part. A shared
+normalization now applies this evidence in ordinary unification, extension
+receiver inference, and callable inference without changing other nullable
+evidence. The pinned `inference/dynamic_nullable_test.dart` fixture and nine
+existing focused inference tests pass. Its stale `expect_fail` entry was
+removed.
