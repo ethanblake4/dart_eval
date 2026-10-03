@@ -85,7 +85,6 @@ expect_fail:
   - path: 'control_flow_collections/for_dynamic_null_strong_test.dart'
   - path: 'control_flow_collections/for_runtime_error_test.dart'
   - path: 'control_flow_collections/map_set_ambiguity_test.dart'
-  - path: 'covariant/callable_class_field_getter_test.dart'
   - path: 'covariant/subtyping_test.dart'
   - path: 'covariant/type_parameter_test.dart'
   - path: 'dot_shorthands/constructor/constructor_cascade_test.dart'

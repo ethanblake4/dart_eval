@@ -2926,3 +2926,12 @@ SDK-full passes with 2503 runnable fixtures, 177 expected compile failures,
 57 expected runtime failures, and three skips. The full 23-driver, 15-sample
 AOT sweep matched all 22 execution checksums; logs are under
 `.dart_tool/improvement_loop/cycle16-pass3-full23/`.
+
+## Cycle 16 pass 5: covariant callable getters
+
+A widened generic receiver could read a function-valued getter without
+checking the callable's parameter type against the receiver's view. Getter
+reads now emit a type assertion only when a class type parameter appears in
+a contravariant position in the return type. The pinned
+`covariant/callable_class_field_getter_test.dart` fixture passes, and its stale
+`expect_fail` entry is removed. Ordinary getters emit no additional bytecode.

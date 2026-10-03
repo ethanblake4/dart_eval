@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import '../helpers/extension_type.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/tearoff.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/type_check.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import '../member/call_signature.dart';
 import '../member/member.dart';
@@ -576,15 +577,34 @@ sealed class GetTarget {
     TypeRef? boundContext,
     List<TypeRef>? typeArguments,
     BoundExtension? extensionPin,
-  }) => resolve(
-    ctx,
-    receiver,
-    name,
-    source: source,
-    boundContext: boundContext,
-    typeArguments: typeArguments,
-    extensionPin: extensionPin,
-  ).emit(ctx);
+  }) {
+    final value = resolve(
+      ctx,
+      receiver,
+      name,
+      source: source,
+      boundContext: boundContext,
+      typeArguments: typeArguments,
+      extensionPin: extensionPin,
+    ).emit(ctx);
+    if (extensionPin == null) {
+      final member = ctx.memberLookup.tryInterfaceMember(
+        receiver.type,
+        MemberName.getter(name),
+        source: source,
+      );
+      if (member != null &&
+          ctx.memberLookup.getterNeedsCovariantCheck(member)) {
+        compileTypeAssertion(
+          ctx,
+          value.boxIfNeeded(ctx),
+          member.signature.returnType,
+          source: source,
+        );
+      }
+    }
+    return value;
+  }
 
   Variable emit(CompilerContext ctx);
 }

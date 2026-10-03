@@ -964,6 +964,11 @@ final class MemberLookup {
     }
   }
 
+  /// A widened generic receiver can expose a getter value with an unsafe
+  /// function parameter type. Check that value against the caller's view.
+  bool getterNeedsCovariantCheck(ResolvedMember member) =>
+      _hasClassTypeParameter(member.member.signature.returnType, false);
+
   /// Whether [type] has a covariant occurrence of a class type parameter —
   /// a parameter declared with such a type is implicitly covariant. Function
   /// parameter positions flip polarity: `void Function(T)` uses `T`
