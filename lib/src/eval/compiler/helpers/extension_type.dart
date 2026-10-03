@@ -29,6 +29,18 @@ TypeRef? extensionRepresentationField(
   return decl.extensionRepresentation;
 }
 
+/// Whether the selector names a declared extension type constructor.
+bool isExtensionTypeConstructor(SourceTypeDecl declaration, String name) {
+  final node = declaration.node as ExtensionTypeDeclaration;
+  final primary = node.namePart as PrimaryConstructorDeclaration;
+  final primaryName = primary.constructorName?.name.lexeme ?? '';
+  return name == primaryName ||
+      name == 'new' && primaryName.isEmpty ||
+      node.body.members.whereType<ConstructorDeclaration>().any(
+        (constructor) => (constructor.name?.lexeme ?? '') == name,
+      );
+}
+
 /// Constructs the source type while preserving its representation value.
 Variable constructExtensionType(
   CompilerContext ctx,
@@ -39,6 +51,11 @@ Variable constructExtensionType(
   required bool isConst,
   required AstNode source,
 }) {
+  // Check the initial selector in the caller's scope. Redirects below enter
+  // the declaring scope and may name its private constructors.
+  if (name.startsWith('_') && declaration.library != ctx.library) {
+    throw CompileError('Private extension type constructor $name', source);
+  }
   return _ExtensionConstruction(
     ctx,
     declaration,

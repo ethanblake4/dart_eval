@@ -154,37 +154,17 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       stInfo = StatementInfo(willAlwaysReturn: true);
       ctx.endScope();
     } else if (b is EmptyFunctionBody && d.externalKeyword != null) {
-      emitMissingExternal(
+      emitMissingExternalBody(
         ctx,
         d.name.lexeme,
+        resolvedParams,
+        parameterTypes,
+        abi,
         kind: d.isGetter
             ? InvocationKind.getter
             : d.isSetter
             ? InvocationKind.setter
             : InvocationKind.method,
-        positional: [
-          for (var j = 0; j < resolvedParams.length; j++)
-            if (!resolvedParams[j].isNamed)
-              Variable.of(
-                ctx,
-                SSA('arg_$j'),
-                parameterTypes[j],
-                rep: abi.parameters[j],
-              ),
-        ],
-        named: [
-          for (var j = 0; j < resolvedParams.length; j++)
-            if (resolvedParams[j].isNamed)
-              (
-                resolvedParams[j].name!.lexeme,
-                Variable.of(
-                  ctx,
-                  SSA('arg_$j'),
-                  parameterTypes[j],
-                  rep: abi.parameters[j],
-                ),
-              ),
-        ],
       );
       stInfo = StatementInfo(willAlwaysThrow: true);
     } else {

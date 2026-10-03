@@ -249,31 +249,19 @@ int compileMethodDeclaration(
             ctx.endScope();
           } else if (b is EmptyFunctionBody) {
             if (d.externalKeyword != null) {
-              final firstArgument = hasReceiver ? 1 : 0;
-              Variable argument(int index) => Variable.of(
-                ctx,
-                SSA('arg_${index + firstArgument}'),
-                parameterTypes[index],
-                rep: abi.parameters[index + firstArgument],
-              );
-              emitMissingExternal(
+              emitMissingExternalBody(
                 ctx,
                 methodName,
+                resolvedParams,
+                parameterTypes,
+                abi,
                 kind: d.isGetter
                     ? InvocationKind.getter
                     : d.isSetter
                     ? InvocationKind.setter
                     : InvocationKind.method,
                 receiver: hasReceiver ? ctx.lookupLocal('#this') : null,
-                positional: [
-                  for (var j = 0; j < resolvedParams.length; j++)
-                    if (!resolvedParams[j].isNamed) argument(j),
-                ],
-                named: [
-                  for (var j = 0; j < resolvedParams.length; j++)
-                    if (resolvedParams[j].isNamed)
-                      (resolvedParams[j].name!.lexeme, argument(j)),
-                ],
+                argumentOffset: hasReceiver ? 1 : 0,
               );
               ctx.endScope();
               return StatementInfo(willAlwaysThrow: true);

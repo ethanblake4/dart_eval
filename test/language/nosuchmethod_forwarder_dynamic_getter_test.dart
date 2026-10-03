@@ -3,6 +3,41 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('inherited private getter keeps the missing setter restricted', () {
+    final packages = {
+      'dynamic_fixtures': {
+        'api.dart': '''
+          abstract class Contract { int _value = 0; }
+          class Base { int get _value => 42; }
+          int read(Contract receiver) => receiver._value;
+          bool writeRejected(Contract receiver) {
+            try { receiver._value = 7; }
+            on NoSuchMethodError { return true; }
+            return false;
+          }
+        ''',
+        'main.dart': '''
+          import 'api.dart';
+          class Proxy extends Base implements Contract {
+            int calls = 0;
+            dynamic noSuchMethod(Invocation invocation) => ++calls;
+          }
+          bool main() {
+            final receiver = Proxy();
+            return read(receiver) == 42 &&
+                writeRejected(receiver) && receiver.calls == 0;
+          }
+        ''',
+      },
+    };
+    for (final (mode, result) in runDynamicPackages(
+      packages,
+      entrypoint: dynamicFixtureLibrary,
+    )) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
   test('restricted private forwarders bind slots and core helpers', () {
     final packages = {
       'dynamic_fixtures': {

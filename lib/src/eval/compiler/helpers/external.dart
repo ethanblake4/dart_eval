@@ -1,3 +1,5 @@
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
 import 'package:dart_eval/dart_eval_bridge.dart';
 import '../../ir/bridge.dart' show InvocationKind;
 import '../builtins.dart';
@@ -6,6 +8,7 @@ import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
 import '../type.dart';
 import '../variable.dart';
+import '../values/abi.dart';
 
 export '../../ir/bridge.dart' show InvocationKind;
 
@@ -36,5 +39,38 @@ Variable emitMissingExternal(
       named: named,
       returnType: CoreTypes.never.ref(ctx),
     ),
+  );
+}
+
+/// Reconstructs the declaration's argument slots for its missing external body.
+Variable emitMissingExternalBody(
+  CompilerContext ctx,
+  String name,
+  List<FormalParameter> parameters,
+  List<TypeRef> types,
+  CallableAbi abi, {
+  InvocationKind kind = InvocationKind.method,
+  Variable? receiver,
+  int argumentOffset = 0,
+}) {
+  Variable argument(int index) => Variable.of(
+    ctx,
+    SSA('arg_${index + argumentOffset}'),
+    types[index],
+    rep: abi.parameters[index + argumentOffset],
+  );
+  return emitMissingExternal(
+    ctx,
+    name,
+    kind: kind,
+    receiver: receiver,
+    positional: [
+      for (var i = 0; i < parameters.length; i++)
+        if (!parameters[i].isNamed) argument(i),
+    ],
+    named: [
+      for (var i = 0; i < parameters.length; i++)
+        if (parameters[i].isNamed) (parameters[i].name!.lexeme, argument(i)),
+    ],
   );
 }

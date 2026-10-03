@@ -602,20 +602,6 @@ void _checkInterfaceConformance(
               v.name.lexeme,
           ];
     for (final name in names) {
-      // A private interface member from another library cannot be named by
-      // this class. Dart supplies a throwing forwarder for that slot.
-      if (name.startsWith('_') && declLib != ctx.library) {
-        if (ctx.memberLookup.implementationOwner(
-              hostType,
-              MemberName(name, kind, privateLibraryUri: ctx.libraryUri(declLib)),
-            ) ==
-            null) {
-          (ctx.interfaceNoSuchMethodForwarderRequirements[
-                    (ctx.library, hostName)] ??= [])
-              .add((member, declLib, kind, name, true));
-        }
-        continue;
-      }
       for (final view
           in kind == MemberKind.method
               ? const [MemberKind.method]
@@ -630,6 +616,24 @@ void _checkInterfaceConformance(
               ? member.isSetter
               : true;
           if (!expected) continue;
+        }
+        // Each private accessor needs its own implementation. An inherited
+        // getter does not satisfy a mutable field's setter requirement.
+        if (name.startsWith('_') && declLib != ctx.library) {
+          if (ctx.memberLookup.implementationOwner(
+                hostType,
+                MemberName(
+                  name,
+                  view,
+                  privateLibraryUri: ctx.libraryUri(declLib),
+                ),
+              ) ==
+              null) {
+            (ctx.interfaceNoSuchMethodForwarderRequirements[
+                      (ctx.library, hostName)] ??= [])
+                .add((member, declLib, view, name, true));
+          }
+          continue;
         }
         var impl = _effectiveConcreteMember(
           ctx,

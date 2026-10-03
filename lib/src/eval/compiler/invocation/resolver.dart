@@ -446,7 +446,8 @@ final class CallResolver {
     if (receiver case TypeLiteralReceiver(:final type)) {
       final declaration = nominalDeclOf(type);
       if (declaration is SourceTypeDecl &&
-          declaration.kind == TypeDeclKind.extensionType) {
+          declaration.kind == TypeDeclKind.extensionType &&
+          isExtensionTypeConstructor(declaration, staticMemberName)) {
         return constructExtensionType(
           ctx,
           declaration,
@@ -1288,8 +1289,9 @@ final class CallResolver {
         argument.type.assignmentConversionTo(ctx, parameter.type) ==
             AssignmentConversion.none;
     for (var i = 0; i < supplied.positional.length; i++) {
-      if (!accepts(supplied.positional[i], signature.positional[i]))
+      if (!accepts(supplied.positional[i], signature.positional[i])) {
         return null;
+      }
     }
     for (final (name, argument) in supplied.named) {
       final parameter = signature.named.firstWhereOrNull((p) => p.name == name);

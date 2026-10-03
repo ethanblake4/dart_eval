@@ -4032,3 +4032,32 @@ included in production sources.
 The final isolated 23-driver AOT sweep, 15 samples per driver, matched all
 22 execution checksums and the mixed compile size of 1354 bytes. Logs are
 under cycle24/compiler-speed-aot. Runtime and interpreter sources are unchanged.
+
+
+## Cycle 24 cleanup and review
+
+Consolidated missing-external declaration argument reconstruction for functions,
+methods and constructors into one helper, retaining their original slots, ABI
+representations and receiver offsets. Three original abstract/external fixtures
+still pass. Astra medium reviewed only during this cleanup step and identified
+three issues, all verified and fixed: imported private extension constructors
+must check the caller's library while internal redirects retain their declaring
+scope; constructor routing must leave parenthesized Type-literal extensions
+reachable; foreign mutable fields need independent getter/setter implementation
+checks; lexical constant defaults must infer their initializer using the constant's
+own declaration annotation, or no contextual type when unannotated.
+
+Native Dart probes confirm the boundary cases. Existing focused tests cover fresh
+and serialized runtimes: 21 extension/identity checks, eight forwarding checks,
+and 39 default/capture/contextual checks pass. The external helper passed scoped
+analysis. Astra's final read-only recheck found no remaining introduced issue.
+The stable cleanup's default gate passes 2243 tests with 86 skipped; CFG passes
+all 105 tests. Final SDK-full and the applicable AOT recheck follow below.
+
+Final stable SDK-full gate passes 2737 configured tests with 557 skipped;
+actual outcomes remain 2615 passed, 99 compile errors, 23 runtime failures and
+three skipped. Cycle24 removed 16 stale expectations and reduced actual failures
+from 138 to 122. Final cleanup AOT sweep, all 23 drivers with 15 samples and
+alternating executable order, matched every execution checksum and the mixed
+compile code size. No runtime/hot-loop sources changed. Cycle25 continues with
+six further correctness passes; the next compiler-throughput pass is cycle27.

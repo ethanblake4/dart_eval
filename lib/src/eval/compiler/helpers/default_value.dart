@@ -73,6 +73,24 @@ T withDefaultExpressionScope<T>(
   }
 }
 
+/// A constant's initializer is inferred at its declaration, independently of
+/// the optional parameter that later uses the constant.
+TypeRef? constantInitializerContext(
+  CompilerContext ctx,
+  int library,
+  VariableDeclaration declaration,
+) {
+  final parent = declaration.parent;
+  final annotation = parent is VariableDeclarationList ? parent.type : null;
+  if (annotation == null) return null;
+  return withDefaultExpressionScope(
+    ctx,
+    library,
+    declaration,
+    () => TypeRef.fromAnnotation(ctx, library, annotation),
+  );
+}
+
 /// Defaults are bound before entering a typed function, including host exports.
 /// Keep their native values separate from language wrappers and register banks.
 Object? evaluateDefaultValue(
@@ -156,7 +174,10 @@ Object? evaluateDefaultValue(
           expression,
         ).lexicalConstants[expression];
         if (lexicalConstant?.initializer case final initializer?) {
-          return evaluate(initializer, context: bound);
+          return evaluate(
+            initializer,
+            context: constantInitializerContext(ctx, library, lexicalConstant!),
+          );
         }
         final staticMember = withDefaultExpressionScope(
           ctx,

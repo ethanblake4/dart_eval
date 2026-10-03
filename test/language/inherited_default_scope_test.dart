@@ -2,6 +2,32 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('local constant defaults retain declaration type arguments', () {
+    final program = Compiler().compile({
+      'defaults': {
+        'main.dart': '''
+class Box<T> { const Box(); }
+int main() {
+  const List<int> xs = [];
+  const Box<int> box = Box();
+  bool list([Object value = xs]) => value is List<int>;
+  bool generic([Object value = box]) => value is Box<int>;
+  dynamic listCall = list;
+  dynamic genericCall = generic;
+  return (list() ? 1 : 0) + (generic() ? 2 : 0) +
+      (listCall() ? 4 : 0) + (genericCall() ? 8 : 0);
+}
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(runtime.executeLib('package:defaults/main.dart', 'main'), 15);
+    }
+  });
+
   test(
     'escaping local defaults retain lexical constants and formal shadowing',
     () {

@@ -43,14 +43,59 @@ void main() {
 ''';
 
 void main() {
+  for (final constructor in ['_primary', '_private']) {
+    test(
+      'imported private extension constructor $constructor is inaccessible',
+      () {
+        expect(
+          () => Compiler().compile({
+            'extension_private': {
+              'support.dart': '''
+extension type Count._primary(int value) {
+  Count._private(int n) : this._primary(n);
+}
+''',
+              'main.dart':
+                  '''
+import 'support.dart';
+void main() { Count.$constructor(1); }
+''',
+            },
+          }),
+          throwsA(isA<CompileError>()),
+        );
+      },
+    );
+  }
+  test('extension type literals retain extensions on Type', () {
+    final program = Compiler().compile({
+      'extension_literal': {
+        'support.dart': 'extension type Count(int value) {}',
+        'main.dart': '''
+import 'support.dart' as support;
+extension Describe on Type { int describe() => 42; }
+int main() => (support.Count).describe();
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib('package:extension_literal/main.dart', 'main'),
+        42,
+      );
+    }
+  });
   test('redirects bind arguments once in the extension declaring scope', () {
     final program = Compiler().compile({
       'extension_redirect': {
         'support.dart': r'''
 const seed = 7;
-extension type const Count.primary(int value) {
-  const Count.from([int n = seed]) : this.primary(n);
-  const Count.named({int n = seed}) : this.from(n);
+extension type const Count._primary(int value) {
+  const Count._from([int n = seed]) : this._primary(n);
+  const Count.named({int n = seed}) : this._from(n);
 }
 extension type const Maybe(Object? value) {
   const Maybe.empty() : this(null);

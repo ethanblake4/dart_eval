@@ -202,25 +202,13 @@ void compileConstructorDeclaration(
       abi.machine;
 
   if (d.externalKeyword != null) {
-    final firstArgument = isEnum ? 2 : 0;
-    Variable argument(int index) => Variable.of(
-      ctx,
-      SSA('arg_${index + firstArgument}'),
-      parameterTypes[index],
-      rep: abi.parameters[index + firstArgument],
-    );
-    emitMissingExternal(
+    emitMissingExternalBody(
       ctx,
       n,
-      positional: [
-        for (var j = 0; j < resolvedParams.length; j++)
-          if (!resolvedParams[j].isNamed) argument(j),
-      ],
-      named: [
-        for (var j = 0; j < resolvedParams.length; j++)
-          if (resolvedParams[j].isNamed)
-            (resolvedParams[j].name!.lexeme, argument(j)),
-      ],
+      resolvedParams,
+      parameterTypes,
+      abi,
+      argumentOffset: isEnum ? 2 : 0,
     );
     ctx.endScope();
     return;
@@ -516,7 +504,12 @@ void compileConstructorDeclaration(
     isEnum ? 2 : 0,
     evaluatedFieldInits,
   );
-  initializeBridgeMixins(ctx, fields, inst.ssa, firstFieldIndex: isEnum ? 2 : 0);
+  initializeBridgeMixins(
+    ctx,
+    fields,
+    inst.ssa,
+    firstFieldIndex: isEnum ? 2 : 0,
+  );
 
   if (extendsDecl != null && !extendsDecl.isBridge) {
     $super = _invokeSuperConstructor(

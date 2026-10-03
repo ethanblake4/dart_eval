@@ -20,7 +20,11 @@ Variable compileIdentifier(
         ctx,
         ctx.library,
         initializer,
-        () => compileExpression(initializer, ctx, bound),
+        () => compileExpression(
+          initializer,
+          ctx,
+          constantInitializerContext(ctx, ctx.library, declaration!),
+        ),
       );
     }
   }
