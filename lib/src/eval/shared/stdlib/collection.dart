@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/collection/list_base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/list_queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/typedefs.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/set_base.dart';
 
 /// [EvalPlugin] for the `dart:collection` library
 class DartCollectionPlugin implements EvalPlugin {
@@ -46,6 +47,7 @@ class DartCollectionPlugin implements EvalPlugin {
     $LinkedHashSet.configureForCompile(registry);
     $MapBase$bridge.configureForCompile(registry);
     $ListBase$bridge.configureForCompile(registry);
+    $SetBase$bridge.configureForCompile(registry);
   }
 
   @override
@@ -59,5 +61,6 @@ class DartCollectionPlugin implements EvalPlugin {
     $LinkedHashSet.configureForRuntime(runtime);
     $MapBase$bridge.configureForRuntime(runtime);
     $ListBase$bridge.configureForRuntime(runtime);
+    $SetBase$bridge.configureForRuntime(runtime);
   }
 }

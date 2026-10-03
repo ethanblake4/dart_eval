@@ -3638,3 +3638,15 @@ regression pass. Native precise-message checks passed through the existing fixtu
 with only its unavailable variations configuration import supplied locally; SDK
 sources were unchanged. Scoped analysis, diff checks and generated-machine
 validation pass (225 primary, 176 extended). One stale entry removed.
+## Cycle 22 pass 3: set literal identity and generated SetBase
+
+Mutable set literal boxing retains its exact LinkedHashSet descriptor, without
+adding boxing or bytecode instructions. Collection-for spread shape uses the
+outer typed map binding only when loop bindings do not shadow it. SetBase now
+uses an authentic generated SDK bridge and existing collection plugin/export
+conventions. No runtime changes. Original set_literal, const_set_literal and
+big_set_literal fixtures pass, as do 19 existing focused tests; analysis and diff
+checks pass. One stale entry removed. Both ambiguity fixtures now reach the
+separate unsupported bridged MapMixin cause; that lowering remains a future pass.
+Expectation comments/reason text corrupted by earlier Windows decoding were
+restored to plain text, and suite edits now read UTF-8 explicitly.

@@ -199,7 +199,11 @@ class Variable {
         );
       case ValueRep.nativeSet:
         ctx.pushOp(
-          BoxSet(dest, ssa, runtimeTypeId: ctx.runtimeTypes.idOf(type)),
+          BoxSet(
+            dest,
+            ssa,
+            runtimeTypeId: ctx.runtimeTypes.idOf(exactType ?? type),
+          ),
         );
       case ValueRep.nativeObject:
         // The object bank is already the uniform representation, so boxing

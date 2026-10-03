@@ -226,7 +226,8 @@ libraries:
         file: map_base.dart
         mode: both
       SetBase:
-        include: false
+        file: set_base.dart
+        mode: both
       ListMixin:
         include: false
   - uri: dart:convert

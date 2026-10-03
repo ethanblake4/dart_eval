@@ -213,7 +213,13 @@ Variable compileSetOrMapLiteral(
   );
   final result = collection.copyWith(
     type: resultType,
-    facts: ValueFacts(exact: resultType),
+    facts: ValueFacts(
+      exact: !isMap && !literal.isConst
+          ? CollectionTypes.linkedHashSet
+                .ref(ctx)
+                .copyWith(arguments: resultType.arguments)
+          : resultType,
+    ),
   );
   if (isMap &&
       !literal.isConst &&
@@ -237,8 +243,8 @@ Iterable<CollectionElement> _leavesOf(CollectionElement element) sync* {
   }
 }
 
-/// Recognizes Map evidence without emitting expression evaluation. Loop and
-/// pattern bindings aren't in scope yet, so leave their spreads to compilation.
+/// Recognizes Map evidence without emitting expression evaluation. Outer
+/// bindings remain available inside loops; shadowing bindings do not.
 bool _hasMapSpreadType(
   CompilerContext ctx,
   SetOrMapLiteral literal,
@@ -246,7 +252,7 @@ bool _hasMapSpreadType(
 ) {
   for (var parent = spread.parent; parent != literal; parent = parent.parent) {
     if (parent == null ||
-        parent is ForElement ||
+        parent is ForElement && !_usesOuterSpreadBinding(parent, spread) ||
         parent is IfElement && parent.caseClause != null) {
       return false;
     }
@@ -274,6 +280,24 @@ bool _hasMapSpreadType(
             forceAllowDynamic: false,
           ) ??
       false;
+}
+
+bool _usesOuterSpreadBinding(ForElement loop, SpreadElement spread) {
+  var expression = spread.expression;
+  while (expression is ParenthesizedExpression) {
+    expression = expression.expression;
+  }
+  if (expression is AsExpression) return true;
+  if (expression is! SimpleIdentifier) return false;
+  final name = expression.name;
+  return switch (loop.forLoopParts) {
+    ForPartsWithDeclarations(:final variables) =>
+      !variables.variables.any((variable) => variable.name.lexeme == name),
+    ForEachPartsWithDeclaration(:final loopVariable) =>
+      loopVariable.name.lexeme != name,
+    ForPartsWithPattern() || ForEachPartsWithPattern() => false,
+    _ => true,
+  };
 }
 
 CollectionElementResult _compileElement(
