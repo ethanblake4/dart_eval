@@ -192,6 +192,7 @@ Variable compileFunctionExpression(
             isFinal: capture.value.isFinal,
             initialized: capture.value.initialized,
           );
+          lb.captureDeclaration = capture.value.captureDeclaration;
           if (capture.value.captureCell != null) {
             lb.storage = CaptureCellStorage(loaded);
           }

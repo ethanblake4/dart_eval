@@ -13,6 +13,8 @@ final class ValueFacts {
     this.possibleClasses = const [],
     this.denotedType,
     this.callableSignature,
+    this.nullShortedType,
+    this.nullShortedPromotions,
     this.isConst = false,
     this.isConstInt = false,
     this.constBool,
@@ -39,6 +41,15 @@ final class ValueFacts {
   /// A runtime callable's known signature, including bridge return rules.
   /// Retained when its static type is widened to `Function` or `dynamic`.
   final CallSignature? callableSignature;
+
+  /// The selector's type on the executed path of a null-shorted chain,
+  /// before the skipped path adds null. Only chain continuations use it;
+  /// binding the expression or joining unrelated values discards it.
+  final TypeRef? nullShortedType;
+
+  /// Local and member proofs on the executed path of a null-shorted chain.
+  /// Epochs prevent a later receiver write from reviving an earlier proof.
+  final Map<String, (TypeRef, int)>? nullShortedPromotions;
 
   /// Whether this value is the result of a compile-time-constant
   /// expression — a literal or a `const`-declared binding.
@@ -80,11 +91,15 @@ final class ValueFacts {
     Map<String, TypeRef>? promotedMembers,
     Map<String, (TypeRef, int)>? truePromotions,
     Map<String, (TypeRef, int)>? falsePromotions,
+    TypeRef? nullShortedType,
+    Map<String, (TypeRef, int)>? nullShortedPromotions,
   }) => ValueFacts(
     exact: exact,
     possibleClasses: possibleClasses ?? this.possibleClasses,
     denotedType: denotedType,
     callableSignature: callableSignature,
+    nullShortedType: nullShortedType ?? this.nullShortedType,
+    nullShortedPromotions: nullShortedPromotions ?? this.nullShortedPromotions,
     isConst: isConst ?? this.isConst,
     isConstInt: isConstInt ?? this.isConstInt,
     constBool: constBool ?? this.constBool,
@@ -125,9 +140,8 @@ final class ValueFacts {
   }
 
   /// This value's facts with member [name] promoted to [type].
-  ValueFacts withPromotedMember(String name, TypeRef type) => copyWith(
-    promotedMembers: {...?promotedMembers, name: type},
-  );
+  ValueFacts withPromotedMember(String name, TypeRef type) =>
+      copyWith(promotedMembers: {...?promotedMembers, name: type});
 
   /// No facts survive an unknown value change, including callable signatures.
   ValueFacts cleared() => const ValueFacts();

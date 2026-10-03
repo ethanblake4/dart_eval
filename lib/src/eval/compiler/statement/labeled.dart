@@ -36,9 +36,12 @@ StatementInfo compileLabeledStatement(
 
   final exit = BasicBlock<Operation>([], label: ctx.label('labeled_exit'));
   final initialState = ctx.saveState();
+  final breakStates = <ContextSaveState>[];
   ctx.labels.add(
     CompilerLabel(
       (ctx) => ctx.resolveBranchStateDiscontinuity(initialState),
+      onJump: (ctx, target) => breakStates.add(ctx.saveState()),
+      jumpStates: {exit: breakStates},
       exceptionDepth: ctx.exceptionDepth,
       breakTarget: exit,
       names: ctx.takePendingLabelNames(),
@@ -47,11 +50,13 @@ StatementInfo compileLabeledStatement(
   final result = compileStatement(inner, expectedReturnType, ctx);
   ctx.labels.removeLast();
   final parent = ctx.builder;
+  ContextSaveState? fallthroughState;
   if (!result.willAlwaysReturn &&
       !result.willAlwaysThrow &&
       !result.willAlwaysBreak &&
       !ctx.flowTerminated) {
     ctx.resolveBranchStateDiscontinuity(initialState);
+    fallthroughState = ctx.saveState();
     ctx.pushOp(Jump(exit.label!));
     final tail = ctx.flushBlock();
     ctx.builder.link(tail, exit);
@@ -73,7 +78,13 @@ StatementInfo compileLabeledStatement(
       }
     }
   }
-  ctx.restoreState(initialState);
+  ctx.restoreState(
+    fallthroughState ??
+        (breakStates.isNotEmpty ? breakStates.first : initialState),
+  );
+  ctx.locals.removeRange(initialState.locals.length, ctx.locals.length);
+  ctx.restoreBoxingState(initialState);
+  ctx.mergeBranchState(breakStates);
   declaredInside.forEach((i, declared) {
     if (i < ctx.locals.length) {
       ctx.locals[i].addAll(declared);

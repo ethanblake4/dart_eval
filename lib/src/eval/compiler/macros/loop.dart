@@ -160,7 +160,14 @@ StatementInfo macroLoop(
 
   ctx.builder.float(exit);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [exit], parent);
-  ctx.restoreState(conditionExitState ?? initialState);
+  ctx.restoreState(
+    conditionExitState ??
+        (alwaysLoopOnce && header.id == null && breakStates.isNotEmpty
+            ? breakStates.first
+            : initialState),
+  );
+  ctx.locals.removeRange(initialState.locals.length, ctx.locals.length);
+  ctx.restoreBoxingState(initialState);
   // `while (cond) {...}` reaches the exit with cond false, so its
   // false-edge promotions apply to post-loop code. (For `do {} while`,
   // they were already applied onto the merged back-edge state above.)

@@ -568,12 +568,16 @@ class CompilerContext with ScopeContext {
         _ => const <ClassMember>[],
       };
       for (final member in members) {
+        if (member is FieldDeclaration &&
+            !member.isStatic &&
+            member.abstractKeyword == null &&
+            !member.fields.isFinal) {
+          for (final field in member.fields.variables) {
+            final name = field.name.lexeme;
+            if (name.startsWith('_')) blockers.add(name);
+          }
+        }
         final name = switch (member) {
-          // A non-final instance field blocks (`late final` fields still
-          // promote — their single-assignment semantics keep one value).
-          FieldDeclaration m
-              when m.staticKeyword == null && !m.fields.isFinal =>
-            m.fields.variables.first.name.lexeme,
           // A concrete getter or method supplies a real getter — it
           // blocks. Setters, abstract members (empty body), and statics
           // don't.
@@ -588,8 +592,8 @@ class CompilerContext with ScopeContext {
       }
     }
 
-    // A concrete class declaring `noSuchMethod` materializes a forwarding
-    // getter for every interface member it doesn't implement — those
+    // A concrete class inheriting or declaring `noSuchMethod` materializes
+    // a forwarding getter for every interface member it doesn't implement — those
     // getters are assumed unstable and block promotion library-wide.
     String refKey(NamedType t) {
       final prefix = t.importPrefix;
@@ -601,43 +605,78 @@ class CompilerContext with ScopeContext {
     final concrete = <String>{};
     final required = <String>{};
     final seen = <String>{};
+    var hasNoSuchMethod = false;
+    bool isConcrete(Declaration member) => switch (member) {
+      FieldDeclaration m => m.abstractKeyword == null,
+      MethodDeclaration m =>
+        m.body is! EmptyFunctionBody || m.externalKeyword != null,
+      _ => true,
+    };
+    void collect(int file, String name, bool interface) {
+      final declaration = topLevelDeclarationsMap[file]?[name]?.declaration;
+      final members = switch (declaration) {
+        ClassDeclaration d => d.body.members,
+        MixinDeclaration d => d.body.members,
+        EnumDeclaration d => d.body.members,
+        _ => const <ClassMember>[],
+      };
+      for (final member in members) {
+        if (member is MethodDeclaration &&
+            !member.isStatic &&
+            !interface &&
+            member.name.lexeme == 'noSuchMethod' &&
+            isConcrete(member)) {
+          hasNoSuchMethod = true;
+        }
+        if (file != library) continue;
+        final names = switch (member) {
+          FieldDeclaration m when !m.isStatic => m.fields.variables.map(
+            (field) => field.name.lexeme,
+          ),
+          MethodDeclaration m when !m.isStatic && !m.isSetter => [
+            m.name.lexeme,
+          ],
+          _ => const <String>[],
+        };
+        for (final name in names) {
+          if (name.startsWith('_')) {
+            (interface || !isConcrete(member) ? required : concrete).add(name);
+          }
+        }
+      }
+    }
+
     void walk(
+      int file,
       NamedType? superT,
       List<NamedType> mixins,
       List<NamedType> impls,
       bool interfaceOnly,
     ) {
-      void visit(NamedType? t, bool interface) {
+      void visit(int fromFile, NamedType? t, bool interface) {
         if (t == null) return;
-        final ref = visibleTypes[library]?[refKey(t)];
-        if (ref == null || !seen.add('${ref.file}/${ref.name}')) return;
-        instanceDeclarationsMap[ref.file]?[ref.name]?.forEach((key, member) {
-          final base = key.split(RegExp(r'[*@]')).first;
-          if (!base.startsWith('_')) return;
-          final isConcrete = switch (member) {
-            MethodDeclaration m =>
-              m.body is! EmptyFunctionBody || m.externalKeyword != null,
-            _ => true,
-          };
-          (interface || !isConcrete ? required : concrete).add(base);
-        });
+        final ref = visibleTypes[fromFile]?[refKey(t)];
+        if (ref == null || !seen.add('${ref.file}/${ref.name}/$interface')) {
+          return;
+        }
+        collect(ref.file, ref.name, interface);
         final decl = topLevelDeclarationsMap[ref.file]?[ref.name]?.declaration;
         final (sup, mix, impl, _) = classLikeClauses(decl);
-        visit(sup, interface);
+        visit(ref.file, sup, interface);
         for (final m in mix) {
-          visit(m, interface);
+          visit(ref.file, m, interface);
         }
         for (final i in impl) {
-          visit(i, true);
+          visit(ref.file, i, true);
         }
       }
 
-      visit(superT, interfaceOnly);
+      visit(file, superT, interfaceOnly);
       for (final m in mixins) {
-        visit(m, interfaceOnly);
+        visit(file, m, interfaceOnly);
       }
       for (final i in impls) {
-        visit(i, true);
+        visit(file, i, true);
       }
     }
 
@@ -645,26 +684,23 @@ class CompilerContext with ScopeContext {
         in topLevelDeclarationsMap[library]?.values ??
             const <DeclarationOrBridge>[]) {
       final dec = entry.declaration;
-      if (dec is! ClassDeclaration || dec.abstractKeyword != null) continue;
-      final declaresNsm = dec.body.members.any(
-        (m) =>
-            m is MethodDeclaration &&
-            !m.isStatic &&
-            m.name.lexeme == 'noSuchMethod',
-      );
-      if (!declaresNsm) continue;
+      if (switch (dec) {
+        ClassDeclaration d =>
+          d.abstractKeyword != null || d.sealedKeyword != null,
+        ClassTypeAlias d => d.abstractKeyword != null,
+        EnumDeclaration() => false,
+        _ => true,
+      }) {
+        continue;
+      }
       concrete.clear();
       required.clear();
       seen.clear();
-      instanceDeclarationsMap[library]?[declarationName(dec)]?.forEach((
-        key,
-        member,
-      ) {
-        final base = key.split(RegExp(r'[*@]')).first;
-        if (base.startsWith('_')) concrete.add(base);
-      });
+      hasNoSuchMethod = false;
+      collect(library, declarationName(dec!), false);
       final (sup, mix, impl, _) = classLikeClauses(dec);
-      walk(sup, mix, impl, false);
+      walk(library, sup, mix, impl, false);
+      if (!hasNoSuchMethod) continue;
       for (final name in required) {
         if (!concrete.contains(name)) blockers.add(name);
       }

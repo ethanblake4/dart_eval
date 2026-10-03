@@ -95,6 +95,9 @@ final class LocalBinding {
   /// happen at any time, so flow promotions on the local are unsound.
   bool writeCaptured = false;
 
+  /// Lexical declaration retained by closure captures for suspension flow.
+  AstNode? captureDeclaration;
+
   /// Replaces the binding's current value — assignment, reconciliation at
   /// flow joins, and in-place box/unbox updates. Storage is unchanged:
   /// rebinding never moves the value in or out of a cell or slot.
@@ -197,10 +200,15 @@ final class LocalBinding {
     }
     final localType = dynamicWrite || stored.type.isSpec(CoreTypes.dynamic)
         ? declaredType
-        : declaredType.nullable &&
-              stored.type.isAssignableTo(ctx, declaredType.withNullable(false))
-        ? declaredType.withNullable(false)
-        : retained ?? promotionBase;
+        : retained ??
+              (declaredType.nullable &&
+                      promotionBase == declaredType &&
+                      stored.type.isAssignableTo(
+                        ctx,
+                        declaredType.withNullable(false),
+                      )
+                  ? declaredType.withNullable(false)
+                  : promotionBase);
 
     if (localType == declaredType && !ctx.soundFlowAnalysis(source)) {
       typesOfInterest.clear();
@@ -279,6 +287,7 @@ final class LocalBinding {
   /// final objects are captured by value; scalars use typed cells. Mutable
   /// cells lose allocation proofs because a closure can replace their value.
   void captureBinding(CompilerContext ctx, AstNode declaration) {
+    captureDeclaration = declaration;
     final analysis = capturesFor(declaration);
     if (!analysis.captured.contains(declaration) &&
         !(declaration is SwitchMember &&

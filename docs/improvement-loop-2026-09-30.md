@@ -3407,3 +3407,21 @@ Phi insertion now propagates newly inserted definitions through iterated merge
 sets. A focused branch-selected-loop regression and all 105 sibling tests pass.
 Committed and pushed to main as 558cbfa. No allocator or runtime change was
 needed for this correctness fix.
+## Cycle 20 SDK assertion follow-up
+
+The stored-generic bounds check revealed twelve previously hidden static-type
+errors in bare expectStaticType tearoffs. Fixed the compiler behavior instead
+of weakening the runtime check: abstract fields and inherited noSuchMethod
+forwarders block field promotion; null-shortened selectors retain the type of
+the executed path; anonymous bodies retain the appropriate receiver and chain
+proofs; do-loop and labeled exits join actual outgoing states; dart:core.identical
+participates in null promotion. Assignment interests take priority over a
+nullable fallback.
+
+Await and yield now demote captured outer bindings using declaration/write
+metadata, retaining the final-variable experimental exemption. Cast promotion
+preserves the physical bank of cells and handler slots. These are compiler
+flow changes and emit no suspension checks or adapters. All twelve regressed
+SDK fixtures now pass, as do both proper-subtype fixtures and focused existing
+capture, loop, foreach and assignment tests. Three newly passing expect_fail
+entries were removed. Full default and SDK gates are being rerun.

@@ -5,6 +5,7 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/model/label.dart';
 import 'package:dart_eval/src/eval/compiler/expression/null_aware.dart';
@@ -35,12 +36,17 @@ Variable compileAnonymousMethodInvocation(
     final output = BuiltinValue().push(ctx).boxIfNeeded(ctx);
     final nullResult = BuiltinValue().push(ctx).boxIfNeeded(ctx);
     final types = <TypeRef>{CoreTypes.nullType.ref(ctx)};
+    Map<String, (TypeRef, int)>? continuations;
     macroBranch(
       ctx,
       null,
       condition: (ctx) => compileNonNullCondition(ctx, receiver),
       thenBranch: (ctx, _) {
+        if (isNullShorted(e.target)) {
+          _applyContinuationPromotions(ctx, receiver, e);
+        }
         final v = _runBody(e, ctx, receiver, boundType);
+        continuations = _continuationPromotions(ctx);
         types.add(v.type);
         ctx.pushOp(Assign(output.ssa, v.boxIntoFreshSlot(ctx).ssa));
         return StatementInfo();
@@ -51,10 +57,63 @@ Variable compileAnonymousMethodInvocation(
       },
       source: e,
     );
-    return output.copyWith(type: TypeRef.commonBaseType(ctx, types));
+    return output
+        .copyWith(type: TypeRef.commonBaseType(ctx, types))
+        .withFacts(output.facts.copyWith(nullShortedPromotions: continuations));
   }
 
   return _runBody(e, ctx, receiver, boundType);
+}
+
+Map<String, (TypeRef, int)> _continuationPromotions(CompilerContext ctx) {
+  final proofs = <String, (TypeRef, int)>{};
+  for (final frame in ctx.locals) {
+    for (final binding in frame.values) {
+      if (binding.name.startsWith('#') || binding.writeCaptured) continue;
+      final value = binding.current;
+      proofs[binding.name] = (value.type, value.writeEpoch);
+      for (final member
+          in value.facts.promotedMembers?.entries ??
+              const <MapEntry<String, TypeRef>>[]) {
+        proofs['${binding.name}.${member.key}'] = (
+          member.value,
+          value.writeEpoch,
+        );
+      }
+    }
+  }
+  return proofs;
+}
+
+void _applyContinuationPromotions(
+  CompilerContext ctx,
+  Variable receiver,
+  AstNode source,
+) {
+  for (final entry
+      in receiver.facts.nullShortedPromotions?.entries ??
+          const <MapEntry<String, (TypeRef, int)>>[]) {
+    final dot = entry.key.indexOf('.');
+    final name = dot < 0 ? entry.key : entry.key.substring(0, dot);
+    final binding = ctx.lookupBinding(name);
+    if (binding == null ||
+        binding.writeCaptured ||
+        binding.current.writeEpoch != entry.value.$2) {
+      continue;
+    }
+    if (dot < 0) {
+      if (canPromoteTo(ctx, entry.value.$1, binding.current.type, source)) {
+        binding.promote(entry.value.$1);
+      }
+    } else {
+      promoteMember(
+        ctx,
+        binding.current,
+        entry.key.substring(dot + 1),
+        entry.value.$1,
+      );
+    }
+  }
 }
 
 Variable _runBody(
@@ -71,11 +130,12 @@ Variable _runBody(
       (e.isNullAware || (!e.isCascaded && isNullShorted(e.target)))
       ? receiver.copyWith(type: receiver.type.withNullable(false))
       : receiver;
-  ctx.anonymousThisReceiver = boundReceiver;
+  final rebindsThis = e.parameters == null;
+  if (rebindsThis) ctx.anonymousThisReceiver = boundReceiver;
   // `#this` gets its own binding — adopting the receiver variable itself
   // would steal the `.binding` back-reference of a bound local it aliases
   // (e.g. the promoted variable a previous anonymous body returned).
-  ctx.setLocal('#this', boundReceiver.copyWith());
+  if (rebindsThis) ctx.setLocal('#this', boundReceiver.copyWith());
   final parameters = e.parameters;
   if (parameters != null) {
     for (final parameter in parameters.parameters) {
@@ -87,7 +147,9 @@ Variable _runBody(
           : TypeRef.fromAnnotation(ctx, ctx.library, annotation);
       ctx.setLocal(
         name,
-        boundReceiver.copyWith(type: declared ?? boundReceiver.type),
+        boundReceiver
+            .copyWith(type: declared ?? boundReceiver.type)
+            .withFacts(boundReceiver.facts.copyWith(promotedMembers: const {})),
         declaredType: declared ?? boundReceiver.type,
       );
     }

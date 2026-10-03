@@ -1,13 +1,59 @@
+// ignore_for_file: experimental_member_use
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 import 'package:dart_eval/src/eval/compiler/context.dart';
+import 'package:dart_eval/src/eval/compiler/denotation.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'assigned_locals.dart';
+import 'captures.dart';
+
+/// Suspension lets enclosing invocations write captured variables. Local
+/// variables and unwritten captures retain their promotions.
+void demoteAfterSuspension(CompilerContext ctx, AstNode source) {
+  final function =
+      source.thisOrAncestorOfType<FunctionExpression>() ??
+      source.thisOrAncestorOfType<MethodDeclaration>() ??
+      source.thisOrAncestorOfType<ConstructorDeclaration>();
+  if (function == null) return;
+  final analysis = capturesFor(source);
+  final unit = source.thisOrAncestorOfType<CompilationUnit>();
+  var inferenceUpdate4 = false;
+  for (
+    Token? comment = unit?.beginToken.precedingComments;
+    comment != null;
+    comment = comment.next
+  ) {
+    if (RegExp(
+      r'^//\s*SharedOptions=.*--enable-experiment=inference-update-4(?:\s|,|$)',
+    ).hasMatch(comment.lexeme)) {
+      inferenceUpdate4 = true;
+    }
+  }
+  for (final scope in ctx.locals) {
+    for (final binding in scope.values) {
+      final declaration = binding.captureDeclaration;
+      if (declaration == null ||
+          analysis.declaringFunctions[declaration] == function ||
+          !analysis.assignedDeclarations.contains(declaration) ||
+          binding.isFinal && inferenceUpdate4) {
+        continue;
+      }
+      final current = binding.current;
+      binding.rebind(
+        current
+            .withType(binding.declaredType)
+            .withFacts(current.facts.cleared()),
+      );
+      binding.current.writeEpoch = current.writeEpoch + 1;
+    }
+  }
+}
 
 /// The action one branch edge takes with a proved promotion: [member] is
 /// null for a local's own type, or the member name for a `x._f` member
@@ -133,6 +179,27 @@ void _visitPromotions(
     );
     return;
   }
+  if (expression is AnonymousMethodInvocation &&
+      expression.parameters == null &&
+      expression.body is AnonymousExpressionBody) {
+    final body = (expression.body as AnonymousExpressionBody).expression;
+    final receiver = promotableMemberSlot(
+      ctx,
+      expression.realTarget,
+      excluded: excluded,
+    );
+    final binding = receiver?.member == null ? receiver?.local.binding : null;
+    if (binding != null && !assignedLocalNames([body]).contains(binding.name)) {
+      ctx.beginScope();
+      ctx.locals.last['#this'] = binding;
+      try {
+        _visitPromotions(ctx, body, value, promote, excluded: excluded);
+      } finally {
+        ctx.endScope();
+      }
+    }
+    return;
+  }
   if (expression is PrefixExpression && expression.operator.lexeme == '!') {
     _visitPromotions(
       ctx,
@@ -211,6 +278,20 @@ void _visitPromotions(
     }
     return;
   }
+  if (!value &&
+      expression is MethodInvocation &&
+      _isCoreIdentical(ctx, expression)) {
+    final arguments = expression.argumentList.arguments;
+    if (arguments.length == 2) {
+      final slot = switch ((arguments[0], arguments[1])) {
+        (final Expression slot, NullLiteral()) => slot,
+        (NullLiteral(), final Expression slot) => slot,
+        _ => null,
+      };
+      if (slot != null) _promoteSlot(ctx, slot, null, promote, excluded);
+    }
+    return;
+  }
   if (expression is IsExpression) {
     final tested = TypeRef.fromAnnotation(ctx, ctx.library, expression.type);
     final matches = expression.notOperator == null ? value : !value;
@@ -222,6 +303,48 @@ void _visitPromotions(
     }
     _promoteSlot(ctx, expression.expression, tested, promote, excluded);
     return;
+  }
+}
+
+bool _isCoreIdentical(CompilerContext ctx, MethodInvocation expression) {
+  if (expression.methodName.name != 'identical' || expression.isCascaded) {
+    return false;
+  }
+  try {
+    final Denotation denotation;
+    final target = expression.target;
+    if (target == null) {
+      denotation = resolveIdentifier(
+        ctx,
+        'identical',
+        forSet: false,
+        source: expression,
+      );
+    } else if (target is SimpleIdentifier) {
+      final prefix = resolveIdentifier(
+        ctx,
+        target.name,
+        forSet: false,
+        source: target,
+      );
+      if (prefix is! PrefixDenotation) return false;
+      denotation = prefix.memberAccess(
+        ctx,
+        'identical',
+        forSet: false,
+        source: expression,
+      );
+    } else {
+      return false;
+    }
+    final library = switch (denotation) {
+      FunctionDenotation(:final target) ||
+      BridgeDenotation(:final target) => target.sourceLib,
+      _ => null,
+    };
+    return library != null && library == ctx.libraryMap['dart:core'];
+  } on CompileError {
+    return false;
   }
 }
 
@@ -286,6 +409,25 @@ PromotionSlot? promotableMemberSlot(
 }) {
   while (target is ParenthesizedExpression) {
     target = target.expression;
+  }
+  if (target is AnonymousMethodInvocation &&
+      target.parameters == null &&
+      target.body is AnonymousExpressionBody) {
+    final expression = (target.body as AnonymousExpressionBody).expression;
+    final receiver = target.realTarget;
+    final source = promotableMemberSlot(ctx, receiver, excluded: excluded);
+    final binding = source?.member == null ? source?.local.binding : null;
+    if (binding == null ||
+        assignedLocalNames([expression]).contains(binding.name)) {
+      return null;
+    }
+    ctx.beginScope();
+    ctx.locals.last['#this'] = binding;
+    try {
+      return promotableMemberSlot(ctx, expression, excluded: excluded);
+    } finally {
+      ctx.endScope();
+    }
   }
   Expression? receiver;
   String? member;

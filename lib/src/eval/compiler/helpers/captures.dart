@@ -15,6 +15,8 @@ CaptureAnalysis capturesFor(AstNode node) {
 /// creation never controls whether a shared cell exists.
 class CaptureAnalysis extends RecursiveAstVisitor<void> {
   final captured = <AstNode>{};
+  final declaringFunctions = <AstNode, AstNode>{};
+  final assignedDeclarations = <AstNode>{};
   final capturedCaseBodies = <SwitchMember, Set<String>>{};
   final _patternBindings = <AstNode, List<DeclaredVariablePattern>>{};
 
@@ -40,6 +42,7 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
     // `_` is a wildcard: it never binds, so it is never declared.
     if (_functions.isNotEmpty && name != '_') {
       _scopes.last[name] = (declaration, _functions.last);
+      declaringFunctions[declaration] = _functions.last;
     }
   }
 
@@ -63,6 +66,7 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       return;
     }
     final owner = _functions.indexOf(binding.$2);
+    if (setter) assignedDeclarations.add(binding.$1);
     if (owner == _functions.length - 1) return;
     final declaration = binding.$1;
     if (declaration is SwitchMember) {

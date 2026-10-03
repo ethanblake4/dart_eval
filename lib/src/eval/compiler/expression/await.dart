@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import '../values/value_rep.dart';
+import '../helpers/promotion.dart';
 
 Variable compileAwaitExpression(
   AwaitExpression e,
@@ -51,6 +52,8 @@ Variable compileAwaitExpression(
   final awaitTypeId = ctx.runtimeTypes.idOf(
     ctx.types.bySpec(CoreTypes.future).instantiate([resultType]),
   );
+
+  demoteAfterSuspension(ctx, e);
 
   return Variable.ssa(
     ctx,

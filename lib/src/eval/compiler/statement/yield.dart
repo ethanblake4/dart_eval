@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/ir/generators.dart';
 import '../invocation/accessors.dart';
+import '../helpers/promotion.dart';
 
 StatementInfo compileYield(
   CompilerContext ctx,
@@ -67,6 +68,7 @@ StatementInfo compileYield(
       type: CoreTypes.iterator.ref(ctx).copyWith(arguments: [elementType]),
     );
     ctx.pushOp(YieldGenerator(iterator.ssa, delegate: true));
+    demoteAfterSuspension(ctx, statement);
     return StatementInfo();
   }
   ctx.pushOp(
@@ -76,6 +78,7 @@ StatementInfo compileYield(
       asynchronous: node.isAsynchronous,
     ),
   );
+  demoteAfterSuspension(ctx, statement);
   return StatementInfo();
 }
 

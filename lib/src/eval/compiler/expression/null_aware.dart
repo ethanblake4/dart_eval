@@ -88,12 +88,15 @@ Variable emitNullGuard(
       // extension resolution (`c1n?.ext` on `extension on C1`) see the
       // non-nullable view. Detach it from the binding so boxing cannot
       // replace this view with the binding's nullable type.
+      final selectorType = narrow
+          ? target.type.withNullable(false)
+          : target.facts.nullShortedType;
       final V = body(
-        narrow
+        selectorType != null
             ? Variable.of(
                 ctx,
                 target.ssa,
-                target.type.withNullable(false),
+                selectorType,
                 rep: target.rep,
                 facts: target.facts,
               )
@@ -105,10 +108,13 @@ Variable emitNullGuard(
       final canBeNull = target.type.hasNullableRepresentation;
       out = out.copyWith(
         type: canBeNull ? V.type.withNullable(true) : V.type,
-        possibleClasses: {
-          ...V.concreteTypes,
-          if (canBeNull) CoreTypes.nullType.ref(ctx),
-        }.toList(),
+        facts: out.facts.copyWith(
+          nullShortedType: V.type,
+          possibleClasses: {
+            ...V.concreteTypes,
+            if (canBeNull) CoreTypes.nullType.ref(ctx),
+          }.toList(),
+        ),
       );
       ctx.pushOp(Assign(out.ssa, V.ssa));
       return StatementInfo();

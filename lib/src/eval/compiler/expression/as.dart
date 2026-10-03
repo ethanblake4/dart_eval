@@ -6,6 +6,8 @@ import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/return.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import 'package:dart_eval/src/eval/compiler/variable/binding.dart'
+    show SsaStorage;
 import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -72,7 +74,15 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
       // A write-captured local can be clobbered by a closure at any
       // time — `x as T` can't promote it.
       if (localBinding?.writeCaptured != true) {
-        localBinding?.rebind(result);
+        if (localBinding != null) {
+          // Cell and handler slots retain their physical bank after a cast.
+          // The cast result can be unboxed without changing storage reads.
+          localBinding.rebind(
+            localBinding.storage is SsaStorage
+                ? result
+                : localBinding.current.withType(type),
+          );
+        }
       }
     }
     return result;
