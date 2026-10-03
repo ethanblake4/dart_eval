@@ -3957,3 +3957,14 @@ Targeted SDK regeneration is byte-identical for both generated files. Removed
 two stale expectations. Enhanced_enums_basic reaches a separate mixin
 super.toString failure and remains expected to fail. All six correctness passes
 are checkpointed; 15 confirmed stale entries have been removed in this cycle.
+
+
+## Cycle 24 correctness gate follow-up
+
+Broad gates exposed a declaration-context distinction after the private lookup
+fix: constructor field formals must name the declaring class's own private
+field, even when a signature is queried from an importing library or backend
+export pass. Field-formal lookup now supplies that class's library explicitly;
+ordinary access retains lexical privacy. All 44 focused stream/class/late-local/
+promotion/mixin tests and both original anonymous-method private-field-promotion
+fixtures pass; scoped analyzer passes. Broad gates are rerun after this fix.

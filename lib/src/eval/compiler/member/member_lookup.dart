@@ -732,7 +732,15 @@ final class MemberLookup {
       final decl = nominalDeclOf(type);
       // A field formal binds a real field, which lives at the bare name —
       // an inherited abstract accessor can occupy the getter slot instead.
-      final member = decl?.declaredMember(MemberName(name, MemberKind.method));
+      final member = decl?.declaredMember(
+        MemberName(
+          name,
+          MemberKind.method,
+          // Constructor signatures can be queried from an importing library.
+          // A field formal always names its declaring class's own field.
+          privateLibraryUri: name.startsWith('_') ? decl.libraryUri : null,
+        ),
+      );
       if (member == null || !member.isField) {
         throw CompileError(
           'Field formals did not find field $name in class $type',
