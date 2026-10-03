@@ -130,11 +130,7 @@ import '../helpers/assigned_locals.dart';
     final staticOutcome =
         expression is IsExpression &&
             !ctx.soundFlowAnalysis(expression) &&
-            !TypeRef.fromAnnotation(
-              ctx,
-              ctx.library,
-              expression.type,
-            ).isSpec(CoreTypes.never)
+            !TypeRef.fromAnnotation(ctx, ctx.library, expression.type).isBottom
         ? null
         : compiledValue.facts.constBool;
     for (final (destination, outcome) in [(yes, true), (no, false)]) {

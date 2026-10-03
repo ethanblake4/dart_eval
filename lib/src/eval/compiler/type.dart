@@ -43,6 +43,20 @@ sealed class TypeRef {
 
   final bool nullable;
 
+  /// Whether this type has no values, including parameters bounded by Never.
+  bool get isBottom {
+    var type = this;
+    Set<TypeParameterDef>? seen;
+    while (!type.nullable) {
+      if (type.isSpec(CoreTypes.never)) return true;
+      if (type is! TypeParameterTypeRef) return false;
+      final bound = type.effectiveBound;
+      if (bound == null || !(seen ??= {}).add(type.parameter)) return false;
+      type = bound;
+    }
+    return false;
+  }
+
   /// Whether the runtime value can be null, including erased representations
   /// and type parameter bounds that lack a `?` on their annotation.
   bool get hasNullableRepresentation => _hasNullableRepresentation();

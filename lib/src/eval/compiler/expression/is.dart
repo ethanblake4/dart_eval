@@ -16,7 +16,7 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   final runtimeSlot = slot.erasedExtensionType;
 
   // `x is S` narrows only when `S` is a subtype of the operand's type.
-  if (isPromotionSubtype(ctx, slot, V.type)) {
+  if (canPromoteTo(ctx, slot, V.type, e)) {
     V.inferType(ctx, slot);
   }
 
@@ -27,10 +27,8 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
     return BuiltinValue(boolval: !not).push(ctx);
   }
 
-  /// `x is Never` can never hold — no runtime value has type Never — so
-  /// both directions fold statically. That makes a guarded branch
-  /// unreachable.
-  if (runtimeSlot.isSpec(CoreTypes.never)) {
+  // No runtime value inhabits Never or a type parameter bounded by it.
+  if (slot.isBottom) {
     return BuiltinValue(boolval: not).push(ctx);
   }
 

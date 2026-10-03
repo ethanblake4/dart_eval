@@ -3367,3 +3367,12 @@ their existing reachability behavior. Five real SDK fixtures now pass and
 their expect_fail entries were removed. Both disabled sound-flow counterparts
 and all 17 existing focused pattern/version tests pass. No duplicate tests,
 runtime changes or extra checks on statically certain pattern paths.
+
+## Cycle 20 pass 5: Never-bounded expression reachability
+
+A cycle-safe TypeRef.isBottom follows non-nullable type-parameter bounds.
+Statement termination, condition reachability and short-circuit RHS handling
+now recognize T extends Never as bottom. Nullable Never retains its null value.
+The existing Null comparison folding needed no change. All four pinned
+unreachable_via fixtures pass; their stale entries were removed. Scoped
+analysis is clean and the change adds no runtime instructions.

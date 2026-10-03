@@ -3,7 +3,6 @@ import '../helpers/return.dart';
 import '../builtins.dart';
 import '../reference.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
@@ -46,7 +45,7 @@ StatementInfo compileStatement(
       return compileVariableDeclarationStatement(s, ctx);
     } else if (s is ExpressionStatement) {
       final V = compileExpressionAndDiscardResult(s.expression, ctx);
-      if (V != null && V.type.isSpec(CoreTypes.never)) {
+      if (V != null && V.type.isBottom) {
         return markNeverTerminates(ctx);
       }
       return StatementInfo();

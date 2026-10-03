@@ -332,7 +332,7 @@ Variable _compileShortCircuit(
           : CoreTypes.bool.ref(ctx);
       var R = compileExpression(right, ctx, rightBound);
       rightType = R.type;
-      if (rightType.isSpec(CoreTypes.never) && !rightType.nullable) {
+      if (rightType.isBottom) {
         return markNeverTerminates(ctx);
       }
       if (operator != '??') {
@@ -355,9 +355,7 @@ Variable _compileShortCircuit(
     },
   );
 
-  if (rightType.isSpec(CoreTypes.never) &&
-      !rightType.nullable &&
-      operator != '??') {
+  if (rightType.isBottom && operator != '??') {
     // The RHS cannot reach the join. Continuing therefore proves the LHS
     // short-circuited, including any type test or null check it contains.
     applyConditionPromotions(ctx, left, operator == '||');
