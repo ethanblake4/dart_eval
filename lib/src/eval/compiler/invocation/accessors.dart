@@ -603,17 +603,26 @@ sealed class GetTarget {
       extensionPin: extensionPin,
     ).emit(ctx);
     if (extensionPin == null) {
-      final member = ctx.memberLookup.tryInterfaceMember(
-        receiver.type,
-        MemberName.getter(name),
-        source: source,
-      );
+      final member =
+          ctx.memberLookup.tryInterfaceMember(
+            receiver.type,
+            MemberName.getter(name),
+            source: source,
+          ) ??
+          ctx.memberLookup.tryInterfaceMember(
+            receiver.type,
+            MemberName(name, MemberKind.method),
+            source: source,
+          );
+      final getterNeedsCheck =
+          member != null && ctx.memberLookup.getterNeedsCovariantCheck(member);
       if (member != null &&
-          ctx.memberLookup.getterNeedsCovariantCheck(member)) {
+          (getterNeedsCheck ||
+              ctx.memberLookup.methodTearOffNeedsCovariantCheck(member))) {
         compileTypeAssertion(
           ctx,
           value.boxIfNeeded(ctx),
-          member.signature.returnType,
+          getterNeedsCheck ? member.signature.returnType : value.type,
           source: source,
         );
       }

@@ -979,10 +979,21 @@ final class MemberLookup {
     return _hasClassTypeParameter(declaration.signature.returnType, false);
   }
 
-  /// A method tear-off can expose a class parameter contravariantly through
-  /// its result, so a widened receiver needs its actual callable checked.
+  /// A widened receiver can expose unsafe result types or generic bounds
+  /// through a method tear-off.
   bool methodTearOffNeedsCovariantCheck(ResolvedMember member) =>
-      _hasClassTypeParameter(member.member.signature.returnType, false);
+      methodResultNeedsCovariantCheck(member.member) ||
+      member.member.signature.typeParameters.any(
+        (parameter) => _hasInvariantClassTypeParameter(parameter.bound),
+      );
+
+  /// Function-valued results can expose a class parameter contravariantly.
+  bool methodResultNeedsCovariantCheck(Member member) =>
+      _hasClassTypeParameter(member.signature.returnType, false);
+
+  bool _hasInvariantClassTypeParameter(TypeRef? type) =>
+      type != null &&
+      (_hasClassTypeParameter(type) || _hasClassTypeParameter(type, false));
 
   /// Whether [type] has a covariant occurrence of a class type parameter —
   /// a parameter declared with such a type is implicitly covariant. Function
@@ -1006,6 +1017,12 @@ final class MemberLookup {
     }
     if (type is! FunctionTypeRef) return false;
     final function = type.signature;
+    // Generic function bounds must agree in either direction of subtyping.
+    if (function.typeParameters.any(
+      (parameter) => _hasInvariantClassTypeParameter(parameter.bound),
+    )) {
+      return true;
+    }
     if ([
       ...function.positional,
       for (final parameter in function.named.values) parameter.type,

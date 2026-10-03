@@ -3500,3 +3500,13 @@ casts the host type iterable without reifying guest argument values.
 Both failing arguments/abstract-override fixtures and partial-instantiation
 neighbor pass; four existing forwarding regressions pass. Analysis is clean,
 two stale entries removed. No hot interpreter or generated stdlib changes.
+
+## Cycle 21 pass 3: function-valued covariance boundaries
+
+Class-parameter occurrence analysis now includes generic function bounds with
+invariant treatment. Ordinary method tear-offs and function-valued method
+results receive assertions only when their declaration requires the covariance
+boundary. Generic setters and invocation checks already worked and were retained.
+Both complete original covariant fixtures and nine existing dispatch/member/
+tear-off tests pass. Analysis and diff checks pass; two stale entries removed.
+This emits checks only on affected signatures and changes no runtime code.

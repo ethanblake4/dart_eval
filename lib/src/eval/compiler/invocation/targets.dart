@@ -22,6 +22,7 @@ import 'binder.dart';
 import 'resolver.dart';
 import 'bound_call.dart';
 import '../variable/value_facts.dart';
+import '../helpers/type_check.dart';
 
 /// Who supplies omitted arguments and how supplied arguments reach the callee.
 enum BindingPolicy {
@@ -167,7 +168,13 @@ final class StaticCall extends CallTarget {
             : null,
       ),
     );
-    return Variable.of(ctx, s, call.returnType, rep: resultRep);
+    final result = Variable.of(ctx, s, call.returnType, rep: resultRep);
+    if (receiver != null &&
+        member != null &&
+        ctx.memberLookup.methodResultNeedsCovariantCheck(member!)) {
+      compileTypeAssertion(ctx, result.boxIfNeeded(ctx), call.returnType);
+    }
+    return result;
   }
 
   // Direct calls bypass dynamic dispatch's argument checks. An inherited
@@ -437,8 +444,14 @@ final class VirtualCall extends CallTarget {
   CallSignature? get signature => _signature ?? member?.signature;
 
   @override
-  Variable emit(CompilerContext ctx, BoundCall call) =>
-      _emitDynamicCall(ctx, call, receiver, name);
+  Variable emit(CompilerContext ctx, BoundCall call) {
+    final result = _emitDynamicCall(ctx, call, receiver, name);
+    if (member != null &&
+        ctx.memberLookup.methodResultNeedsCovariantCheck(member!)) {
+      compileTypeAssertion(ctx, result, call.returnType);
+    }
+    return result;
+  }
 }
 
 Variable _emitDynamicCall(
