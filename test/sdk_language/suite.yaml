@@ -178,7 +178,6 @@ expect_fail:
   - path: 'nnbd/resolution/null_assertion_null_type_test.dart'
   - path: 'nnbd/static_errors/super_equals_allows_null_test.dart'
   - path: 'no_such_method/mock_test.dart'
-  - path: 'no_such_method/no_such_method_non_nullable_optional_test.dart'
   - path: 'nonfunction_type_aliases/private_names/private_name_types_test.dart'
   - path: 'null_aware/index_this_null_aware_equals_test.dart'
     reason: 'Expando type not bound in stdlib'

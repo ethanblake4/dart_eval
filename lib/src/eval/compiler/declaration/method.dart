@@ -1,5 +1,6 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/analysis/utilities.dart' show parseString;
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -20,6 +21,7 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import '../values/abi.dart';
 import '../member/member_name.dart';
+import '../member/member.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
 
@@ -375,6 +377,95 @@ bool _forwardsAbstractMember(
             ),
           ) ==
           null;
+}
+
+/// Materializes interface-only source methods through the same checked
+/// boundary as an explicitly declared abstract method. Imported declarations
+/// and class-generic interfaces still require a substituted declaring scope;
+/// inferred returns and nonliteral defaults retain their original source.
+void compileInterfaceNoSuchMethodForwarders(
+  CompilerContext ctx,
+  Declaration host,
+) {
+  if (host is! ClassDeclaration ||
+      host.abstractKeyword != null ||
+      host.sealedKeyword != null ||
+      host.namePart.typeParameters != null) {
+    return;
+  }
+  final hostName = declarationName(host);
+  final names = ctx.noSuchMethodForwarders[(ctx.library, hostName)];
+  if (names == null || names.isEmpty) return;
+  final receiver = TypeRef.lookupDeclaration(ctx, ctx.library, host);
+  final positions = ctx.instanceDeclarationPositions[ctx.library]![hostName]!;
+  for (final key in names) {
+    final name = key.split('::').last;
+    if (positions[MemberKind.method]!.containsKey(name)) continue;
+    final resolved = ctx.memberLookup.tryInterfaceMember(
+      receiver,
+      MemberName(name, MemberKind.method),
+    );
+    final member = resolved?.member;
+    if (member is! SourceMember ||
+        member.library != ctx.library ||
+        member.declaringDecl!.typeParameters.isNotEmpty) {
+      continue;
+    }
+    final declaration = member.node;
+    if (declaration is! MethodDeclaration ||
+        declaration.isGetter ||
+        declaration.isSetter ||
+        declaration.returnType == null ||
+        declaration.externalKeyword != null ||
+        (declaration.parameters?.parameters.any(
+              (parameter) =>
+                  (parameter.defaultClause != null &&
+                      parameter.defaultClause!.value is! IntegerLiteral &&
+                      parameter.defaultClause!.value is! DoubleLiteral &&
+                      parameter.defaultClause!.value is! BooleanLiteral &&
+                      parameter.defaultClause!.value is! NullLiteral &&
+                      parameter.defaultClause!.value is! SimpleStringLiteral) ||
+                  (!parameter.isRequired &&
+                      parameter.defaultClause == null &&
+                      parameter.functionTypedSuffix != null),
+            ) ??
+            false)) {
+      continue;
+    }
+    // Defaults and annotations keep their source spelling and library.
+    // A missing optional default on an interface is supplied as null by its
+    // forwarder, even when the interface annotation itself is non-nullable.
+    final source = declaration.toSource();
+    var signature = source.substring(
+      0,
+      source.length - declaration.body.toSource().length,
+    );
+    for (final parameter
+        in declaration.parameters?.parameters ?? const <FormalParameter>[]) {
+      final annotation = parameter.type;
+      if (parameter.isRequired ||
+          parameter.defaultClause != null ||
+          annotation == null ||
+          annotation.toSource().endsWith('?')) {
+        continue;
+      }
+      final original = parameter.toSource();
+      signature = signature.replaceFirst(
+        original,
+        original.replaceFirst(
+          annotation.toSource(),
+          '${annotation.toSource()}?',
+        ),
+      );
+    }
+    final unit = parseString(content: 'class $hostName { $signature; }').unit;
+    final stub =
+        (unit.declarations.single as ClassDeclaration).body.members.single
+            as MethodDeclaration;
+    ctx.instanceDeclarationsMap[ctx.library]![hostName]![name] = stub;
+    ctx.currentClass = host;
+    compileMethodDeclaration(stub, ctx, host);
+  }
 }
 
 /// Extension parameters belong to the extension's own scope, not the

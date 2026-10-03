@@ -3661,3 +3661,14 @@ initializers no longer hit the obsolete rejection guard, whose duplicative test
 was removed. Six original private-named fixtures, instance-field initializer and
 primary initializer-scope fixtures pass; 17 existing focused tests and analysis
 pass. Eight confirmed stale entries removed. No runtime changes.
+## Cycle 22 pass 5: checked interface-only noSuchMethod forwarders
+
+Concrete nongeneric hosts now materialize same-library source interface methods
+through the existing checked abstract-method boundary. Explicit return annotations
+and literal defaults preserve their declaring source; unsupported imported,
+class-generic or source-inferred signatures retain the existing path. Omitted
+optional interface defaults are null at the forwarding boundary. The original
+non_nullable_optional fixture and seven positive forwarding variants pass, along
+with tearoff_fta, private-setter variants and the prior arguments fixture. Four
+existing focused regressions, analysis and diff checks pass. One stale entry
+removed; no runtime changes. Dynamic comparison in mock_test remains separate.

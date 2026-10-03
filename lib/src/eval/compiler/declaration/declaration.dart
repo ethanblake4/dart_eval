@@ -230,4 +230,6 @@ void compileClassMembers(
       fieldIndex += m.fields.variables.length;
     }
   }
+  ctx.currentClass = parent;
+  compileInterfaceNoSuchMethodForwarders(ctx, parent);
 }
