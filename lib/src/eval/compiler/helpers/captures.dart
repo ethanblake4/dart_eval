@@ -156,14 +156,31 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   }
 
   @override
+  void visitEnumDeclaration(EnumDeclaration node) {
+    _members.add({
+      for (final member in node.body.members)
+        if (member is MethodDeclaration && !member.isStatic)
+          member.name.lexeme
+        else if (member is FieldDeclaration && !member.isStatic)
+          ...member.fields.variables.map((v) => v.name.lexeme),
+    });
+    super.visitEnumDeclaration(node);
+    _members.removeLast();
+  }
+
+  @override
   void visitMethodDeclaration(MethodDeclaration node) =>
       _function(node, node.parameters, node.body, instance: !node.isStatic);
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
     final declarationInitializers = <Expression>[];
     if (isLoweredPrimaryConstructor(node)) {
-      final owner = node.parent!.parent as ClassDeclaration;
-      for (final field in owner.body.members.whereType<FieldDeclaration>()) {
+      final members = switch (node.parent!.parent) {
+        ClassDeclaration owner => owner.body.members,
+        EnumDeclaration owner => owner.body.members,
+        _ => throw StateError('Unsupported primary constructor owner'),
+      };
+      for (final field in members.whereType<FieldDeclaration>()) {
         if (field.isStatic || field.fields.isLate) continue;
         for (final variable in field.fields.variables) {
           final initializer = variable.initializer;

@@ -7,6 +7,8 @@ import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/member/resolved_member.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import '../helpers/bridge_mixin.dart';
+import '../helpers/primary_constructor.dart';
+import '../helpers/global.dart' show inferStaticExpressionType;
 
 /// What declared a member: a nominal type or an extension.
 sealed class MemberOwner {
@@ -398,8 +400,16 @@ final class SourceMember extends Member {
       // with neither an annotation nor an inferred entry is left
       // unresolved (callers degrade to dynamic themselves).
       final inferred = ctx.inferredFieldTypes[library]?[_ownerName]?[name.name];
-      if (inferred == null) return null;
-      return inferred;
+      if (inferred != null) return inferred;
+      final defaultValue = primaryConstructorFieldDefault(variable!);
+      if (defaultValue == null) return null;
+      final type = ctx.typeFactory.widenedInferredType(
+        inferStaticExpressionType(ctx, library, defaultValue),
+      );
+      ctx.inferredFieldTypes
+          .putIfAbsent(library, () => {})
+          .putIfAbsent(_ownerName, () => {})[name.name] = type;
+      return type;
     }
     return TypeRef.fromAnnotation(
       ctx,

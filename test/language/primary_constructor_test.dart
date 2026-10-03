@@ -30,6 +30,39 @@ int main() {
 }
 ''', 9);
 
+  check(
+    'enum headers preserve defaults and captured initializer parameters',
+    '''
+enum Gauge({final int a = 2, required final int b}) {
+  first(b: 3), second(a: 4, b: 5);
+  final int doubled = b * 2;
+  final int Function() total = () => a + b;
+  final int sum;
+  this : sum = a + b;
+}
+int main() => Gauge.first.doubled + Gauge.first.total() +
+    Gauge.first.sum + Gauge.second.total();
+''',
+    25,
+  );
+
+  check('declaring parameter defaults infer field types', '''
+class Named({final x = 1, var y = 2});
+enum Optional([final x = 3]) { first, second(4); }
+bool main() => [Named().x, Named().y, Optional.first.x] is List<int>;
+''', true);
+
+  check('covariant declaring fields permit narrower interface setters', '''
+class Wide(covariant var num value);
+class Narrow(var int value) implements Wide;
+int main() {
+  Wide first = Narrow(4);
+  first.value = 5;
+  try { first.value = 2.5; } on TypeError { return first.value.toInt(); }
+  return 0;
+}
+''', 5);
+
   check('named generic headers retain optional defaults and redirects', '''
 class Box<T>.named(final T value, {var int count = 2}) {
   Box.redirect(T value) : this.named(value);

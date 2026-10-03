@@ -4380,3 +4380,12 @@ valid call, wrong type-argument count and missing context. The SDK-shaped
 surface, while the retained cases isolate the custom generic tear-off behavior.
 The confirmed stale `dot_shorthands/type_parameter/type_parameter_test.dart`
 expectation was removed after its fresh/serialized pass.
+
+### Cycle 27 correctness pass 3: primary-constructor headers and defaults
+
+Enum primary-constructor lowering now follows the enum-specific constructor
+contract. Header field-formal defaults reuse the existing lazy inference cache,
+and explicit `covariant` header fields retain their setter contract. The four
+untouched SDK fixtures for enum implicit const constructors, header syntax,
+covariant fields and optional-parameter inference pass fresh and serialized
+execution; their stale expectations were removed. Twenty-six focused tests pass.

@@ -9,17 +9,50 @@ import 'package:analyzer/src/dart/ast/ast.dart' as ast;
 /// Ordinary constructor declarations have their own name token.
 bool isLoweredPrimaryConstructor(ConstructorDeclaration constructor) {
   final owner = constructor.parent?.parent;
-  return owner is ClassDeclaration &&
-      identical(constructor.typeName?.token, owner.namePart.typeName);
+  final name = switch (owner) {
+    ClassDeclaration() => owner.namePart.typeName,
+    EnumDeclaration() => owner.namePart.typeName,
+    _ => null,
+  };
+  return name != null && identical(constructor.typeName?.token, name);
+}
+
+/// A declaring parameter's default remains on its lowered field formal.
+/// Shared name tokens distinguish synthesized fields from body declarations.
+Expression? primaryConstructorFieldDefault(VariableDeclaration field) {
+  final owner = field.parent?.parent?.parent?.parent;
+  final members = switch (owner) {
+    ClassDeclaration() => owner.body.members,
+    EnumDeclaration() => owner.body.members,
+    _ => const <ClassMember>[],
+  };
+  for (final constructor in members.whereType<ConstructorDeclaration>()) {
+    if (!isLoweredPrimaryConstructor(constructor)) continue;
+    for (final parameter in constructor.parameters.parameters) {
+      if (parameter is FieldFormalParameter &&
+          identical(parameter.name, field.name)) {
+        return parameter.defaultClause?.value;
+      }
+    }
+  }
+  return null;
 }
 
 /// Reuses ordinary constructor registration, signatures and field lowering.
 /// Original tokens and expression nodes retain their source locations.
-void lowerPrimaryConstructor(ClassDeclaration declaration) {
-  final header = declaration.namePart;
+void lowerPrimaryConstructor(Declaration declaration) {
+  final header = switch (declaration) {
+    ClassDeclaration() => declaration.namePart,
+    EnumDeclaration() => declaration.namePart,
+    _ => null,
+  };
   if (header is! PrimaryConstructorDeclaration) return;
   final body = header.body;
-  final members = declaration.body.members;
+  final members = switch (declaration) {
+    ClassDeclaration() => declaration.body.members,
+    EnumDeclaration() => declaration.body.members,
+    _ => throw StateError('Unsupported primary constructor owner'),
+  };
   final fields = <ast.FieldDeclarationImpl>[];
   final parameters = <ast.FormalParameterImpl>[];
   for (final parameter in header.formalParameters.parameters) {
@@ -91,7 +124,9 @@ void lowerPrimaryConstructor(ClassDeclaration declaration) {
     metadata: body?.metadata.cast<ast.AnnotationImpl>().toList() ?? [],
     augmentKeyword: null,
     externalKeyword: null,
-    constKeyword: header.constKeyword,
+    constKeyword: declaration is EnumDeclaration
+        ? header.constKeyword ?? Token(Keyword.CONST, header.offset)
+        : header.constKeyword,
     factoryKeyword: null,
     newKeyword: null,
     typeName: ast.SimpleIdentifierImpl(token: header.typeName),
@@ -115,22 +150,39 @@ void lowerPrimaryConstructor(ClassDeclaration declaration) {
           semicolon: Token(TokenType.SEMICOLON, originalParameters.end),
         ),
   );
-  final originalBody = declaration.body;
-  final lowered = declaration as ast.ClassDeclarationImpl;
-  lowered.namePart = ast.NameWithTypeParametersImpl(
+  final loweredName = ast.NameWithTypeParametersImpl(
     typeName: header.typeName,
     typeParameters: header.typeParameters as ast.TypeParameterListImpl?,
   );
+  final loweredMembers = <ast.ClassMemberImpl>[
+    ...fields,
+    constructor,
+    for (final member in members)
+      if (member is! PrimaryConstructorBody) member as ast.ClassMemberImpl,
+  ];
+  if (declaration is EnumDeclaration) {
+    final originalBody = declaration.body as BlockEnumBody;
+    final lowered = declaration as ast.EnumDeclarationImpl;
+    lowered.namePart = loweredName;
+    lowered.body = ast.BlockEnumBodyImpl(
+      leftBracket: originalBody.leftBracket,
+      constants: originalBody.constants
+          .cast<ast.EnumConstantDeclarationImpl>()
+          .toList(),
+      semicolon: originalBody.semicolon,
+      members: loweredMembers,
+      rightBracket: originalBody.rightBracket,
+    );
+    return;
+  }
+  final lowered = declaration as ast.ClassDeclarationImpl;
+  final ClassBody originalBody = lowered.body;
+  lowered.namePart = loweredName;
   lowered.body = ast.BlockClassBodyImpl(
     leftBracket: originalBody is BlockClassBody
         ? originalBody.leftBracket
         : Token(TokenType.OPEN_CURLY_BRACKET, originalBody.offset),
-    members: [
-      ...fields,
-      constructor,
-      for (final member in members)
-        if (member is! PrimaryConstructorBody) member as ast.ClassMemberImpl,
-    ],
+    members: loweredMembers,
     rightBracket: originalBody is BlockClassBody
         ? originalBody.rightBracket
         : Token(TokenType.CLOSE_CURLY_BRACKET, originalBody.end),

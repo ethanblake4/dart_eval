@@ -937,6 +937,16 @@ final class MemberLookup {
     if (!visited.add('${type.file}:${type.name}')) return;
     final key = MemberName(memberName, kind).key;
     final decl = ctx.instanceDeclarationsMap[type.file]?[type.name]?[key];
+    if (kind == MemberKind.setter) {
+      final variable =
+          ctx.instanceDeclarationsMap[type.file]?[type.name]?[memberName];
+      final field = variable is VariableDeclaration
+          ? variable.parent?.parent
+          : variable;
+      if (field is FieldDeclaration && field.covariantKeyword != null) {
+        positional.add(0);
+      }
+    }
     if (decl is MethodDeclaration) {
       final id =
           ctx.instanceDeclarationPositions[type.file]?[type

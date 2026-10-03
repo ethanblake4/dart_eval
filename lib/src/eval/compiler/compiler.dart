@@ -1098,7 +1098,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     }
 
     final declaration = declarationOrBridge.declaration!;
-    if (declaration is ClassDeclaration) lowerPrimaryConstructor(declaration);
+    if (declaration is ClassDeclaration || declaration is EnumDeclaration) {
+      lowerPrimaryConstructor(declaration);
+    }
 
     // Extensions declare no top-level name binding themselves; their
     // `E.member` namespace keys are registered from `visibleExtensions` in
