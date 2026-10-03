@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/compiler/member/member.dart';
 import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import '../helpers/extension_type.dart';
+import '../helpers/bridge_mixin.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/member/resolved_member.dart';
@@ -41,6 +42,8 @@ final class MemberLookup {
   /// Resolve a folded body's source declaration without consulting the
   /// host's dispatch table, which may already contain a later override.
   Member? lexicalSuperMember(FoldedMemberBody body) {
+    final nativeMixin = bridgeMixinMethod(body.declaration);
+    if (nativeMixin != null) return nativeMixin.member;
     final owner = body.declaration.parent?.parent;
     if (owner is! Declaration) return null;
     final type = TypeRef.lookupDeclaration(ctx, body.library, owner);
@@ -56,6 +59,8 @@ final class MemberLookup {
   }
 
   TypeRef lexicalSuperResultType(FoldedMemberBody body) {
+    final nativeMixin = bridgeMixinMethod(body.declaration);
+    if (nativeMixin != null) return nativeMixin.signature.returnType;
     final annotation = body.declaration.returnType;
     if (annotation == null) return CoreTypes.dynamic.ref(ctx);
     return TypeRef.fromAnnotation(
@@ -67,6 +72,8 @@ final class MemberLookup {
   }
 
   TypeRef lexicalSuperSetterType(FoldedMemberBody body) {
+    final nativeMixin = bridgeMixinMethod(body.declaration);
+    if (nativeMixin != null) return nativeMixin.signature.positional.single.type;
     final parameters = body.declaration.parameters?.parameters;
     final parameter = parameters == null || parameters.isEmpty
         ? null
@@ -674,6 +681,7 @@ final class MemberLookup {
         ? decl.declaredMember(name, forImplementation: true)
         : null;
     final node = member is SourceMember ? member.node : null;
+    if (node != null && bridgeMixinMethod(node) != null) return true;
     if (node is! MethodDeclaration) return true;
     var usesSuper = false;
     node.body.accept(_SuperSeeker(() => usesSuper = true));

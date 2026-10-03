@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../helpers/deferred_import.dart';
 import '../helpers/primary_constructor.dart';
+import '../helpers/bridge_mixin.dart';
 import '../invocation/binder.dart';
 import '../invocation/call.dart';
 import '../invocation/bound_call.dart';
@@ -488,6 +489,7 @@ void compileConstructorDeclaration(
     isEnum ? 2 : 0,
     evaluatedFieldInits,
   );
+  initializeBridgeMixins(ctx, fields, inst.ssa, firstFieldIndex: isEnum ? 2 : 0);
 
   if (extendsDecl != null && !extendsDecl.isBridge) {
     $super = _invokeSuperConstructor(
@@ -654,6 +656,7 @@ void compileDefaultConstructor(
     parent is EnumDeclaration ? 2 : 0,
     evaluatedFieldInits,
   );
+  initializeBridgeMixins(ctx, fields, inst, firstFieldIndex: isEnum ? 2 : 0);
 
   if (extendsDecl != null && !extendsDecl.isBridge) {
     $super = _invokeSuperConstructor(
@@ -1281,6 +1284,7 @@ void compileAliasForwardingConstructor(
   );
   if (!isFactory) ctx.pushOp(LinkSuperclass(SSA('arg_${i + 1}'), inst.ssa));
   _compileUnusedFields(ctx, fields, {}, inst.ssa, 0, evaluatedFieldInits);
+  initializeBridgeMixins(ctx, fields, inst.ssa);
   if (!isFactory) {
     argSsa.add(pushRuntimeTypeId(ctx, targetType));
     argSsa.add(inst.ssa);

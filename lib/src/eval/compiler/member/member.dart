@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/member/call_signature.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/member/resolved_member.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import '../helpers/bridge_mixin.dart';
 
 /// What declared a member: a nominal type or an extension.
 sealed class MemberOwner {
@@ -229,6 +230,8 @@ final class SourceMember extends Member {
   late final CallSignature signature = _buildSignature();
 
   CallSignature _buildSignature() {
+    final nativeMixin = bridgeMixinMethod(node);
+    if (nativeMixin != null) return nativeMixin.signature;
     final ctx = _ctx;
     final ownerParams = _ownTypeParams;
     switch (node) {
@@ -430,7 +433,8 @@ final class BridgeMember extends Member {
   };
 
   @override
-  bool get isAbstract => false;
+  bool get isAbstract =>
+      def is BridgeMethodDef && (def as BridgeMethodDef).isAbstract;
 
   @override
   bool get isField => def is BridgeFieldDef;

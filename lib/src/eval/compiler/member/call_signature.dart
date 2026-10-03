@@ -5,6 +5,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import '../context.dart';
 import '../errors.dart';
 import '../helpers/fpl.dart';
+import '../helpers/bridge_mixin.dart';
 import '../helpers/redirect_constructor.dart';
 import '../helpers/default_value.dart'
     show superFormalDefault, redirectFormalDefault;
@@ -239,6 +240,8 @@ final class CallSignature {
     Map<String, TypeRef> typeParameters = const {},
     Declaration? parameterHost,
   }) {
+    final nativeMixin = bridgeMixinMethod(declaration);
+    if (nativeMixin != null) return nativeMixin.signature;
     final (
       name,
       typeParameterList,

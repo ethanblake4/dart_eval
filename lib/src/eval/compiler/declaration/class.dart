@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/expression/identifier.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import '../member/member.dart';
 import '../member/member_name.dart';
+import '../helpers/bridge_mixin.dart';
 
 void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
   return ctx.withTypeParameters(
@@ -35,6 +36,7 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
         ctx,
         d.withClause?.mixinTypes,
       );
+      registerBridgeMixinMethods(ctx, d, mixinMethods);
       _checkAbstractMixinMemberConformance(
         ctx,
         d,
@@ -121,6 +123,7 @@ void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
         ctx,
         d.withClause.mixinTypes,
       );
+      registerBridgeMixinMethods(ctx, d, mixinMethods);
       _checkAbstractMixinMemberConformance(
         ctx,
         d,
@@ -331,6 +334,10 @@ _mixinMembers(
         );
         memberLibraries.addAll(l);
         return (<ConstructorDeclaration>[], f, m);
+      }(),
+      null when nominalDeclOf(ref) is BridgeTypeDecl => () {
+        final (fields, methods) = lowerBridgeMixin(ctx, ref);
+        return (<ConstructorDeclaration>[], fields, methods);
       }(),
       _ => throw CompileError(
         '${ref.name} is not a mixin (used in a with clause)',

@@ -14,6 +14,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/variable.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
+import '../helpers/bridge_mixin.dart';
 
 int? compileDeclaration(
   Declaration d,
@@ -169,7 +170,17 @@ void compileClassMembers(
     }
     int? position;
     try {
-      if (memberLibrary == null) {
+      if (m is FieldDeclaration && isBridgeMixinField(m)) {
+        // Hidden native adapters have no guest-visible field accessors.
+      } else if (m is MethodDeclaration && bridgeMixinMethod(m) != null) {
+        position = compileBridgeMixinMethod(
+          ctx,
+          parent,
+          m,
+          fields,
+          firstFieldIndex,
+        );
+      } else if (memberLibrary == null) {
         position = compileDeclaration(
           m,
           ctx,

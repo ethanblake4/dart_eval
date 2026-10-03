@@ -3783,3 +3783,15 @@ constructor uses a cold guest-receiver-preserving hook. Five original SDK fixtur
 pass natively and in eval, and three StringBuffer/HLC checks pass, including unique
 subclass/base-dispatch and serialized coverage. Scoped analysis and diff checks
 pass. Five stale entries removed; no hot-loop or frame-guard change.
+## Cycle 23 pass 5: native bridge mixin applications
+
+Each native mixin keeps a separate hidden adapter, preserving the real superclass,
+mixin precedence and lexical super calls. Concrete SDK members forward through
+existing bridge/shim operations; abstract members remain interface requirements.
+SDK-derived signatures and defaults bind supplied/omitted arguments correctly.
+The compiler registers folded methods and initializes adapters on ordinary, default
+and alias constructors; no runtime changes. Four original runnable fixtures and
+both ambiguity error fixtures' selected positive cases pass. Negative cases remain
+skipped under the existing policy. Eight existing focused tests and a unique
+adapter/callback/defaults/inheritance probe pass in direct and serialized runtimes.
+Scoped seven-file analysis and diff checks pass. Six stale entries removed.
