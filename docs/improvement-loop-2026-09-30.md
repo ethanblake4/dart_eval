@@ -3650,3 +3650,14 @@ checks pass. One stale entry removed. Both ambiguity fixtures now reach the
 separate unsupported bridged MapMixin cause; that lowering remains a future pass.
 Expectation comments/reason text corrupted by earlier Windows decoding were
 restored to plain text, and suite edits now read UTF-8 explicitly.
+## Cycle 22 pass 4: named parameter API names and initializer scope
+
+One helper gives private field-formal parameters their public named-argument
+name while retaining their lexical/private field binding. Function signatures,
+tear-offs, export descriptors and calls share that helper. Ordinary declaration
+field initializers resolve outside constructor parameters; lowered primary
+constructor parameters remain visible in their own fields. Supported lazy primary
+initializers no longer hit the obsolete rejection guard, whose duplicative test
+was removed. Six original private-named fixtures, instance-field initializer and
+primary initializer-scope fixtures pass; 17 existing focused tests and analysis
+pass. Eight confirmed stale entries removed. No runtime changes.

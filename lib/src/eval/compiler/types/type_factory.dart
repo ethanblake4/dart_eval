@@ -1,4 +1,5 @@
 import 'dart:collection';
+import '../helpers/formal_parameter.dart';
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:collection/collection.dart';
@@ -672,7 +673,7 @@ final class TypeFactory {
     final named = <String, ({TypeRef type, bool required})>{
       for (final parameter in parameters)
         if (parameter.isNamed)
-          parameter.name!.lexeme: (
+          formalParameterName(parameter): (
             type: resolveParameter(parameter),
             required: parameter.isRequired,
           ),
@@ -775,7 +776,7 @@ final class TypeFactory {
         named: {
           for (final parameter in all)
             if (parameter.isNamed)
-              parameter.name!.lexeme: (
+              formalParameterName(parameter): (
                 type: parameterType(parameter),
                 required: parameter.isRequired,
               ),

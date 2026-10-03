@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../helpers/deferred_import.dart';
+import '../helpers/primary_constructor.dart';
 import '../invocation/binder.dart';
 import '../invocation/call.dart';
 import '../invocation/bound_call.dart';
@@ -379,6 +380,7 @@ void compileConstructorDeclaration(
     fields,
     memberLibraries,
     parent,
+    constructorParametersInScope: isLoweredPrimaryConstructor(d),
   );
   final pendingFieldInits = <({int index, SSA ssa})>[];
   for (final init in otherInitializers) {
@@ -730,10 +732,18 @@ Variable _compileFieldDeclarationInitializer(
   FieldDeclaration fd,
   VariableDeclaration field,
   Map<ClassMember, int> memberLibraries,
-  Declaration? parent,
-) {
+  Declaration? parent, {
+  bool constructorParametersInScope = false,
+}) {
   final prevLibrary = ctx.library;
   final memberLibrary = memberLibraries[fd];
+  final constructorLocals = ctx.locals;
+  final isolateLocals = !constructorParametersInScope || memberLibrary != null;
+  // Ordinary declaration initializers resolve outside constructor parameters.
+  // Primary constructor parameters are visible only in their own fields.
+  if (isolateLocals) {
+    ctx.locals = [{}];
+  }
   // Folded mixin initializers resolve in their declaring library and class.
   ctx.library = memberLibrary ?? prevLibrary;
   final memberOwner = fd.parent?.parent;
@@ -763,6 +773,7 @@ Variable _compileFieldDeclarationInitializer(
       });
     }
   } finally {
+    if (isolateLocals) ctx.locals = constructorLocals;
     ctx.library = prevLibrary;
     ctx.memberDeclaringClass = null;
   }
@@ -781,8 +792,9 @@ Map<VariableDeclaration, Variable> _evalFieldInitializers(
   CompilerContext ctx,
   List<FieldDeclaration> fields,
   Map<ClassMember, int> memberLibraries,
-  Declaration? parent,
-) {
+  Declaration? parent, {
+  bool constructorParametersInScope = false,
+}) {
   final evaluated = <VariableDeclaration, Variable>{};
   // Folded fields retain their storage order, but constructor execution walks
   // from the applying class through the last mixin to the first. Keep source
@@ -806,6 +818,7 @@ Map<VariableDeclaration, Variable> _evalFieldInitializers(
         field,
         memberLibraries,
         parent,
+        constructorParametersInScope: constructorParametersInScope,
       );
     }
   }

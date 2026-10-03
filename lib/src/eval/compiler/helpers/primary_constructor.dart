@@ -5,8 +5,6 @@ import 'package:analyzer/dart/ast/token.dart';
 // ignore: implementation_imports
 import 'package:analyzer/src/dart/ast/ast.dart' as ast;
 
-import '../errors.dart';
-
 /// Lowering preserves the class header's name token as the constructor name.
 /// Ordinary constructor declarations have their own name token.
 bool isLoweredPrimaryConstructor(ConstructorDeclaration constructor) {
@@ -22,19 +20,6 @@ void lowerPrimaryConstructor(ClassDeclaration declaration) {
   if (header is! PrimaryConstructorDeclaration) return;
   final body = header.body;
   final members = declaration.body.members;
-  // Late initializers run on first access in instance scope. Ordinary field
-  // lowering currently evaluates them during construction instead.
-  if (members.whereType<FieldDeclaration>().any(
-    (field) =>
-        !field.isStatic &&
-        field.fields.isLate &&
-        field.fields.variables.any((variable) => variable.initializer != null),
-  )) {
-    throw CompileError(
-      'Primary constructors with late field initializers are not supported',
-      header,
-    );
-  }
   final fields = <ast.FieldDeclarationImpl>[];
   final parameters = <ast.FormalParameterImpl>[];
   for (final parameter in header.formalParameters.parameters) {

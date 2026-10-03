@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import '../helpers/formal_parameter.dart';
 
 import '../../ir/string.dart';
 import '../../ir/collection.dart' as collection;
@@ -382,10 +383,10 @@ class TypedBackend {
             requiredPositional:
                 positional.where((p) => p.isRequired).length +
                 syntheticPositionalCount,
-            namedNames: named.map((p) => p.name!.lexeme).toList(),
+            namedNames: named.map(formalParameterName).toList(),
             requiredNamed: named
                 .where((p) => p.isRequired)
-                .map((p) => p.name!.lexeme)
+                .map(formalParameterName)
                 .toList(),
             positionalDefaults: [
               ...positionalDefaults.map((d) => d.$1),
@@ -775,7 +776,7 @@ class TypedBackend {
       defaultValue = defaultValue.toDouble();
     }
     return TypedExportParameter(
-      parameter.name!.lexeme,
+      formalParameterName(parameter),
       isRequired: parameter.isRequired,
       nullable: runtimeType.hasNullableRepresentation,
       typeName: runtimeType.name,

@@ -9,6 +9,7 @@ import '../helpers/redirect_constructor.dart';
 import '../helpers/default_value.dart'
     show superFormalDefault, redirectFormalDefault;
 import '../type.dart';
+import '../helpers/formal_parameter.dart';
 
 /// How a parameter's default is spelled at its declaration.
 sealed class DefaultSource {
@@ -336,7 +337,7 @@ final class CallSignature {
             (null, library);
       }
       final spec = ParameterSpec(
-        param.name?.lexeme ?? '',
+        formalParameterName(param),
         resolved,
         isRequired: param.isRequired,
         defaultValue: defaultExpr == null

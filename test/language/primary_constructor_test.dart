@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -95,22 +94,4 @@ int main() {
   return ordinary.seen + ordinary.inherited + primary.seen + primary.inherited;
 }
 ''', 204);
-
-  test('unsupported primary late initializer scope is explicit', () {
-    expect(
-      () => Compiler().compile({
-        'primary': {
-          'main.dart':
-              'class C(int x) { late int y = x; } void main() { C(1); }',
-        },
-      }),
-      throwsA(
-        isA<CompileError>().having(
-          (error) => error.message,
-          'message',
-          contains('late field initializers'),
-        ),
-      ),
-    );
-  });
 }

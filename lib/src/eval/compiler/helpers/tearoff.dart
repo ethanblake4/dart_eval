@@ -1,4 +1,5 @@
 import 'const.dart';
+import 'formal_parameter.dart';
 import 'callable_inference.dart';
 import 'default_value.dart';
 import 'extension.dart';
@@ -262,7 +263,7 @@ Variable materializeTearOff(
       captures,
       requiredPositional: positional.where((param) => param.isRequired).length,
       positionalCount: positional.length,
-      namedNames: named.map((param) => param.name!.lexeme).toList(),
+      namedNames: named.map(formalParameterName).toList(),
       hasEnvironment: false,
       positionalDefaults: [for (final d in positionalDefaults) d.$1],
       namedDefaults: [for (final d in namedDefaults) d.$1],
@@ -272,7 +273,7 @@ Variable materializeTearOff(
       ],
       requiredNamed: [
         for (final parameter in named)
-          if (parameter.isRequired) parameter.name!.lexeme,
+          if (parameter.isRequired) formalParameterName(parameter),
       ],
       boundReceiver: boundReceiver,
       positionalUnboxed: [
