@@ -242,6 +242,6 @@ final class _ExtensionConstruction {
       value,
       representation,
       source: source,
-    ).copyWith(type: instantiatedType, isConst: isConst);
+    ).copyWith(type: instantiatedType, isConst: isConst)..binding = null;
   }
 }

@@ -68,8 +68,6 @@ exclude:
 # Same path/glob syntax as `exclude`.
 expect_fail:
   - path: 'constructor/patch_tear_off_test.dart'
-  - path: 'dot_shorthands/constructor/constructor_cascade_test.dart'
-  - path: 'dot_shorthands/constructor/constructor_collection_literal_test.dart'
   - path: 'dot_shorthands/multiple/type_alias_test.dart'
   - path: 'dot_shorthands/type_parameter/type_parameter_test.dart'
   - path: 'extension_methods/null_aware_reachability_test.dart'

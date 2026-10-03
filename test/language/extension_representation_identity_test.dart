@@ -43,6 +43,29 @@ void main() {
 ''';
 
 void main() {
+  test('constructor representation views retain nominal types in records', () {
+    final program = Compiler().compile({
+      'record_view': {
+        'main.dart': r"""
+extension type M<T>(T value) { M.copy(this.value); }
+(M<int>, M<String>) pair() => (M<int>.copy(1), M<String>.copy('s'));
+int main() {
+  var input = 3;
+  final record = (M<int>.copy(input), M<String>.copy('s'));
+  input = 5;
+  return record.$1.value + (pair().$2.value == record.$2.value ? 10 : 0);
+}
+""",
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(runtime.executeLib('package:record_view/main.dart', 'main'), 13);
+    }
+  });
+
   test(
     'static members and secondary constructors preserve representations',
     () {

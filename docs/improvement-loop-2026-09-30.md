@@ -4354,3 +4354,17 @@ move without another spill slot.
 Cycle27 will include the additional compilation-speed/resource pass, as requested,
 after its six correctness passes and regular generated-code/runtime performance
 work. Remaining actual failures still require further loops.
+
+### Cycle 27 correctness pass 1: constructor views across record boxing
+
+Two remaining shorthand fixtures fail in record literals, rather than cascade
+resolution. Secondary extension constructors returned a nominal type view still
+attached to their representation parameter binding. Boxing a record field read
+that binding's current representation type and discarded the nominal view.
+The construction result now detaches the source binding while retaining its SSA,
+representation and facts. This emits no extra bytecode or runtime work.
+
+Both untouched cascade and collection originals pass fresh and serialized modes,
+and their stale expectations are removed. A unique generic-constructor record
+probe checks retained nominal fields and a captured input snapshot; 31 focused
+representation tests pass and scoped analysis is clean.
