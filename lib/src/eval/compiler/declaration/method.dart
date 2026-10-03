@@ -408,17 +408,16 @@ bool _forwardsAbstractMember(
 }
 
 /// Materializes source interface members through the same checked boundary as
-/// an explicitly declared abstract method. Class-generic interfaces still
-/// require a substituted declaring scope; inferred returns and nonliteral
-/// defaults retain their original source.
+/// an explicitly declared abstract method. Generic interfaces with renamed or
+/// concrete arguments still require substituted annotations; inferred returns
+/// and nonliteral defaults retain their original source.
 void compileInterfaceNoSuchMethodForwarders(
   CompilerContext ctx,
   Declaration host,
 ) {
   if (host is! ClassDeclaration ||
       host.abstractKeyword != null ||
-      host.sealedKeyword != null ||
-      host.namePart.typeParameters != null) {
+      host.sealedKeyword != null) {
     return;
   }
   _compileInterfaceNoSuchMethodRequirements(ctx, host);
@@ -438,7 +437,30 @@ void _compileInterfaceNoSuchMethodRequirements(
   final emitted = <(int, String, MemberKind)>{};
   for (final (member, sourceLibrary, kind, name, restricted) in requirements) {
     final owner = member.parent?.parent;
-    if (owner is Declaration && classLikeClauses(owner).$4 != null) continue;
+    if (owner is Declaration && classLikeClauses(owner).$4 != null) {
+      // Reusing the source annotation is sound only when its parameter names
+      // resolve to the same parameters in the implementing class's scope.
+      // Other generic interfaces require substituted cloned annotations.
+      final interface = ctx.types.find(sourceLibrary, declarationName(owner));
+      final implementing = ctx.types.find(hostLibrary, hostName);
+      if (sourceLibrary != hostLibrary ||
+          interface == null ||
+          implementing == null) {
+        continue;
+      }
+      final view = ctx.typeSystem.asInstanceOf(implementing.thisType, interface);
+      if (view == null) continue;
+      final arguments = interfaceArgumentsOf(view);
+      if (arguments.length != interface.typeParameters.length ||
+          arguments.indexed.any((entry) {
+            final (i, argument) = entry;
+            return argument is! TypeParameterTypeRef ||
+                argument.parameter.name != interface.typeParameters[i].name ||
+                !implementing.typeParameters.contains(argument.parameter);
+          })) {
+        continue;
+      }
+    }
     final sources = <(MemberKind, String)>[];
     if (member is MethodDeclaration) {
       if (!member.isGetter &&

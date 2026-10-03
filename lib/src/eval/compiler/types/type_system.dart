@@ -938,9 +938,8 @@ final class TypeSystem {
 
   /// The pairwise LUB step behind [leastUpperBound]: function and parameter
   /// rules precede interface subtyping. A shared declaration merges arguments
-  /// covariantly (Dart classes are covariant unless declared `in`/`inout`,
-  /// which dart_eval does not model),
-  /// and incomparable types intersect their superinterface *instantiations*
+    /// according to their declared variance, and incomparable types intersect
+    /// their superinterface *instantiations*
   /// — the set element keeps its type arguments, so `Comparable<num>` and
   /// `Comparable<String>` never meet — then takes the unique deepest.
   TypeRef _pairwiseUpperBound(TypeRef a, TypeRef b) {
@@ -1020,12 +1019,28 @@ final class TypeSystem {
         final argsA = interfaceArgumentsOf(a);
         final argsB = interfaceArgumentsOf(b);
         if (argsA.isNotEmpty && argsA.length == argsB.length) {
-          return a.copyWith(
-            arguments: [
-              for (var i = 0; i < argsA.length; i++)
-                _pairwiseUpperBound(argsA[i], argsB[i]),
-            ],
-          );
+          final arguments = <TypeRef>[];
+          for (var i = 0; i < argsA.length; i++) {
+            final variance = i < declA.typeParameters.length
+                ? declA.typeParameters[i].variance
+                : TypeParameterVariance.covariant;
+            if (variance == TypeParameterVariance.invariant) {
+              if (!isAssignable(argsA[i], argsB[i], forceAllowDynamic: false) ||
+                  !isAssignable(argsB[i], argsA[i], forceAllowDynamic: false)) {
+                break;
+              }
+              arguments.add(argsA[i]);
+            } else {
+              arguments.add(
+                variance == TypeParameterVariance.contravariant
+                    ? greatestLowerBound(argsA[i], argsB[i])
+                    : _pairwiseUpperBound(argsA[i], argsB[i]),
+              );
+            }
+          }
+          if (arguments.length == argsA.length) {
+            return a.copyWith(arguments: arguments);
+          }
         }
       }
     }
@@ -1513,12 +1528,25 @@ final class TypeSystem {
           generics.length != targetGenerics.length) {
         return false;
       }
-      for (var i = 0; i < targetGenerics.length && i < generics.length; i++) {
-        if (!isAssignable(
-          generics[i],
-          targetGenerics[i],
-          forceAllowDynamic: false,
-        )) {
+        final parameters = nominalDeclOf(from)?.typeParameters;
+        for (var i = 0; i < targetGenerics.length && i < generics.length; i++) {
+        final variance = parameters != null && i < parameters.length
+            ? parameters[i].variance
+            : TypeParameterVariance.covariant;
+        if (variance != TypeParameterVariance.contravariant &&
+            !isAssignable(
+              generics[i],
+              targetGenerics[i],
+              forceAllowDynamic: false,
+            )) {
+          return false;
+        }
+        if (variance != TypeParameterVariance.covariant &&
+            !isAssignable(
+              targetGenerics[i],
+              generics[i],
+              forceAllowDynamic: false,
+            )) {
           return false;
         }
       }

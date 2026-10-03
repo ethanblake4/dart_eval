@@ -334,7 +334,9 @@ final class ConstructorCall extends CallTarget {
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     var instantiatedType = this.instantiatedType;
-    if (instantiatedType == null || instantiatedType.hasSchemaHoles) {
+    if (constructor != null ||
+        instantiatedType == null ||
+        instantiatedType.hasSchemaHoles) {
       instantiatedType = call.returnType;
     }
     if (instantiatedType is InterfaceTypeRef &&

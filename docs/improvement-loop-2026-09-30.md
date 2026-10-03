@@ -4389,3 +4389,15 @@ and explicit `covariant` header fields retain their setter contract. The four
 untouched SDK fixtures for enum implicit const constructors, header syntax,
 covariant fields and optional-parameter inference pass fresh and serialized
 execution; their stale expectations were removed. Twenty-six focused tests pass.
+
+### Cycle 27 correctness pass 4: nominal variance and forwarders
+
+Nominal generic classes now carry declaration-site variance metadata in the
+runtime type descriptor (codec version XVC107); typed codec layout and hot-loop
+opcodes remain unchanged. Explicit variance annotations feed inference and
+subtyping, including invariant and contravariant joins. Generic noSuchMethod
+forwarders use a conservative same-library identity-parameter rule, preserving
+type arguments only where declaration identity is known. All eight original
+SDK variance fixtures pass fresh and serialized execution; their stale
+expectations were removed. Ninety-two focused tests, two noSuchMethod originals
+in both modes and scoped analysis pass.

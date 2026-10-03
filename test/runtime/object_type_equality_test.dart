@@ -1,6 +1,8 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'package:test/test.dart';
 
 const source = '''
@@ -34,6 +36,40 @@ bool compare(
 }
 
 void main() {
+  test('imported nominal descriptors retain declaration-site variance', () {
+    final producer = Compiler().compile({
+      'variance_origin': {
+        'main.dart': '''
+          class Consumer<in T> {}
+          class Cell<inout T> {}
+          Object consumer(bool narrow) => narrow ? Consumer<int>() : Consumer<num>();
+          Object cell(bool narrow) => narrow ? Cell<int>() : Cell<num>();
+        ''',
+      },
+    });
+    for (final serialized in [false, true]) {
+      final origin = serialized
+          ? Runtime(producer.write().buffer)
+          : Runtime.ofProgram(producer);
+      final target = createRuntime('variance_target', serialized: serialized);
+      const library = 'package:variance_origin/main.dart';
+      for (final (method, accepted) in [('consumer', true), ('cell', false)]) {
+        final narrow = origin.executeLib(
+          library,
+          method,
+          arguments: {'narrow': true},
+        );
+        final expected = (narrow as $Value).$getRuntimeType(target);
+        final value = origin.executeLib(
+          library,
+          method,
+          arguments: {'narrow': false},
+        );
+        expect(target.isTypedValueType(value, expected), accepted);
+      }
+    }
+  });
+
   test('Object equality preserves defining and imported Type descriptors', () {
     final first = createRuntime('first');
     final equivalent = createRuntime('first', serialized: true);

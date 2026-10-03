@@ -1391,14 +1391,25 @@ extension TypedRuntimeInterop on Runtime {
     }
     if (target.length == 2) return true;
     if (source.length != target.length) return false;
+    final variances = _typeVariances[targetNominal];
     for (var index = 2; index < source.length; index++) {
-      if (!_isTypedDescriptorSubtypeInEnvironment(
+      final variance = variances != null && index - 2 < variances.length
+          ? variances[index - 2]
+          : TypeParameterVariance.covariant;
+      if (variance != TypeParameterVariance.contravariant && !_isTypedDescriptorSubtypeInEnvironment(
         source[index],
         target[index],
         actualOwnerType,
         callableTypeArguments,
         signatureParameterRenames: signatureParameterRenames,
       )) {
+        return false;
+      }
+      if (variance != TypeParameterVariance.covariant &&
+          !_isTypedDescriptorSubtypeInEnvironment(
+            target[index], source[index], actualOwnerType, callableTypeArguments,
+            signatureParameterRenames: signatureParameterRenames,
+          )) {
         return false;
       }
     }

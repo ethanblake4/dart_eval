@@ -1,4 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
+export 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart'
+    show TypeParameterVariance;
 
 import '../context.dart';
 import '../type.dart';
@@ -101,11 +103,19 @@ final class TypeParameterOwner {
 /// bound. Equality is over `(owner, index)` only — never the bound — so
 /// F-bounded parameters cannot create equality cycles.
 final class TypeParameterDef {
-  TypeParameterDef(this.owner, this.index, this.name);
+  TypeParameterDef(
+    this.owner,
+    this.index,
+    this.name, {
+    this.variance = TypeParameterVariance.covariant,
+    this.hasExplicitVariance = false,
+  });
 
   final TypeParameterOwner owner;
   final int index;
   final String name;
+  final TypeParameterVariance variance;
+  final bool hasExplicitVariance;
 
   TypeRef? _bound;
   bool _boundSet = false;
@@ -156,7 +166,22 @@ final class TypeParameterDefs {
     owner,
     () => [
       for (var i = 0; i < nodes.length; i++)
-        TypeParameterDef(owner, i, nodes[i].name.lexeme),
+        TypeParameterDef(
+          owner,
+          i,
+          nodes[i].name.lexeme,
+          hasExplicitVariance: const {
+            'in',
+            'out',
+            'inout',
+          }.contains(nodes[i].name.previous?.lexeme),
+          // The experimental token is not exposed by analyzer's public AST.
+          variance: switch (nodes[i].name.previous?.lexeme) {
+            'in' => TypeParameterVariance.contravariant,
+            'inout' => TypeParameterVariance.invariant,
+            _ => TypeParameterVariance.covariant,
+          },
+        ),
     ],
   );
 

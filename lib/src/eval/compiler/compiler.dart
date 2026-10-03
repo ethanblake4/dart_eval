@@ -1018,6 +1018,16 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             ),
       },
       typeDescriptors: _ctx.runtimeTypes.descriptors,
+      typeVariances: {
+        for (final entry in _ctx.runtimeTypes.indexMap.entries)
+          if (entry.key.typeParameters.any(
+            (parameter) => parameter.variance != TypeParameterVariance.covariant,
+          ))
+            entry.value: [
+              for (final parameter in entry.key.typeParameters)
+                parameter.variance,
+            ],
+      },
     );
   }
 

@@ -62,11 +62,6 @@ TypeRef inferredConstructorType(
           knownTypes: argumentsByParameter,
         )
       : argumentsByParameter;
-  if (type.arguments.isNotEmpty) {
-    return type.substituteTypeParameters(
-      Substitution.of({...defaults, ...argumentsByParameter}),
-    );
-  }
   return type.copyWith(
     arguments: [
       for (final parameter in parameters)

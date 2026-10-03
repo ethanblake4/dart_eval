@@ -40,6 +40,17 @@ class Program {
       }
       return OverrideSpec(_integer(fields[0]), fields[1] as String?);
     });
+    final variances = _intMap(
+      reader.readMeta(),
+      (value) => [
+        for (final item in _list(value))
+          if (_integer(item) >= 0 &&
+              _integer(item) < TypeParameterVariance.values.length)
+            TypeParameterVariance.values[_integer(item)]
+          else
+            throw const FormatException('Invalid nominal type variance'),
+      ],
+    );
     return Program(
       typeIds,
       types,
@@ -50,6 +61,7 @@ class Program {
       enums,
       overrides,
       typeDescriptors: typeDescriptors,
+      typeVariances: variances,
     );
   }
 
@@ -64,12 +76,16 @@ class Program {
     this.enumMappings,
     this.overrideMap, {
     this.typeDescriptors = const [],
+    this.typeVariances = const {},
   }) {
     _validateTypes();
   }
 
   void _validateTypes() {
     final count = typeTypes.length;
+    if (typeVariances.keys.any((id) => id < 0 || id >= count)) {
+      throw const FormatException('Invalid variance nominal reference');
+    }
     for (final supertypes in typeTypes) {
       if (supertypes.any((id) => id < 0 || id >= count)) {
         throw const FormatException('Invalid runtime supertype reference');
@@ -240,6 +256,7 @@ class Program {
 
   /// The executable typed bytecode, including exported declarations.
   final TypedProgram typedProgram;
+  final Map<int, List<TypeParameterVariance>> typeVariances;
 
   /// Write the program to a [Uint8List], to be loaded by a [Runtime].
   Uint8List write() {
@@ -275,6 +292,12 @@ class Program {
       ),
     );
 
+    _writeMetaBlock(b, {
+      for (final entry in typeVariances.entries)
+        entry.key.toString(): [
+          for (final variance in entry.value) variance.index,
+        ],
+    });
     final payload = typedProgram.write().buffer.asUint8List();
     _writeInt32(b, payload.length);
     b.add(payload);

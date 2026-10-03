@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
+import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 import 'package:test/test.dart';
 
 Program fixture() => Program(
@@ -43,6 +44,9 @@ Program fixture() => Program(
   {
     'override': OverrideSpec(3, '>=1.0.0'),
     'unversioned': OverrideSpec(4, null),
+  },
+  typeVariances: const {
+    2: [TypeParameterVariance.contravariant, TypeParameterVariance.invariant],
   },
 );
 
@@ -270,6 +274,7 @@ void main() {
       final decoded = Program.read(encoded.buffer);
       expect(decoded.typeIds, original.typeIds);
       expect(decoded.typeTypes, original.typeTypes);
+      expect(decoded.typeVariances, original.typeVariances);
       expect(decoded.bridgeLibraryMappings, original.bridgeLibraryMappings);
       expect(decoded.bridgeFunctionMappings, original.bridgeFunctionMappings);
       expect(decoded.constantPool, original.constantPool);

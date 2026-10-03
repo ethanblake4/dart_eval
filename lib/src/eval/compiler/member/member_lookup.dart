@@ -1031,11 +1031,21 @@ final class MemberLookup {
   /// parameter positions flip polarity: `void Function(T)` uses `T`
   /// contravariantly, so it does not mark the parameter covariant.
   bool _hasClassTypeParameter(TypeRef type, [bool covariant = true]) {
-    if (type.isClassTypeParameter) return covariant;
-    if (interfaceArgumentsOf(
-      type,
-    ).any((argument) => _hasClassTypeParameter(argument, covariant))) {
-      return true;
+    if (type is TypeParameterTypeRef && type.isClassTypeParameter) {
+      return covariant && type.parameter.variance == TypeParameterVariance.covariant;
+    }
+    final arguments = interfaceArgumentsOf(type);
+    final parameters = nominalDeclOf(type)?.typeParameters;
+    for (var i = 0; i < arguments.length; i++) {
+      final variance = parameters != null && i < parameters.length
+          ? parameters[i].variance
+          : TypeParameterVariance.covariant;
+      if (variance != TypeParameterVariance.contravariant &&
+          _hasClassTypeParameter(arguments[i], covariant) ||
+          variance != TypeParameterVariance.covariant &&
+          _hasClassTypeParameter(arguments[i], !covariant)) {
+        return true;
+      }
     }
     if (type is RecordTypeRef &&
         (type.positional.any(

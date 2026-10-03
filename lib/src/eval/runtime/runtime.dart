@@ -85,7 +85,7 @@ class Runtime {
   int? bridgeConstructorTypeId;
 
   /// The current runtime version code
-  static const int versionCode = 106;
+  static const int versionCode = 107;
 
   /// Construct a runtime from a typed bytecode buffer. When possible, use the
   /// [Runtime.ofProgram] constructor instead to reduce loading time.
@@ -113,6 +113,10 @@ class Runtime {
     _typeDescriptors = program.typeDescriptors.isEmpty
         ? List.generate(program.typeTypes.length, (id) => [id, 0])
         : List.of(program.typeDescriptors);
+    _typeVariances = {
+      for (final entry in program.typeVariances.entries)
+        entry.key: List.unmodifiable(entry.value),
+    };
     _descriptorIndex.clear();
     _indexedDescriptors = 0;
     _typeTableVersion++;
@@ -436,6 +440,7 @@ class Runtime {
 
   late final List<Set<int>> _typeTypes;
   late final List<List<int>> _typeDescriptors;
+  late final Map<int, List<TypeParameterVariance>> _typeVariances;
   // Core nominal IDs stay fixed when imported structural types are appended.
   late final _dynamicTypeId = _typedTypeId(CoreTypes.dynamic);
   late final _voidTypeId = _typedTypeId(CoreTypes.voidType);
@@ -552,6 +557,8 @@ class Runtime {
     _typeIdentities.add(identity);
     _typeDescriptors.add([translated, 0]);
     _typeTypes.add({translated});
+    final variance = origin._typeVariances[id];
+    if (variance != null) _typeVariances[translated] = variance;
     (_importedRuntimeTypes[origin] ??= {})[id] = translated;
     _mutableTypeTypes(translated).addAll(
       origin._typeTypes[id].map((type) => importRuntimeType(origin, type)),

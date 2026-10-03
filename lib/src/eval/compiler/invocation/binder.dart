@@ -517,7 +517,13 @@ final class ArgumentBinder {
                 !fixedParameters.contains(parameter))
           parameter,
     };
-    var argumentSubstitution = Substitution.of(resolveGenerics);
+    var argumentSubstitution = Substitution.of({
+      for (final entry in resolveGenerics.entries)
+        if (parameterHost is! ConstructorDeclaration ||
+            !parameterDefs.contains(entry.key) ||
+            !entry.key.hasExplicitVariance)
+          entry.key: entry.value,
+    });
     final candidates = <TypeParameterDef, _InferenceConstraints>{};
 
     // The parameter in the dispatch implementation's own signature —
@@ -602,7 +608,10 @@ final class ArgumentBinder {
           final provisional = {
             ...solved,
             for (final entry in candidates.entries)
-              if (!solved.containsKey(entry.key) &&
+              if ((solved[entry.key] == null ||
+                      solved[entry.key] is TypeParameterTypeRef &&
+                          (solved[entry.key] as TypeParameterTypeRef).parameter ==
+                              entry.key) &&
                   entry.value.lower.isEmpty &&
                   entry.value.upper.isNotEmpty)
                 entry.key: CoreTypes.never.ref(ctx),
@@ -1024,7 +1033,15 @@ final class ArgumentBinder {
           i < pattern.arguments.length && i < arguments.length;
           i++
         ) {
-          collect(pattern.arguments[i], arguments[i], covariant);
+          final variance = i < pattern.decl.typeParameters.length
+              ? pattern.decl.typeParameters[i].variance
+              : TypeParameterVariance.covariant;
+          if (variance != TypeParameterVariance.contravariant) {
+            collect(pattern.arguments[i], arguments[i], covariant);
+          }
+          if (variance != TypeParameterVariance.covariant) {
+            collect(pattern.arguments[i], arguments[i], !covariant);
+          }
         }
       } else if (evidence is InterfaceTypeRef) {
         final parent = ctx.typeSystem.asInstanceOf(pattern, evidence.decl);
@@ -1040,7 +1057,11 @@ final class ArgumentBinder {
     bool includeUpper = true,
   }) => {
     for (final entry in candidates.entries)
-      if (entry.value.lower.isNotEmpty)
+      if (includeUpper &&
+          entry.key.variance == TypeParameterVariance.contravariant &&
+          entry.value.upper.isNotEmpty)
+        entry.key: entry.value.upper.reduce(ctx.typeSystem.greatestLowerBound)
+      else if (entry.value.lower.isNotEmpty)
         entry.key: TypeRef.commonBaseType(ctx, entry.value.lower)
       else if (includeUpper && entry.value.upper.isNotEmpty)
         entry.key: entry.value.upper.reduce(ctx.typeSystem.greatestLowerBound),
@@ -1250,7 +1271,12 @@ final class ArgumentBinder {
       }
       inferParameterNames = {
         for (final name in classParameters)
-          if (seeds[name] == null ||
+          if (typeArguments == null &&
+                  (target.signature!.typeParameterRefs[name]
+                          as TypeParameterTypeRef)
+                      .parameter
+                      .hasExplicitVariance ||
+              seeds[name] == null ||
               seeds[name]!.isTypeParameter ||
               seeds[name]!.hasSchemaHoles ||
               seeds[name]!.hasInferenceVariables)

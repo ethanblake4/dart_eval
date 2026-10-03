@@ -1,3 +1,6 @@
+/// Declaration-site variance, shared by compiler and serialized nominal types.
+enum TypeParameterVariance { covariant, contravariant, invariant }
+
 /// Tags used after the nominal type and nullability entries in a runtime type
 /// descriptor. Non-negative entries in that position remain generic arguments.
 abstract final class RuntimeTypeDescriptorTag {
