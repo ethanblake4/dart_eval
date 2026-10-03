@@ -456,19 +456,8 @@ Variable instantiateRuntimeCallable(
       inferCallableTypeArguments(ctx, type, boundContext! as FunctionTypeRef),
     );
   }
-  // The adapter forwards optional parameters through its own defaults, which
-  // only a fresh tear-off can supply — instantiating a stored closure loses
-  // that provenance and can't model them.
-  final hasOptionals =
-      signature.requiredPositional != signature.positional.length ||
-      signature.named.values.any((parameter) => !parameter.required);
-  if (hasOptionals &&
-      (positionalDefaults.length != signature.positional.length ||
-          namedDefaults.length != signature.named.length)) {
-    throw CompileError(
-      'Instantiating a runtime function with optional parameters is not supported',
-    );
-  }
+  // Stored closures retain their defaults at runtime. The adapter delegates
+  // omitted arguments to that captured callable's default values.
   final substitution = Substitution.of(bindings);
   final instantiated = FunctionTypeRef(
     FunctionSignature(

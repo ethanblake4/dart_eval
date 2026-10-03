@@ -653,7 +653,13 @@ class TypedBackend {
     // superclass constructor's parameters, whose annotations resolve in the
     // callee's library and type-parameter scope — the same scope
     // compileAliasForwardingConstructor resolved them in.
-    var calleeTypeParameters = const <String, TypeRef>{};
+    var calleeTypeParameters = <String, TypeRef>{
+      if (declaration == null)
+        for (final parameter
+            in context.functionTypeParameters[functionId] ??
+                const <TypeParameterDef>[])
+          parameter.name: TypeParameterTypeRef(parameter),
+    };
     if (declaration is ConstructorDeclaration &&
         constructorOwner is ClassTypeAlias) {
       // A class type alias can't declare constructors — a constructor

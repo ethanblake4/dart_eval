@@ -3328,3 +3328,20 @@ positions. This changes compiler binding metadata without adding bytecode.
 Original super-formal names and their aliases leave scope before the body.
 The pinned wildcard super-parameter fixture passes and its expect_fail entry
 was removed. All 16 neighboring constructor scope/inference/header tests pass.
+
+## Cycle 20 pass 2: stored generic closure defaults
+
+Instantiation adapters now take omitted argument defaults from their captured
+closure, including named-parameter alignment. The compiler no longer rejects
+stored generic closures solely because their declaration defaults are absent.
+Adapter creation checks the captured callable's bounds. The interpreter loop,
+bytecode format and exact invocation path are unchanged.
+
+Extension method denotations now retain complete generic signatures and apply
+receiver bindings. Synthetic mixin method exports use their compiled generic
+parameter definitions when no source declaration is registered. These fixes
+let the full explicit_instantiated_tearoff fixture compile and reach a separate
+inherited tear-off equality failure; its expect_fail entry remains. A focused
+valid-source regression selects closures with distinct positional and named
+defaults before instantiation, checked fresh and serialized. Existing tear-off,
+extension and export tests pass; touched-file analysis is clean.

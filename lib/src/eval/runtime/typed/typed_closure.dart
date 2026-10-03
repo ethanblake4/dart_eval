@@ -199,8 +199,18 @@ final class TypedClosure extends EvalFunction {
   // Thunk-produced defaults (closures, const objects) belong to a runtime, so
   // they're memoized per closure instance instead of per shared descriptor.
   List<$Value?>? _resolvedDefaults;
+  TypedClosure? _defaultsSource;
 
   List<$Value?> get defaults {
+    final source = _defaultsSource;
+    if (source != null) {
+      return _resolvedDefaults ??= List<$Value?>.unmodifiable([
+        ...source.defaults.take(descriptor.positionalCount),
+        for (final name in descriptor.namedNames)
+          source.defaults[source.descriptor.positionalCount +
+              source.descriptor.namedNames.indexOf(name)],
+      ]);
+    }
     final thunks = descriptor.defaultThunks;
     if (thunks.isEmpty) {
       return _defaultArguments[descriptor] ??= List<$Value?>.unmodifiable([
@@ -258,16 +268,17 @@ final class TypedClosure extends EvalFunction {
       definingTypeArguments,
       definingTypeEnvironment,
     );
-    if (descriptor.isInstantiationAdapter && runtime != null) {
+    if (descriptor.isInstantiationAdapter) {
       final captured = captures.single;
       final callable = captured is TypedMember
           ? captured.boundClosure
           : captured;
-      // Instance method bounds can narrow with the actual class receiver.
-      // Static callable bounds are checked by the compiler's type context.
-      if (callable is TypedClosure &&
-          callable.descriptor.boundReceiver &&
-          callable.captures.single is TypedInstance) {
+      if (callable is TypedClosure) {
+        closure._defaultsSource = callable;
+      }
+      // Instantiation checks the captured callable's bounds even if the
+      // resulting closure is never invoked.
+      if (callable is TypedClosure && runtime != null) {
         final arguments = runtime.resolveTypedCallTypeArguments(
           descriptor.instantiationTypeArguments,
           actualOwnerType: closure._typeEnvironmentOwnerType(runtime),

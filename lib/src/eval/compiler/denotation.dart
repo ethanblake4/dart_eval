@@ -202,9 +202,7 @@ final class LocalDenotation extends Denotation {
     final value = binding.read(ctx);
     // A local holding a Type object is a value, not the static namespace of
     // the class it denotes. Its denotation facts belong to the initializer.
-    return value.denotedType == null
-        ? value
-        : value.withFacts(ValueFacts.none);
+    return value.denotedType == null ? value : value.withFacts(ValueFacts.none);
   }
 
   @override
@@ -754,7 +752,32 @@ final class ExtensionMemberDenotation extends Denotation {
           ? CoreTypes.dynamic.ref(ctx)
           : TypeRef.fromAnnotation(ctx, ext.library, member.returnType!);
     }
-    return CoreTypes.function.ref(ctx);
+    final type = CallSignature.forDeclaration(
+      ctx,
+      ext.library,
+      member,
+    ).toFunctionType(ctx);
+    if (member.isStatic) return type;
+    final recv = receiver ?? ctx.lookupLocal('#this');
+    final bindings = onBindings.isNotEmpty
+        ? onBindings
+        : recv == null
+        ? const <TypeRef>[]
+        : matchExtensionOn(ctx, recv.type, ext) ?? const <TypeRef>[];
+    final parameters = ctx.typeParameterDefs.declare(
+      TypeParameterOwner(
+        TypeParameterOwnerKind.extension,
+        ext.library,
+        ext.name,
+      ),
+      ext.declaration.typeParameters?.typeParameters ?? const <TypeParameter>[],
+    );
+    return type.substituteTypeParameters(
+      Substitution.of({
+        for (var i = 0; i < bindings.length && i < parameters.length; i++)
+          parameters[i]: bindings[i],
+      }),
+    );
   }
 
   @override
