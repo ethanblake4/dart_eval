@@ -372,11 +372,7 @@ abstract final class TypedInterop {
       return switch (name) {
         'hashCode' => $int(null.hashCode),
         'noSuchMethod' => $Object.noSuchMethodTearOff(null),
-        'toString' => $Function(
-          (runtime, target, r, s, c) => c == 0
-              ? $String('null')
-              : throw ArgumentError('Expected no arguments'),
-        ),
+        'toString' => const $Function(_nullToString),
         _ => throw NoSuchMethodError.withInvocation(
           null,
           Invocation.getter(Symbol(name)),
@@ -388,6 +384,14 @@ abstract final class TypedInterop {
         : (receiver as $Instance).$getProperty(_runtime(runtime), name);
     return value is $null ? null : value;
   }
+
+  static $Value? _nullToString(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => c == 0 ? $String('null') : throw ArgumentError('Expected no arguments');
 
   static void setProperty(
     Runtime? runtime,

@@ -3376,3 +3376,18 @@ now recognize T extends Never as bottom. Nullable Never retains its null value.
 The existing Null comparison folding needed no change. All four pinned
 unreachable_via fixtures pass; their stale entries were removed. Scoped
 analysis is clean and the change adds no runtime instructions.
+
+## Cycle 20 pass 6: tear-off receiver identity
+
+Inherited TypedMember and TypedClosure tear-offs compare and hash through the
+same dispatch-root receiver. Fallback method tear-offs use receiver/member
+identity. Function, Type and null toString reads now use stable callbacks.
+Type's wrapper is explicitly handMaintained in bindgen.yaml; generated SDK
+wrappers were not edited. The main interpreter loop is unchanged.
+
+The full explicit_instantiated_tearoff and super-default fixtures pass; the
+explicit fixture's stale entry was removed. Ten focused tests and touched-file
+analysis pass. tearoff_dynamic advances past all 15 toString cases but still
+fails a quoted noSuchMethod member-name assertion; its entry remains. Receiver
+identity before subclass construction finishes remains part of the separately
+identified constructor-linking limitation.

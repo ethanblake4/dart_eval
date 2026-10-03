@@ -65,13 +65,24 @@ abstract class EvalFunction implements $Instance, EvalCallable {
       case 'hashCode':
         return $int(hashCode);
       case 'toString':
-        return $Function(
-          (runtime, target, r, s, c) => $String(toString()),
+        return $Closure.withNamed(
+          _toString,
+          $Object(this),
+          positionalParameterCount: 0,
+          namedParameters: const [],
         );
       default:
         throw EvalUnknownPropertyException(identifier);
     }
   }
+
+  static $Value? _toString(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $String(target!.$value.toString());
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
@@ -103,7 +114,8 @@ class $Function extends EvalFunction {
   /// A function reference equals another carrying the same host callable —
   /// top-level and static tear-offs canonicalize to one func value.
   @override
-  bool operator ==(Object other) => other is $Function && identical(func, other.func);
+  bool operator ==(Object other) =>
+      other is $Function && identical(func, other.func);
 
   @override
   int get hashCode => identityHashCode(func);
@@ -151,12 +163,7 @@ class $Function extends EvalFunction {
   final EvalCallableFunc func;
 
   /// `Function.apply(function, positionalArguments, [namedArguments])`.
-  static $Value? $apply(
-    Runtime runtime,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
+  static $Value? $apply(Runtime runtime, Object? r, Object? s, Object? c) {
     final positional = switch (s) {
       $Value v => (v.$value as List).cast<Object?>(),
       _ => (s as List).cast<Object?>(),
@@ -172,8 +179,7 @@ class $Function extends EvalFunction {
     if (namedArg != null) {
       for (final entry in namedArg.entries) {
         final key = entry.key;
-        namedMap[_symbolName(key is $Value ? key.$value : key)] =
-            entry.value;
+        namedMap[_symbolName(key is $Value ? key.$value : key)] = entry.value;
       }
     }
     return _apply(runtime, r, positional, namedMap);
@@ -244,10 +250,14 @@ class $Function extends EvalFunction {
         final args = TypedInterop.argList(count, first, rest);
         throw NoSuchMethodError.withInvocation(
           fn,
-          Invocation.method(Symbol('call'), args.sublist(0, positional.length), {
-            for (var i = 0; i < namedNames.length; i++)
-              Symbol(namedNames[i]): args[positional.length + i],
-          }),
+          Invocation.method(
+            Symbol('call'),
+            args.sublist(0, positional.length),
+            {
+              for (var i = 0; i < namedNames.length; i++)
+                Symbol(namedNames[i]): args[positional.length + i],
+            },
+          ),
         );
       }
       return fn.invoke(

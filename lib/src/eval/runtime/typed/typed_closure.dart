@@ -130,12 +130,18 @@ final class TypedClosure extends EvalFunction {
           !other.descriptor.hasEnvironment &&
           descriptor.boundReceiver == other.descriptor.boundReceiver &&
           (!descriptor.boundReceiver ||
-              identical(captures.single, other.captures.single)) ||
+              identical(
+                tearOffReceiverIdentity(captures.single),
+                tearOffReceiverIdentity(other.captures.single),
+              )) ||
       other is TypedClosure && _adapterEquals(other) ||
       other is TypedMember &&
           descriptor.boundReceiver &&
           descriptor.functionId == other.functionId &&
-          identical(captures.single, other.receiver);
+          identical(
+            tearOffReceiverIdentity(captures.single),
+            other.receiver.dispatchRoot,
+          );
 
   /// Instantiation adapters (`f<X>` torn off under an enclosing generic and
   /// `f<int>` torn off directly) get distinct function ids but are the same
@@ -164,7 +170,7 @@ final class TypedClosure extends EvalFunction {
     // closure created directly must hash alike for canonicalization.
     if (descriptor.boundReceiver) {
       return Object.hash(
-        identityHashCode(captures.single),
+        identityHashCode(tearOffReceiverIdentity(captures.single)),
         descriptor.functionId,
       );
     }

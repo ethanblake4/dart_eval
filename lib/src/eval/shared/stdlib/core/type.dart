@@ -71,10 +71,11 @@ class $TypeImpl implements $Type {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'toString':
-        return $Function(
-          ((runtime, target, r, s, c) => $String(
-            _runtime?.runtimeTypeToString(_typeId) ?? "Instance of 'Type'",
-          )),
+        return $Closure.withNamed(
+          _toString,
+          $Object(this),
+          positionalParameterCount: 0,
+          namedParameters: const [],
         );
       case '==':
         return $Function((runtime, target, r, s, c) {
@@ -85,6 +86,19 @@ class $TypeImpl implements $Type {
         return $int(hashCode);
     }
     return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static $Value? _toString(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final type = target!.$value as $TypeImpl;
+    return $String(
+      type._runtime?.runtimeTypeToString(type._typeId) ?? "Instance of 'Type'",
+    );
   }
 
   @override

@@ -10,6 +10,10 @@ import 'typed_interop.dart';
 import 'typed_machine.g.dart';
 import 'typed_program.dart';
 
+/// Superclass links represent the same receiver when comparing tear-offs.
+Object? tearOffReceiverIdentity(Object? receiver) =>
+    receiver is TypedInstance ? receiver.dispatchRoot : receiver;
+
 Invocation _typedMethodInvocation(
   String name,
   int positionalCount,
@@ -547,6 +551,20 @@ final class TypedMethodTearOff extends $Function {
   final String name;
   final String callerLibrary;
 
+  @override
+  bool operator ==(Object other) =>
+      other is TypedMethodTearOff &&
+      identical(receiver.dispatchRoot, other.receiver.dispatchRoot) &&
+      name == other.name &&
+      (!name.startsWith('_') || callerLibrary == other.callerLibrary);
+
+  @override
+  int get hashCode => Object.hash(
+    identityHashCode(receiver.dispatchRoot),
+    name,
+    name.startsWith('_') ? callerLibrary : null,
+  );
+
   $Value? invoke(
     int positionalCount,
     Object? first,
@@ -571,15 +589,19 @@ final class TypedMember extends EvalFunction {
   @override
   bool operator ==(Object other) =>
       (other is TypedMember &&
-          identical(receiver, other.receiver) &&
+          identical(receiver.dispatchRoot, other.receiver.dispatchRoot) &&
           functionId == other.functionId) ||
       (other is TypedClosure &&
           other.descriptor.boundReceiver &&
           functionId == other.descriptor.functionId &&
-          identical(receiver, other.captures.single));
+          identical(
+            receiver.dispatchRoot,
+            tearOffReceiverIdentity(other.captures.single),
+          ));
 
   @override
-  int get hashCode => Object.hash(identityHashCode(receiver), functionId);
+  int get hashCode =>
+      Object.hash(identityHashCode(receiver.dispatchRoot), functionId);
 
   TypedMember(this.receiver, this.functionId)
     : function = receiver.program.functions[functionId];
