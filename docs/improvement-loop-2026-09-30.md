@@ -2800,3 +2800,23 @@ now rejects invalid calls with `NoSuchMethodError` and exposes the correct
 signature. The exact `unsorted/invocation_mirror_test.dart` fixture and focused
 fresh/serialized dynamic-call tests pass. Its stale expect-fail entry is
 removed. This change stays in the cold Object bridge path.
+
+## Cycle 15 pass 4: FutureOr runtime types
+
+`FutureOr<T>` is a synthetic type. Type-literal expressions could not resolve
+it, and runtime descriptors erased it to `Object?`, losing Type display and
+generic membership. A tagged descriptor now retains the member type through
+serialization, type-environment substitution, display, and subtype checks.
+The exact `type_object/futureor_tostring_test.dart` fixture and focused
+fresh/serialized tests pass. SDK-full also found three related stale failures:
+`generic/regress_45767_test.dart`,
+`nnbd/normalization/future_or_never_normalization_test.dart`, and
+`regress/regress51910_test.dart`; all four entries are removed. The corrected
+null and union subtype paths also preserve the previously passing
+`null/is2_test.dart` and `subtyping_static/future_or_subtype_test.dart`.
+
+The complete cycle 15 correctness tree passed SDK-full with 2492 runnable
+passes, 179 expected compile failures, 66 expected runtime failures, and
+three skips. The ordinary language/runtime gate passed 997 tests. A paired
+23-driver, 15-sample AOT sweep matched all 22 execution checksums; logs are
+under `.dart_tool/improvement_loop/cycle15-correctness-full23/`.

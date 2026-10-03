@@ -169,6 +169,11 @@ class Program {
           }
           if (descriptor[3] >= 0) yield descriptor[3];
           yield descriptor[5];
+        case RuntimeTypeDescriptorTag.futureOr:
+          if (descriptor.length != 4) {
+            throw const FormatException('Invalid FutureOr type descriptor');
+          }
+          yield descriptor[3];
         default:
           throw const FormatException('Unknown runtime type descriptor tag');
       }
@@ -192,8 +197,7 @@ class Program {
       for (final argument in referencedTypes(descriptor)) {
         if (cyclic(argument) &&
             (descriptor.length < 3 ||
-                descriptor[2] !=
-                    RuntimeTypeDescriptorTag.typeParameter)) {
+                descriptor[2] != RuntimeTypeDescriptorTag.typeParameter)) {
           return true;
         }
       }

@@ -127,12 +127,16 @@ final class RuntimeTypes {
         ],
       ];
     }
-    // `FutureOr<S>` has no runtime descriptor — it is a compile-time union.
-    // Wherever a type check can't see the union (parameter descriptors,
-    // type literals) degrade to `Object?`, matching the old `dynamic`
-    // behavior. `is`/`as` desugar the union before reaching here.
     if (type is InterfaceTypeRef && type.decl.isSpec(AsyncTypes.futureOr)) {
-      return [idOf(CoreTypes.object.ref(_ctx)), 1];
+      final arguments = interfaceArgumentsOf(type);
+      return [
+        idOf(CoreTypes.object.ref(_ctx)),
+        type.nullable ? 1 : 0,
+        RuntimeTypeDescriptorTag.futureOr,
+        _componentIdOf(
+          arguments.isEmpty ? CoreTypes.dynamic.ref(_ctx) : arguments.first,
+        ),
+      ];
     }
     return [
       (type is InterfaceTypeRef ? indexMap[type.decl] : null) ?? idOf(type),

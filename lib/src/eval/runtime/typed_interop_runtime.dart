@@ -131,11 +131,13 @@ extension TypedRuntimeInterop on Runtime {
       return true;
     }
     if (value == null || value is $null) {
-      return expectedDescriptor[1] == 1 || expectedNominal == _nullTypeId;
+      return _acceptsNullType(expected);
     }
     // Every non-null value satisfies Object. Host bridge values may be opaque
     // and unable to report a runtime type, so accept before reifying.
-    if (expectedNominal == _objectTypeId) return true;
+    if (expectedNominal == _objectTypeId && expectedDescriptor.length == 2) {
+      return true;
+    }
     // Generated MapEntry wrappers expose a nominal runtime type. Check their
     // payload when the destination expects instantiated key/value arguments.
     if (expectedNominal == lookupType(CoreTypes.mapEntry) &&
@@ -180,6 +182,24 @@ extension TypedRuntimeInterop on Runtime {
     _subtypeMemoVersion = _typeTableVersion;
     _subtypeMemoResult = result;
     return result;
+  }
+
+  bool _acceptsNullType(int type) {
+    final descriptor = _typeDescriptors[type];
+    if (descriptor.length == 6 &&
+        descriptor[2] == RuntimeTypeDescriptorTag.typeParameter) {
+      return descriptor[1] == 1;
+    }
+    final nominal = descriptor[0];
+    if (descriptor[1] == 1 ||
+        nominal == _dynamicTypeId ||
+        nominal == _voidTypeId ||
+        nominal == _nullTypeId) {
+      return true;
+    }
+    return descriptor.length == 4 &&
+        descriptor[2] == RuntimeTypeDescriptorTag.futureOr &&
+        _acceptsNullType(descriptor[3]);
   }
 
   /// Whether [type] is a plain nominal descriptor with no type arguments or
@@ -488,19 +508,10 @@ extension TypedRuntimeInterop on Runtime {
       return true;
     }
     if (value == null || value is $null) {
-      final descriptor = expectedDescriptor;
-      final nominal = descriptor[0];
-      if (descriptor[1] == 1 ||
-          nominal == _dynamicTypeId ||
-          nominal == _nullTypeId) {
-        return true;
-      }
+      if (_acceptsNullType(expected)) return true;
       final resolved = _resolveTypeParameter(expected, actualOwnerType);
       if (resolved == null) return true;
-      final resolvedDescriptor = _typeDescriptors[resolved];
-      return resolvedDescriptor[1] == 1 ||
-          resolvedDescriptor[0] == _dynamicTypeId ||
-          resolvedDescriptor[0] == _nullTypeId;
+      return _acceptsNullType(resolved);
     }
     if (expectedDescriptor.length == 2 &&
         expectedDescriptor[0] == _objectTypeId) {
@@ -535,18 +546,14 @@ extension TypedRuntimeInterop on Runtime {
       return true;
     }
     if (value == null || value is $null) {
-      final descriptor = expectedDescriptor;
-      if (descriptor[1] == 1) return true;
+      if (_acceptsNullType(expected)) return true;
       final resolved = _resolveTypeParameter(
         expected,
         actualOwnerType,
         typeArguments,
       );
       if (resolved == null) return true;
-      final resolvedDescriptor = _typeDescriptors[resolved];
-      return resolvedDescriptor[1] == 1 ||
-          resolvedDescriptor[0] == _dynamicTypeId ||
-          resolvedDescriptor[0] == _nullTypeId;
+      return _acceptsNullType(resolved);
     }
     if (expectedDescriptor.length == 2 &&
         expectedDescriptor[0] == _objectTypeId) {
@@ -701,6 +708,8 @@ extension TypedRuntimeInterop on Runtime {
       ) {
         yield descriptor[index + 1];
       }
+    } else if (descriptor[2] == RuntimeTypeDescriptorTag.futureOr) {
+      yield descriptor[3];
     }
   }
 
@@ -893,6 +902,17 @@ extension TypedRuntimeInterop on Runtime {
             resolution,
             signatureBoundOwners,
           );
+        case RuntimeTypeDescriptorTag.futureOr:
+          translated.addAll([
+            descriptor[2],
+            _resolveEnvironmentType(
+              descriptor[3],
+              actualOwnerType,
+              callableTypeArguments,
+              resolution,
+              signatureBoundOwners,
+            ),
+          ]);
       }
     }
     if (_sameTypeDescriptor(descriptor, translated)) return type;
@@ -1123,6 +1143,79 @@ extension TypedRuntimeInterop on Runtime {
     final source = _typeDescriptors[actual];
     final target = _typeDescriptors[expected];
     final sourceNominal = source[0], targetNominal = target[0];
+    final targetTag = target.length > 2 && target[2] < 0 ? target[2] : null;
+    if (targetTag == RuntimeTypeDescriptorTag.futureOr) {
+      if (source[1] == 1 && !_acceptsNullType(expected)) return false;
+      if (source.length == 4 &&
+          source[2] == RuntimeTypeDescriptorTag.futureOr) {
+        if (_acceptsNullType(actual) && !_acceptsNullType(expected)) {
+          return false;
+        }
+        final member = source[3];
+        if (!_isTypedDescriptorSubtypeInEnvironment(
+          member,
+          expected,
+          actualOwnerType,
+          callableTypeArguments,
+          signatureParameterRenames: signatureParameterRenames,
+        )) {
+          return false;
+        }
+        final targetMember = _typeDescriptors[target[3]];
+        if (_isTypedDescriptorSubtypeInEnvironment(
+          member,
+          target[3],
+          actualOwnerType,
+          callableTypeArguments,
+          signatureParameterRenames: signatureParameterRenames,
+        )) {
+          return true;
+        }
+        final futureNominal = _typedTypeId(CoreTypes.future);
+        return targetMember[0] == futureNominal &&
+            targetMember.length > 2 &&
+            _isTypedDescriptorSubtypeInEnvironment(
+              member,
+              targetMember[2],
+              actualOwnerType,
+              callableTypeArguments,
+              signatureParameterRenames: signatureParameterRenames,
+            );
+      }
+      if (sourceNominal == _nullTypeId &&
+          (target[1] == 1 || nullableExpected)) {
+        return true;
+      }
+      if (_isTypedDescriptorSubtypeInEnvironment(
+        actual,
+        target[3],
+        actualOwnerType,
+        callableTypeArguments,
+        signatureParameterRenames: signatureParameterRenames,
+      )) {
+        return true;
+      }
+      final futureNominal = _typedTypeId(CoreTypes.future);
+      if (futureNominal == null) return false;
+      final candidates = actual < _typeTypes.length
+          ? _typeTypes[actual]
+          : {actual};
+      for (final candidate in candidates) {
+        final row = _typeDescriptors[candidate];
+        if (row[0] == futureNominal &&
+            row.length > 2 &&
+            _isTypedDescriptorSubtypeInEnvironment(
+              row[2],
+              target[3],
+              actualOwnerType,
+              callableTypeArguments,
+              signatureParameterRenames: signatureParameterRenames,
+            )) {
+          return true;
+        }
+      }
+      return false;
+    }
     // Object? is a top type even for dynamic and abstract signature bounds,
     // which do not necessarily have an Object entry in their supertype table.
     if (targetNominal == _dynamicTypeId ||
@@ -1138,7 +1231,6 @@ extension TypedRuntimeInterop on Runtime {
       return target[1] == 1 || nullableExpected;
     }
     if (source[1] == 1 && target[1] == 0 && !nullableExpected) return false;
-    final targetTag = target.length > 2 && target[2] < 0 ? target[2] : null;
     if (targetTag != null) {
       final sourceTag = source.length > 2 && source[2] < 0 ? source[2] : null;
       if (sourceTag != targetTag) {

@@ -13,6 +13,21 @@ import 'identifier.dart';
 /// Handles `List<num>`, `Map<String, int>` etc. as expressions.
 Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
   final typeArguments = e.typeArguments?.arguments;
+  final target = e.function;
+  if (target is SimpleIdentifier &&
+      target.name == 'FutureOr' &&
+      typeArguments != null &&
+      typeArguments.length == 1 &&
+      ctx.lookupBinding('FutureOr') == null &&
+      ctx.visibleDeclarations[ctx.library]?['FutureOr'] == null) {
+    final argument = TypeRef.fromAnnotation(
+      ctx,
+      ctx.library,
+      typeArguments.single,
+    );
+    final type = ctx.types.futureOr.instantiate([argument]);
+    return typeLiteral(ctx, type, 'FutureOr.');
+  }
   // Applying alias arguments must expand its body, including nested or
   // reordered arguments, rather than replacing the target class arguments.
   if (typeArguments != null && e.function is Identifier) {
@@ -100,7 +115,7 @@ Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
         CoreTypes.type.ref(ctx),
         facts: ValueFacts(
           denotedType: parameterized,
-          possibleClasses: [parameterized],
+          possibleClasses: [CoreTypes.type.ref(ctx)],
         ),
       );
     }

@@ -609,6 +609,12 @@ class Runtime {
         source[4],
         importRuntimeType(origin, source[5]),
       ],
+      RuntimeTypeDescriptorTag.futureOr => [
+        nominal,
+        source[1],
+        source[2],
+        importRuntimeType(origin, source[3]),
+      ],
       _ => throw StateError('Unknown runtime type descriptor tag ${source[2]}'),
     };
   }
@@ -729,7 +735,8 @@ class Runtime {
           if (named.isNotEmpty) '{${named.join(', ')}}',
         ];
         final typeParameters = count == 0 ? '' : '<${generics.join(', ')}>';
-        final function = '$typeParameters(${parameters.join(', ')})'
+        final function =
+            '$typeParameters(${parameters.join(', ')})'
             ' => ${format(descriptor[3])}';
         return suffix.isEmpty ? function : '($function)$suffix';
       case RuntimeTypeDescriptorTag.typeParameter:
@@ -738,6 +745,25 @@ class Runtime {
           return '${names[descriptor[4]]}$suffix';
         }
         return '${format(descriptor[5])}$suffix';
+      case RuntimeTypeDescriptorTag.futureOr:
+        final argument = descriptor[3];
+        final member = _typeDescriptors[argument];
+        final nominal = member[0];
+        if (nominal == _dynamicTypeId) return 'dynamic';
+        if (nominal == _voidTypeId) return 'void';
+        if (nominal == _objectTypeId && member.length == 2) {
+          final object = format(argument);
+          return suffix.isNotEmpty && !object.endsWith('?')
+              ? '$object?'
+              : object;
+        }
+        if (nominal == _nullTypeId) {
+          return 'Future<Null>?';
+        }
+        if (nominal == _typedTypeId(CoreTypes.never)) {
+          return 'Future<${format(argument)}>${member[1] == 1 || suffix.isNotEmpty ? '?' : ''}';
+        }
+        return 'FutureOr<${format(argument)}>${_acceptsNullType(argument) ? '' : suffix}';
       default:
         throw StateError(
           'Unknown runtime type descriptor tag ${descriptor[2]}',
@@ -768,6 +794,8 @@ class Runtime {
         'p?${descriptor[1]}:'
             '${descriptor[3] < 0 ? descriptor[3] : _typeIdentities[descriptor[3]]}:'
             '${descriptor[4]}:${_runtimeTypeSemanticKey(descriptor[5])}',
+      RuntimeTypeDescriptorTag.futureOr =>
+        'u?${descriptor[1]}:${_runtimeTypeSemanticKey(descriptor[3])}',
       _ => throw StateError(
         'Unknown runtime type descriptor tag ${descriptor[2]}',
       ),

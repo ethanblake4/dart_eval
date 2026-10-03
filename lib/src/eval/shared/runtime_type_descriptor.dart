@@ -4,6 +4,7 @@ abstract final class RuntimeTypeDescriptorTag {
   static const function = -1;
   static const record = -2;
   static const typeParameter = -3;
+  static const futureOr = -4;
 
   /// The owner slot of a type-parameter descriptor is negative for any
   /// callable parameter: -(4 + seq) identifies the declaring callable's
