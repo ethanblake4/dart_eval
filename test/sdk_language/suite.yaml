@@ -67,7 +67,6 @@ exclude:
 # suite; a test that starts passing fails loudly so the entry gets removed.
 # Same path/glob syntax as `exclude`.
 expect_fail:
-  - path: 'async/await_user_defined_future_soundness_test.dart'
   - path: 'constructor/patch_tear_off_test.dart'
   - path: 'dot_shorthands/constructor/constructor_cascade_test.dart'
     reason: 'extension type declarations unsupported'

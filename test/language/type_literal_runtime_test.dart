@@ -2,6 +2,30 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('runtimeType reads preserve an unboxed String local', () {
+    final program = Compiler().compile({
+      'type_literals': {
+        'main.dart': '''
+          String text() => 'abc';
+          bool main() {
+            final value = text();
+            final kind = value.runtimeType;
+            return kind == String && value.length == 3 && value + '!' == 'abc!';
+          }
+        ''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib('package:type_literals/main.dart', 'main'),
+        true,
+      );
+    }
+  });
+
   test('type object getters preserve Type facts', () {
     final program = Compiler().compile({
       'type_literals': {

@@ -110,11 +110,12 @@ void main() {
         expect(runtime.executeLib(_library, 'readStage'), 2, reason: kind);
         expect(await pending, $int(7), reason: kind);
         expect(runtime.executeLib(_library, 'readStage'), 2, reason: kind);
-        await expectLater(
-          runtime.executeLib(_library, 'wrongInline'),
-          throwsA(isA<TypeError>()),
-          reason: kind,
+        Object? synchronousError;
+        runZonedGuarded<void>(
+          () => runtime.executeLib(_library, 'wrongInline'),
+          (error, trace) => synchronousError = error,
         );
+        expect(synchronousError, isA<TypeError>(), reason: kind);
       }
     },
   );

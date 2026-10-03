@@ -4193,3 +4193,25 @@ record histories; temporary value views do not.
 All three original try/finally SDK fixtures pass fresh and serialized execution,
 and their stale expectations are removed. Forty-two existing focused tests pass;
 scoped analysis is clean. No fixture copies or runtime operations were added.
+
+### Cycle 26 correctness pass 5: generated zones and guest Future soundness
+
+runZoned and runZonedGuarded are generated from SDK sources and registered through
+the async plugin. Repeating generate_stdlib for async/functions.dart produces
+identical SHA256 8C8364C1375FB9EC463B0E02B335876633E72DF752D1E91BCCCD39C9E82EE5F5.
+No binding-generator change or handwritten stdlib wrapper is needed.
+
+The original user-defined Future soundness fixture exposed two further blockers.
+The runtimeType intrinsic now boxes an unboxed receiver into a fresh slot instead
+of forcing one String SSA value into both register banks. A guest await callback
+validates its argument with the existing awaited type descriptor before entering
+resume error handling. Invalid callback arguments reject synchronously in the
+foreign then call, with native error-zone timing. Ordinary body and foreign-then
+errors retain existing behavior; return adoption and interpreter dispatch are
+unchanged. A recovery probe, where then catches an invalid argument before
+providing a valid value, also matches native timing in both runtime modes.
+
+The untouched original passes native Dart, fresh eval and serialized eval; its
+stale expectation is removed. Twenty-six focused async, zone and type tests pass;
+scoped analysis is clean. The existing invalid-inline test now asserts verified
+native synchronous zone semantics instead of delayed catchability.

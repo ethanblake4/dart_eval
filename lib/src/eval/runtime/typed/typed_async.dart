@@ -225,12 +225,23 @@ abstract final class TypedAsync {
           subject,
           runtime,
           (value) {
+            final boxed = TypedInterop.boxExternal(value, runtime: runtime);
+            // Reject an invalid callback argument in the guest's `then`,
+            // before resuming the awaiting body or handling its errors.
+            try {
+              runtime.assertTypedFuturePayload(boxed, awaitTypeId);
+            } catch (_) {
+              // A foreign Future invoking onValue with the wrong type fails
+              // synchronously, including notification of its error zone.
+              state?._deferErrors = false;
+              rethrow;
+            }
             try {
               resume(
                 program,
                 frame,
                 pc,
-                TypedInterop.boxExternal(value, runtime: runtime),
+                boxed,
                 null,
                 null,
                 runtime,

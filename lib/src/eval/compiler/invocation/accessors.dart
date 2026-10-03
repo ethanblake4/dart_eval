@@ -738,7 +738,10 @@ final class IntrinsicGet extends GetTarget {
       ),
       _ => Variable.ssa(
         ctx,
-        LoadRuntimeType(ctx.svar('runtime_type'), recv.ssa),
+        LoadRuntimeType(
+          ctx.svar('runtime_type'),
+          (recv.boxed ? recv : recv.boxIntoFreshSlot(ctx)).ssa,
+        ),
         CoreTypes.type.ref(ctx),
         facts: switch (recv.exactType) {
           final exact? => ValueFacts(denotedType: exact),

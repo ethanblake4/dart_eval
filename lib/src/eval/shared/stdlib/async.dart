@@ -20,6 +20,8 @@ class DartAsyncPlugin implements EvalPlugin {
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeTopLevelFunction($unawaitedFn.$declaration);
+    registry.defineBridgeTopLevelFunction($runZonedFn.$declaration);
+    registry.defineBridgeTopLevelFunction($runZonedGuardedFn.$declaration);
     registry.defineBridgeTopLevelFunction(
       BridgeFunctionDeclaration(
         'dart:async',
@@ -79,6 +81,8 @@ class DartAsyncPlugin implements EvalPlugin {
   @override
   void configureForRuntime(Runtime runtime) {
     $unawaitedFn.configureForRuntime(runtime);
+    $runZonedFn.configureForRuntime(runtime);
+    $runZonedGuardedFn.configureForRuntime(runtime);
     runtime.registerBridgeFuncRegisters(
       'dart:async',
       'scheduleMicrotask',

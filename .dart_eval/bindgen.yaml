@@ -186,6 +186,8 @@ libraries:
     outDir: lib/src/eval/shared/stdlib/async
     functions:
       - unawaited
+      - runZoned
+      - runZonedGuarded
     registry:
       file: lib/src/eval/shared/types.dart
       class: AsyncTypes
