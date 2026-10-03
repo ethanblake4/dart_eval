@@ -233,7 +233,7 @@ final class TypedClosure extends EvalFunction {
     if (descriptor.captureCount > 0) {
       outgoing.fillRange(0, descriptor.captureCount, null);
     }
-    return TypedClosure._(
+    final closure = TypedClosure._(
       program,
       descriptor,
       captures,
@@ -242,6 +242,27 @@ final class TypedClosure extends EvalFunction {
       definingTypeArguments,
       definingTypeEnvironment,
     );
+    if (descriptor.isInstantiationAdapter && runtime != null) {
+      final captured = captures.single;
+      final callable = captured is TypedMember
+          ? captured.boundClosure
+          : captured;
+      // Instance method bounds can narrow with the actual class receiver.
+      // Static callable bounds are checked by the compiler's type context.
+      if (callable is TypedClosure &&
+          callable.descriptor.boundReceiver &&
+          callable.captures.single is TypedInstance) {
+        final arguments = runtime.resolveTypedCallTypeArguments(
+          descriptor.instantiationTypeArguments,
+          actualOwnerType: closure._typeEnvironmentOwnerType(runtime),
+          callableTypeArguments: definingTypeArguments,
+          typeEnvironment: definingTypeEnvironment,
+        );
+        if (!callable.acceptsTypeArguments(arguments)) throw TypeError();
+        callable._checkTypeArguments(arguments, runtime);
+      }
+    }
+    return closure;
   }
 
   /// Exact calls need no argument vector, signature adapter or recursive Dart

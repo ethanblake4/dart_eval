@@ -116,6 +116,7 @@ void main() {
     () {
       final names = ['z', 'a'];
       final defaults = <Object?>[null, -0.0];
+      final instantiationArguments = [7, 8];
       final descriptor = TypedClosureDescriptor(
         1,
         captureCount: 1,
@@ -125,9 +126,12 @@ void main() {
         namedNames: names,
         requiredNamed: ['z'],
         namedDefaults: [null, 'value'],
+        isInstantiationAdapter: true,
+        instantiationTypeArguments: instantiationArguments,
       );
       names.clear();
       defaults.clear();
+      instantiationArguments.clear();
       final p = TypedProgram(
         Uint8List.fromList([TypedOp.rReturn, TypedOp.rReturn]),
         functions: [
@@ -149,10 +153,15 @@ void main() {
       expect(closure.requiredNamed, ['z']);
       expect((closure.positionalDefaults[1] as double).isNegative, isTrue);
       expect(closure.namedDefaults, [null, 'value']);
+      expect(closure.instantiationTypeArguments, [7, 8]);
       expect(restored.closureCalls.single.namedNames, ['a', 'z']);
       expect(restored.closureCalls.single.overflowCount, 2);
       expect(() => closure.namedNames.clear(), throwsUnsupportedError);
       expect(() => closure.positionalDefaults.clear(), throwsUnsupportedError);
+      expect(
+        () => closure.instantiationTypeArguments.clear(),
+        throwsUnsupportedError,
+      );
       expect(() => restored.closures.clear(), throwsUnsupportedError);
     },
   );
@@ -164,6 +173,13 @@ void main() {
         argumentKinds: [TypedArgumentKind.object],
       );
       for (final descriptor in [
+        TypedClosureDescriptor(
+          0,
+          captureCount: 0,
+          positionalCount: 0,
+          requiredPositional: 0,
+          isInstantiationAdapter: true,
+        ),
         TypedClosureDescriptor(
           1,
           captureCount: 0,

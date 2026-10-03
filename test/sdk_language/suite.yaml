@@ -74,7 +74,6 @@ expect_fail:
     reason: '\$Future bridge lacks catchError/whenComplete; await on Future-implementing classes unsupported'
   - path: 'bool/has_environment_test.dart'
   - path: 'closure/in_initializer2_test.dart'
-  - path: 'closure/partial_instantiation_eager_bounds_check_test.dart'
   - path: 'closure/tearoff_dynamic_test.dart'
   - path: 'closure/type_arguments_test.dart'
   - path: 'constructor/constructor_test.dart'

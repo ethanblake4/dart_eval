@@ -3131,3 +3131,19 @@ binding needs a call tear-off; ordinary pattern checks keep their failure
 behavior. The pinned
 `patterns/call_tear_off_test.dart` fixture passes, including its refutable
 cases. Its stale `expect_fail` entry was removed.
+
+## Cycle 18 pass 4: eager bounds for generic tear-offs
+
+Partially instantiating a generic tear-off could defer a bound violation until
+the resulting adapter was invoked. Method tear-off types now carry substituted
+receiver bounds, and instantiation adapters retain their selected type IDs.
+An adapter with a guest instance-method receiver checks those IDs against the
+captured callable when it is created; ordinary call dispatch is unchanged.
+Typed bytecode version 138 carries the extra metadata. The pinned
+`closure/partial_instantiation_eager_bounds_check_test.dart` fixture and
+focused compiler, closure, and codec tests pass. Its stale `expect_fail` entry
+was removed. Compiler, language, and runtime tests passed (1,336 tests), and
+SDK-full passed all 2,516 runnable cases. The final 23-driver AOT sweep
+matched all 23 baseline results; logs are under
+`.dart_tool/improvement_loop/cycle18-pass4-final-full23/`. A paired exception
+control ruled out a noisy sweep timing outlier.

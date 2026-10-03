@@ -1126,6 +1126,7 @@ class _LoweringSession {
         hasEnvironment: op.hasEnvironment,
         boundReceiver: op.boundReceiver,
         isInstantiationAdapter: op.isInstantiationAdapter,
+        instantiationTypeArguments: op.instantiationTypeArguments,
         positionalDefaults: op.positionalDefaults.isEmpty
             ? List.filled(op.positionalCount, null)
             : op.positionalDefaults,

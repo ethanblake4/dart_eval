@@ -15,6 +15,7 @@ final class TypedClosureDescriptor {
     List<bool> parameterNullable = const [],
     List<int> typeParameterBounds = const [],
     List<int> defaultTypeArguments = const [],
+    List<int> instantiationTypeArguments = const [],
     this.runtimeTypeId = -1,
     this.hasEnvironment = true,
     this.boundReceiver = false,
@@ -33,6 +34,9 @@ final class TypedClosureDescriptor {
        parameterNullable = List.unmodifiable(parameterNullable),
        typeParameterBounds = List.unmodifiable(typeParameterBounds),
        defaultTypeArguments = List.unmodifiable(defaultTypeArguments),
+       instantiationTypeArguments = List.unmodifiable(
+         instantiationTypeArguments,
+       ),
        needsCovariantParameterChecks =
            boundReceiver && parameterTypeIds.any((id) => id >= 0);
 
@@ -50,6 +54,9 @@ final class TypedClosureDescriptor {
 
   /// Finite instantiate-to-bound defaults, resolved against the closure environment.
   final List<int> defaultTypeArguments;
+
+  /// Arguments checked eagerly against the captured generic callable.
+  final List<int> instantiationTypeArguments;
   final bool hasEnvironment, boundReceiver;
 
   /// Whether this descriptor is a `<generic function adapter>`: a closure that

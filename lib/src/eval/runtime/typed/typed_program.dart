@@ -168,6 +168,7 @@ class TypedProgram {
       yield* closure.parameterTypeIds.where((id) => id >= 0);
       yield* closure.typeParameterBounds;
       yield* closure.defaultTypeArguments;
+      yield* closure.instantiationTypeArguments;
       if (closure.runtimeTypeId >= 0) yield closure.runtimeTypeId;
     }
     for (final call in closureCalls) {
@@ -396,6 +397,12 @@ class TypedProgram {
           descriptor.defaultTypeArguments.any(
             (type) => type < 0 || type > 65535,
           ) ||
+          descriptor.instantiationTypeArguments.any(
+            (type) => type < 0 || type > 65535,
+          ) ||
+          (descriptor.isInstantiationAdapter && descriptor.captureCount != 1) ||
+          (descriptor.instantiationTypeArguments.isNotEmpty &&
+              !descriptor.isInstantiationAdapter) ||
           descriptor.runtimeTypeId < -1 ||
           (descriptor.defaultThunks.isNotEmpty &&
               (descriptor.defaultThunks.length != descriptor.argumentCount ||

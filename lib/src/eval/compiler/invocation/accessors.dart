@@ -427,7 +427,7 @@ sealed class GetTarget {
     final CallSignature? methodSignature;
     if (isDeclaredMethod || isBridgeMethod) {
       methodSignature = member!.signature;
-      fieldType = methodSignature.toFunctionType(ctx);
+      fieldType = member.fieldType ?? methodSignature.toFunctionType(ctx);
       if (isDeclaredMethod &&
           boundContext is FunctionTypeRef &&
           methodSignature.typeParameters.isNotEmpty) {

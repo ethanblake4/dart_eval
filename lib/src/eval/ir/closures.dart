@@ -16,6 +16,7 @@ final class CreateClosure extends Operation {
   /// Marks the synthetic `<generic function adapter>` closure: instantiations
   /// of the same callable to the same signature compare equal across sites.
   final bool isInstantiationAdapter;
+  final List<int> instantiationTypeArguments;
   final List<Object?> positionalDefaults;
   final List<Object?> namedDefaults;
   final List<String> requiredNamed;
@@ -37,6 +38,7 @@ final class CreateClosure extends Operation {
     this.namedNames = const [],
     this.boundReceiver = false,
     this.isInstantiationAdapter = false,
+    this.instantiationTypeArguments = const [],
     this.hasEnvironment = true,
     this.positionalDefaults = const [],
     this.namedDefaults = const [],
@@ -65,6 +67,7 @@ final class CreateClosure extends Operation {
       namedNames: namedNames,
       boundReceiver: boundReceiver,
       isInstantiationAdapter: isInstantiationAdapter,
+      instantiationTypeArguments: instantiationTypeArguments,
       hasEnvironment: hasEnvironment,
       positionalDefaults: positionalDefaults,
       namedDefaults: namedDefaults,

@@ -561,6 +561,7 @@ Variable instantiateRuntimeCallable(
         DeferredOrOffset(offset: functionId),
         [value.ssa],
         isInstantiationAdapter: true,
+        instantiationTypeArguments: argumentIds,
         requiredPositional: signature.requiredPositional,
         positionalCount: signature.positional.length,
         namedNames: named,
