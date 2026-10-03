@@ -3,6 +3,8 @@ import '../../ir/alu.dart' as alu;
 import '../../ir/collection.dart' as collection;
 import '../../ir/exception.dart' as exceptions;
 import '../../ir/memory.dart' as memory;
+import '../../ir/logic.dart' as logic;
+import '../../ir/numeric.dart';
 import '../../ir/objects.dart' as objects;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/representation.dart';
@@ -77,7 +79,8 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
       final op = code[i];
       if (op is primitives.Unbox) {
         final primitive = _primitiveBox(definition(op.source));
-        if (primitive != null && primitive.representation == op.representation) {
+        if (primitive != null &&
+            primitive.representation == op.representation) {
           code[i] = cfg.Assign(op.target, primitive.source);
         }
       } else if (op is objects.SetPropertyStatic &&
@@ -115,6 +118,7 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
       }
     }
   }
+  _reuseNativeFieldReads(graph, definitions);
   // Catch edges can leave before a block's last definition has executed.
   // Normal block dominance is sufficient only without these edges.
   if (!operations().any((op) => op is exceptions.EnterTry)) {
@@ -147,6 +151,71 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
   );
   hoistLoopInvariants(graph);
 }
+
+/// Reuses a numeric or bool slot read while no intervening operation can mutate
+/// guest state. Reads stay at their original positions and never cross blocks.
+void _reuseNativeFieldReads(
+  cfg.ControlFlowGraph graph,
+  cfg.SSADefinitions definitions,
+) {
+  cfg.SSA receiver(cfg.SSA value) =>
+      definitions.throughCopies(value)?.writesTo ?? value;
+  for (final id in graph.graph.vertices) {
+    final code = graph[id]!.code;
+    final reads = <(cfg.SSA, int, MachineRepresentation), cfg.SSA>{};
+    for (var i = 0; i < code.length; i++) {
+      final op = code[i];
+      if (op is objects.LoadPropertyStatic &&
+          !op.isLate &&
+          (op.rep == MachineRepresentation.integer ||
+              op.rep == MachineRepresentation.doublePrecision ||
+              op.rep == MachineRepresentation.boolean)) {
+        final key = (receiver(op.object), op.index, op.rep);
+        final previous = reads[key];
+        if (previous == null) {
+          reads[key] = op.target;
+        } else {
+          code[i] = cfg.Assign(op.target, previous);
+        }
+      } else if (!_preservesNativeFieldReads(op)) {
+        reads.clear();
+      }
+    }
+  }
+}
+
+bool _preservesNativeFieldReads(cfg.Operation op) => switch (op) {
+  cfg.Assign() ||
+  primitives.BoxInt() ||
+  primitives.BoxDouble() ||
+  primitives.BoxBool() ||
+  primitives.BoxString() ||
+  primitives.BoxNull() ||
+  memory.LoadInt() ||
+  memory.LoadDouble() ||
+  memory.LoadBool() ||
+  memory.LoadString() ||
+  memory.LoadNull() ||
+  memory.IsNull() ||
+  alu.IntAdd() ||
+  alu.IntSub() ||
+  alu.Increment() ||
+  alu.IntLessThan() ||
+  alu.IntLessThanOrEqual() ||
+  alu.IntGreaterThan() ||
+  alu.IntGreaterThanOrEqual() ||
+  alu.IntEqual() ||
+  alu.IntNotEqual() ||
+  alu.Negate() ||
+  logic.LogicalNot() ||
+  logic.LogicalAnd() ||
+  logic.LogicalOr() ||
+  IntToDouble() ||
+  StringOperation() ||
+  StringSubstring() => true,
+  NumericBinary() => op.isPure,
+  _ => false,
+};
 
 ({cfg.SSA source, MachineRepresentation representation})? _primitiveBox(
   cfg.Operation? operation,

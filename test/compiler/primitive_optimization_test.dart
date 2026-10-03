@@ -19,6 +19,95 @@ void checkBoth(Program program, Object? expected) {
 }
 
 void main() {
+  test('scalar field reads reuse copied receivers within a pure block', () {
+    final program = (Compiler()..enableLeafInlining = false).compile({
+      'test': {
+        'main.dart': '''
+class Row {
+  int count = 3;
+  double rate = 2.5;
+  bool enabled = true;
+  String name = 'abcd';
+}
+int read(Row row) {
+  final alias = row;
+  final count = row.count + alias.count;
+  final rate = row.rate + alias.rate;
+  final enabled = row.enabled == alias.enabled;
+  final text = row.name.length + alias.name.codeUnitAt(0) +
+      row.name.codeUnitAt(1);
+  return count + rate.toInt() + text + (enabled ? 1 : 0);
+}
+int main() => read(Row());
+''',
+      },
+    });
+    checkBoth(program, 211);
+    final names = program.typedProgram.instructions.map(
+      (entry) => entry.$2.name,
+    );
+    expect(
+      names.where((name) => RegExp(r'^[ab]LoadProperty[RSC]$').hasMatch(name)),
+      hasLength(1),
+    );
+    expect(
+      names.where((name) => RegExp(r'^[fg]LoadProperty[RSC]$').hasMatch(name)),
+      hasLength(1),
+    );
+    expect(
+      names.where((name) => RegExp(r'^eLoadProperty[RSC]$').hasMatch(name)),
+      hasLength(1),
+    );
+  });
+
+  test('field read reuse stops at alias writes and guest calls', () {
+    checkBoth(
+      compile('''
+class Row {
+  int count = 1;
+  int get change { count++; return count; }
+  void touch() { count++; }
+}
+int main() {
+  final row = Row();
+  final alias = row;
+  final before = row.count;
+  alias.count = 4;
+  final written = row.count;
+  final changed = row.change;
+  final afterGetter = row.count;
+  row.touch();
+  final afterMethod = row.count;
+  final callback = () { alias.count = 9; };
+  callback();
+  return before * 100000 + written * 10000 + changed * 1000 +
+      afterGetter * 100 + afterMethod * 10 + row.count;
+}
+'''),
+      145569,
+    );
+  });
+
+  test('field read reuse preserves writes observed after an exception', () {
+    checkBoth(
+      compile('''
+class Row { int count = 1; }
+int main() {
+  final row = Row();
+  var result = row.count;
+  try {
+    row.count = 4;
+    throw StateError('changed');
+  } catch (_) {
+    result += row.count;
+  }
+  return result + row.count;
+}
+'''),
+      9,
+    );
+  });
+
   test('primitive field stores retain Object reads and escaped aliases', () {
     final program = compile('''
       class Row {

@@ -4116,3 +4116,14 @@ Original enum/enhanced_enums_basic_test.dart passes and its stale expect_fail en
 
 
 Cycle 25 correctness gates: SDK actual outcomes are 2621 passed / 96 compile errors / 20 failures / 3 skipped, six fewer actual failures than cycle 24. Configured full run had 2736 passes / 557 skipped and one stale enhanced-enum expectation loaded before its removal; the fixture passes a fresh core-suite rerun. Default run had 2249 passes / 86 skipped and the same stale expectation plus two subprocess timeouts under concurrent load. Both timeout files pass an isolated serial rerun (15 tests), and the enum rerun passes. The final cleanup gates will use fresh configuration. Correctness AOT baseline was built from 61497157 before performance edits. User HTTP deletions, untracked bindgen fixture and empty runtime diff remain untouched.
+
+
+### Cycle 25 performance: repeated native scalar field reads
+
+The backend reuses nonlate integer/double/bool slot reads within one basic block, keyed by canonical receiver, slot and representation. Calls, writes, late reads, strings, arbitrary unboxing and unknown operations clear the cache. Native primitive boxing preserves the cache without moving or removing allocations. The existing SSA definition map is reused. No new opcode, runtime helper or interpreter-loop change.
+
+Experiments that retained String reads removed three loads from TokenRecord.score but added an object spill slot. Its timing benefit was inconclusive, so String reuse was discarded. The final numeric/bool variant retains the meaningful order-total improvement while avoiding that object-bank pressure.
+
+New benchmark/order_totals.dart calculates merchandise, shipping and insured line totals over immutable records. AOT paired runs use CPU affinity 4, 15000 batches and 31 samples. Final reverse order: baseline 178.054 ms, candidate 162.296 ms (8.9% faster). Earlier broader variants measured 9.1?12.9%; the final forward pair had a larger noisy difference (236.489 vs 158.390 ms), not a general speedup claim. All order checksums equal independently calculated 34076481700. The final full 23-driver sweep uses 15 samples: all 22 execution checksums match; compiler output sizes match at 1354 bytes. JSON 340.455 vs 342.371 ms and compiler 13649 vs 13381 us are small noisy differences, not broad performance claims. Earlier full/reverse sweeps and longer JSON/compile probes were retained in ignored cycle25 logs.
+
+Validation: 66 scoped backend/primitive/loop/late-field tests pass; fresh and serialized tests cover repeated scalar reads through aliases, native boxing, alias writes, mutating getters/methods/closures and exception paths. Scoped analysis and diff checks pass. Final AOT baseline is from 61497157; final scalar candidate was built before this checkpoint with all agent compilation idle.
