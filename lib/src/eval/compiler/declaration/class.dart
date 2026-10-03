@@ -818,7 +818,11 @@ DeclarationOrBridge? _effectiveConcreteMember(
   if (superRef != null) {
     final memberName = MemberName(name, kind);
     final owner = ctx.memberLookup.implementationOwner(superRef, memberName);
-    if (owner == null) return null;
+    if (owner == null) {
+      // Object is bridged, so implementationOwner cannot inspect its methods.
+      // They still satisfy abstract declarations such as operator ==.
+      return _superMemberOf(ctx, name, kind, CoreTypes.object.ref(ctx));
+    }
     final member = ctx.memberLookup.concreteMemberOn(owner, memberName);
     if (member is SourceMember) {
       return DeclarationOrBridge(

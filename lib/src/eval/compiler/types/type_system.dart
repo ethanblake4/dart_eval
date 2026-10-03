@@ -801,7 +801,7 @@ final class TypeSystem {
     Set<TypeParameterDef> bound,
   ) => switch (type) {
     TypeParameterTypeRef(:final parameter) =>
-      bound.contains(parameter)
+      (bound.contains(parameter) || !_isLexicalTypeParameter(parameter))
           ? type
           : covariant
           ? CoreTypes.never.ref(_ctx).withNullable(type.nullable)
@@ -829,6 +829,20 @@ final class TypeSystem {
     FunctionTypeRef() => _constantFunctionType(type, covariant, bound),
     UnknownTypeRef() => type,
   };
+
+  bool _isLexicalTypeParameter(TypeParameterDef parameter) {
+    for (
+      var scope = _ctx.typeScopes[_ctx.library];
+      scope != null;
+      scope = scope.parent
+    ) {
+      final type = scope.entries[parameter.name];
+      if (type is TypeParameterTypeRef && type.parameter == parameter) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   TypeRef _constantFunctionType(
     FunctionTypeRef type,

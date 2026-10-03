@@ -3037,3 +3037,17 @@ as closures in their string form. The pinned `function/local3_test.dart` and
 matched all 22 execution checksums; logs are under
 `.dart_tool/improvement_loop/cycle17-pass5-full23/`. Paired telemetry and
 particle controls found no sustained slowdown.
+
+## Cycle 17 combined gate corrections
+
+The first SDK-full gate found four failures after the five correctness passes.
+Object's bridged methods, especially `operator ==`, now satisfy an inherited
+abstract declaration without treating other abstract superclass methods as
+concrete. Constant-context closure now replaces only type parameters from the
+current lexical scope; generic parameters of a called function remain open
+for argument inference. The four affected pinned fixtures pass individually:
+`abstract/equal_test.dart`, `const/primitive_equality_test.dart`,
+`map/ordered2_test.dart`, and
+`named_arguments_anywhere/order_side_effects_ok_test.dart`. The original
+`const/inference_test.dart` and `regress/regress32660_test.dart` remain green.
+These are compiler-only corrections.
