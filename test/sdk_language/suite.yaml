@@ -200,7 +200,6 @@ expect_fail:
   - path: 'primary_constructors/wildcard_declaring_parameters_test.dart'
   - path: 'private/member_test.dart'
   - path: 'private/method_tearoff_test.dart'
-  - path: 'promotion_chain_intersection_join/join_test.dart'
   - path: 'regress/regress13179_test.dart'
   - path: 'regress/regress18435_test.dart'
   - path: 'regress/regress21795_test.dart'

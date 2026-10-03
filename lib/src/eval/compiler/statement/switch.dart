@@ -97,6 +97,7 @@ StatementInfo compileSwitchStatement(
   for (final entry in caseLabels.values) {
     ctx.labels.remove(entry.$3);
   }
+  final fallthroughState = ctx.flowTerminated ? null : ctx.saveState();
   ctx.flushBlock();
   // Live tails (the "no case matched" path) link to the switch's end;
   // terminated ones (e.g. a `default` ending in `break`) are skipped.
@@ -104,9 +105,11 @@ StatementInfo compileSwitchStatement(
     endBlock,
     CompilerContext.isTerminatorOp,
   );
-  final fallthroughState = ctx.saveState();
   ctx.restoreState(initialState);
-  ctx.mergeBranchState([fallthroughState, ...breakStates]);
+  ctx.mergeBranchState([
+    ?fallthroughState,
+    ...breakStates,
+  ], includeCurrent: false);
   // A `break` (explicit or implicit) exits through the switch's own end
   // block, so the statement completes whenever a break edge exists — even
   // when every case body terminated early and the case join was dead.

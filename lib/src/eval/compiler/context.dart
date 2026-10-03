@@ -127,8 +127,12 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   /// bound of the edges' types (`i1` is `int?` after `case null: i1 = null`
   /// merges with a promoted `int` edge). The current
   /// state's SSA bindings are authoritative — the incoming states only
-  /// contribute their type proofs.
-  void mergeBranchState(Iterable<ContextSaveState> incoming) {
+  /// contribute their type proofs. Set [includeCurrent] to false when
+  /// [incoming] already contains every edge reaching the join.
+  void mergeBranchState(
+    Iterable<ContextSaveState> incoming, {
+    bool includeCurrent = true,
+  }) {
     flowTerminated = false;
     for (var i = 0; i < locals.length; i++) {
       final frame = locals[i];
@@ -140,24 +144,29 @@ mixin ScopeContext on Object implements AbstractScopeContext {
         var epoch = value.writeEpoch;
         var changed = false;
         var typeChanged = false;
+        var hasIncoming = includeCurrent;
         for (final state in incoming) {
           final other = i < state.locals.length
               ? state.locals[i][key]?.current
               : null;
           if (other == null || identical(other, value)) continue;
           changed = true;
-          facts = facts.join(other.facts);
+          facts = hasIncoming ? facts.join(other.facts) : other.facts;
           // An edge that reassigned the local carries a higher epoch —
           // the join takes the max so records stamped on earlier values
           // stay invalidated.
           if (other.writeEpoch > epoch) epoch = other.writeEpoch;
-          if (other.type != type) {
+          if (!hasIncoming) {
+            type = other.type;
+            typeChanged = type != value.type;
+          } else if (other.type != type) {
             type = TypeRef.commonBaseType(this as CompilerContext, {
               type,
               other.type,
             });
             typeChanged = true;
           }
+          hasIncoming = true;
         }
         if (changed || epoch != value.writeEpoch) {
           binding.rebind(

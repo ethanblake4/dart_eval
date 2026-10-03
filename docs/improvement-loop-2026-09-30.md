@@ -3672,3 +3672,14 @@ non_nullable_optional fixture and seven positive forwarding variants pass, along
 with tearoff_fta, private-setter variants and the prior arguments fixture. Four
 existing focused regressions, analysis and diff checks pass. One stale entry
 removed; no runtime changes. Dynamic comparison in mock_test remains separate.
+## Cycle 22 pass 6: incoming flow proofs at branch joins
+
+A complete branch-edge list now joins its own type/fact proofs without the
+pre-branch state acting as an extra incoming edge. Loop and incremental joins
+retain the current edge by default. Switches snapshot live fallthrough before
+changing builders and exclude terminated tails, so default/implicit-break joins
+retain common promotions. The original promotion-chain intersection join fixture
+passes in eval and native Dart with its feature enabled; 57 existing flow, switch,
+pattern and loop regressions pass. Scoped analysis and diff checks pass. One stale
+entry removed, with no emitted runtime checks or interpreter changes. Broader
+extension-type member support remains the earlier this-promotion blocker.

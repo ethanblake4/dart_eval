@@ -199,7 +199,7 @@ StatementInfo macroBranch(
   // already converted local storage back to the initial representation.
   ctx.restoreBoxingState(initialState);
   if (thenContinues && elseContinues) {
-    ctx.mergeBranchState([thenState, elseState]);
+    ctx.mergeBranchState([thenState, elseState], includeCurrent: false);
     for (var i = 0; i < ctx.locals.length; i++) {
       for (final entry in ctx.locals[i].entries) {
         final thenType = thenState.locals[i][entry.key]?.current.type;
