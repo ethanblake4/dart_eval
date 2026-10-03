@@ -1275,13 +1275,17 @@ final class ArgumentBinder {
       defaultsSignature: target is StaticCall ? target.member?.signature : null,
     );
     if (target is! ConstructorCall) return result;
-    final parameters = [
-      for (final ref in target.signature!.typeParameterRefs.values)
-        if (ref case TypeParameterTypeRef(
-          :final parameter,
-        ) when parameter.owner.kind == TypeParameterOwnerKind.classLike)
-          parameter,
-    ];
+    final parameters =
+        nominalDeclOf(
+          target.instantiatedType ?? target.staticType,
+        )?.typeParameters ??
+        [
+          for (final ref in target.signature!.typeParameterRefs.values)
+            if (ref case TypeParameterTypeRef(
+              :final parameter,
+            ) when parameter.owner.kind == TypeParameterOwnerKind.classLike)
+              parameter,
+        ];
     return BoundCall(
       positional: result.positional,
       named: result.named,

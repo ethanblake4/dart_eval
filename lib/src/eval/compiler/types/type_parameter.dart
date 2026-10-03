@@ -189,13 +189,14 @@ List<TypeParameterDef> declareTypeParameters(
   TypeRef Function(TypeAnnotation bound)? resolveBound,
 ]) {
   final defs = ctx.typeParameterDefs.declare(owner, nodes);
-  for (final def in defs) {
+  for (var i = 0; i < defs.length; i++) {
+    final def = defs[i];
     // Since Dart 3.7, `_` declares a wildcard type parameter: it still
     // occupies a position in the generic type, but does not shadow an outer
     // declaration named `_` during bound or body type lookup.
     if (def.name == '_' &&
-        nodes.isNotEmpty &&
-        ctx.languageVersionAtLeast(nodes.first, 3, 7)) {
+        i < nodes.length &&
+        isWildcardTypeParameter(ctx, nodes[i])) {
       continue;
     }
     scope[def.name] = TypeParameterTypeRef(def);
@@ -209,6 +210,11 @@ List<TypeParameterDef> declareTypeParameters(
   }
   return defs;
 }
+
+/// Whether [parameter] is a Dart 3.7+ wildcard, which keeps its generic
+/// position but does not bind its name in lexical scope.
+bool isWildcardTypeParameter(CompilerContext ctx, TypeParameter parameter) =>
+    parameter.name.lexeme == '_' && ctx.languageVersionAtLeast(parameter, 3, 7);
 
 /// The ordered runtime refs for an owner's declared parameters, including
 /// non-binding wildcards that are intentionally absent from lexical scope.

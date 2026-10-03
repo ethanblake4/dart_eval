@@ -3,6 +3,22 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('an argument assignment preserves an implicit extension receiver', () {
+    const source = '''
+      class Value { Value(this.id); final int id; }
+      extension Invoke on Value {
+        int call(Value ignored) => id;
+      }
+      int main() {
+        var value = Value(1);
+        return value(value = Value(2));
+      }
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(1), reason: mode);
+    }
+  });
+
   test('implicit extension calls bind explicit types and named arguments', () {
     const source = '''
       class Value {}

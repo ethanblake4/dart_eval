@@ -30,7 +30,7 @@ import 'deferred.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
-import 'package:control_flow_graph/control_flow_graph.dart' show SSA;
+import 'package:control_flow_graph/control_flow_graph.dart' show Assign, SSA;
 import 'binder.dart';
 import 'bound_call.dart';
 import 'call.dart';
@@ -247,14 +247,25 @@ final class CallResolver {
     if (callable != null) {
       final extension = _implicitCallExtension(callable.type, site);
       if (extension != null) {
-        return _invokeExtensionValue(site, () => callable, extension);
+        // An argument can assign to the callee's local slot. Capture its
+        // value now; member-value calls still read after their arguments.
+        final boxed = callable.boxed
+            ? callable
+            : callable.boxIntoFreshSlot(ctx);
+        final receiver = Variable.ssa(
+          ctx,
+          Assign(ctx.svar('extension_target'), boxed.ssa),
+          boxed.type,
+          rep: boxed.rep,
+        );
+        return _invokeExtensionValue(site, () => receiver, extension);
       }
     }
     final target = ClosureCall(callee: callable, known: direct);
     final bound = ArgumentBinder(
       ctx,
     ).bindSuppliedOnly(target, site, callee: callable);
-    return (_emitValue(target, bound, callable, site), bound);
+    return (target.emit(ctx, bound), bound);
   }
 
   (EvalExtension, MethodDeclaration, List<TypeRef>)? _implicitCallExtension(
@@ -359,42 +370,6 @@ final class CallResolver {
       return;
     }
     throw CompileError('Type $type is not callable', site.source);
-  }
-
-  Variable _emitValue(
-    ClosureCall target,
-    BoundCall bound,
-    Variable? callable,
-    CallSite site,
-  ) {
-    if (target.known != null) {
-      return target.emit(ctx, bound);
-    }
-    final callableVar = callable!;
-    // `x(...)` where `x` isn't a function is an implicit `x.call(...)` — an
-    // extension `call` member applies statically before the dynamic
-    // fallback.
-    if (!callableVar.type.isAssignableTo(ctx, CoreTypes.function.ref(ctx))) {
-      if (!ctx.memberLookup.hasInstanceMember(
-            callableVar.type,
-            MemberName.method('call'),
-          ) &&
-          resolveExtensionMember(
-                ctx,
-                callableVar.type,
-                'call',
-                arity: bound.positional.length,
-              ) !=
-              null) {
-        return invokeOperator(
-          callableVar,
-          'call',
-          bound.positional,
-          namedArgs: {for (final e in bound.named) e.$1: e.$2},
-        ).result;
-      }
-    }
-    return target.emit(ctx, bound);
   }
 
   /// The [Variable] behind a [Receiver] that carries a concrete value.

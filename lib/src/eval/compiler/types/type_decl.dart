@@ -243,8 +243,7 @@ final class SourceTypeDecl extends TypeDecl {
         classLikeClauses(node).$4?.typeParameters ?? const <TypeParameter>[];
     return {
       for (var i = 0; i < parameters.length && i < typeParameters.length; i++)
-        if (parameters[i].name.lexeme != '_' ||
-            !ctx.languageVersionAtLeast(parameters[i], 3, 7))
+        if (!isWildcardTypeParameter(ctx, parameters[i]))
           parameters[i].name.lexeme: ownParameterRef(i),
     };
   }

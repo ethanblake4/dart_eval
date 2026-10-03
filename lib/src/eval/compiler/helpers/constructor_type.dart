@@ -49,20 +49,30 @@ TypeRef inferredConstructorType(
   Map<String, TypeRef> arguments,
 ) {
   if (type is! InterfaceTypeRef || parameters.isEmpty) return type;
-  final substitution = Substitution.of({
+  final argumentsByParameter = {
     for (final parameter in parameters)
       if (arguments[parameter.name] case final argument?) parameter: argument,
-  });
-  return type.arguments.isEmpty
-      ? type.copyWith(
-          arguments: [
-            for (final parameter in parameters)
-              TypeParameterTypeRef(
-                parameter,
-              ).substituteTypeParameters(substitution),
-          ],
+  };
+  final defaults =
+      parameters.any(
+        (parameter) => !argumentsByParameter.containsKey(parameter),
+      )
+      ? ctx.typeSystem.instantiateToBounds(
+          parameters,
+          knownTypes: argumentsByParameter,
         )
-      : type.substituteTypeParameters(substitution);
+      : argumentsByParameter;
+  if (type.arguments.isNotEmpty) {
+    return type.substituteTypeParameters(
+      Substitution.of({...defaults, ...argumentsByParameter}),
+    );
+  }
+  return type.copyWith(
+    arguments: [
+      for (final parameter in parameters)
+        argumentsByParameter[parameter] ?? defaults[parameter]!,
+    ],
+  );
 }
 
 /// Contextual arguments must satisfy the parameters' declared upper bounds.

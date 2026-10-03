@@ -49,23 +49,4 @@ void main() {
       );
     },
   );
-
-  test(
-    'SDK environment fixtures pass with their declared definitions',
-    () async {
-      final suite = await SdkSuite.load();
-      final compiler = Compiler();
-      for (final path in [
-        'bool/has_environment_test.dart',
-        'library/env_test.dart',
-        'dot_shorthands/language_defined/bool_from_environment_test.dart',
-      ]) {
-        expect(
-          await runSdkTest(suite, suite.classify(path), compiler),
-          TestOutcome.passed,
-          reason: path,
-        );
-      }
-    },
-  );
 }

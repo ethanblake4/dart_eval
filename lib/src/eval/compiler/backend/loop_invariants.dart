@@ -17,15 +17,24 @@ void hoistLoopInvariants(cfg.ControlFlowGraph graph) {
       if (op.writesTo case final target?) locations[target] = id;
     }
   }
-  final dominators = graph.dominators;
-  bool dominates(int ancestor, int block) {
-    while (ancestor != block) {
-      final parent = dominators[block];
-      if (parent == null || parent == block) return false;
-      block = parent;
+  final tree = graph.dominatorTree;
+  var next = 0;
+  final before = <int, int>{}, after = <int, int>{};
+  final pending = [(graph.root.id!, false)];
+  while (pending.isNotEmpty) {
+    final (id, returning) = pending.removeLast();
+    if (returning) {
+      after[id] = next++;
+    } else {
+      before[id] = next++;
+      pending.add((id, true));
+      for (final child in tree.successorsOf(id)) {
+        if (child != id) pending.add((child, false));
+      }
     }
-    return true;
   }
+  bool dominates(int ancestor, int block) =>
+      before[ancestor]! <= before[block]! && after[ancestor]! >= after[block]!;
 
   final loops = <int, Set<int>>{};
   for (final tail in graph.graph.vertices) {

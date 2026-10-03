@@ -58,18 +58,15 @@ int compileMethodDeclaration(
       // opens — a method parameter may shadow an extension parameter's
       // name, and the callable env must carry the extension's defs in
       // their declared positions.
-      final extensionRefs = [
-        for (final ref in declaredTypeParameterRefs(
-          ctx,
-          TypeParameterOwner(
-            TypeParameterOwnerKind.extension,
-            ctx.library,
-            parentName,
-          ),
-          extensionTypeParameters,
-        ))
-          ref,
-      ];
+      final extensionRefs = declaredTypeParameterRefs(
+        ctx,
+        TypeParameterOwner(
+          TypeParameterOwnerKind.extension,
+          ctx.library,
+          parentName,
+        ),
+        extensionTypeParameters,
+      );
       // The `on` clause likewise resolves in the extension parameter
       // scope so `#this` and the body's `T` references use the same
       // parameter.
@@ -98,13 +95,11 @@ int compileMethodDeclaration(
           for (final parameter
               in classLikeClauses(declaringHost).$4?.typeParameters ??
                   const <TypeParameter>[])
-            if (parameter.name.lexeme != '_' ||
-                !ctx.languageVersionAtLeast(parameter, 3, 7))
+            if (!isWildcardTypeParameter(ctx, parameter))
               parameter.name.lexeme:
                   ctx.typeScopes[ctx.library]![parameter.name.lexeme]!,
         for (var i = 0; i < extensionTypeParameters.length; i++)
-          if (extensionTypeParameters[i].name.lexeme != '_' ||
-              !ctx.languageVersionAtLeast(extensionTypeParameters[i], 3, 7))
+          if (!isWildcardTypeParameter(ctx, extensionTypeParameters[i]))
             extensionTypeParameters[i].name.lexeme: extensionRefs[i],
       };
       final methodOwner = TypeParameterOwner(
@@ -131,12 +126,7 @@ int compileMethodDeclaration(
             ctx.library,
             d,
             memberTypeParameters: memberTypeParameters,
-            ownTypeParameterOwner: TypeParameterOwner(
-              TypeParameterOwnerKind.method,
-              ctx.library,
-              '$parentName.$methodName',
-              pos,
-            ),
+            ownTypeParameterOwner: methodOwner,
           );
 
           ctx.beginScope();

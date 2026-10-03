@@ -3287,3 +3287,34 @@ outliers were checked with longer alternating controls; dispatch and particle
 controls overlap, as do global and exception controls. Evidence is under
 .dart_tool/improvement_loop/cycle19/performance-final-full23/ and adjacent
 calibration/control logs. Full-suite validation follows in cleanup.
+
+## Cycle 19 cleanup
+
+Astra medium reviewed the completed correctness and performance changes. Its
+review found that constructor inference used the lexical type-parameter map,
+which omits wildcard positions. Constructor result types now use ordered
+nominal definitions and instantiate omitted slots to their bounds. A focused
+test covers explicit and implicit constructor calls, bounded wildcards and
+outer typedef lookup when a wildcard follows a named parameter.
+
+The review also found a potentially quadratic dominance scan in loop invariant
+hoisting. An iterative traversal now records dominator entry/exit intervals for
+constant-time queries. The hoisting rules and emitted bytecode are unchanged.
+
+Implicit extension calls now snapshot a local receiver before evaluating their
+arguments. This preserves the receiver when an argument assigns to its local
+slot. The obsolete late extension-dispatch fallback was removed. Shared
+wildcard helpers replace repeated declaration checks, and a redundant test
+copying three SDK environment fixtures was removed. The synthetic environment
+isolation test remains.
+
+Final default validation passed 2,223 tests with 86 configured skips. SDK-full
+passed its configured gate with 2,529 passing fixtures, 165 expected compile
+errors and 43 expected runtime failures. These remaining failures still need
+fixes. All 104 sibling CFG tests pass and touched-file analysis is clean.
+
+The cleanup AOT sweep completed all 23 drivers with matching execution checksums
+and unchanged compile output size, 1,330 bytes. Compile medians were 13.38 ms
+before cleanup and 12.89 ms after it. Execution timing varies between samples;
+the cleanup introduces no runtime or hot-loop changes. Results are under
+.dart_tool/improvement_loop/cycle19/performance-cleanup-full23/.
