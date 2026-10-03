@@ -638,7 +638,16 @@ void _checkInterfaceConformance(
           if (impl != null) continue;
         }
         if (impl == null) {
-          if (hasNoSuchMethod) continue;
+          if (hasNoSuchMethod) {
+            if (view == MemberKind.method) {
+              (ctx.noSuchMethodForwarders[(ctx.library, hostName)] ??= {}).add(
+                name.startsWith('_')
+                    ? '${ctx.libraryUri(ctx.library)}::$name'
+                    : name,
+              );
+            }
+            continue;
+          }
           if (!superInspectable && !chainEndsAtObject) continue;
           throw CompileError(
             'Missing concrete implementation of $name',

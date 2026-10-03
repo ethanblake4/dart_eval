@@ -13,7 +13,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 136;
+  static const version = 137;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -285,6 +285,7 @@ abstract final class TypedCodec {
       string(type.library);
       u32(type.valueCount);
       u32(type.hasBridgeCallMethod ? 1 : 0);
+      strings(type.noSuchMethodForwarders.toList());
       members(type.methods);
       members(type.getters);
       members(type.setters);
@@ -481,13 +482,13 @@ abstract final class TypedCodec {
       return values;
     }
 
-    List<String> callSiteStrings() {
+    List<String> classAndSiteStrings() {
       final count = u32();
       return List.generate(count, (_) => string(), growable: false);
     }
 
     require(
-      classCount * 32 +
+      classCount * 36 +
           callSiteCount * 28 +
           exportCount * 20 +
           externalCallCount * 12 +
@@ -504,12 +505,14 @@ abstract final class TypedCodec {
       if (bridgeCall > 1) {
         throw const FormatException('Invalid typed bridge call flag');
       }
+      final forwarders = classAndSiteStrings().toSet();
       classes.add(
         TypedClass(
           name,
           library: library,
           valueCount: valueCount,
           hasBridgeCallMethod: bridgeCall != 0,
+          noSuchMethodForwarders: forwarders,
           methods: members(),
           getters: members(),
           setters: members(),
@@ -526,7 +529,7 @@ abstract final class TypedCodec {
       }
       final positionalCount = u32();
       final callerLibrary = string();
-      final namedNames = callSiteStrings();
+      final namedNames = classAndSiteStrings();
       final typeArgumentCount = u32();
       final typeArguments = List.generate(
         typeArgumentCount,

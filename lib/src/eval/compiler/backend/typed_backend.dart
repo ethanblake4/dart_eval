@@ -295,6 +295,12 @@ class TypedBackend {
           library: libraries[allocation.library]!,
           valueCount: allocation.valuesLength,
           hasBridgeCallMethod: _hasBridgeCallMethod(allocation),
+          noSuchMethodForwarders:
+              context.noSuchMethodForwarders[(
+                allocation.library,
+                allocation.name,
+              )] ??
+              const {},
           getters: _classMembers(allocation, MemberKind.getter, indices),
           setters: _classMembers(allocation, MemberKind.setter, indices),
           methods: _classMembers(allocation, MemberKind.method, indices),
@@ -500,6 +506,7 @@ class TypedBackend {
         library: type.library,
         valueCount: type.valueCount,
         hasBridgeCallMethod: type.hasBridgeCallMethod,
+        noSuchMethodForwarders: type.noSuchMethodForwarders,
         methods: type.methods,
         getters: type.getters,
         setters: type.setters,

@@ -400,6 +400,28 @@ final class TypedInstance implements $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) =>
       getProperty(identifier, runtime: runtime);
 
+  bool _hasNoSuchMethodForwarder(String name, String callerLibrary) {
+    final key = name.startsWith('_') ? '$callerLibrary::$name' : name;
+    var owner = dispatchRoot;
+    while (true) {
+      if (owner.descriptor.noSuchMethodForwarders.contains(key)) return true;
+      final parent = owner.superclass;
+      if (parent is! TypedInstance) return false;
+      owner = parent;
+    }
+  }
+
+  $Function _methodTearOff(String name, String callerLibrary) => $Function(
+    (runtime, target, r, s, c) => invoke(
+      name,
+      TypedInterop.callableCount(c),
+      r,
+      TypedInterop.callableRest(s, c),
+      callerLibrary: callerLibrary,
+      runtime: runtime,
+    ),
+  );
+
   $Value? getProperty(
     String identifier, {
     String callerLibrary = '',
@@ -421,6 +443,9 @@ final class TypedInstance implements $Instance {
     if (method != null) {
       return method;
     }
+    if (_hasNoSuchMethodForwarder(identifier, callerLibrary)) {
+      return _methodTearOff(identifier, callerLibrary);
+    }
     var parent = superclass;
     while (parent is TypedInstance) {
       parent = parent.superclass;
@@ -430,15 +455,7 @@ final class TypedInstance implements $Instance {
     }
     return switch (identifier) {
       'hashCode' => $int(identityHashCode(dispatchRoot)),
-      '==' || '!=' || 'toString' => $Function(
-        (runtime, target, r, s, c) => invoke(
-          identifier,
-          TypedInterop.callableCount(c),
-          r,
-          TypedInterop.callableRest(s, c),
-          runtime: runtime,
-        ),
-      ),
+      '==' || '!=' || 'toString' => _methodTearOff(identifier, callerLibrary),
       _ => _noSuchMethod(Invocation.getter(Symbol(identifier)), runtime),
     };
   }

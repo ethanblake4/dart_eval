@@ -2909,3 +2909,20 @@ method tear-offs. Member lookup now considers bridge methods for this read.
 The pinned `constructor/explicit_instantiation_syntax_test.dart` fixture
 passes its runnable variants, so its stale `expect_fail` entry is removed.
 Existing super method tear-off tests pass. This changes compiler lookup only.
+
+## Cycle 16 pass 3: dynamic noSuchMethod forwarder reads
+
+An interface method satisfied by `noSuchMethod` had a statically readable
+tear-off, but a dynamic property read invoked `noSuchMethod` as a missing
+getter. The compiler now records implicit forwarder names on each affected
+class, preserving them through bytecode serialization. A missing dynamic
+method read returns a callable tear-off that forwards invocation to the
+receiver. The pinned `nosuchmethod_forwarding/nosuchmethod_forwarding_test.dart`
+fixture passes all runnable variants, and a distinct abstract-interface
+regression passes in fresh and serialized runtimes. Its stale `expect_fail`
+entry is removed.
+
+SDK-full passes with 2503 runnable fixtures, 177 expected compile failures,
+57 expected runtime failures, and three skips. The full 23-driver, 15-sample
+AOT sweep matched all 22 execution checksums; logs are under
+`.dart_tool/improvement_loop/cycle16-pass3-full23/`.

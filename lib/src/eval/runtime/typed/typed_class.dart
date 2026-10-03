@@ -6,11 +6,13 @@ final class TypedClass {
     required this.library,
     required this.valueCount,
     this.hasBridgeCallMethod = false,
+    Set<String> noSuchMethodForwarders = const {},
     Map<int, int> methodRuntimeTypes = const {},
     Map<String, int> methods = const {},
     Map<String, int> getters = const {},
     Map<String, int> setters = const {},
-  }) : methodRuntimeTypes = Map.unmodifiable(methodRuntimeTypes),
+  }) : noSuchMethodForwarders = Set.unmodifiable(noSuchMethodForwarders),
+       methodRuntimeTypes = Map.unmodifiable(methodRuntimeTypes),
        methods = Map.unmodifiable(methods),
        getters = Map.unmodifiable(getters),
        setters = Map.unmodifiable(setters);
@@ -21,6 +23,9 @@ final class TypedClass {
 
   /// Only an inherited bridge method makes an implicit bridge call eligible.
   final bool hasBridgeCallMethod;
+
+  /// Missing interface methods that have implicit noSuchMethod tear-offs.
+  final Set<String> noSuchMethodForwarders;
 
   /// Receiver-specific signatures for inherited methods with forwarding checks.
   final Map<int, int> methodRuntimeTypes;

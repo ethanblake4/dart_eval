@@ -472,6 +472,7 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, int>> bridgeStaticFunctionIndices = {};
   Map<int, Map<String, Map<MemberKind, Map<String, int>>>>
   instanceDeclarationPositions = {};
+  final noSuchMethodForwarders = <(int, String), Set<String>>{};
 
   /// Direct superinterface edges: descendant 'file:class' → ancestor keys.
   Map<String, List<String>> subclassEdges = {};

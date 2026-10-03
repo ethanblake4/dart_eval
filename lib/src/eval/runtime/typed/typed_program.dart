@@ -48,6 +48,7 @@ class TypedProgram {
              library: type.library,
              valueCount: type.valueCount,
              hasBridgeCallMethod: type.hasBridgeCallMethod,
+             noSuchMethodForwarders: type.noSuchMethodForwarders,
              methodRuntimeTypes: type.methodRuntimeTypes,
              methods: type.methods,
              getters: type.getters,
