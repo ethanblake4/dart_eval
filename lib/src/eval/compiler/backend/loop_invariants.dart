@@ -76,7 +76,7 @@ void hoistLoopInvariants(cfg.ControlFlowGraph graph) {
         final code = graph[id]!.code;
         for (var i = 0; i < code.length; i++) {
           final op = code[i];
-          if (!_canHoist(op) ||
+          if (!isNonThrowingPrimitive(op) ||
               !op.readsFrom.every((input) {
                 final definition = locations[input];
                 return definition != null &&
@@ -100,7 +100,8 @@ void hoistLoopInvariants(cfg.ControlFlowGraph graph) {
   if (changed) graph.refreshSSA();
 }
 
-bool _canHoist(cfg.Operation op) => switch (op) {
+/// Primitive computations that neither throw nor change guest state.
+bool isNonThrowingPrimitive(cfg.Operation op) => switch (op) {
   cfg.Assign() ||
   memory.LoadInt() ||
   memory.LoadDouble() ||

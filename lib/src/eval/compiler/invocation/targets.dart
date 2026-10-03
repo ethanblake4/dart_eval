@@ -346,14 +346,16 @@ final class ConstructorCall extends CallTarget {
     }
     var result = ctx.svar('instance');
     if (externalIndex != null) {
-      final arguments = [...call.vector()];
+      var arguments = call.vector();
       if (staticType.isSpec(CoreTypes.stringBuffer) &&
           name.isEmpty &&
           call.positional.isNotEmpty) {
-        arguments[0] = prepareStringBufferValue(
-          ctx,
-          call.positional.first,
-        ).boxIfNeeded(ctx).ssa;
+        final value = call.positional.first;
+        final prepared = prepareStringBufferValue(ctx, value);
+        if (!identical(prepared, value)) {
+          arguments = [...arguments];
+          arguments[0] = prepared.boxIfNeeded(ctx).ssa;
+        }
       }
       if (classBridge is BridgeClassDef) {
         final subclass = BuiltinValue().push(ctx);
@@ -698,7 +700,8 @@ final class NoSuchMethodCall extends CallTarget {
   Variable _dispatchInvocation(CompilerContext ctx, Variable invocation) {
     final receiver = this.receiver ?? ctx.lookupLocal('#this')!;
     if (restricted) {
-      final core = ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
+      final core =
+          ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
       final error = Variable.ssa(
         ctx,
         InvokeExternal(
@@ -807,9 +810,11 @@ final class NoSuchMethodCall extends CallTarget {
       );
       ctx.pushOp(ListAppend(types.ssa, type.ssa));
     }
-    final mapType = CoreTypes.map.ref(ctx).copyWith(
-      arguments: [CoreTypes.string.ref(ctx), CoreTypes.dynamic.ref(ctx)],
-    );
+    final mapType = CoreTypes.map
+        .ref(ctx)
+        .copyWith(
+          arguments: [CoreTypes.string.ref(ctx), CoreTypes.dynamic.ref(ctx)],
+        );
     final map = Variable.ssa(
       ctx,
       NewMap(ctx.svar('map')),

@@ -10,7 +10,10 @@ void main() {
           const _prefix = 'layer';
           mixin Layer<T> on Enum {
             bool accepts(Object value) => value is T;
-            String toString() => _prefix + ':' + super.toString();
+            String toString() {
+              final base = super.toString;
+              return _prefix + ':' + base();
+            }
             int get baseIndex => super.index;
           }
         ''',
@@ -19,7 +22,10 @@ void main() {
           const _prefix = 'wrong';
           enum Choice with Layer<int> {
             first, second;
-            String toString() => 'host:' + super.toString();
+            String toString() {
+              final layer = super.toString;
+              return 'host:' + layer();
+            }
           }
           bool main() => Choice.second.toString() == 'host:layer:Choice.second'
               && Choice.second.baseIndex == 1

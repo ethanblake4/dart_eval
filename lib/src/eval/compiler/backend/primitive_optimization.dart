@@ -3,8 +3,6 @@ import '../../ir/alu.dart' as alu;
 import '../../ir/collection.dart' as collection;
 import '../../ir/exception.dart' as exceptions;
 import '../../ir/memory.dart' as memory;
-import '../../ir/logic.dart' as logic;
-import '../../ir/numeric.dart';
 import '../../ir/objects.dart' as objects;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/representation.dart';
@@ -177,7 +175,7 @@ void _reuseNativeFieldReads(
         } else {
           code[i] = cfg.Assign(op.target, previous);
         }
-      } else if (!_preservesNativeFieldReads(op)) {
+      } else if (reads.isNotEmpty && !_preservesNativeFieldReads(op)) {
         reads.clear();
       }
     }
@@ -185,36 +183,14 @@ void _reuseNativeFieldReads(
 }
 
 bool _preservesNativeFieldReads(cfg.Operation op) => switch (op) {
-  cfg.Assign() ||
   primitives.BoxInt() ||
   primitives.BoxDouble() ||
   primitives.BoxBool() ||
   primitives.BoxString() ||
   primitives.BoxNull() ||
-  memory.LoadInt() ||
-  memory.LoadDouble() ||
-  memory.LoadBool() ||
-  memory.LoadString() ||
-  memory.LoadNull() ||
-  memory.IsNull() ||
-  alu.IntAdd() ||
-  alu.IntSub() ||
-  alu.Increment() ||
-  alu.IntLessThan() ||
-  alu.IntLessThanOrEqual() ||
-  alu.IntGreaterThan() ||
-  alu.IntGreaterThanOrEqual() ||
-  alu.IntEqual() ||
-  alu.IntNotEqual() ||
-  alu.Negate() ||
-  logic.LogicalNot() ||
-  logic.LogicalAnd() ||
-  logic.LogicalOr() ||
-  IntToDouble() ||
   StringOperation() ||
   StringSubstring() => true,
-  NumericBinary() => op.isPure,
-  _ => false,
+  _ => isNonThrowingPrimitive(op),
 };
 
 ({cfg.SSA source, MachineRepresentation representation})? _primitiveBox(

@@ -19,6 +19,7 @@ import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/collection.dart';
+import 'package:dart_eval/src/eval/ir/closures.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/objects.dart';
 import 'package:dart_eval/src/eval/ir/string.dart';
@@ -166,6 +167,30 @@ sealed class GetTarget {
         foldedGetter,
         ctx.lookupLocal('#this')!,
       ).emit(ctx);
+    }
+    final host = ctx.currentClass;
+    if (host is EnumDeclaration && name == 'toString') {
+      if (typeArguments != null) {
+        throw CompileError('Enum.toString takes no type arguments');
+      }
+      final library = ctx.enclosingLibrary ?? ctx.library;
+      final offset = ctx
+          .enumBaseToStringOffsets[(library, host.namePart.typeName.lexeme)]!;
+      final signature = CallSignature.returnOnly(CoreTypes.string.ref(ctx));
+      final type = signature.toFunctionType(ctx);
+      return Variable.ssa(
+        ctx,
+        CreateClosure(
+          ctx.svar('enum_toString_tearoff'),
+          DeferredOrOffset(offset: offset),
+          [ctx.lookupLocal('#this')!.ssa],
+          boundReceiver: true,
+          hasEnvironment: false,
+          runtimeTypeId: ctx.runtimeTypes.idOf(type),
+        ),
+        type,
+        facts: ValueFacts(callableSignature: signature),
+      );
     }
     if (!ctx.memberLookup
         .superMemberTarget(self.type, name, kind: MemberKind.getter)

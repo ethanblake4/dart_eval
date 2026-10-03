@@ -105,18 +105,27 @@ final class _ExtensionConstruction {
     }
     final redirect =
         constructor.initializers.single as RedirectingConstructorInvocation;
-    final signature = CallSignature.forDeclaration(
+    final inferArguments = _needsTypeInference;
+    final declaredSignature = CallSignature.forDeclaration(
       ctx,
       declaration.library,
       constructor,
-    ).substitute(Substitution.forInterface(instantiatedType));
+    );
+    final signature = inferArguments
+        ? declaredSignature
+        : declaredSignature.substitute(
+            Substitution.forInterface(instantiatedType),
+          );
+    final inferred = <TypeParameterDef, TypeRef>{};
     final bound = ArgumentBinder(ctx).bindParameterList(
       arguments,
       declaration.library,
       signature,
       constructor,
+      resolveGenerics: inferred,
       source: source,
     );
+    if (inferArguments) _applyInferredArguments(inferred);
     try {
       return withDefaultExpressionScope(
         ctx,
@@ -140,6 +149,21 @@ final class _ExtensionConstruction {
     }
   }
 
+  bool get _needsTypeInference =>
+      interfaceArgumentsOf(instantiatedType).isEmpty &&
+      declaration.typeParameters.isNotEmpty;
+
+  void _applyInferredArguments(Map<TypeParameterDef, TypeRef> inferred) {
+    final defaults = ctx.typeSystem.instantiateToBounds(
+      declaration.typeParameters,
+      knownTypes: inferred,
+    );
+    instantiatedType = declaration.instantiate([
+      for (final parameter in declaration.typeParameters)
+        inferred[parameter] ?? defaults[parameter]!,
+    ]);
+  }
+
   Variable _primary(
     PrimaryConstructorDeclaration primary,
     ArgumentList arguments,
@@ -154,9 +178,7 @@ final class _ExtensionConstruction {
     if (isConst && primary.constKeyword == null) {
       throw CompileError('Extension type constructor is not const', source);
     }
-    final inferArguments =
-        interfaceArgumentsOf(instantiatedType).isEmpty &&
-        declaration.typeParameters.isNotEmpty;
+    final inferArguments = _needsTypeInference;
     var representation = inferArguments
         ? null
         : declaration.extensionRepresentationFor(instantiatedType)!;
@@ -172,14 +194,7 @@ final class _ExtensionConstruction {
         value.type,
         inferred,
       );
-      final defaults = ctx.typeSystem.instantiateToBounds(
-        declaration.typeParameters,
-        knownTypes: inferred,
-      );
-      instantiatedType = declaration.instantiate([
-        for (final parameter in declaration.typeParameters)
-          inferred[parameter] ?? defaults[parameter]!,
-      ]);
+      _applyInferredArguments(inferred);
       representation = declaration.extensionRepresentationFor(
         instantiatedType,
       )!;

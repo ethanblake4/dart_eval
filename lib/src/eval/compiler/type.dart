@@ -93,20 +93,28 @@ sealed class TypeRef {
         type.decl.kind != TypeDeclKind.extensionType) {
       return type;
     }
-    final visited = <TypeDecl>{};
+    final previousApplications = <TypeDecl, TypeRef>{};
+    bool consumesArgument(TypeRef container, TypeRef argument) =>
+        interfaceArgumentsOf(container).any(
+          (child) =>
+              child.withNullable(false) == argument.withNullable(false) ||
+              consumesArgument(child, argument),
+        );
     var nullable = type.nullable;
     while (type is InterfaceTypeRef &&
         type.decl is SourceTypeDecl &&
         type.decl.kind == TypeDeclKind.extensionType) {
       final declaration = type.decl as SourceTypeDecl;
-      // Re-entering through an applied parameter (Box<Box<int>>) consumes
-      // a finite argument. Only declaration-level representation edges cycle.
-      if (declaration.extensionRepresentation is TypeParameterTypeRef) {
-        visited.clear();
-      } else if (!visited.add(type.decl)) {
-        throw CompileError(
-          'Cyclic extension type representation: ${type.name}',
-        );
+      if (declaration.extensionRepresentation is! TypeParameterTypeRef) {
+        final previous = previousApplications[declaration];
+        // A repeated declaration must consume part of its previous argument
+        // tree. Parameter-only wrappers may expose that subtree indirectly.
+        if (previous != null && !consumesArgument(previous, type)) {
+          throw CompileError(
+            'Cyclic extension type representation: ${type.name}',
+          );
+        }
+        previousApplications[declaration] = type;
       }
       type = declaration.extensionRepresentationFor(type)!;
       nullable = nullable || type.nullable;

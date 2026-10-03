@@ -51,8 +51,13 @@ import 'dart:async';
 extension type Box<T>(T value) {}
 extension type Bag<T>(List<T> values) {}
 extension type Nested<T>(Box<T> value) {}
+extension type Indirect<T>(Box<T> value) {}
+extension type Wrapped<T>(Box<Box<T>> value) {}
+extension type Wrapper<T>(Box<T> value) {}
+extension type Synthesized<T>(Wrapper<Wrapper<T>> value) {}
 extension type Named<T>.primary(T value) {
   Named.redirect(T value) : this.primary(value);
+  Named.fromList(List<T> values) : this.primary(values.first);
 }
 bool verify() {
   final box = Box<int>(7);
@@ -62,6 +67,13 @@ bool verify() {
   final absent = Box<int?>(null);
   final inferred = Box(9);
   final named = Named<int>.redirect(11);
+  final inferredNamed = Named.redirect(12);
+  final inferredList = Named.fromList([14]);
+  final indirect = Indirect<Indirect<int>>(
+      Box<Indirect<int>>(Indirect<int>(Box<int>(13))));
+  final wrapped = Wrapped<int>(Box<Box<int>>(Box<int>(15)));
+  final synthesized = Synthesized<int>(
+      Wrapper<Wrapper<int>>(Box<Wrapper<int>>(Wrapper<int>(Box<int>(16)))));
   Box<num> contextual = Box(10);
   final Type boxType = Box<int>;
   final Type bagType = Bag<int>;
@@ -73,7 +85,11 @@ bool verify() {
       identical(absent, null) &&
       boxType == int && bagType == listType && nestedType == int &&
       shorthand is int && shorthand == 8 &&
-      inferred.value == 9 && contextual.value == 10 && named.value == 11;
+      inferred.value == 9 && contextual.value == 10 && named.value == 11 &&
+      [inferredNamed] is List<int> && inferredNamed.value == 12 &&
+      [inferredList] is List<int> && inferredList.value == 14 &&
+      identical(indirect, 13) && identical(wrapped, 15) &&
+      identical(synthesized, 16);
 }
 void main() {}
 ''',
@@ -115,19 +131,31 @@ void main() { $construction; }
       );
     });
   }
-  test('generic extension representation cycles are rejected', () {
-    expect(
-      () => Compiler().compile({
-        'generic_representation_cycle': {
-          'main.dart': '''
-extension type Cycle<T>(Cycle<List<T>> value) {}
+  for (final declarations in [
+    'extension type Cycle<T>(Cycle<List<T>> value) {}',
+    'extension type A<T>(B<A<T>> value) {} '
+        'extension type B<T>(T value) {}',
+    'extension type A<T>(B<A<List<T>>> value) {} '
+        'extension type B<T>(T value) {}',
+  ]) {
+    test(
+      'generic extension representation cycle is rejected: $declarations',
+      () {
+        expect(
+          () => Compiler().compile({
+            'generic_representation_cycle': {
+              'main.dart':
+                  '''
+$declarations
 void main() {}
 ''',
-        },
-      }),
-      throwsA(isA<CompileError>()),
+            },
+          }),
+          throwsA(isA<CompileError>()),
+        );
+      },
     );
-  });
+  }
 
   for (final constructor in ['_primary', '_private']) {
     test(
