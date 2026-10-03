@@ -59,9 +59,16 @@ int compileMethodDeclaration(
       // name, and the callable env must carry the extension's defs in
       // their declared positions.
       final extensionRefs = [
-        for (final parameter in extensionTypeParameters)
-          ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
-              as TypeParameterTypeRef,
+        for (final ref in declaredTypeParameterRefs(
+          ctx,
+          TypeParameterOwner(
+            TypeParameterOwnerKind.extension,
+            ctx.library,
+            parentName,
+          ),
+          extensionTypeParameters,
+        ))
+          ref,
       ];
       // The `on` clause likewise resolves in the extension parameter
       // scope so `#this` and the body's `T` references use the same
@@ -91,27 +98,34 @@ int compileMethodDeclaration(
           for (final parameter
               in classLikeClauses(declaringHost).$4?.typeParameters ??
                   const <TypeParameter>[])
-            parameter.name.lexeme:
-                ctx.typeScopes[ctx.library]![parameter.name.lexeme]!,
+            if (parameter.name.lexeme != '_' ||
+                !ctx.languageVersionAtLeast(parameter, 3, 7))
+              parameter.name.lexeme:
+                  ctx.typeScopes[ctx.library]![parameter.name.lexeme]!,
         for (var i = 0; i < extensionTypeParameters.length; i++)
-          extensionTypeParameters[i].name.lexeme: extensionRefs[i],
+          if (extensionTypeParameters[i].name.lexeme != '_' ||
+              !ctx.languageVersionAtLeast(extensionTypeParameters[i], 3, 7))
+            extensionTypeParameters[i].name.lexeme: extensionRefs[i],
       };
+      final methodOwner = TypeParameterOwner(
+        TypeParameterOwnerKind.method,
+        ctx.library,
+        '$parentName.$methodName',
+        pos,
+      );
       return ctx.withTypeParameters(
         ctx.library,
-        TypeParameterOwner(
-          TypeParameterOwnerKind.method,
-          ctx.library,
-          '$parentName.$methodName',
-          pos,
-        ),
+        methodOwner,
         methodTypeParameters,
         () {
           ctx.functionTypeParameters[pos] = [
             for (final ref in extensionRefs) ref.parameter,
-            for (final parameter in methodTypeParameters)
-              (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
-                      as TypeParameterTypeRef)
-                  .parameter,
+            for (final ref in declaredTypeParameterRefs(
+              ctx,
+              methodOwner,
+              methodTypeParameters,
+            ))
+              ref.parameter,
           ];
           ctx.functionRuntimeTypes[pos] = ctx.typeFactory.declaredMethodType(
             ctx.library,

@@ -58,12 +58,16 @@ void compileConstructorDeclaration(
 
   if (d.factoryKeyword != null) {
     ctx.functionTypeParameters[functionId] = [
-      for (final parameter
-          in classLikeClauses(parent).$4?.typeParameters ??
-              const <TypeParameter>[])
-        (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
-                as TypeParameterTypeRef)
-            .parameter,
+      for (final ref in declaredTypeParameterRefs(
+        ctx,
+        TypeParameterOwner(
+          TypeParameterOwnerKind.classLike,
+          ctx.library,
+          parentName,
+        ),
+        classLikeClauses(parent).$4?.typeParameters ?? const <TypeParameter>[],
+      ))
+        ref.parameter,
     ];
   }
 

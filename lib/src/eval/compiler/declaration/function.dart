@@ -62,22 +62,25 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final typeParameters =
       d.functionExpression.typeParameters?.typeParameters ??
       const <TypeParameter>[];
+  final owner = TypeParameterOwner(
+    TypeParameterOwnerKind.function,
+    ctx.library,
+    d.name.lexeme,
+    pos,
+  );
   final b = d.functionExpression.body;
   final stInfo = ctx.withTypeParameters(
     ctx.library,
-    TypeParameterOwner(
-      TypeParameterOwnerKind.function,
-      ctx.library,
-      d.name.lexeme,
-      pos,
-    ),
+    owner,
     typeParameters,
     () {
       ctx.functionTypeParameters[pos] = [
-        for (final parameter in typeParameters)
-          (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
-                  as TypeParameterTypeRef)
-              .parameter,
+        for (final ref in declaredTypeParameterRefs(
+          ctx,
+          owner,
+          typeParameters,
+        ))
+          ref.parameter,
       ];
 
       final resolvedParams = resolveFPLDefaults(

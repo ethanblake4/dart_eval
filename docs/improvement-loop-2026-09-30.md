@@ -3253,3 +3253,13 @@ SDK environment fixtures pass and their stale entries were removed. Focused
 checks cover define isolation, empty strings, hex integers and invalid booleans.
 Touched-file analysis is clean. Generated stdlib and interpreter dispatch are
 unchanged. Arbitrary -D conditional import selection remains outside this fix.
+
+## Cycle 19 correctness follow-up: wildcard type parameters
+
+The independent wildcard inspection finished during performance preparation.
+Dart 3.7+ wildcard type parameters now retain their ordered runtime definitions
+without binding the name `_` in lexical scopes. Metadata consumers use ordered
+definitions, preserving multiple wildcard positions and outer typedef lookup.
+The class generic type-parameter and top-level typedef SDK fixtures pass; their
+stale entries were removed. Existing compiler tests, tear-offs, constructor
+inference, mixin inference and generic-bound regressions pass. No runtime edit.

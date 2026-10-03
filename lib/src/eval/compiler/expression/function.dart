@@ -112,10 +112,17 @@ Variable compileFunctionExpression(
       typeParameters,
       () {
         ctx.functionTypeParameters[fnOffset] = [
-          for (final parameter in typeParameters)
-            (ctx.typeScopes[ctx.library]![parameter.name.lexeme]!
-                    as TypeParameterTypeRef)
-                .parameter,
+          for (final ref in declaredTypeParameterRefs(
+            ctx,
+            TypeParameterOwner(
+              TypeParameterOwnerKind.closure,
+              ctx.library,
+              '<anonymous>',
+              fnOffset,
+            ),
+            typeParameters,
+          ))
+            ref.parameter,
         ];
         var reboundContext = bound;
         // A generic context binds its own parameters. Rebind its component

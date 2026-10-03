@@ -238,6 +238,18 @@ final class SourceTypeDecl extends TypeDecl {
   final Declaration node;
 
   @override
+  Map<String, TypeRef> get ownTypeParams {
+    final parameters =
+        classLikeClauses(node).$4?.typeParameters ?? const <TypeParameter>[];
+    return {
+      for (var i = 0; i < parameters.length && i < typeParameters.length; i++)
+        if (parameters[i].name.lexeme != '_' ||
+            !ctx.languageVersionAtLeast(parameters[i], 3, 7))
+          parameters[i].name.lexeme: ownParameterRef(i),
+    };
+  }
+
+  @override
   TypeDeclKind get kind => switch (node) {
     ClassDeclaration() => TypeDeclKind.classDecl,
     MixinDeclaration() => TypeDeclKind.mixin,
