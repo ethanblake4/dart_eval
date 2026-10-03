@@ -112,8 +112,6 @@ expect_fail:
     reason: 'extension type declarations unsupported'
   - path: 'dot_shorthands/type_parameter/type_parameter_test.dart'
     reason: 'extension type declarations unsupported'
-  - path: 'exception/nested_catch_rethrow_test.dart'
-    reason: 'sync* YieldStatement not implemented'
   - path: 'extension_methods/null_aware_reachability_test.dart'
     reason: '?. on explicit extension application + expectStaticType'
   - path: 'extension_type/combined_member_signature_test.dart'

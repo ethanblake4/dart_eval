@@ -4237,3 +4237,9 @@ expectations are removed. Seventy exception and codec tests pass, including
 Unicode metadata roundtrip, callback trace merging and cached-frame snapshots;
 scoped analysis is clean. Six correctness passes are complete, with 16 confirmed
 stale entries removed. Full gates and the AOT baseline follow before performance.
+
+The default correctness gate reports 2277 passes / 86 skips and one unexpected
+pass for exception/nested_catch_rethrow_test.dart. That untouched fixture also
+passes an isolated fresh and serialized probe, so its stale expectation is
+removed too. There are now 17 confirmed stale removals in this cycle. The fresh
+SDK-full gate and final cleanup default gate will use the updated configuration.
