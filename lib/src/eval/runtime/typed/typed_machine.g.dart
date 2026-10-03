@@ -657,9 +657,15 @@ abstract final class TypedMachine {
                   callableTypeArguments: frame.effectiveTypeArguments,
                   typeEnvironment: frame.typeEnvironment,
                 );
-          final closure = TypedClosure.resolve(
+          var closure = TypedClosure.resolve(
             program, r, index, runtime, s, c, callTypeArguments,
           );
+          if (closure == null) {
+            closure = TypedClosure.resolveSingleNamedDefault(
+              program, r, site, runtime, callTypeArguments,
+            );
+            if (closure != null) c = closure.defaults[1];
+          }
           if (closure != null) {
             final function = closure.function;
             if (!closure.descriptor.hasEnvironment) r = closure.captures.single;

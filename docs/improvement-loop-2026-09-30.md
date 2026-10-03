@@ -3165,3 +3165,20 @@ found by SDK-full. The newly passing
 `variance/variance_out_inference_test.dart` entry was removed too. SDK-full
 passed 2,518 runnable fixtures with no unexpected failures. No ordinary test
 duplicates either SDK fixture.
+
+## Cycle 18 performance: direct entry for one omitted named default
+
+A boxed closure with one positional argument and one omitted scalar named
+default previously allocated an argument vector and entered a nested
+interpreter invocation. Trusted calls of this exact shape now load the cached
+default into the third call register and enter the existing child frame. The
+eligibility check is cached per closure. Other closure shapes keep their
+existing adapter path. The typed machine is regenerated from
+`tool/generate_typed_machine.dart`.
+
+The AOT `closures` benchmark's `default-adapter` median fell from 23.49 ms to
+12.05 ms for 100,000 calls. A capture-load inlining pilot had no repeatable
+benefit and was reverted. The full default suite passed 2,216 tests, SDK-full
+passed 2,518 runnable fixtures, and all 23 drivers in the final paired AOT
+sweep produced matching results. Results are under
+`.dart_tool/improvement_loop/cycle18-performance-defaults-only-full23/`.

@@ -103,6 +103,22 @@ final class TypedClosure extends EvalFunction {
       (function.resultKind == null ||
           function.resultKind == TypedArgumentKind.object);
 
+  late final bool _canEnterSingleNamedDefault =
+      descriptor.positionalCount == 1 &&
+      descriptor.requiredPositional == 1 &&
+      descriptor.namedNames.length == 1 &&
+      descriptor.requiredNamed.isEmpty &&
+      descriptor.namedDefaults.length == 1 &&
+      descriptor.defaultThunks.isEmpty &&
+      descriptor.hasEnvironment &&
+      !descriptor.boundReceiver &&
+      function.argumentKinds.length == 3 &&
+      function.argumentKinds.every(
+        (kind) => kind == TypedArgumentKind.object,
+      ) &&
+      (function.resultKind == null ||
+          function.resultKind == TypedArgumentKind.object);
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -310,6 +326,39 @@ final class TypedClosure extends EvalFunction {
         typeArguments,
       );
     }
+    return receiver;
+  }
+
+  /// A trusted one-argument call can supply a single omitted named default
+  /// directly in the boxed closure registers, without building an adapter
+  /// entry or starting a nested interpreter run.
+  @pragma('vm:never-inline')
+  static TypedClosure? resolveSingleNamedDefault(
+    TypedProgram program,
+    Object? receiver,
+    TypedClosureCall site,
+    Runtime? runtime,
+    List<int> callTypeArguments,
+  ) {
+    if (!site.trusted ||
+        site.positionalCount != 1 ||
+        site.namedNames.isNotEmpty) {
+      return null;
+    }
+    if (receiver is! TypedClosure ||
+        !identical(receiver.program, program) ||
+        (receiver.runtime != null && !identical(receiver.runtime, runtime))) {
+      return null;
+    }
+    if (!receiver._canEnterSingleNamedDefault) {
+      return null;
+    }
+    final typeArguments = receiver.typeArgumentsForCall(
+      callTypeArguments,
+      runtime,
+    );
+    if (!receiver.acceptsTypeArguments(typeArguments)) return null;
+    receiver._checkTypeArguments(typeArguments, runtime);
     return receiver;
   }
 
