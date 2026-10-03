@@ -1903,6 +1903,13 @@ String familyOf(String name) {
     mayThrow: true,
     extended: true,
   );
+  add(
+    'linkSuperclassRS',
+    'TypedInstance.linkSuperclass(r, s as TypedInstance);',
+    inputs: [6, 7],
+    mayThrow: true,
+    extended: true,
+  );
   return (ops: ops, extended: extendedOps);
 }
 

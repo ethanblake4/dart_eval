@@ -378,6 +378,8 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
         constrain($super, object);
         constrain(runtimeTypeDescriptor, integer);
         output(operation, object);
+      case objects.LinkSuperclass():
+        inputs(operation, object);
       case closures.CreateClosure():
         inputs(operation, object);
         output(operation, object);

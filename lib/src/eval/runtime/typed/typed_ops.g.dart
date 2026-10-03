@@ -433,6 +433,7 @@ abstract final class TypedOp {
   static const setLateLocalInitializerRS = 426;
   static const rReadLateLocal = 427;
   static const writeLateLocalRS = 428;
+  static const linkSuperclassRS = 429;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false, 'True'),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false, 'False'),
@@ -863,5 +864,6 @@ abstract final class TypedOp {
     TypedInstruction('setLateLocalInitializerRS', [6, 7], [], TypedImmediate.none, true, false, false, 'setLateLocalInitializer'),
     TypedInstruction('rReadLateLocal', [6], [6], TypedImmediate.none, true, false, false, 'ReadLateLocal'),
     TypedInstruction('writeLateLocalRS', [6, 7], [], TypedImmediate.none, true, false, false, 'writeLateLocal'),
+    TypedInstruction('linkSuperclassRS', [6, 7], [], TypedImmediate.none, true, false, false, 'linkSuperclass'),
   ];
 }

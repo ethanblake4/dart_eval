@@ -87,7 +87,15 @@ final class TypedInstance implements $Instance {
   final TypedProgram program;
   final Runtime? runtime;
   final int classId;
-  final $Instance? superclass;
+  $Instance? superclass;
+
+  /// Constructor calls connect each parent before running its body.
+  static void linkSuperclass(Object? subclass, TypedInstance superclass) {
+    if (subclass == null) return;
+    final child = subclass as TypedInstance;
+    child.superclass = superclass;
+    superclass._dispatchRoot = child.dispatchRoot;
+  }
 
   /// Canonical boxed values or native scalar values written by typed stores.
   final List<Object?> values;

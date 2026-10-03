@@ -227,11 +227,19 @@ class TypedProgram {
       if (constructorRuntimeTypeId < -1) {
         throw const FormatException('Invalid constructor runtime type ID');
       }
-      final hiddenArgumentCount = constructorRuntimeTypeId >= 0 ? 1 : 0;
+      final hiddenArgumentCount = constructorRuntimeTypeId >= 0
+          ? function.argumentKinds.length - declaration.parameters.length
+          : 0;
       if (declaration.parameters.length + hiddenArgumentCount !=
               function.argumentKinds.length ||
-          (hiddenArgumentCount == 1 &&
-              function.argumentKinds.last != TypedArgumentKind.integer)) {
+          (constructorRuntimeTypeId >= 0 &&
+              (hiddenArgumentCount < 1 ||
+                  hiddenArgumentCount > 2 ||
+                  function.argumentKinds[declaration.parameters.length] !=
+                      TypedArgumentKind.integer ||
+                  hiddenArgumentCount == 2 &&
+                      function.argumentKinds.last !=
+                          TypedArgumentKind.object))) {
         throw const FormatException('Invalid typed export parameter count');
       }
       final parameterNames = <String>{};

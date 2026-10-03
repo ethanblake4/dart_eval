@@ -1498,6 +1498,15 @@ class _LoweringSession {
           }
           continue;
         }
+        if (op is objects_ir.LinkSuperclass) {
+          lowered.add(
+            TypedOperation(b._named(['linkSuperclassRS']), null, [
+              value(op.subclass),
+              value(op.superclass),
+            ]),
+          );
+          continue;
+        }
         if (op is bridge.NewBridgeSuperShim) {
           lowered.add(
             TypedOperation(

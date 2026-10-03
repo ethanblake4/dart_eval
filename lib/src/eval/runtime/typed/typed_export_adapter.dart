@@ -35,10 +35,18 @@ abstract final class TypedExportAdapter {
     final constructorRuntimeTypeId =
         declaration.generativeConstructorRuntimeTypeId;
     final hasConstructorRuntimeType = constructorRuntimeTypeId >= 0;
-    if (parameters.length + (hasConstructorRuntimeType ? 1 : 0) !=
+    final hiddenArgumentCount = hasConstructorRuntimeType
+        ? function.argumentKinds.length - parameters.length
+        : 0;
+    if (parameters.length + hiddenArgumentCount !=
             function.argumentKinds.length ||
         (hasConstructorRuntimeType &&
-            function.argumentKinds.last != TypedArgumentKind.integer)) {
+            (hiddenArgumentCount < 1 ||
+                hiddenArgumentCount > 2 ||
+                function.argumentKinds[parameters.length] !=
+                    TypedArgumentKind.integer ||
+                hiddenArgumentCount == 2 &&
+                    function.argumentKinds.last != TypedArgumentKind.object))) {
       throw StateError(
         'Export parameter metadata does not match ${declaration.name}',
       );
@@ -98,7 +106,10 @@ abstract final class TypedExportAdapter {
         TypedArgumentKind.object => boxed,
       });
     }
-    if (hasConstructorRuntimeType) values.add(constructorRuntimeTypeId);
+    if (hasConstructorRuntimeType) {
+      values.add(constructorRuntimeTypeId);
+      if (hiddenArgumentCount == 2) values.add(null);
+    }
     return TypedEntry.fromValues(function, values);
   }
 

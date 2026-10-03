@@ -153,7 +153,10 @@ final class CallableAbi {
       for (var i = 0; i < leadingBoxed; i++) ValueRep.boxed,
       for (var i = 0; i < parameters.length; i++)
         Abi.sourceParameter(ctx, types[i], parameters[i], declaration),
-      if (hiddenTypeId ?? declaration.factoryKeyword == null) ValueRep.int,
+      if (hiddenTypeId ?? declaration.factoryKeyword == null) ...[
+        ValueRep.int,
+        ValueRep.boxed,
+      ],
     ], ValueRep.boxed);
   }
 
@@ -176,7 +179,7 @@ final class CallableAbi {
     [
       for (var i = 0; i < leadingBoxed; i++) ValueRep.boxed,
       for (final type in parameterTypes) Abi.parameter(type, kind),
-      if (hiddenTypeId) ValueRep.int,
+      if (hiddenTypeId) ...[ValueRep.int, ValueRep.boxed],
     ],
     kind == CallableKind.constructor
         ? ValueRep.boxed

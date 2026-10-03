@@ -287,6 +287,7 @@ final class ConstructorCall extends CallTarget {
     this.classBridge,
     this.implicitDefault = false,
     this.leadingArguments,
+    this.subclass,
     this.signature,
     this.bridgeFunction,
   });
@@ -320,6 +321,9 @@ final class ConstructorCall extends CallTarget {
   /// Arguments supplied by the caller before declared parameters, such as
   /// an enum constant's index and name.
   final List<SSA>? leadingArguments;
+
+  /// A super call connects its new instance to this already allocated child.
+  final SSA? subclass;
 
   bool get _isFactory => constructor?.factoryKeyword != null;
 
@@ -377,8 +381,10 @@ final class ConstructorCall extends CallTarget {
         if (!implicitDefault) ...call.vector(),
         // Generative constructors take a hidden trailing runtime-type arg;
         // the implicit default's synthesized body takes it as its only arg.
-        if (implicitDefault || (constructor != null && !_isFactory))
+        if (implicitDefault || (constructor != null && !_isFactory)) ...[
           pushRuntimeTypeId(ctx, instantiatedType),
+          subclass ?? BuiltinValue().push(ctx).ssa,
+        ],
       ];
       ctx.pushOp(
         Call(

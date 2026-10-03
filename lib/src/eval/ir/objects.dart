@@ -95,6 +95,26 @@ final class CreateClass extends Operation {
   }
 }
 
+/// Connects a superclass before its constructor can dispatch on the receiver.
+final class LinkSuperclass extends Operation {
+  LinkSuperclass(this.subclass, this.superclass);
+  final SSA subclass;
+  final SSA superclass;
+
+  @override
+  Set<SSA> get readsFrom => {subclass, superclass};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    final inputs = renameOperands(
+      [subclass, superclass],
+      this.readsFrom,
+      readsFrom,
+    );
+    return LinkSuperclass(inputs[0], inputs[1]);
+  }
+}
+
 final class SetPropertyStatic extends Operation {
   final SSA object;
   final int index;

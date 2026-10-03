@@ -180,6 +180,7 @@ void compileConstructorDeclaration(
   }
 
   SSA? runtimeTypeArgument;
+  SSA? subclassArgument;
   if (d.factoryKeyword == null) {
     runtimeTypeArgument = SSA('arg_$i');
     ctx.pushOp(
@@ -190,6 +191,8 @@ void compileConstructorDeclaration(
       ),
     );
     ctx.pushOp(SetTypeEnvironment(runtimeTypeArgument));
+    subclassArgument = SSA('arg_${i + 1}');
+    ctx.pushOp(Parameter(subclassArgument, i + 1));
   }
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
       abi.machine;
@@ -267,6 +270,7 @@ void compileConstructorDeclaration(
                   .vector();
         if (ctorDecl?.factoryKeyword == null) {
           argSsa.add(pushRuntimeTypeId(ctx, targetType));
+          argSsa.add(BuiltinValue().push(ctx).ssa);
         }
         ctx.pushOp(
           Call(
@@ -353,6 +357,7 @@ void compileConstructorDeclaration(
         if (isEnum) ...[SSA('arg_0'), SSA('arg_1')],
         ...result.vector(),
         runtimeTypeArgument!,
+        subclassArgument!,
       ], result: ctx.svar('redirected')),
       clsType,
       rep: ValueRep.boxed,
@@ -437,16 +442,7 @@ void compileConstructorDeclaration(
             NewBridgeSuperShim(ctx.svar('shim')),
             CoreTypes.dynamic.ref(ctx),
           )
-        : _invokeSuperConstructor(
-            ctx,
-            parent: parent,
-            extendsDecl: extendsDecl,
-            extendsType: extendsType,
-            prefix: prefix,
-            constructorName: constructorName,
-            superInitializer: $superInitializer,
-            superParams: superParams,
-          );
+        : BuiltinValue().push(ctx);
   }
 
   final inst = Variable.ssa(
@@ -462,6 +458,7 @@ void compileConstructorDeclaration(
     TypeRef.$this(ctx)!,
     facts: ValueFacts(possibleClasses: [TypeRef.$this(ctx)!]),
   );
+  ctx.pushOp(LinkSuperclass(subclassArgument!, inst.ssa));
 
   if (parent is EnumDeclaration) {
     _setupEnum(ctx, parent, inst.ssa);
@@ -489,6 +486,20 @@ void compileConstructorDeclaration(
     isEnum ? 2 : 0,
     evaluatedFieldInits,
   );
+
+  if (extendsDecl != null && !extendsDecl.isBridge) {
+    $super = _invokeSuperConstructor(
+      ctx,
+      parent: parent,
+      extendsDecl: extendsDecl,
+      extendsType: extendsType,
+      prefix: prefix,
+      constructorName: constructorName,
+      superInitializer: $superInitializer,
+      superParams: superParams,
+      subclass: inst.ssa,
+    );
+  }
 
   final body = d.body;
   if (d.factoryKeyword == null && body is! EmptyFunctionBody) {
@@ -572,6 +583,8 @@ void compileDefaultConstructor(
     ),
   );
   ctx.pushOp(SetTypeEnvironment(runtimeTypeArgument));
+  final subclassArgument = SSA('arg_${isEnum ? 3 : 1}');
+  ctx.pushOp(Parameter(subclassArgument, isEnum ? 3 : 1));
 
   final fieldIdx = _getFieldIndices(fields).count;
 
@@ -590,13 +603,13 @@ void compileDefaultConstructor(
   Variable $super;
   DeclarationOrBridge? extendsDecl;
   ImportPrefixReference? prefix;
+  TypeRef? extendsType;
 
   const constructorName = '';
 
   if ($extends == null) {
     $super = BuiltinValue().push(ctx);
   } else {
-    TypeRef? extendsType;
     (extendsDecl, prefix, extendsType) = _resolveSuperclass(ctx, $extends);
     if (extendsDecl.isBridge && _isObjectWrapper(ctx, extendsDecl.bridge!)) {
       // `extends Object` is the implicit superclass already — elide the
@@ -611,14 +624,7 @@ void compileDefaultConstructor(
             NewBridgeSuperShim(ctx.svar('shim')),
             CoreTypes.dynamic.ref(ctx),
           )
-        : _invokeSuperConstructor(
-            ctx,
-            parent: parent,
-            extendsDecl: extendsDecl,
-            extendsType: extendsType,
-            prefix: prefix,
-            constructorName: constructorName,
-          );
+        : BuiltinValue().push(ctx);
   }
 
   final inst = ctx.svar('instance');
@@ -632,6 +638,7 @@ void compileDefaultConstructor(
       fieldIdx + (isEnum ? 2 : 0),
     ),
   );
+  ctx.pushOp(LinkSuperclass(subclassArgument, inst));
 
   if (parent is EnumDeclaration) {
     _setupEnum(ctx, parent, inst);
@@ -645,6 +652,18 @@ void compileDefaultConstructor(
     parent is EnumDeclaration ? 2 : 0,
     evaluatedFieldInits,
   );
+
+  if (extendsDecl != null && !extendsDecl.isBridge) {
+    $super = _invokeSuperConstructor(
+      ctx,
+      parent: parent,
+      extendsDecl: extendsDecl,
+      extendsType: extendsType,
+      prefix: prefix,
+      constructorName: constructorName,
+      subclass: inst,
+    );
+  }
 
   final bridgeArgs = extendsDecl != null && extendsDecl.isBridge
       ? _bridgeSuperArgs(ctx, extendsDecl, constructorName)
@@ -908,6 +927,7 @@ Variable _invokeSuperConstructor(
   required String constructorName,
   SuperConstructorInvocation? superInitializer,
   SuperParams superParams = const (positional: [], named: {}),
+  required SSA subclass,
 }) {
   extendsType ??= TypeRef.lookupDeclaration(
     ctx,
@@ -945,6 +965,7 @@ Variable _invokeSuperConstructor(
     offset: methodOffset,
     constructor: constructor,
     implicitDefault: constructor == null,
+    subclass: subclass,
     signature: constructor == null
         ? null
         : CallSignature.forDeclaration(ctx, extendsDecl.sourceLib, constructor),
@@ -1198,6 +1219,7 @@ void compileAliasForwardingConstructor(
       ),
     );
     ctx.pushOp(SetTypeEnvironment(SSA('arg_$i')));
+    ctx.pushOp(Parameter(SSA('arg_${i + 1}'), i + 1));
   }
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
       aliasAbi.machine;
@@ -1221,7 +1243,6 @@ void compileAliasForwardingConstructor(
       ).ssa,
     );
   }
-  argSsa.add(pushRuntimeTypeId(ctx, targetType));
   // Field initializers run before the superconstructor invocation — evaluate
   // them now and apply the values once the instance exists.
   final evaluatedFieldInits = _evalFieldInitializers(
@@ -1229,19 +1250,6 @@ void compileAliasForwardingConstructor(
     fields,
     memberLibraries,
     parent,
-  );
-  final superResult = ctx.svar('super');
-  ctx.pushOp(
-    Call(
-      DeferredOrOffset.lookupStatic(
-        ctx,
-        target.sourceLib,
-        targetType.name,
-        constructorName,
-      ),
-      argSsa,
-      result: superResult,
-    ),
   );
   // The alias is itself a class: `new C.n()` produces an instance of `C`
   // whose superclass part is the `S.n` result.
@@ -1252,13 +1260,30 @@ void compileAliasForwardingConstructor(
       result,
       ctx.library,
       parentName,
-      superResult,
+      BuiltinValue().push(ctx).ssa,
       SSA('arg_$i'),
       _getFieldIndices(fields).count,
     ),
     parentType,
   );
+  if (!isFactory) ctx.pushOp(LinkSuperclass(SSA('arg_${i + 1}'), inst.ssa));
   _compileUnusedFields(ctx, fields, {}, inst.ssa, 0, evaluatedFieldInits);
+  if (!isFactory) {
+    argSsa.add(pushRuntimeTypeId(ctx, targetType));
+    argSsa.add(inst.ssa);
+  }
+  ctx.pushOp(
+    Call(
+      DeferredOrOffset.lookupStatic(
+        ctx,
+        target.sourceLib,
+        targetType.name,
+        constructorName,
+      ),
+      argSsa,
+      result: ctx.svar('super'),
+    ),
+  );
   ctx.pushOp(Return(inst.ssa));
   ctx.endScope();
 }

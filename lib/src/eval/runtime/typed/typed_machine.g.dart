@@ -1973,6 +1973,9 @@ abstract final class TypedMachine {
     case 428:
        (r as TypedLateLocal).write(s);
        break;
+    case 429:
+       TypedInstance.linkSuperclass(r, s as TypedInstance);
+       break;
     default: throw StateError('Invalid extended typed opcode');
     }
     st.pc = pc;

@@ -3538,3 +3538,21 @@ The edge-cases stale entry was removed; field/global diagnostics remain a
 separate failing group. One focused serialized capture/retry/handler regression
 and 31 focused tests pass, plus proper-subtype and await/yield SDK regressions.
 Analysis and generated-machine validation pass: 225 primary, 173 extended.
+
+## Cycle 21 pass 6: subclass visibility during parent construction
+
+Generative constructors allocate and initialize their own fields before calling
+the parent. A hidden subclass argument and one extended cold linking operation
+connect each new superclass to the already allocated child before its body runs.
+Virtual dispatch, inherited receiver identity and initialized child fields are
+therefore visible inside superclass bodies. Redirects, synthesized defaults,
+mixin aliases and host entry binding use the same constructor ABI. Public
+export validation/binding retain compatibility with the earlier single hidden
+runtime-type argument. The existing hot CreateClass instruction is unchanged.
+
+The original constructor, initializer-closure and parameter-initializer fixtures
+pass; three stale entries were removed. All 67 focused constructor/bridge/export
+tests pass in the combined tree. An isolated complete default run found only
+those three stale expected failures. Scoped analysis is clean. No duplicated SDK
+fixtures or ordinary tests were added. Generated machine has 225 primary and
+174 extended instructions; the new operation is confined to cold dispatch.
