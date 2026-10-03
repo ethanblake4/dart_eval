@@ -1,9 +1,10 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
-TypedProgram compile(String source) => Compiler().compileTyped({
-  'typed': {'main.dart': source},
-}, entrypoint: 'package:typed/main.dart');
+TypedProgram compile(String source) =>
+    (Compiler()..enableLeafInlining = false).compileTyped({
+      'typed': {'main.dart': source},
+    }, entrypoint: 'package:typed/main.dart');
 
 List<String> names(TypedProgram program) => [
   for (final e in program.instructions) e.$2.family,

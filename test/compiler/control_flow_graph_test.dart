@@ -7,7 +7,7 @@ import 'package:dart_eval/src/eval/ir/memory.dart' show LoadInt;
 import 'package:test/test.dart';
 
 Compiler compileGraph(String source) {
-  final compiler = Compiler();
+  final compiler = Compiler()..enableLeafInlining = false;
   compiler.compile({
     'cfg_test': {'main.dart': source},
   });

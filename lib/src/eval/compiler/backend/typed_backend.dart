@@ -824,22 +824,7 @@ class TypedBackend {
   }
 
   int _resolveFunction(DeferredOrOffset target) {
-    var id = target.offset;
-    if (id == null && target.className != null) {
-      final members =
-          context.instanceDeclarationPositions[target.file]?[target.className];
-      if (members != null) {
-        final kind = target.methodType;
-        if (kind != null) {
-          id = members[kind]?[target.name];
-        } else {
-          for (final group in members.values) {
-            id ??= group[target.name];
-          }
-        }
-      }
-    }
-    id ??= context.topLevelDeclarationPositions[target.file]?[target.name];
+    final id = target.resolveFunctionId(context);
     if (id == null || !context.ssaFunctionGraphs.containsKey(id)) {
       throw UnsupportedError(
         'Typed direct-call target $target className=${target.className} kind=${target.methodType}',

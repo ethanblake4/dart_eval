@@ -3051,3 +3051,26 @@ for argument inference. The four affected pinned fixtures pass individually:
 `named_arguments_anywhere/order_side_effects_ok_test.dart`. The original
 `const/inference_test.dart` and `regress/regress32660_test.dart` remain green.
 These are compiler-only corrections.
+
+## Cycle 17 performance: short leaf inlining
+
+Several runtime experiments showed no stable gain: a direct-register host
+closure path, a frame-to-host argument snapshot for opcodes the compiler does
+not emit, small capture-list copies, empty type-argument list reuse, and
+extra frame-clear specializations. Those changes were discarded. A new
+`benchmark/closure_factory.dart` records short-lived callback creation for
+future work.
+
+Direct calls to short, non-generic, single-block leaf functions now expand
+before SSA construction. The pass copies arguments into fresh locals so
+parameter mutation cannot change caller variables, and it excludes calls
+with generic environments, exception regions, nested calls, allocations,
+and implicit frame state. Structural compiler tests can disable the pass to
+inspect call and branch lowering; default compilation enables it. A focused
+fresh/serialized regression covers side-effecting arguments and mutable
+parameters. In a 300,000-iteration warmed AOT pair, `calls` primitive improved
+from 36.10 to 23.25 ns/iteration, method from 77.71 to 48.25, and overflow
+arguments from 192.85 to 50.95. The 23-driver AOT sweep matched all 22
+execution checksums; its compile driver reported 1,241 rather than 1,249
+code bytes, as expected from inlining. Logs are under
+`.dart_tool/improvement_loop/cycle17-leaf-inline-full23/`.

@@ -18,6 +18,25 @@ class DeferredOrOffset {
   final MemberKind? methodType;
   final String? name;
 
+  /// Resolves a direct source call after declarations have been compiled.
+  int? resolveFunctionId(CompilerContext ctx) {
+    var id = offset;
+    if (id == null && className != null) {
+      final members = ctx.instanceDeclarationPositions[file]?[className];
+      if (members != null) {
+        final kind = methodType;
+        if (kind != null) {
+          id = members[kind]?[name];
+        } else {
+          for (final group in members.values) {
+            id ??= group[name];
+          }
+        }
+      }
+    }
+    return id ?? ctx.topLevelDeclarationPositions[file]?[name];
+  }
+
   factory DeferredOrOffset.lookupStatic(
     CompilerContext ctx,
     int library,

@@ -7,6 +7,7 @@ import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_program.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/ssa.dart';
+import 'package:dart_eval/src/eval/compiler/optimizer/inline.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
@@ -101,6 +102,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
   /// The diagnostic mode to use when parsing.
   var diagnosticMode = DiagnosticMode.throwIfError;
+
+  /// Disable leaf inlining when inspecting the unoptimized call graph.
+  bool enableLeafInlining = true;
 
   // Add a plugin, which will only be run once.
   @override
@@ -910,6 +914,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     for (final entry in _ctx.functionGraphs.entries) {
       final graph = entry.value;
       graph.removeUnreachableBlocks();
+      validateFrontendGraph(graph);
+    }
+    if (enableLeafInlining) inlineLeafCalls(_ctx);
+    for (final entry in _ctx.functionGraphs.entries) {
+      final graph = entry.value;
       validateFrontendGraph(graph);
       _ctx.ssaFunctionGraphs[entry.key] = buildSSA(graph);
     }
