@@ -26,7 +26,7 @@ TypeRef? extensionRepresentationField(
       name.startsWith('_') && decl.library != ctx.library) {
     return null;
   }
-  return decl.extensionRepresentation;
+  return decl.extensionRepresentationFor(type);
 }
 
 /// Whether the selector names a declared extension type constructor.
@@ -78,7 +78,7 @@ final class _ExtensionConstruction {
 
   final CompilerContext ctx;
   final SourceTypeDecl declaration;
-  final TypeRef instantiatedType;
+  TypeRef instantiatedType;
   final bool isConst;
   final AstNode source;
   final _active = <ConstructorDeclaration>{};
@@ -109,7 +109,7 @@ final class _ExtensionConstruction {
       ctx,
       declaration.library,
       constructor,
-    );
+    ).substitute(Substitution.forInterface(instantiatedType));
     final bound = ArgumentBinder(ctx).bindParameterList(
       arguments,
       declaration.library,
@@ -154,19 +154,58 @@ final class _ExtensionConstruction {
     if (isConst && primary.constKeyword == null) {
       throw CompileError('Extension type constructor is not const', source);
     }
-    final representation = declaration.extensionRepresentation!;
+    final inferArguments =
+        interfaceArgumentsOf(instantiatedType).isEmpty &&
+        declaration.typeParameters.isNotEmpty;
+    var representation = inferArguments
+        ? null
+        : declaration.extensionRepresentationFor(instantiatedType)!;
     final value = compileExpression(
       arguments.arguments.single.argumentExpression,
       ctx,
       representation,
     );
+    if (inferArguments) {
+      final inferred = <TypeParameterDef, TypeRef>{};
+      ctx.typeSystem.unify(
+        declaration.extensionRepresentation!,
+        value.type,
+        inferred,
+      );
+      final defaults = ctx.typeSystem.instantiateToBounds(
+        declaration.typeParameters,
+        knownTypes: inferred,
+      );
+      instantiatedType = declaration.instantiate([
+        for (final parameter in declaration.typeParameters)
+          inferred[parameter] ?? defaults[parameter]!,
+      ]);
+      representation = declaration.extensionRepresentationFor(
+        instantiatedType,
+      )!;
+    }
+    final parameters = declaration.typeParameters;
+    final applied = interfaceArgumentsOf(instantiatedType);
+    if (applied.length != parameters.length) {
+      throw CompileError('Wrong number of extension type arguments', source);
+    }
+    final substitution = Substitution.forInterface(instantiatedType);
+    for (var i = 0; i < parameters.length; i++) {
+      final bound = parameters[i].bound?.substituteTypeParameters(substitution);
+      if (bound != null && !applied[i].isAssignableTo(ctx, bound)) {
+        throw CompileError(
+          'Extension type argument does not satisfy its bound',
+          source,
+        );
+      }
+    }
     if (isConst && !value.isConst) {
       throw CompileError('Representation argument is not constant', source);
     }
     return convertForAssignment(
       ctx,
       value,
-      representation,
+      representation!,
       source: source,
     ).copyWith(type: instantiatedType, isConst: isConst);
   }

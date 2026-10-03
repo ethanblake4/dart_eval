@@ -66,7 +66,6 @@ void _validateExtensionType(
 ) {
   final primary = declaration.namePart;
   if (primary is! PrimaryConstructorDeclaration ||
-      primary.typeParameters != null ||
       declaration.implementsClause != null ||
       declaration.body.members.any(
         (member) =>
@@ -77,7 +76,7 @@ void _validateExtensionType(
             member.initializers.single is! RedirectingConstructorInvocation,
       )) {
     throw CompileError(
-      'Only nongeneric extension types with primary or redirecting constructors '
+      'Only extension types with primary or redirecting constructors '
       'and no other members or implements clause are supported',
     );
   }

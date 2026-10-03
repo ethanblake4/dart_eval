@@ -98,12 +98,17 @@ sealed class TypeRef {
     while (type is InterfaceTypeRef &&
         type.decl is SourceTypeDecl &&
         type.decl.kind == TypeDeclKind.extensionType) {
-      if (!visited.add(type.decl)) {
+      final declaration = type.decl as SourceTypeDecl;
+      // Re-entering through an applied parameter (Box<Box<int>>) consumes
+      // a finite argument. Only declaration-level representation edges cycle.
+      if (declaration.extensionRepresentation is TypeParameterTypeRef) {
+        visited.clear();
+      } else if (!visited.add(type.decl)) {
         throw CompileError(
           'Cyclic extension type representation: ${type.name}',
         );
       }
-      type = (type.decl as SourceTypeDecl).extensionRepresentation!;
+      type = declaration.extensionRepresentationFor(type)!;
       nullable = nullable || type.nullable;
     }
     return type.withNullable(nullable);

@@ -4092,3 +4092,10 @@ nested field path and remains expected to fail.
 StringBuffer construction and write now resolve guest object text through existing guest calls, preserving scalar fast paths and String result checks. Global and field initializer capture analysis uses the implicit function scope, so collection loop locals captured by closures have the right owner. No runtime or generated stdlib changes.
 
 The original string/interpolation_and_buffer_test.dart and regress/regress60409_test.dart pass; their stale expect_fail entries were removed. Validation: 73 focused StringBuffer/classes/async-generator/dynamic tests and 44 capture/default/field-order/late-field/mixin tests pass, with scoped analysis clean. Existing StringBuffer coverage adds fresh and serialized guest formatting, evaluation order, throwing conversions, and native bytecode paths.
+
+
+### Cycle 25 correctness pass 4: generic extension representations
+
+Representation annotations resolve in extension type parameter scope, then substitute applied arguments during erasure and constructor binding. Finite nested representations are distinguished from declaration cycles. Primary constructors validate explicit/inferred/contextual arguments and bounds; redirect signatures specialize their representation parameters. Rich extension members remain a separate unsupported group.
+
+Validation: 23 focused extension-representation and shorthand tests pass; original extension_type/regress_53968_test.dart passes. Scoped analysis is clean. No expect_fail entries removed in this pass: the surveyed FutureOr shorthand fixtures already resolve FutureOr and still require richer extension constructor/member support.

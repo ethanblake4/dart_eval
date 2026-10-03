@@ -2080,16 +2080,29 @@ final class CallResolver {
         final extensionType = nominalDeclOf(type);
         if (extensionType is SourceTypeDecl &&
             extensionType.kind == TypeDeclKind.extensionType) {
+          var instantiated = type;
           if (e.typeArguments != null) {
-            throw CompileError(
-              'Extension type does not take type arguments',
-              e,
+            instantiated = (type as InterfaceTypeRef).copyWith(
+              arguments: [
+                for (final argument in e.typeArguments!.arguments)
+                  TypeRef.fromAnnotation(ctx, ctx.library, argument),
+              ],
             );
+          } else {
+            final inferred = constructorContextArguments(ctx, type, bound);
+            if (inferred.isNotEmpty) {
+              instantiated = (type as InterfaceTypeRef).copyWith(
+                arguments: [
+                  for (final parameter in extensionType.typeParameters)
+                    inferred[parameter] ?? TypeParameterTypeRef(parameter),
+                ],
+              );
+            }
           }
           return constructExtensionType(
             ctx,
             extensionType,
-            type,
+            instantiated,
             '',
             e.argumentList,
             isConst: site.inConstContext,

@@ -43,6 +43,92 @@ void main() {
 ''';
 
 void main() {
+  test('generic extension representations apply use-site type arguments', () {
+    final program = Compiler().compile({
+      'generic_representation': {
+        'main.dart': '''
+import 'dart:async';
+extension type Box<T>(T value) {}
+extension type Bag<T>(List<T> values) {}
+extension type Nested<T>(Box<T> value) {}
+extension type Named<T>.primary(T value) {
+  Named.redirect(T value) : this.primary(value);
+}
+bool verify() {
+  final box = Box<int>(7);
+  final bag = Bag<int>(<int>[1, 2]);
+  final nested = Nested<int>(box);
+  final repeated = Box<Box<int>>(box);
+  final absent = Box<int?>(null);
+  final inferred = Box(9);
+  final named = Named<int>.redirect(11);
+  Box<num> contextual = Box(10);
+  final Type boxType = Box<int>;
+  final Type bagType = Bag<int>;
+  final Type nestedType = Nested<int>;
+  final Type listType = List<int>;
+  FutureOr<Box<int>> shorthand = .new(8);
+  return box.value == 7 && bag.values is List<int> &&
+      identical(nested.value, 7) && identical(repeated.value, 7) &&
+      identical(absent, null) &&
+      boxType == int && bagType == listType && nestedType == int &&
+      shorthand is int && shorthand == 8 &&
+      inferred.value == 9 && contextual.value == 10 && named.value == 11;
+}
+void main() {}
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib(
+          'package:generic_representation/main.dart',
+          'verify',
+        ),
+        true,
+      );
+    }
+  });
+  for (final construction in [
+    "Box<int>('wrong')",
+    "Bag<int>(<String>['wrong'])",
+    "Bounded<String>('wrong')",
+    "Box<int, String>(1)",
+  ]) {
+    test('generic extension representation rejects $construction', () {
+      expect(
+        () => Compiler().compile({
+          'generic_representation_negative': {
+            'main.dart':
+                '''
+extension type Box<T>(T value) {}
+extension type Bag<T>(List<T> values) {}
+extension type Bounded<T extends num>(T value) {}
+void main() { $construction; }
+''',
+          },
+        }),
+        throwsA(isA<CompileError>()),
+      );
+    });
+  }
+  test('generic extension representation cycles are rejected', () {
+    expect(
+      () => Compiler().compile({
+        'generic_representation_cycle': {
+          'main.dart': '''
+extension type Cycle<T>(Cycle<List<T>> value) {}
+void main() {}
+''',
+        },
+      }),
+      throwsA(isA<CompileError>()),
+    );
+  });
+
   for (final constructor in ['_primary', '_private']) {
     test(
       'imported private extension constructor $constructor is inaccessible',

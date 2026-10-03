@@ -285,7 +285,12 @@ final class SourceTypeDecl extends TypeDecl {
     }
     final previousScope = ctx.typeScopes.remove(library);
     try {
-      return TypeRef.fromAnnotation(ctx, library, annotation);
+      return TypeRef.fromAnnotation(
+        ctx,
+        library,
+        annotation,
+        typeParameters: ownTypeParams,
+      );
     } finally {
       if (previousScope == null) {
         ctx.typeScopes.remove(library);
@@ -294,6 +299,10 @@ final class SourceTypeDecl extends TypeDecl {
       }
     }
   }
+
+  /// The representation template applied to this extension's use-site type.
+  TypeRef? extensionRepresentationFor(TypeRef type) => extensionRepresentation
+      ?.substituteTypeParameters(Substitution.forInterface(type));
 
   @override
   List<TypeParameterDef> computeTypeParameters() {
