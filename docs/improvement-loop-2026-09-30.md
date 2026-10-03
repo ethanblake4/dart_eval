@@ -3702,3 +3702,30 @@ non-noisy dynamic shifts within -5% to +2.8%, while noncapturing closures improv
 4.2%. Raw samples and checksums are retained under .dart_tool/improvement_loop/cycle22.
 No other compilation overlapped the timed comparisons. Scoped analysis and focused
 primitive/store tests pass.
+## Cycle 22 cleanup and review
+
+Primitive-box matching now shares one helper. Astra medium reviewed the completed
+six correctness passes, performance changes and cleanup, then verified the fixes
+for two synthesized noSuchMethod signature defects. Parameters are reconstructed
+structurally instead of replacing matching text, and cloned declarations retain
+the source language version. One combined regression covers name collisions and
+legacy underscore type binding. Native Dart confirmed nullable optional forwarder
+signatures and explicit-null acceptance.
+
+Final default checks exposed two execution regressions and a stale opcode test.
+Named late-field descriptors now use contiguous scalar typed-program constants,
+so raw execution needs no Runtime and serialization retains the metadata. Names
+and initialization flags are read only when reporting an error. Exact native-set
+runtimeType access recognizes proven LinkedHashSet allocations through the existing
+constant path. The old opcode expectation and Error catch were corrected. Astra's
+follow-up review found no remaining issue. Focused tests and scoped analysis pass,
+and generated machine validation reports 225 primary and 176 extended operations.
+Final default suite: 2231 passed, 86 skipped. Configured SDK-full: 2737 passed,
+557 skipped; actual outcomes: 2573 passed, 139 compileError, 25 failed, 3 skipped.
+CFG: 105 passed. The final rebuilt candidate completed the 23-driver AOT sweep
+with all 22 execution checksums equal and compile output 1355 to 1354 bytes.
+Three short-run outliers received two alternating comparisons at ten times the
+workload. Dispatch and external-call differences did not persist; captured-void
+callbacks shifted +9.9% in the first pair and -0.8% in the second. Raw samples
+remain in cycle22/cleanup-recheck logs. No other compilation overlapped timings.
+The remaining 164 real SDK failures continue into cycle 23.

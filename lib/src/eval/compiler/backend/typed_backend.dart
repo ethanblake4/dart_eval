@@ -147,6 +147,7 @@ class TypedBackend {
   final doubles = <double>[];
   final objects = <Object?>[];
   final _objectIndices = <Object?, int>{};
+  final _lateFieldDescriptors = <(int, String, bool), int>{};
   final _classIndices = <(int, String), int>{};
   final _callSites = <TypedCallSite>[];
   final _closures = <TypedClosureDescriptor>[];
@@ -856,6 +857,14 @@ class TypedBackend {
     _objectIndices[value] = index;
     return index;
   }
+
+  // Contiguous scalar constants work in raw and serialized typed programs.
+  int _lateFieldDescriptor(int field, String name, {bool initializing = false}) =>
+      _lateFieldDescriptors.putIfAbsent((field, name, initializing), () {
+        final index = objects.length;
+        objects.addAll([field, name, initializing]);
+        return index;
+      });
 
   int _integer(int value) {
     final cached = _integerIndices[value];
@@ -1607,7 +1616,7 @@ class _LoweringSession {
               b._named(['rReadNamedLateFieldR']),
               value(op.target),
               [value(op.object)],
-              immediate: b.context.constantPool.addOrGet([op.index, op.fieldName]),
+              immediate: b._lateFieldDescriptor(op.index, op.fieldName!),
             ),
           );
           continue;
@@ -1620,11 +1629,11 @@ class _LoweringSession {
               b._named(['writeNamedLateFinalFieldRS']),
               null,
               [value(op.object), value(op.value)],
-              immediate: b.context.constantPool.addOrGet([
+              immediate: b._lateFieldDescriptor(
                 op.index,
-                op.fieldName,
-                op.isLateInitialization,
-              ]),
+                op.fieldName!,
+                initializing: op.isLateInitialization,
+              ),
             ),
           );
           continue;

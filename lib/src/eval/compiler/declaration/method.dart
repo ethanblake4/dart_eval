@@ -413,52 +413,38 @@ void compileInterfaceNoSuchMethodForwarders(
     }
     final declaration = member.node;
     if (declaration is! MethodDeclaration ||
-        declaration.isGetter ||
-        declaration.isSetter ||
-        declaration.returnType == null ||
-        declaration.externalKeyword != null ||
-        (declaration.parameters?.parameters.any(
-              (parameter) =>
-                  (parameter.defaultClause != null &&
-                      parameter.defaultClause!.value is! IntegerLiteral &&
-                      parameter.defaultClause!.value is! DoubleLiteral &&
-                      parameter.defaultClause!.value is! BooleanLiteral &&
-                      parameter.defaultClause!.value is! NullLiteral &&
-                      parameter.defaultClause!.value is! SimpleStringLiteral) ||
-                  (!parameter.isRequired &&
-                      parameter.defaultClause == null &&
-                      parameter.functionTypedSuffix != null),
-            ) ??
-            false)) {
+        !_canCloneForwarderSignature(declaration)) {
       continue;
     }
     // Defaults and annotations keep their source spelling and library.
     // A missing optional default on an interface is supplied as null by its
     // forwarder, even when the interface annotation itself is non-nullable.
-    final source = declaration.toSource();
-    var signature = source.substring(
-      0,
-      source.length - declaration.body.toSource().length,
-    );
-    for (final parameter
-        in declaration.parameters?.parameters ?? const <FormalParameter>[]) {
-      final annotation = parameter.type;
-      if (parameter.isRequired ||
-          parameter.defaultClause != null ||
-          annotation == null ||
-          annotation.toSource().endsWith('?')) {
-        continue;
-      }
-      final original = parameter.toSource();
-      signature = signature.replaceFirst(
-        original,
-        original.replaceFirst(
-          annotation.toSource(),
-          '${annotation.toSource()}?',
-        ),
-      );
-    }
-    final unit = parseString(content: 'class $hostName { $signature; }').unit;
+    final parameters = declaration.parameters!.parameters;
+    final parameterGroups = [
+      ...parameters
+          .where((p) => p.isRequiredPositional)
+          .map(_forwarderParameter),
+      if (parameters.any((p) => p.isOptionalPositional))
+        '[${parameters.where((p) => p.isOptionalPositional).map(_forwarderParameter).join(', ')}]',
+      if (parameters.any((p) => p.isNamed))
+        '{${parameters.where((p) => p.isNamed).map(_forwarderParameter).join(', ')}}',
+    ];
+    final signature = [
+      ...declaration.metadata.map((annotation) => annotation.toSource()),
+      declaration.returnType!.toSource(),
+      if (declaration.operatorKeyword != null) 'operator',
+      '${declaration.name.lexeme}${declaration.typeParameters?.toSource() ?? ''}'
+          '(${parameterGroups.join(', ')})',
+    ].join(' ');
+    final version = declaration
+        .thisOrAncestorOfType<CompilationUnit>()
+        ?.languageVersionToken;
+    final versionDirective = version == null
+        ? ''
+        : '// @dart=${version.major}.${version.minor}\n';
+    final unit = parseString(
+      content: '${versionDirective}class $hostName { $signature; }',
+    ).unit;
     final stub =
         (unit.declarations.single as ClassDeclaration).body.members.single
             as MethodDeclaration;
@@ -466,6 +452,49 @@ void compileInterfaceNoSuchMethodForwarders(
     ctx.currentClass = host;
     compileMethodDeclaration(stub, ctx, host);
   }
+}
+
+bool _canCloneForwarderSignature(MethodDeclaration declaration) {
+  if (declaration.isGetter ||
+      declaration.isSetter ||
+      declaration.returnType == null ||
+      declaration.externalKeyword != null) {
+    return false;
+  }
+  for (final parameter in declaration.parameters!.parameters) {
+    final defaultValue = parameter.defaultClause?.value;
+    if (defaultValue != null &&
+        defaultValue is! IntegerLiteral &&
+        defaultValue is! DoubleLiteral &&
+        defaultValue is! BooleanLiteral &&
+        defaultValue is! NullLiteral &&
+        defaultValue is! SimpleStringLiteral) {
+      return false;
+    }
+    if (!parameter.isRequired &&
+        defaultValue == null &&
+        parameter.functionTypedSuffix != null) {
+      return false;
+    }
+  }
+  return true;
+}
+
+String _forwarderParameter(FormalParameter parameter) {
+  final annotation = parameter.type;
+  if (parameter.isRequired ||
+      parameter.defaultClause != null ||
+      annotation == null ||
+      annotation.toSource().endsWith('?')) {
+    return parameter.toSource();
+  }
+  return [
+    ...parameter.metadata.map((annotation) => annotation.toSource()),
+    if (parameter.covariantKeyword != null) 'covariant',
+    if (parameter.constFinalOrVarKeyword case final keyword?) keyword.lexeme,
+    '${annotation.toSource()}?',
+    parameter.name!.lexeme,
+  ].join(' ');
 }
 
 /// Extension parameters belong to the extension's own scope, not the

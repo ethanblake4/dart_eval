@@ -867,7 +867,7 @@ abstract final class TypedOp {
     TypedInstruction('rReadLateLocal', [6], [6], TypedImmediate.none, true, false, false, 'ReadLateLocal'),
     TypedInstruction('writeLateLocalRS', [6, 7], [], TypedImmediate.none, true, false, false, 'writeLateLocal'),
     TypedInstruction('linkSuperclassRS', [6, 7], [], TypedImmediate.none, true, false, false, 'linkSuperclass'),
-    TypedInstruction('rReadNamedLateFieldR', [6], [6], TypedImmediate.runtimeConstant, true, false, false, 'ReadNamedLateField'),
-    TypedInstruction('writeNamedLateFinalFieldRS', [6, 7], [], TypedImmediate.runtimeConstant, true, false, false, 'writeNamedLateFinalField'),
+    TypedInstruction('rReadNamedLateFieldR', [6], [6], TypedImmediate.objectConstant, true, false, false, 'ReadNamedLateField'),
+    TypedInstruction('writeNamedLateFinalFieldRS', [6, 7], [], TypedImmediate.objectConstant, true, false, false, 'writeNamedLateFinalField'),
   ];
 }

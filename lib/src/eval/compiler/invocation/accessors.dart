@@ -269,7 +269,8 @@ sealed class GetTarget {
               receiver.rep == ValueRep.nativeMap &&
                   exact.isSpec(CoreTypes.map) ||
               receiver.rep == ValueRep.nativeSet &&
-                  exact.isSpec(CoreTypes.set))) {
+                  (exact.isSpec(CoreTypes.set) ||
+                      exact.isSpec(CollectionTypes.linkedHashSet)))) {
         return IntrinsicGet(
           receiver,
           name,

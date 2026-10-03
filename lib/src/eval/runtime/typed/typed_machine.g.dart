@@ -1978,11 +1978,11 @@ abstract final class TypedMachine {
        break;
     case 430:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       r = TypedLateField.readNamed(r, runtime!, index);
+       r = TypedLateField.readNamed(r, program, index);
        break;
     case 431:
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
-       TypedLateField.writeNamedFinal(r, s, runtime!, index);
+       TypedLateField.writeNamedFinal(r, s, program, index);
        break;
     default: throw StateError('Invalid extended typed opcode');
     }

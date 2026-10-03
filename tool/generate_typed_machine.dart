@@ -1912,18 +1912,18 @@ String familyOf(String name) {
   );
   add(
     'rReadNamedLateFieldR',
-    'r = TypedLateField.readNamed(r, runtime!, index);',
+    'r = TypedLateField.readNamed(r, program, index);',
     inputs: [6],
     output: 6,
-    immediate: 'runtimeConstant',
+    immediate: 'objectConstant',
     mayThrow: true,
     extended: true,
   );
   add(
     'writeNamedLateFinalFieldRS',
-    'TypedLateField.writeNamedFinal(r, s, runtime!, index);',
+    'TypedLateField.writeNamedFinal(r, s, program, index);',
     inputs: [6, 7],
-    immediate: 'runtimeConstant',
+    immediate: 'objectConstant',
     mayThrow: true,
     extended: true,
   );

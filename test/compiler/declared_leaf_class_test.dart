@@ -121,14 +121,14 @@ void main() {
         try {
           leaf.assign(2.5);
           return false;
-        } on StateError {
+        } on Error {
           return leaf.value == 1.5;
         }
       }
     ''');
     expect(
       program.typedProgram.instructions.map((entry) => entry.$2.name),
-      contains('setLateFinalPropertyRS'),
+      contains('writeNamedLateFinalFieldRS'),
     );
     _expectProgramResult(program, true);
   });

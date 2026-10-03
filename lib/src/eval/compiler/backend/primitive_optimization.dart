@@ -76,47 +76,23 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
     for (var i = 0; i < code.length; i++) {
       final op = code[i];
       if (op is primitives.Unbox) {
-        final source = switch ((definition(op.source), op.representation)) {
-          (primitives.BoxInt(:final source), MachineRepresentation.integer) =>
-            source,
-          (
-            primitives.BoxDouble(:final source),
-            MachineRepresentation.doublePrecision,
-          ) =>
-            source,
-          (primitives.BoxBool(:final source), MachineRepresentation.boolean) =>
-            source,
-          (primitives.BoxString(:final source), MachineRepresentation.string) =>
-            source,
-          _ => null,
-        };
-        if (source != null) code[i] = cfg.Assign(op.target, source);
+        final primitive = _primitiveBox(definition(op.source));
+        if (primitive != null && primitive.representation == op.representation) {
+          code[i] = cfg.Assign(op.target, primitive.source);
+        }
       } else if (op is objects.SetPropertyStatic &&
           !op.isLateFinal &&
           op.rep == MachineRepresentation.object) {
-        final primitive = switch (definition(op.value)) {
-          primitives.BoxInt(:final source) => (
-            source,
-            MachineRepresentation.integer,
-          ),
-          primitives.BoxDouble(:final source) => (
-            source,
-            MachineRepresentation.doublePrecision,
-          ),
-          primitives.BoxBool(:final source) => (
-            source,
-            MachineRepresentation.boolean,
-          ),
-          _ => null,
-        };
-        if (primitive != null) {
+        final primitive = _primitiveBox(definition(op.value));
+        if (primitive != null &&
+            primitive.representation != MachineRepresentation.string) {
           code[i] = objects.SetPropertyStatic(
             op.object,
             op.index,
-            primitive.$1,
+            primitive.source,
             fieldName: op.fieldName,
             isLateInitialization: op.isLateInitialization,
-            rep: primitive.$2,
+            rep: primitive.representation,
           );
         }
       } else if (op is alu.IntAdd) {
@@ -171,3 +147,25 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
   );
   hoistLoopInvariants(graph);
 }
+
+({cfg.SSA source, MachineRepresentation representation})? _primitiveBox(
+  cfg.Operation? operation,
+) => switch (operation) {
+  primitives.BoxInt(:final source) => (
+    source: source,
+    representation: MachineRepresentation.integer,
+  ),
+  primitives.BoxDouble(:final source) => (
+    source: source,
+    representation: MachineRepresentation.doublePrecision,
+  ),
+  primitives.BoxBool(:final source) => (
+    source: source,
+    representation: MachineRepresentation.boolean,
+  ),
+  primitives.BoxString(:final source) => (
+    source: source,
+    representation: MachineRepresentation.string,
+  ),
+  _ => null,
+};
