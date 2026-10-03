@@ -34,7 +34,9 @@ Variable compileListLiteral(
 ]) {
   final elements = l.elements;
   if (bound != null) {
-    if (l.isConst) bound = ctx.typeSystem.constantContextType(bound);
+    if (l.isConst && l.typeArguments == null) {
+      bound = ctx.typeSystem.constantContextType(bound);
+    }
     bound = inferContextType(ctx, CoreTypes.list.ref(ctx), bound);
   }
 

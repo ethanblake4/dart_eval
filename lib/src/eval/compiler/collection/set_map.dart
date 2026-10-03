@@ -29,7 +29,7 @@ Variable compileSetOrMapLiteral(
   TypeRef? bound,
 ]) {
   final annotations = literal.typeArguments?.arguments;
-  if (literal.isConst && bound != null) {
+  if (literal.isConst && annotations == null && bound != null) {
     bound = ctx.typeSystem.constantContextType(bound);
   }
   final resolvedBound = bound == null

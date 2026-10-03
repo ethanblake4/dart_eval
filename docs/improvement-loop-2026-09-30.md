@@ -2982,6 +2982,10 @@ The pinned `const/inference_test.dart` fixture passes across const classes,
 lists, sets, maps, and function tear-offs; its stale `expect_fail` entry is
 removed. Four focused constructor and generic-inference test files pass.
 This changes compiler inference only.
+The combined ordinary gate found that explicitly typed const collection
+literals must retain their own type arguments in inherited defaults. Context
+closure is now limited to collection literals without explicit type arguments;
+`inherited_default_scope_test.dart` and the full ordinary gate pass.
 
 ## Cycle 17 pass 3: interface implementation and call shape
 
