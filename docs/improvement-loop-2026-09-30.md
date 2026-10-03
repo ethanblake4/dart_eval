@@ -4074,3 +4074,14 @@ one confirmed stale expectation. No compiler, runtime or generator implementatio
 changes. Generation command: dart run tool/generate_stdlib.dart
 lib/src/eval/shared/stdlib/collection/splay_tree_map.dart
 lib/src/eval/shared/types.dart.
+
+
+## Cycle 25 correctness checkpoint 2
+
+The non-null edge of ?? now applies the existing field promotion proof. Branch
+joining keeps that proof after a throwing right-hand side, and drops it when
+the right-hand side continues or assigns the receiver. No checks, bytecode or
+runtime operations are added. The original field_promotion_on_lhs_of_if_null
+fixture passes; removed its stale expectation. Eleven focused flow tests and
+scoped analysis pass. The distinct preserved_by_join fixture still fails at a
+nested field path and remains expected to fail.

@@ -353,6 +353,10 @@ Variable _compileShortCircuit(
       ctx.pushOp(Assign(outVar.ssa, R.ssa));
       return StatementInfo();
     },
+    elseBranch: (ctx, rt) {
+      if (operator == '??') promoteNonNull(ctx, left);
+      return StatementInfo();
+    },
   );
 
   if (rightType.isBottom && operator != '??') {

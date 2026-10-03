@@ -40,6 +40,39 @@ int main() {
 }
 
 void main() {
+  test(
+    'coalescing field proofs do not survive a nullable RHS or receiver write',
+    () {
+      final program = Compiler().compile({
+        'field_flow': {
+          'main.dart': '''
+typedef Exactly<T> = T Function(T);
+extension StaticType<T> on T {
+  T check<R extends Exactly<T>>() => this;
+}
+class C {
+  final int? _value;
+  C(this._value);
+}
+int inspect(C c) {
+  c._value ?? 0;
+  c._value.check<Exactly<int?>>();
+  c._value ?? (c = C(null))._value;
+  c._value.check<Exactly<int?>>();
+  return c._value ?? 0;
+}
+int main() => inspect(C(1)) + inspect(C(null));
+''',
+        },
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        expect(runtime.executeLib('package:field_flow/main.dart', 'main'), 1);
+      }
+    },
+  );
   for (final version in ['3.8', '3.9']) {
     test('Dart $version null-aware access retains versioned field facts', () {
       final program = Compiler().compile({

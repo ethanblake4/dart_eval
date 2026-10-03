@@ -208,8 +208,6 @@ expect_fail:
     reason: 'promotion-chain layering (sound flow analysis) not implemented'
   - path: 'inference_update_1/horizontal_inference_extension_method_test.dart'
     reason: 'horizontal inference (inference_update_1) not implemented'
-  - path: 'inference_update_2/field_promotion_on_lhs_of_if_null_test.dart'
-    reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
   - path: 'inference_update_2/preserved_by_join_test.dart'
     reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
   - path: 'inference_update_2/try_finally_test.dart'
