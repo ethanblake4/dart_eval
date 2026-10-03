@@ -19,7 +19,7 @@ final class _ObservedMap extends $Map {
 }
 
 final class _ObservedList extends $List {
-  _ObservedList() : super.wrap([]);
+  _ObservedList() : super.wrap([$int(1), $int(2), $int(3)]);
 
   int reads = 0;
 
@@ -72,11 +72,18 @@ void main() {
   });
 
   test('native wrapper subclasses retain their member dispatch', () {
-    final runtime = Runtime.ofProgram(
-      Compiler().compile({
-        'native_index': {'main.dart': 'int main() => 0;'},
-      }),
-    );
+    final program = Compiler().compile({
+      'native_index': {
+        'main.dart': '''
+int main(dynamic values) {
+  var total = 0;
+  for (var i = 0; i < values.length; i++) total += values[i] as int;
+  return total;
+}
+''',
+      },
+    });
+    final runtime = Runtime.ofProgram(program);
     final map = _ObservedMap();
     final list = _ObservedList();
     expect(
@@ -91,5 +98,21 @@ void main() {
     );
     expect(map.reads, 1);
     expect(list.reads, 1);
+
+    for (final loopRuntime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      final loopList = _ObservedList();
+      expect(
+        loopRuntime.executeLib(
+          'package:native_index/main.dart',
+          'main',
+          arguments: {'values': loopList},
+        ),
+        273,
+      );
+      expect(loopList.reads, 3);
+    }
   });
 }

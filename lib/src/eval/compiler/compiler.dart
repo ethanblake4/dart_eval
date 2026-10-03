@@ -8,6 +8,7 @@ import 'package:dart_eval/src/eval/runtime/typed/typed_program.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/ssa.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/inline.dart';
+import 'optimizer/indexed_loops.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
@@ -919,6 +920,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     if (enableLeafInlining) inlineLeafCalls(_ctx);
     for (final entry in _ctx.functionGraphs.entries) {
       final graph = entry.value;
+      specializeIndexedLoops(graph);
       validateFrontendGraph(graph);
       _ctx.ssaFunctionGraphs[entry.key] = buildSSA(graph);
     }

@@ -1862,6 +1862,17 @@ String familyOf(String name) {
     extended: true,
   );
   add('cNewStringMap', 'c = <Object?, Object?>{};', output: 8);
+  // Loop-version guards run once, so keep their type checks off hot dispatch.
+  for (final recv in [6, 7, 8]) {
+    final rn = names[recv];
+    add(
+      'eIsCanonicalList${rn.toUpperCase()}',
+      'e = $rn is TypedNativeList || $rn is \$MappedListView;',
+      inputs: [recv],
+      output: 4,
+      extended: true,
+    );
+  }
   return (ops: ops, extended: extendedOps);
 }
 

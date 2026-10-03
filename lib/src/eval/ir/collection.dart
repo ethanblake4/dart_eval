@@ -400,6 +400,27 @@ final class MapKeys extends Operation {
 
 /// `value is List` at the VM level: true for raw natives and the canonical
 /// `$List` wrapper, false for evaluated-class implementations.
+/// Only internal wrappers whose index reads produce canonical guest values.
+final class IsCanonicalList extends Operation {
+  IsCanonicalList(this.target, this.value);
+
+  final SSA target;
+  final SSA value;
+
+  @override
+  SSA get writesTo => target;
+
+  @override
+  Set<SSA> get readsFrom => {value};
+
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) =>
+      IsCanonicalList(writesTo ?? target, readsFrom?.single ?? value);
+
+  @override
+  String toString() => '$target = isCanonicalList $value';
+}
+
 final class IsNativeList extends Operation {
   final SSA target;
   final SSA value;

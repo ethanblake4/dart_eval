@@ -21,8 +21,13 @@ int weightedTotal(List<int> amounts, List<int> weights) {
 }
 ''';
 
-String sourceFor(String mode, int width) =>
-    '''$common
+String sourceFor(String mode, int width, {bool cacheLength = true}) {
+  final aggregation = cacheLength
+      ? common
+      : common
+            .replaceFirst('final length = amounts.length;', '')
+            .replaceFirst('column < length', 'column < amounts.length');
+  return '''$aggregation
 int main(int batches) {
   final amounts = <int>[for (var i = 0; i < $width; i++) i + 1];
   final weights = <int>[for (var i = 0; i < $width; i++) i % 7 + 1];
@@ -30,25 +35,27 @@ int main(int batches) {
   var result = 0;
   for (var batch = 0; batch < batches; batch++) {
     final List<int> row = ${switch (mode) {
-      'native' => 'amounts',
-      'guest' => 'adjusted',
-      'mixed' => 'batch.isEven ? amounts : adjusted',
-      _ => throw ArgumentError.value(mode, 'mode'),
-    }};
+    'native' => 'amounts',
+    'guest' => 'adjusted',
+    'mixed' => 'batch.isEven ? amounts : adjusted',
+    _ => throw ArgumentError.value(mode, 'mode'),
+  }};
     result += weightedTotal(row, weights) ^ (batch & 7);
   }
   return result;
 }
 ''';
+}
 
 void main(List<String> args) {
   final mode = args.length > 2 ? args[2] : 'native';
   final width = args.length > 3 ? int.parse(args[3]) : 16;
+  final cacheLength = args.length < 5 || args[4] != 'live';
   if (width < 1) throw ArgumentError.value(width, 'width');
   runComparison(
     args.take(2).toList(),
-    name: 'indexed_aggregation_$mode',
-    source: sourceFor(mode, width),
+    name: 'indexed_aggregation_$mode${cacheLength ? '' : '_live'}',
+    source: sourceFor(mode, width, cacheLength: cacheLength),
     parameter: 'batches',
     unit: 'batch',
     iterations: 5000,

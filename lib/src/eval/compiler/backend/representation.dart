@@ -84,6 +84,7 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       objects.IsUninitializedField() ||
       objects.DynamicEquals() ||
       collection.IsNativeList() ||
+      collection.IsCanonicalList() ||
       collection.IsNativeSet() ||
       collection.IsNativeMap() ||
       types.IsType() => MachineRepresentation.boolean,
@@ -306,6 +307,7 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           objects.DynamicEquals() ||
           types.IsType() ||
           collection.IsNativeList() ||
+          collection.IsCanonicalList() ||
           collection.IsNativeSet() ||
           collection.IsNativeMap():
         inputs(operation, object);

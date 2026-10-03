@@ -2015,6 +2015,10 @@ class _LoweringSession {
             ['listAppendCR'],
             [list, value],
           ),
+          collection.IsCanonicalList(:final value) => make(
+            ['eIsCanonicalListR', 'eIsCanonicalListS', 'eIsCanonicalListC'],
+            [value],
+          ),
           collection.IsNativeList(:final value) => make(
             ['eIsNativeR', 'eIsNativeS', 'eIsNativeC'],
             [value],

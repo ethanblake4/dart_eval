@@ -426,6 +426,9 @@ abstract final class TypedOp {
   static const rYieldAsync = 419;
   static const rYieldAsyncStar = 420;
   static const eIsUninitializedFieldR = 421;
+  static const eIsCanonicalListR = 422;
+  static const eIsCanonicalListS = 423;
+  static const eIsCanonicalListC = 424;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false, 'True'),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false, 'False'),
@@ -849,5 +852,8 @@ abstract final class TypedOp {
     TypedInstruction('rYieldAsync', [6], [], TypedImmediate.none, true, false, false, 'YieldAsync'),
     TypedInstruction('rYieldAsyncStar', [6], [], TypedImmediate.none, true, false, false, 'YieldAsyncStar'),
     TypedInstruction('eIsUninitializedFieldR', [6], [4], TypedImmediate.field, true, false, false, 'IsUninitializedField'),
+    TypedInstruction('eIsCanonicalListR', [6], [4], TypedImmediate.none, false, false, false, 'IsCanonicalList'),
+    TypedInstruction('eIsCanonicalListS', [7], [4], TypedImmediate.none, false, false, false, 'IsCanonicalList'),
+    TypedInstruction('eIsCanonicalListC', [8], [4], TypedImmediate.none, false, false, false, 'IsCanonicalList'),
   ];
 }

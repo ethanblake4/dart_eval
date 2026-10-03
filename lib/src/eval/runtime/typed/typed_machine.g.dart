@@ -1950,6 +1950,15 @@ abstract final class TypedMachine {
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        e = TypedLateField.isUninitialized(r, index);
        break;
+    case 422:
+       e = r is TypedNativeList || r is $MappedListView;
+       break;
+    case 423:
+       e = s is TypedNativeList || s is $MappedListView;
+       break;
+    case 424:
+       e = c is TypedNativeList || c is $MappedListView;
+       break;
     default: throw StateError('Invalid extended typed opcode');
     }
     st.pc = pc;

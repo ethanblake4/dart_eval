@@ -3430,3 +3430,28 @@ follow-up preserves that rule while distinguishing abstract final fields in
 noSuchMethod forwarding. The SDK abstract_field fixture and both forwarding
 fixtures pass. Default gate: 2224 passed, 86 skipped. SDK-full rerun had only
 this corrected fixture failure; final gates will run again after cleanup.
+
+## Cycle 20 performance: guarded indexed loops
+
+Small indexed loops with live length reads now branch once to a native list
+path or retain the original dynamic dispatch path. The native path uses direct
+index and length instructions, preserves mutation and exception order, and has
+its own preheader for existing invariant-code motion. Receiver reassignment,
+external wrapper overrides, empty inputs and serialization are covered by two
+focused tests. Cached-length loops are excluded because experiments showed no
+consistent benefit. Async, handler and large functions are also excluded.
+
+The canonical-list checks use three new extended opcodes in cold dispatch.
+Existing opcode IDs and the hot dispatch body are unchanged. ARM64 inspection
+found identical hot code: 52,868 bytes, 13,217 instructions, and unchanged load,
+store and stack-access counts. Cold dispatch grew by 308 bytes.
+
+A matched AOT pair from the corrected compiler checkpoint improves native live
+indexed aggregation from 82.718 to 59.280 ms, 28.3%; mixed receivers improve from
+123.267 to 115.268 ms, 6.5%. Guest receivers remain flat. All 22 execution
+checksums match across the full 23-benchmark sweep; compile benchmarks produce
+1,330 code bytes in both builds. Three alternating repeat pairs for dynamic
+calls, polymorphic calls and callbacks did not reproduce the large one-run
+regressions. Raw logs, sweep CSV and ARM64 comparison are under
+.dart_tool/improvement_loop/cycle20. Generated-machine validation and scoped
+analysis pass. The new loop fixture and external override dispatch tests pass.
