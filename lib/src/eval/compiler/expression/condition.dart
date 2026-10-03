@@ -106,13 +106,17 @@ import '../helpers/assigned_locals.dart';
     // leak their expression-local inference into the enclosing condition.
     // The bool context also resolves `.m()` shorthand in condition position.
     ctx.enterTypeInferenceContext();
+    // A pattern guard's split point can follow an already throwing scrutinee.
+    // Only termination caused by this condition removes its outcomes.
+    final wasTerminated = ctx.flowTerminated;
     final compiledValue = compileExpression(
       expression,
       ctx,
       CoreTypes.bool.ref(ctx),
     );
     ctx.typeInferenceSaveStates.removeLast();
-    if (compiledValue.type.isSpec(CoreTypes.never) || ctx.flowTerminated) {
+    if (compiledValue.type.isSpec(CoreTypes.never) ||
+        !wasTerminated && ctx.flowTerminated) {
       ctx.flushBlock();
       return (false, false);
     }

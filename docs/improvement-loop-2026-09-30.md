@@ -3811,3 +3811,4 @@ neighbors and three existing focused tests. Ten-file analysis passes. The SDK
 Expect.contains shim now admits String substring checks and retains Iterable
 support, exposing the separate guest-stack-frame failures. Those stack-trace
 entries remain. Four confirmed stale entries removed.
+Cycle 23 correctness follow-up: broad SDK testing identified inherited scrutinee termination incorrectly suppressing guard outcomes in split_point_test. Guard evaluation now distinguishes inherited termination from newly terminating guards. The original fixture, seven neighboring pattern fixtures, and 17 focused tests pass; analyzer is clean. Removed two additional confirmed stale expectations: class_from_core_library and null_assert_pattern_error. Broad gates also exposed a final-field/interface-setter dispatch regression, which is being addressed separately.
