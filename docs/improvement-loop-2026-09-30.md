@@ -3679,7 +3679,7 @@ pre-branch state acting as an extra incoming edge. Loop and incremental joins
 retain the current edge by default. Switches snapshot live fallthrough before
 changing builders and exclude terminated tails, so default/implicit-break joins
 retain common promotions. The original promotion-chain intersection join fixture
-passes in eval and native Dart with its feature enabled; 57 existing flow, switch,
+passes in eval; the installed native runner rejects its experimental feature flag, so native verification is unavailable. The 57 existing flow, switch,
 pattern and loop regressions pass. Scoped analysis and diff checks pass. One stale
 entry removed, with no emitted runtime checks or interpreter changes. Broader
 extension-type member support remains the earlier this-promotion blocker.
