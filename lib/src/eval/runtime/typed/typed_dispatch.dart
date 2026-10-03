@@ -156,6 +156,16 @@ abstract final class TypedDispatch {
             runtime: runtime,
           );
         }
+        if (site.name == 'call' && receiver is TypedMethodTearOff) {
+          return receiver.invoke(
+            site.positionalCount,
+            first,
+            rest,
+            namedNames: site.namedNames,
+            typeArguments: typeArguments,
+            runtime: runtime,
+          );
+        }
         final bridgeSubclass = receiver is $Bridge
             ? Runtime.bridgeData[receiver]?.subclass
             : null;

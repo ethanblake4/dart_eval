@@ -2902,14 +2902,6 @@ gate passes 994 tests after removing the duplicate tests. The full 23-driver,
 repeats found no sustained slowdown in calls, external calls, or inventory
 pricing after an anomalous `calls` median in the sweep.
 
-## Cycle 16 pass 4: bridge superclass tear-offs
-
-Getter-shaped reads of a bridge superclass method were not recognized as
-method tear-offs. Member lookup now considers bridge methods for this read.
-The pinned `constructor/explicit_instantiation_syntax_test.dart` fixture
-passes its runnable variants, so its stale `expect_fail` entry is removed.
-Existing super method tear-off tests pass. This changes compiler lookup only.
-
 ## Cycle 16 pass 3: dynamic noSuchMethod forwarder reads
 
 An interface method satisfied by `noSuchMethod` had a statically readable
@@ -2926,6 +2918,14 @@ SDK-full passes with 2503 runnable fixtures, 177 expected compile failures,
 57 expected runtime failures, and three skips. The full 23-driver, 15-sample
 AOT sweep matched all 22 execution checksums; logs are under
 `.dart_tool/improvement_loop/cycle16-pass3-full23/`.
+
+## Cycle 16 pass 4: bridge superclass tear-offs
+
+Getter-shaped reads of a bridge superclass method were not recognized as
+method tear-offs. Member lookup now considers bridge methods for this read.
+The pinned `constructor/explicit_instantiation_syntax_test.dart` fixture
+passes its runnable variants, so its stale `expect_fail` entry is removed.
+Existing super method tear-off tests pass. This changes compiler lookup only.
 
 ## Cycle 16 pass 5: covariant callable getters
 
@@ -2948,3 +2948,26 @@ An experiment that lazily allocated the cold-dispatch state slowed calls and
 was reverted. The ordinary language/runtime gate passed 988 tests.
 SDK-full passed 2504 runnable fixtures, with 177 expected compile failures,
 56 expected runtime failures, and three skips.
+
+## Cycle 16 cleanup
+
+The Astra medium review found two assertions overlapping pinned SDK coverage.
+The repeated-parameter extension regression now keeps only the distinct
+forward/reverse receiver cases; the dynamic `noSuchMethod` regression now
+checks invoking the obtained tear-off rather than repeating the SDK's
+`is Function` assertion.
+
+Review also found that implicit forwarder tear-offs lost named arguments.
+They now retain their receiver and member name, allowing ordinary calls,
+explicit `.call`, and `Function.apply` to forward named and type arguments.
+A distinct inherited-forwarder regression checks reordered named calls in
+fresh and serialized runtimes. The final 23-driver, 15-sample AOT sweep
+matched all 22 execution checksums; logs are under
+`.dart_tool/improvement_loop/cycle16-cleanup-full23/`. Paired controls found
+no sustained callback or policy slowdown. The ordinary language/runtime gate
+passed 989 tests.
+The same fix made the pinned
+`nosuchmethod_forwarding/nosuchmethod_forwarding_partial_instantiation_test.dart`
+fixture pass, so its stale `expect_fail` entry is removed.
+Final SDK-full passed 2505 runnable fixtures, with 177 expected compile
+failures, 55 expected runtime failures, and three skips.

@@ -41,13 +41,9 @@ void main() {
         List<T> get values => <T>[first, second];
       }
       bool main() {
-        Pair<int, double> inferred = Pair(1, 2.5);
         final forward = Pair<int, num>(1, 2.5);
         final reverse = Pair<num, int>(2.5, 1);
-        return inferred.commonType == num &&
-            Common(inferred).commonType == num &&
-            inferred.values is List<num> && inferred.values is! List<int> &&
-            forward.commonType == num && reverse.commonType == num &&
+        return forward.commonType == num && reverse.commonType == num &&
             Common(forward).values is List<num>;
       }
     ''';

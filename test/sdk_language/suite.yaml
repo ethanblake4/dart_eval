@@ -218,7 +218,6 @@ expect_fail:
   - path: 'nonfunction_type_aliases/usage_object_test.dart'
   - path: 'nosuchmethod_forwarding/abstract_override_with_different_type_test.dart'
   - path: 'nosuchmethod_forwarding/nosuchmethod_forwarding_arguments_test.dart'
-  - path: 'nosuchmethod_forwarding/nosuchmethod_forwarding_partial_instantiation_test.dart'
   - path: 'null_aware/index_this_null_aware_equals_test.dart'
     reason: 'Expando type not bound in stdlib'
   - path: 'parameter/initializer_test.dart'

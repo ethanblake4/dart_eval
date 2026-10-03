@@ -411,16 +411,8 @@ final class TypedInstance implements $Instance {
     }
   }
 
-  $Function _methodTearOff(String name, String callerLibrary) => $Function(
-    (runtime, target, r, s, c) => invoke(
-      name,
-      TypedInterop.callableCount(c),
-      r,
-      TypedInterop.callableRest(s, c),
-      callerLibrary: callerLibrary,
-      runtime: runtime,
-    ),
-  );
+  TypedMethodTearOff _methodTearOff(String name, String callerLibrary) =>
+      TypedMethodTearOff(this, name, callerLibrary);
 
   $Value? getProperty(
     String identifier, {
@@ -526,6 +518,43 @@ final class TypedInstance implements $Instance {
 
   @override
   Object get $reified => $value;
+}
+
+/// A method without a concrete body retains its source call shape for dispatch.
+final class TypedMethodTearOff extends $Function {
+  TypedMethodTearOff(this.receiver, this.name, this.callerLibrary)
+    : super(
+        (runtime, target, r, s, c) => receiver.invoke(
+          name,
+          TypedInterop.callableCount(c),
+          r,
+          TypedInterop.callableRest(s, c),
+          callerLibrary: callerLibrary,
+          runtime: runtime,
+        ),
+      );
+
+  final TypedInstance receiver;
+  final String name;
+  final String callerLibrary;
+
+  $Value? invoke(
+    int positionalCount,
+    Object? first,
+    Object? rest, {
+    List<String> namedNames = const [],
+    List<int> typeArguments = const [],
+    Runtime? runtime,
+  }) => receiver.invoke(
+    name,
+    positionalCount,
+    first,
+    rest,
+    namedNames: namedNames,
+    typeArguments: typeArguments,
+    callerLibrary: callerLibrary,
+    runtime: runtime,
+  );
 }
 
 /// A resolved member also serves as an explicit bound method bridge adapter.

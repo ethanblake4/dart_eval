@@ -543,6 +543,16 @@ final class TypedClosure extends EvalFunction {
         trusted: site.trusted,
       );
     }
+    if (receiver is TypedMethodTearOff) {
+      return receiver.invoke(
+        site.positionalCount,
+        first,
+        rest,
+        namedNames: site.namedNames,
+        typeArguments: typeArguments,
+        runtime: runtime,
+      );
+    }
     if (site.namedNames.isNotEmpty) {
       if (receiver is $Closure &&
           receiver.positionalParameterCount != null &&

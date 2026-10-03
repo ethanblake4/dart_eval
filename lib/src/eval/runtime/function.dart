@@ -225,6 +225,15 @@ class $Function extends EvalFunction {
         runtime: runtime,
       );
     }
+    if (fn is TypedMethodTearOff) {
+      return fn.invoke(
+        positional.length,
+        first,
+        rest,
+        namedNames: namedNames,
+        runtime: runtime,
+      );
+    }
     if (fn is TypedInstance) {
       // `Function.apply` tears off `call` and arity-checks it directly — a
       // real `call` member that rejects the signature fails with
