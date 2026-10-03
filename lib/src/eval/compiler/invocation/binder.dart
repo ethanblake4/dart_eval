@@ -27,6 +27,11 @@ typedef _ArgumentValues = ({
   List<(String, Variable)> named,
 });
 
+final class _InferenceConstraints {
+  final lower = <TypeRef>{};
+  final upper = <TypeRef>{};
+}
+
 /// Maps a [CallSite]'s argument shape onto a [CallTarget]'s signature:
 /// match, seed the substitution, compile and coerce, solve inference, fill
 /// omitted arguments per the target's policy.
@@ -216,7 +221,7 @@ final class ArgumentBinder {
     final contextHoles = Substitution.of({
       for (final parameter in ownParameters) parameter: UnknownTypeRef.instance,
     });
-    final inferredArguments = <TypeParameterDef, Set<TypeRef>>{};
+    final inferredArguments = <TypeParameterDef, _InferenceConstraints>{};
     TypeRef contextualType(TypeRef type) => type
         .substituteTypeParameters(substitutions)
         .substituteTypeParameters(contextHoles);
@@ -513,7 +518,7 @@ final class ArgumentBinder {
           parameter,
     };
     var argumentSubstitution = Substitution.of(resolveGenerics);
-    final candidates = <TypeParameterDef, Set<TypeRef>>{};
+    final candidates = <TypeParameterDef, _InferenceConstraints>{};
 
     // The parameter in the dispatch implementation's own signature —
     // omitted defaults come from the callee that will actually run, while
@@ -587,9 +592,23 @@ final class ArgumentBinder {
         // `T -> dynamic` instead of the actual constraint.
         _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
         if (candidates.isNotEmpty) {
-          final solved = {...resolveGenerics, ..._solveArguments(candidates)};
+          // Upper constraints from function parameters need all arguments
+          // before they can be intersected. Until then, Never is a safe
+          // parameter type for checking each source function.
+          final solved = {
+            ...resolveGenerics,
+            ..._solveArguments(candidates, includeUpper: false),
+          };
+          final provisional = {
+            ...solved,
+            for (final entry in candidates.entries)
+              if (!solved.containsKey(entry.key) &&
+                  entry.value.lower.isEmpty &&
+                  entry.value.upper.isNotEmpty)
+                entry.key: CoreTypes.never.ref(ctx),
+          };
           coercionType = spec.type.substituteTypeParameters(
-            Substitution.of(solved),
+            Substitution.of(provisional),
           );
           // Solutions from this argument propagate into the context of
           // later ones — a lambda parameter typed `R` sees `R`'s binding
@@ -625,7 +644,7 @@ final class ArgumentBinder {
         _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
         argumentSubstitution = Substitution.of({
           ...resolveGenerics,
-          ..._solveArguments(candidates),
+          ..._solveArguments(candidates, includeUpper: false),
         });
       }
       // A following source expression can assign to the local slot that
@@ -770,7 +789,7 @@ final class ArgumentBinder {
         ..._callSiteParameters(spec.type),
     };
     var bridgeSubstitution = Substitution.empty;
-    final bridgeCandidates = <TypeParameterDef, Set<TypeRef>>{};
+    final bridgeCandidates = <TypeParameterDef, _InferenceConstraints>{};
     final shape = argumentList == null
         ? CallShape.values(const [])
         : CallShape.fromArgumentList(argumentList);
@@ -924,32 +943,109 @@ final class ArgumentBinder {
     TypeRef formal,
     TypeRef actual,
     Set<TypeParameterDef> parameters,
-    Map<TypeParameterDef, Set<TypeRef>> candidates,
+    Map<TypeParameterDef, _InferenceConstraints> candidates,
   ) {
-    final bindings = <TypeParameterDef, TypeRef>{};
-    ctx.typeSystem.unify(formal, actual, bindings);
-    for (final entry in bindings.entries) {
-      // A self-referential binding (T -> T) carries no information — the
-      // actual type only mentioned the parameter's own placeholder. Skipping
-      // it leaves the parameter unconstrained so downward inference from
-      // the context type can still bind it.
-      if (entry.value case TypeParameterTypeRef(
-        :final parameter,
-      ) when parameter == entry.key) {
-        continue;
+    void collect(TypeRef pattern, TypeRef evidence, bool covariant) {
+      if (pattern is UnknownTypeRef || evidence is UnknownTypeRef) return;
+      if (pattern is TypeParameterTypeRef) {
+        final parameter = pattern.parameter;
+        if (!parameters.contains(parameter)) return;
+        final value = ctx.typeSystem.typeParameterEvidence(pattern, evidence);
+        // T against T adds no evidence and must leave downward inference open.
+        if (value is TypeParameterTypeRef && value.parameter == parameter) {
+          return;
+        }
+        final constraint = candidates.putIfAbsent(
+          parameter,
+          _InferenceConstraints.new,
+        );
+        (covariant ? constraint.lower : constraint.upper).add(value);
+        return;
       }
-      if (parameters.contains(entry.key)) {
-        candidates.putIfAbsent(entry.key, () => {}).add(entry.value);
+      if (pattern is FunctionTypeRef && evidence is FunctionTypeRef) {
+        final source = pattern.signature;
+        final target = evidence.signature;
+        for (
+          var i = 0;
+          i < source.positional.length && i < target.positional.length;
+          i++
+        ) {
+          collect(source.positional[i], target.positional[i], !covariant);
+        }
+        for (final entry in source.named.entries) {
+          final targetParameter = target.named[entry.key];
+          if (targetParameter != null) {
+            collect(entry.value.type, targetParameter.type, !covariant);
+          }
+        }
+        if (!target.returnType.isSpec(CoreTypes.voidType)) {
+          collect(source.returnType, target.returnType, covariant);
+        }
+        return;
+      }
+      if (pattern is RecordTypeRef && evidence is RecordTypeRef) {
+        if (pattern.positional.length != evidence.positional.length ||
+            pattern.named.length != evidence.named.length ||
+            !pattern.named.keys.every(evidence.named.containsKey)) {
+          return;
+        }
+        for (var i = 0; i < pattern.positional.length; i++) {
+          collect(pattern.positional[i], evidence.positional[i], covariant);
+        }
+        for (final entry in pattern.named.entries) {
+          collect(entry.value, evidence.named[entry.key]!, covariant);
+        }
+        return;
+      }
+      if (pattern is! InterfaceTypeRef) return;
+      if (pattern.isSpec(AsyncTypes.futureOr)) {
+        final members = interfaceArgumentsOf(pattern);
+        if (members.isEmpty) return;
+        final member = members.first;
+        final future = ctx.typeSystem.asInstanceOf(
+          evidence,
+          ctx.types.bySpec(CoreTypes.future),
+        );
+        if (future != null) {
+          final arguments = interfaceArgumentsOf(future);
+          collect(
+            member,
+            arguments.isEmpty ? CoreTypes.dynamic.ref(ctx) : arguments.first,
+            covariant,
+          );
+        } else {
+          collect(member, evidence, covariant);
+        }
+        return;
+      }
+      final viewed = ctx.typeSystem.asInstanceOf(evidence, pattern.decl);
+      if (viewed != null) {
+        final arguments = interfaceArgumentsOf(viewed);
+        for (
+          var i = 0;
+          i < pattern.arguments.length && i < arguments.length;
+          i++
+        ) {
+          collect(pattern.arguments[i], arguments[i], covariant);
+        }
+      } else if (evidence is InterfaceTypeRef) {
+        final parent = ctx.typeSystem.asInstanceOf(pattern, evidence.decl);
+        if (parent != null) collect(parent, evidence, covariant);
       }
     }
+
+    collect(formal, actual, true);
   }
 
   Map<TypeParameterDef, TypeRef> _solveArguments(
-    Map<TypeParameterDef, Set<TypeRef>> candidates,
-  ) => {
+    Map<TypeParameterDef, _InferenceConstraints> candidates, {
+    bool includeUpper = true,
+  }) => {
     for (final entry in candidates.entries)
-      if (entry.value.isNotEmpty)
-        entry.key: TypeRef.commonBaseType(ctx, entry.value),
+      if (entry.value.lower.isNotEmpty)
+        entry.key: TypeRef.commonBaseType(ctx, entry.value.lower)
+      else if (includeUpper && entry.value.upper.isNotEmpty)
+        entry.key: entry.value.upper.reduce(ctx.typeSystem.greatestLowerBound),
   };
 
   Set<TypeParameterDef> _fixDownwardArguments(

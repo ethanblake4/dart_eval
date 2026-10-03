@@ -3147,3 +3147,21 @@ SDK-full passed all 2,516 runnable cases. The final 23-driver AOT sweep
 matched all 23 baseline results; logs are under
 `.dart_tool/improvement_loop/cycle18-pass4-final-full23/`. A paired exception
 control ruled out a noisy sweep timing outlier.
+
+## Cycle 18 pass 5: FutureOr lower bounds and generic inference variance
+
+The greatest lower bound of `FutureOr` types now intersects their members,
+including the `Future` and non-Future cases. Generic argument inference now
+keeps lower and upper evidence separately: a type parameter inside a function
+parameter contributes an upper bound, and all such bounds are intersected
+after the arguments are collected. During source-order argument compilation,
+unresolved upper-only parameters use `Never` for the temporary function
+boundary so earlier evidence does not reject a later valid argument. The
+pinned `nnbd/extreme_bounds/glb_futureor_test.dart` fixture passes and its
+stale `expect_fail` entry was removed. Raw `FutureOr` signatures contribute
+no type argument; inference and lower-bound calculation handle them without
+reading a missing argument. This fixed the chained `Future.then` regression
+found by SDK-full. The newly passing
+`variance/variance_out_inference_test.dart` entry was removed too. SDK-full
+passed 2,518 runnable fixtures with no unexpected failures. No ordinary test
+duplicates either SDK fixture.

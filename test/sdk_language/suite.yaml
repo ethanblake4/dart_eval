@@ -67,8 +67,6 @@ exclude:
 # suite; a test that starts passing fails loudly so the entry gets removed.
 # Same path/glob syntax as `exclude`.
 expect_fail:
-  - path: 'nnbd/extreme_bounds/glb_futureor_test.dart'
-    reason: 'generic-call downward inference for FutureOr glb not implemented'
   - path: 'async/await_user_defined_future_soundness_test.dart'
   - path: 'async/derive_future_type_test.dart'
     reason: '\$Future bridge lacks catchError/whenComplete; await on Future-implementing classes unsupported'
@@ -291,7 +289,6 @@ expect_fail:
   - path: 'variance/variance_inout_inference_test.dart'
   - path: 'variance/variance_inout_subtyping_test.dart'
   - path: 'variance/variance_method_tearoff_test.dart'
-  - path: 'variance/variance_out_inference_test.dart'
   - path: 'variance/variance_upper_lower_bounds_test.dart'
   - path: 'void/regress_54800_test.dart'
   - path: 'void/void_check_test.dart'

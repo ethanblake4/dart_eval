@@ -1113,6 +1113,40 @@ final class TypeSystem {
     if (b.isSpec(CoreTypes.dynamic)) return a;
     if (a.isAssignableTo(_ctx, b, forceAllowDynamic: false)) return a;
     if (b.isAssignableTo(_ctx, a, forceAllowDynamic: false)) return b;
+    final aFutureOr = a is InterfaceTypeRef && a.isSpec(AsyncTypes.futureOr);
+    final bFutureOr = b is InterfaceTypeRef && b.isSpec(AsyncTypes.futureOr);
+    if (aFutureOr || bFutureOr) {
+      TypeRef memberOf(InterfaceTypeRef type) {
+        final arguments = interfaceArgumentsOf(type);
+        return arguments.isEmpty
+            ? CoreTypes.dynamic.ref(_ctx)
+            : arguments.first;
+      }
+
+      final union = aFutureOr ? a : b as InterfaceTypeRef;
+      final other = aFutureOr ? b : a;
+      final member = memberOf(union);
+      final outerNullable = a.nullable && b.nullable;
+      if (other is InterfaceTypeRef && other.isSpec(AsyncTypes.futureOr)) {
+        return union.copyWith(
+          nullable: outerNullable,
+          arguments: [
+            greatestLowerBound(member, memberOf(other)),
+          ],
+        );
+      }
+      if (other is InterfaceTypeRef && other.isSpec(CoreTypes.future)) {
+        return other.copyWith(
+          nullable: outerNullable,
+          arguments: [
+            greatestLowerBound(member, memberOf(other)),
+          ],
+        );
+      }
+      if (other is FunctionTypeRef) {
+        return greatestLowerBound(member, other).withNullable(outerNullable);
+      }
+    }
     if (a is FunctionTypeRef && b is FunctionTypeRef) {
       final sa = a.signature;
       final sb = b.signature;
