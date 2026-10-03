@@ -4137,3 +4137,16 @@ Astra medium reviewed the complete cycle and cleanup. The review found two edge 
 Final validation: 71 backend/StringBuffer/late-field/mixin tests, 22 extension-representation tests, scoped analysis, and Astra's final read-only recheck pass. Fresh default gate: 2258 passed / 86 skipped. Fresh SDK-full gate: 2737 passed / 557 skipped; actual outcomes remain 2621 passed / 96 compile errors / 20 failures / 3 skipped. An earlier default run loaded an intermediate guard before its final refinement; the fresh gate supersedes that result. The test audit found no copied SDK fixtures or redundant cases to remove. No runtime, opcode or generated stdlib edits in cleanup.
 
 Final forward and reverse AOT sweeps each run all 23 drivers with 15 samples and affinity 4. All 22 execution checksums match, with compiler output size 1354 bytes on both sides. Longer Particle pairs (60000 ticks, 31 samples) vary by order: 621.669 vs 646.146 ms forward, 655.774 vs 649.400 ms reverse. Its update function's bytecode is identical and spill counts do not increase; only the energy method and inlined reduction lose repeated loads, each shrinking by eight bytes. Order totals (15000 batches, 31 samples) improve from 179.824 to 174.588 ms forward and 178.241 to 171.881 ms reverse, with checksum 34076481700. Timing outliers remain substantial, so the final pairs support a smaller gain than the earlier 8.9% result. All agents remained compilation-idle during timing. Cycle 25 is complete; cycle 26 begins with six correctness passes, and cycle 27 includes the additional compiler-throughput pass.
+
+### Cycle 26 correctness pass 1: nested field promotion paths
+
+Promotion slots now resolve stable private field paths recursively and keep their
+facts on the root receiver. Recorded boolean conditions split the root name from
+the full member path, and member reads recover the corresponding path proof.
+Every segment retains the existing final-field and library-wide promotion checks;
+receiver writes invalidate the facts. No runtime or bytecode changes are needed.
+
+The original inference_update_2/preserved_by_join_test.dart passes fresh and
+serialized execution, so its stale expectation is removed. Twelve focused flow
+tests and nine field, conjunction, pattern and private-super tests pass. The new
+aggregate regression also runs on native Dart; scoped analysis reports no issues.

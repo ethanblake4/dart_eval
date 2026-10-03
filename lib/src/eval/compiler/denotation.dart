@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'helpers/conversion.dart';
 import 'helpers/return.dart';
 import 'helpers/tearoff.dart';
+import 'helpers/promotion.dart';
 import 'helpers/constructor_tearoff.dart';
 import 'member/call_signature.dart';
 import 'member/member.dart';
@@ -465,6 +466,15 @@ final class InstanceMemberDenotation extends Denotation {
         !source.isCascaded &&
         !ctx.soundFlowAnalysis(source)) {
       return null;
+    }
+    if (source is Expression && name.startsWith('_')) {
+      final slot = promotableMemberSlot(ctx, source);
+      if (slot != null && (slot.member?.contains('.') ?? false)) {
+        final key = slot.viaSuper ? 'super:${slot.member}' : slot.member;
+        return (slot.local.binding?.current ?? slot.local)
+            .facts
+            .promotedMembers?[key];
+      }
     }
     // A bound receiver's current value is authoritative; an unbound
     // value (ephemeral cascade target) carries facts on itself.

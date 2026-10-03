@@ -40,6 +40,64 @@ int main() {
 }
 
 void main() {
+  test('nested field proofs retain their root and reject unstable paths', () {
+    final program = Compiler().compile({
+      'nested_field_flow': {
+        'main.dart': r'''
+typedef Exactly<T> = T Function(T);
+extension StaticType<T> on T { T check<R extends Exactly<T>>() => this; }
+class Leaf<T> {
+  final T? _value;
+  Leaf(this._value);
+}
+class Envelope<T> {
+  final Leaf<T> _leaf;
+  Envelope(this._leaf);
+  T? read() {
+    if (_leaf._value == null) return null;
+    return _leaf._value.check<Exactly<T>>();
+  }
+}
+class MutableEnvelope {
+  Leaf<int> _changing;
+  MutableEnvelope(this._changing);
+}
+int remembered(Envelope<int> envelope) {
+  final ready = (envelope._leaf)._value != null;
+  if (!ready) return 0;
+  return envelope._leaf._value.check<Exactly<int>>();
+}
+int replaced() {
+  var envelope = Envelope(Leaf<int>(2));
+  final ready = envelope._leaf._value != null;
+  envelope = Envelope(Leaf<int>(null));
+  if (ready) envelope._leaf._value.check<Exactly<int?>>();
+  return envelope._leaf._value ?? 0;
+}
+int unstable(MutableEnvelope envelope) {
+  if (envelope._changing._value != null) {
+    envelope._changing._value.check<Exactly<int?>>();
+    envelope._changing = Leaf<int>(null);
+  }
+  return envelope._changing._value ?? 0;
+}
+int main() => remembered(Envelope(Leaf<int>(3))) +
+    remembered(Envelope(Leaf<int>(null))) + replaced() +
+    unstable(MutableEnvelope(Leaf<int>(4))) +
+    Envelope(Leaf<String>('ok')).read()!.length;
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib('package:nested_field_flow/main.dart', 'main'),
+        5,
+      );
+    }
+  });
   test(
     'coalescing field proofs do not survive a nullable RHS or receiver write',
     () {

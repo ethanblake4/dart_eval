@@ -377,7 +377,7 @@ void _applyRecorded(
   PromotionApply promote,
   Set<String> excluded,
 ) {
-  final dot = key.lastIndexOf('.');
+  final dot = key.indexOf('.');
   final localName = dot < 0 ? key : key.substring(0, dot);
   if (excluded.contains(localName)) return;
   final binding = ctx.lookupBinding(localName);
@@ -450,7 +450,6 @@ PromotionSlot? promotableMemberSlot(
   }
   Expression? receiver;
   String? member;
-  var viaSuper = false;
   if (target is PropertyAccess &&
       (target.operator.type == TokenType.PERIOD ||
           target.isCascaded ||
@@ -511,27 +510,39 @@ PromotionSlot? promotableMemberSlot(
       }
       return (local: cascade, member: member, viaSuper: false);
     }
-    switch (receiver) {
-      case SimpleIdentifier(:final name):
-        binding = ctx.lookupBinding(name);
-      case ThisExpression():
-        binding = ctx.lookupBinding('#this');
-      case SuperExpression():
-        binding = ctx.lookupBinding('#this');
-        viaSuper = true;
-      default:
-        return null;
+    final PromotionSlot? parent;
+    if (receiver is ThisExpression || receiver is SuperExpression) {
+      final self = ctx.lookupBinding('#this');
+      parent =
+          self == null || self.writeCaptured || excluded.contains(self.name)
+          ? null
+          : (
+              local: self.current,
+              member: null,
+              viaSuper: receiver is SuperExpression,
+            );
+    } else {
+      parent = promotableMemberSlot(ctx, receiver, excluded: excluded);
     }
-    if (binding == null ||
-        binding.writeCaptured ||
-        excluded.contains(binding.name)) {
+    if (parent == null) return null;
+    final owner = parent.member == null
+        ? parent.local.type
+        : promotedMemberReadType(
+            ctx,
+            parent.local,
+            parent.member!,
+            parent.viaSuper,
+          );
+    if (!isPromotableMember(ctx, owner, member, target)) {
       return null;
     }
-    if (!isPromotableMember(ctx, binding.current.type, member, target)) {
-      return null;
-    }
+    return (
+      local: parent.local,
+      member: parent.member == null ? member : '${parent.member}.$member',
+      viaSuper: parent.viaSuper,
+    );
   }
-  return (local: binding.current, member: member, viaSuper: viaSuper);
+  return (local: binding.current, member: member, viaSuper: false);
 }
 
 /// A slot a condition can promote: a local variable, or a promotable
@@ -655,9 +666,13 @@ TypeRef promotedMemberReadType(
   final recorded =
       (local.binding?.current ?? local).facts.promotedMembers?[key];
   if (recorded != null) return recorded;
+  final dot = member.lastIndexOf('.');
+  final owner = dot < 0
+      ? local.type
+      : promotedMemberReadType(ctx, local, member.substring(0, dot), viaSuper);
   final resolved = ctx.memberLookup.tryInterfaceMember(
-    local.type,
-    MemberName(member, MemberKind.getter),
+    owner,
+    MemberName(dot < 0 ? member : member.substring(dot + 1), MemberKind.getter),
   );
   return resolved?.fieldType ?? CoreTypes.dynamic.ref(ctx);
 }
