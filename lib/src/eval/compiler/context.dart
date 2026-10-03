@@ -22,7 +22,7 @@ import 'backend/representation.dart' show representationForType;
 abstract class AbstractScopeContext {
   List<Map<String, LocalBinding>> get locals;
 
-  /// Whether the current emission sequence ended in a terminator â€” unlike
+  /// Whether the current emission sequence ended in a terminator — unlike
   /// [blockEndsControlFlow] it stays set once [pushOp] has split off the
   /// dead tail into a detached block, so branch endpoints (`x ? a : throw`)
   /// still see that the arm ended without fallthrough. Restored by
@@ -58,7 +58,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   }
 
   /// Declares or replaces the binding for [name] in [frame] (default:
-  /// innermost) and returns it â€” [LocalBinding.read] materializes the
+  /// innermost) and returns it — [LocalBinding.read] materializes the
   /// value for reads; `setValue` writes through the binding's storage.
   LocalBinding setLocal(
     String name,
@@ -128,7 +128,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
   /// info every edge agrees on, and widens the flow type to the least upper
   /// bound of the edges' types (`i1` is `int?` after `case null: i1 = null`
   /// merges with a promoted `int` edge). The current
-  /// state's SSA bindings are authoritative â€” the incoming states only
+  /// state's SSA bindings are authoritative — the incoming states only
   /// contribute their type proofs. Set [includeCurrent] to false when
   /// [incoming] already contains every edge reaching the join.
   void mergeBranchState(
@@ -170,7 +170,7 @@ mixin ScopeContext on Object implements AbstractScopeContext {
           } else {
             facts = hasIncoming ? facts.join(other.facts) : other.facts;
           }
-          // An edge that reassigned the local carries a higher epoch â€”
+          // An edge that reassigned the local carries a higher epoch —
           // the join takes the max so records stamped on earlier values
           // stay invalidated.
           if (other.writeEpoch > epoch) epoch = other.writeEpoch;
@@ -280,7 +280,7 @@ class CompilerContext with ScopeContext {
   int _nextFunctionId = 0;
   late ControlFlowGraph activeGraph;
 
-  /// Whether [op] ends a block's normal control flow â€” the frontend ops
+  /// Whether [op] ends a block's normal control flow — the frontend ops
   /// don't declare [Operation.isTerminator], so they are matched here.
   static bool isTerminatorOp(Operation op) =>
       op is Return ||
@@ -352,7 +352,7 @@ class CompilerContext with ScopeContext {
 
   /// While compiling an anonymous-method body (`target.=> expr`), the
   /// receiver the body's `this` resolves to. Like an extension receiver,
-  /// this is a plain local â€” `this` must not emit `LoadThis` (which only
+  /// this is a plain local — `this` must not emit `LoadThis` (which only
   /// accepts class instances).
   Variable? anonymousThisReceiver;
 
@@ -429,7 +429,7 @@ class CompilerContext with ScopeContext {
   /// types; [TypeRef.fromAnnotation] resolves them lazily to their target.
   Map<int, Map<String, TypeAlias>> typeAliases = {};
 
-  /// The library index each [TypeAlias] was declared in â€” an imported alias's
+  /// The library index each [TypeAlias] was declared in — an imported alias's
   /// body resolves against its own file (it may name private types).
   final typeAliasFiles = Expando<int>();
 
@@ -437,31 +437,31 @@ class CompilerContext with ScopeContext {
   /// recursive typedefs (`typedef F = List<G>; typedef G = List<F>;`).
   final resolvingTypeAliases = <TypeAlias>{};
 
-  /// Return value types seen while compiling each `async` function literal â€”
+  /// Return value types seen while compiling each `async` function literal —
   /// the closure's signature reifies `Future<S>` where `S` is the inferred
   /// return type, matching the VM (`() async { return null; }` reifies
   /// `() => Future<Null>`).
   final asyncClosureReturnTypes = <List<TypeRef>>[];
 
-  /// Type parameters currently in scope, per library â€” folded mixin
+  /// Type parameters currently in scope, per library — folded mixin
   /// members resolve in their own library, so scopes key by library
   /// index. The mapped scope is the innermost frame; [withTypeParameters]
   /// pushes and pops frames around a body, and ambient seeds write into
   /// the head through [typeParameterScope].
   final Map<int, TypeScope> typeScopes = {};
 
-  /// Interned [TypeParameterDef]s by owner â€” every owner's parameters are
+  /// Interned [TypeParameterDef]s by owner — every owner's parameters are
   /// created in exactly one place, so bounds resolve on shared defs.
   final typeParameterDefs = TypeParameterDefs();
 
-  /// Annotationâ†’[TypeRef] resolution â€” the home of `fromAnnotation`,
+  /// Annotation→[TypeRef] resolution — the home of `fromAnnotation`,
   /// `fromBridgeTypeRef`, alias expansion, and function-type construction.
   late final typeFactory = TypeFactory(this);
 
   /// The mutable entries of [library]'s innermost type-parameter frame,
   /// creating a base frame on first use. Writes are always scoped: seeds
   /// (mixin application arguments, folded member bindings) are added only
-  /// inside a [withTypeParameters] frame and pop with it â€” the base frame
+  /// inside a [withTypeParameters] frame and pop with it — the base frame
   /// is never a durable write target.
   Map<String, TypeRef> typeParameterScope(int library) =>
       (typeScopes[library] ??= TypeScope(null)).entries;
@@ -498,7 +498,7 @@ class CompilerContext with ScopeContext {
 
   Map<int, Map<String, DeclarationOrPrefix>> visibleDeclarations = {};
 
-  /// Import prefixes declared `deferred` in each library (library index â†’
+  /// Import prefixes declared `deferred` in each library (library index →
   /// prefix names). Such prefixes expose a synthetic `loadLibrary` member.
   Map<int, Set<String>> deferredPrefixes = {};
   Map<int, Map<String, int>> topLevelDeclarationPositions = {};
@@ -509,7 +509,7 @@ class CompilerContext with ScopeContext {
   final interfaceNoSuchMethodForwarderRequirements =
       <(int, String), List<(ClassMember, int, MemberKind, String, bool)>>{};
 
-  /// Direct superinterface edges: descendant 'file:class' â†’ ancestor keys.
+  /// Direct superinterface edges: descendant 'file:class' → ancestor keys.
   Map<String, List<String>> subclassEdges = {};
 
   /// Declared instance member names per 'file:class' (privates carry their
@@ -539,7 +539,7 @@ class CompilerContext with ScopeContext {
   }
 
   /// Whether any class in the program declares `'$file:$cls'` as an
-  /// ancestor â€” a receiver typed `cls` may then hold a subclass instance.
+  /// ancestor — a receiver typed `cls` may then hold a subclass instance.
   bool hasSubclasses(int file, String cls) =>
       _descendants().containsKey('$file:$cls');
 
@@ -613,7 +613,7 @@ class CompilerContext with ScopeContext {
           }
         }
         final name = switch (member) {
-          // A concrete getter or method supplies a real getter â€” it
+          // A concrete getter or method supplies a real getter — it
           // blocks. Setters, abstract members (empty body), and statics
           // don't.
           MethodDeclaration m
@@ -628,7 +628,7 @@ class CompilerContext with ScopeContext {
     }
 
     // A concrete class inheriting or declaring `noSuchMethod` materializes
-    // a forwarding getter for every interface member it doesn't implement â€” those
+    // a forwarding getter for every interface member it doesn't implement — those
     // getters are assumed unstable and block promotion library-wide.
     String refKey(NamedType t) {
       final prefix = t.importPrefix;
@@ -748,7 +748,7 @@ class CompilerContext with ScopeContext {
   late final TypeSystem typeSystem = TypeSystem(this);
 
   /// Whether [node]'s compilation unit runs at language version >=
-  /// `major.minor` â€” files pinned below via a `// @dart=` comment keep the
+  /// `major.minor` — files pinned below via a `// @dart=` comment keep the
   /// older semantics.
   bool languageVersionAtLeast(AstNode node, int major, int minor) {
     final token = node
@@ -783,7 +783,7 @@ class CompilerContext with ScopeContext {
 
   /// Names whose write-capture effects are deferred until the current
   /// invocation completes: a closure passed as an argument can be invoked
-  /// by the callee, so its writes take effect after the call â€” but
+  /// by the callee, so its writes take effect after the call — but
   /// promotions elsewhere in the argument list still see the
   /// pre-invocation state. Null outside an argument list.
   Set<String>? deferredWriteCaptures;
@@ -801,7 +801,7 @@ class CompilerContext with ScopeContext {
   }
 
   /// Runs [body] with write captures deferred, applying the collected
-  /// captures once it returns â€” the argument-list boundary at which a
+  /// captures once it returns — the argument-list boundary at which a
   /// closure argument's writes become visible.
   T withDeferredWriteCaptures<T>(T Function() body) {
     final outer = deferredWriteCaptures;
@@ -836,7 +836,7 @@ class CompilerContext with ScopeContext {
   /// Nonzero while compiling a `late` local initializer. The initializer
   /// runs after the declaration point, so boolean-condition promotions
   /// recorded earlier (`bool b = x != null; if (b)`) cannot be trusted
-  /// inside it â€” the condition variable may be reassigned before the
+  /// inside it — the condition variable may be reassigned before the
   /// first read.
   int lateInitializerDepth = 0;
   int globalIndex = 0;
@@ -906,7 +906,7 @@ class CompilerContext with ScopeContext {
 
   /// For every local in [savedLocals] whose type differs from the current
   /// binding, write back a copy carrying the saved type (keeping the current
-  /// boxing state). Member promotions ride along â€” the saved value's
+  /// boxing state). Member promotions ride along — the saved value's
   /// `promotedMembers` replace the live ones, so [uninferTypes] restores
   /// the pre-inference member state exactly.
   void _restoreSavedTypes(List<Map<String, SavedLocalBinding>> savedLocals) {
@@ -990,7 +990,7 @@ final class SavedLocalBinding {
     current = current.copyWith(type: type, facts: facts.withPromotion(type));
   }
 
-  /// Records a member promotion (`c._f is int`) on the saved value â€” the
+  /// Records a member promotion (`c._f is int`) on the saved value — the
   /// facts live on the receiver's variable so they restore with it.
   void promoteMember(String member, TypeRef type) {
     current = current.withFacts(current.facts.withPromotedMember(member, type));
