@@ -431,6 +431,21 @@ sealed class GetTarget {
       if (isDeclaredMethod &&
           boundContext is FunctionTypeRef &&
           methodSignature.typeParameters.isNotEmpty) {
+        final needsCheck = ctx.memberLookup.methodTearOffNeedsCovariantCheck(
+          member,
+        );
+        if (needsCheck &&
+            methodSignature.requiredPositional ==
+                methodSignature.positional.length &&
+            methodSignature.named.every((parameter) => parameter.isRequired)) {
+          return ContextualVirtualMethodTearOff(
+            receiver,
+            name,
+            fieldType as FunctionTypeRef,
+            boundContext,
+            typeArguments,
+          );
+        }
         final target = Devirtualizer(ctx).refine(
           VirtualCall(receiver: receiver, name: name, member: member.member),
         );
@@ -1004,6 +1019,36 @@ final class ContextualMethodTearOff extends GetTarget {
       ctx,
       target.offset!,
       implicitReceiver: captured,
+      boundContext: boundContext,
+      typeArguments: typeArguments,
+    );
+  }
+}
+
+/// Read an overridden generic method using the receiver's actual signature
+/// before applying a contextual instantiation.
+final class ContextualVirtualMethodTearOff extends GetTarget {
+  const ContextualVirtualMethodTearOff(
+    this.receiver,
+    this.name,
+    this.type,
+    this.boundContext,
+    this.typeArguments,
+  );
+
+  final Variable receiver;
+  final String name;
+  final FunctionTypeRef type;
+  final FunctionTypeRef boundContext;
+  final List<TypeRef>? typeArguments;
+
+  @override
+  Variable emit(CompilerContext ctx) {
+    final callable = DynamicGet(receiver, name, fieldType: type).emit(ctx);
+    compileTypeAssertion(ctx, callable, type);
+    return instantiateRuntimeCallable(
+      ctx,
+      callable,
       boundContext: boundContext,
       typeArguments: typeArguments,
     );

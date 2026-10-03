@@ -3190,3 +3190,15 @@ arguments, as the earlier unification path did. A temporary differential
 probe agreed with native Dart for that case and for nullable FutureOr/function
 lower bounds. The code review also checked the tear-off metadata and the
 defaulted-closure path; no duplicate SDK-language test was added.
+
+## Cycle 19 pass 1: check widened generic method tear-offs
+
+A method read was incorrectly treated as a getter for a covariance check,
+causing `C<A>.f` to throw before the actual unsafe receiver was reached.
+Method reads now skip that getter check. A required-argument generic method
+whose result exposes a class parameter contravariantly reads the actual
+runtime callable, checks it against the caller's generic method signature,
+and then applies contextual type arguments. The pinned
+`generic/instantiate_tearoff_after_contravariance_check_test.dart` fixture
+and its two neighboring tear-off fixtures pass. Its stale `expect_fail`
+entry was removed; no ordinary test copies the fixture.

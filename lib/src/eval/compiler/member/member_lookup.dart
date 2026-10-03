@@ -966,7 +966,22 @@ final class MemberLookup {
 
   /// A widened generic receiver can expose a getter value with an unsafe
   /// function parameter type. Check that value against the caller's view.
-  bool getterNeedsCovariantCheck(ResolvedMember member) =>
+  bool getterNeedsCovariantCheck(ResolvedMember member) {
+    final declaration = member.member;
+    if (declaration is SourceMember &&
+        declaration.node is MethodDeclaration &&
+        !(declaration.node as MethodDeclaration).isGetter) {
+      return false;
+    }
+    if (declaration is BridgeMember && declaration.def is BridgeMethodDef) {
+      return false;
+    }
+    return _hasClassTypeParameter(declaration.signature.returnType, false);
+  }
+
+  /// A method tear-off can expose a class parameter contravariantly through
+  /// its result, so a widened receiver needs its actual callable checked.
+  bool methodTearOffNeedsCovariantCheck(ResolvedMember member) =>
       _hasClassTypeParameter(member.member.signature.returnType, false);
 
   /// Whether [type] has a covariant occurrence of a class type parameter —
