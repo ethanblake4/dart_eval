@@ -85,10 +85,15 @@ class BridgeMethodDef implements BridgeDeclaration {
 /// a constructor's properties when it is defined outside of dart_eval.
 @JsonSerializable(explicitToJson: true)
 class BridgeConstructorDef implements BridgeDeclaration {
-  const BridgeConstructorDef(this.functionDescriptor, {this.isFactory = false});
+  const BridgeConstructorDef(
+    this.functionDescriptor, {
+    this.isFactory = false,
+    this.nativeWrapper = false,
+  });
 
   final BridgeFunctionDef functionDescriptor;
   final bool isFactory;
+  final bool nativeWrapper;
 
   /// Connect the generated [_$BridgeMethodDeclarationFromJson] function to the `fromJson`
   /// factory.

@@ -368,6 +368,7 @@ class BindgenClassConfig {
     this.synthetic = const [],
     this.implicitSupers,
     this.constructorCalls = const [],
+    this.nativeConstructors = false,
     this.libOverride,
     this.imports = const [],
   });
@@ -448,6 +449,9 @@ class BindgenClassConfig {
   /// Concrete members invoked virtually before a bridge constructor returns.
   final List<String> constructorCalls;
 
+  /// Also expose native wrapper constructors for standalone bridge instances.
+  final bool nativeConstructors;
+
   /// Overrides the library URI recorded in generated `$spec`s.
   final String? libOverride;
 
@@ -515,6 +519,7 @@ class BindgenClassConfig {
         ],
         implicitSupers: _bool(yaml['implicitSupers']),
         constructorCalls: _strList(yaml['constructorCalls']),
+        nativeConstructors: _bool(yaml['nativeConstructors']) ?? false,
         libOverride: _str(yaml['overrideLibrary']),
         imports: _strList(yaml['imports']),
       );

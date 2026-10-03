@@ -63,6 +63,12 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
       $StringBuffer$bridge.$new,
       isBridge: true,
     );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'StringBuffer.',
+      $StringBuffer.$new,
+    );
   }
 
   /// Configure this class for use during compilation
@@ -98,6 +104,7 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
           ],
         ),
         isFactory: false,
+        nativeWrapper: true,
       ),
     },
 
@@ -378,6 +385,17 @@ class $StringBuffer implements $Instance {
 
   /// Wrap a [StringBuffer] in a [$StringBuffer]
   $StringBuffer.wrap(this.$value) : _superclass = $Object($value);
+
+  /// Wrapper for the [StringBuffer.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $StringBuffer.wrap(
+      StringBuffer(
+        (r is $Value ? r : null) == null
+            ? ""
+            : (r is $Value ? r : null)!.$reified,
+      ),
+    );
+  }
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);

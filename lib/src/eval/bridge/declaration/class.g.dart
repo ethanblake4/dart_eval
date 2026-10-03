@@ -78,6 +78,7 @@ BridgeConstructorDef _$BridgeConstructorDefFromJson(
     json['functionDescriptor'] as Map<String, dynamic>,
   ),
   isFactory: json['isFactory'] as bool? ?? false,
+  nativeWrapper: json['nativeWrapper'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$BridgeConstructorDefToJson(
@@ -85,6 +86,7 @@ Map<String, dynamic> _$BridgeConstructorDefToJson(
 ) => <String, dynamic>{
   'functionDescriptor': instance.functionDescriptor.toJson(),
   'isFactory': instance.isFactory,
+  'nativeWrapper': instance.nativeWrapper,
 };
 
 BridgeFieldDef _$BridgeFieldDefFromJson(Map<String, dynamic> json) =>

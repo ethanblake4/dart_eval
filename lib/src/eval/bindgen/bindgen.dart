@@ -700,6 +700,7 @@ ${bindTypeSpec(ctx, element)}
 /// Compile-time type declaration of [$wrapperName]
 ${bindBridgeType(ctx, element)}
 ${$wrap(ctx, element)}
+${ctx.classConfig?.nativeConstructors == true ? $constructors(ctx, element) : ''}
 ${$getRuntimeType(ctx, element)}
 ${$getProperty(ctx, element)}
 ${$methods(ctx, element)}
