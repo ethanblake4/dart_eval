@@ -3356,3 +3356,14 @@ exception slots, and finally member promotions layer on a receiver reassigned
 by the try body. Both proper_subtypes SDK fixtures pass and their stale entries
 were removed. All 28 focused existing promotion and exception tests pass.
 No additional runtime checks or interpreter changes.
+
+## Cycle 20 pass 4: pattern guard flow
+
+Pattern guards now compile as conditions, preserving short-circuit promotion
+and joining actual failed edges. Null constant and relational patterns use
+direct null tests. Sound flow analysis folds statically certain null checks
+and non-nullable pattern mismatches against Null; older language versions keep
+their existing reachability behavior. Five real SDK fixtures now pass and
+their expect_fail entries were removed. Both disabled sound-flow counterparts
+and all 17 existing focused pattern/version tests pass. No duplicate tests,
+runtime changes or extra checks on statically certain pattern paths.

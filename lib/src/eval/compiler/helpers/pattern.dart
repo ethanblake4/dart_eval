@@ -16,7 +16,8 @@ import '../invocation/accessors.dart';
 import '../invocation/resolver.dart';
 import 'pattern_type.dart';
 import 'object_pattern_type.dart';
-import '../macros/branch.dart' show compileNonNullCondition, macroBranch;
+import '../macros/branch.dart'
+    show compileNullCondition, compileNonNullCondition, macroBranch;
 import '../statement/statement.dart';
 import 'conversion.dart';
 import 'type_check.dart';
@@ -304,12 +305,21 @@ Variable _matchPattern(
       // The pattern's context type is the matched value's type — this is
       // what lets `case .blue:` resolve the shorthand.
       final constant = compileExpression(pat.expression, ctx, V.type);
+      if (constant.type.isSpec(CoreTypes.nullType)) {
+        return _nullPatternTest(ctx, V, pat, negated: false);
+      }
       return CallResolver(ctx).invokeOperator(constant, '==', [V]).result;
     case RecordPattern pat:
       if (requireMatch != null) {
         final shape = recordPatternShape(ctx, pat);
         requireMatch(
-          _typeTestType(ctx, shape, V, patternContext: patternContext),
+          _typeTestType(
+            ctx,
+            shape,
+            V,
+            patternContext: patternContext,
+            source: pat,
+          ),
         );
         V = V.withType(
           V.type is RecordTypeRef &&
@@ -474,6 +484,7 @@ Variable _matchPattern(
         matchedType,
         V,
         patternContext: patternContext,
+        source: pat,
       );
       requireMatch?.call(result);
       // A tested interface can expose getters absent from the original
@@ -520,6 +531,10 @@ Variable _matchPattern(
           (throw CompileError(
             'Unknown relational operator ${pat.operator.type}',
           ));
+      if ((operator == '==' || operator == '!=') &&
+          operand.type.isSpec(CoreTypes.nullType)) {
+        return _nullPatternTest(ctx, V, pat, negated: operator == '!=');
+      }
       return CallResolver(ctx).invokeOperator(V, operator, [operand]).result;
     case WildcardPattern pat:
       return _typeTest(ctx, pat.type, V);
@@ -532,7 +547,7 @@ Variable _matchPattern(
         continuation: continuation,
       );
     case NullCheckPattern pat:
-      final nonNull = compileNonNullCondition(ctx, V);
+      final nonNull = _nullPatternTest(ctx, V, pat, negated: true);
       requireMatch?.call(nonNull);
       final matched = patternMatchAndBind(
         ctx,
@@ -583,6 +598,7 @@ Variable _matchListPattern(
     listType,
     value,
     patternContext: patternContext,
+    source: pattern,
   );
   continuation?.requireMatch(typeTest);
   final matchedType = matchedPatternType(ctx, pattern, value.type);
@@ -675,6 +691,7 @@ Variable _matchMapPattern(
     mapType,
     subject,
     patternContext: patternContext,
+    source: pattern,
   );
   continuation?.requireMatch(result);
   final map = subject.withType(mapType);
@@ -782,7 +799,13 @@ Variable _typeTest(
   if (patType == null) return BuiltinValue(boolval: true).push(ctx);
   final slot = TypeRef.fromAnnotation(ctx, ctx.library, patType);
   V.inferType(ctx, slot);
-  return _typeTestType(ctx, slot, V, patternContext: patternContext);
+  return _typeTestType(
+    ctx,
+    slot,
+    V,
+    patternContext: patternContext,
+    source: patType,
+  );
 }
 
 Variable _typeTestType(
@@ -790,9 +813,17 @@ Variable _typeTestType(
   TypeRef slot,
   Variable V, {
   PatternBindContext patternContext = PatternBindContext.matching,
+  AstNode? source,
 }) {
   if (V.type.isAssignableTo(ctx, slot, forceAllowDynamic: false)) {
     return BuiltinValue(boolval: true).push(ctx);
+  }
+
+  if (!patternContext.usesAssignmentContext &&
+      ctx.soundFlowAnalysis(source) &&
+      V.type.isSpec(CoreTypes.nullType) &&
+      !slot.hasNullableRepresentation) {
+    return BuiltinValue(boolval: false).push(ctx);
   }
 
   // IsType takes an object operand; box into a fresh slot so V's own SSA
@@ -803,4 +834,23 @@ Variable _typeTestType(
     return BuiltinValue(boolval: true).push(ctx);
   }
   return compileTypeTest(ctx, operand, slot);
+}
+
+Variable _nullPatternTest(
+  CompilerContext ctx,
+  Variable value,
+  DartPattern source, {
+  required bool negated,
+}) {
+  if (ctx.soundFlowAnalysis(source)) {
+    if (value.type.isSpec(CoreTypes.nullType)) {
+      return BuiltinValue(boolval: !negated).push(ctx);
+    }
+    if (!value.type.hasNullableRepresentation) {
+      return BuiltinValue(boolval: negated).push(ctx);
+    }
+  }
+  return negated
+      ? compileNonNullCondition(ctx, value)
+      : compileNullCondition(ctx, value);
 }

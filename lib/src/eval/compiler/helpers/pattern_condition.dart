@@ -7,7 +7,6 @@ import '../backend/representation.dart';
 import '../builtins.dart';
 import '../context.dart';
 import '../expression/condition.dart';
-import '../expression/expression.dart';
 import '../reference.dart';
 import '../variable.dart';
 import '../type.dart';
@@ -115,13 +114,33 @@ void compileIrrefutablePattern(
     continuation: matching,
   );
   if (guard != null) {
-    final value = compileExpression(
-      guard.expression,
-      ctx,
-      CoreTypes.bool.ref(ctx),
-    );
-    enforceConditionType(ctx, value, guard.expression);
-    matching.requireMatch(value);
+    final next = BasicBlock<Operation>([], label: ctx.label('guard_true'));
+    // The guard also sees pattern bindings, which were not present when the
+    // enclosing branch's inference context was saved.
+    ctx.enterTypeInferenceContext();
+    final result = compileCondition(guard.expression, ctx, next, whenFalse);
+    ctx.typeInferenceSaveStates.removeLast();
+    final guardState = ctx.saveState();
+    applyConditionPromotions(ctx, guard.expression, false);
+    if (matching.canMatch && result.$3) {
+      matching.failedStates.add(ctx.saveState());
+    }
+    ctx.restoreState(guardState);
+    matching.canFail |= matching.canMatch && result.$3;
+    matching.canMatch &= result.$2;
+    ctx.builder = result.$1.block(0);
+    applyConditionPromotions(ctx, guard.expression, true);
+    for (final frame in ctx.locals.take(ctx.locals.length - 1)) {
+      for (final binding in frame.values) {
+        final value = binding.current;
+        value.inferType(ctx, value.type);
+        for (final member
+            in value.facts.promotedMembers?.entries ??
+                const <MapEntry<String, TypeRef>>[]) {
+          value.inferType(ctx, member.value, member.key);
+        }
+      }
+    }
   }
   ctx.resolveBranchStateDiscontinuity(initialState);
   ctx.pushOp(Jump(whenTrue.label!));
@@ -130,6 +149,11 @@ void compileIrrefutablePattern(
   // Only enclosing locals join the failed tests. Pattern locals carry the
   // types and values of the successful path into the guard and case body.
   final bindings = ctx.locals.removeLast();
+  if (matching.failedStates.isNotEmpty) {
+    // The successful edge is not an input to the failed-pattern join.
+    ctx.restoreState(matching.failedStates.first);
+    ctx.locals.removeLast();
+  }
   ctx.mergeBranchState(matching.failedStates);
   ctx.locals.add(bindings);
   if (slot != null) {
