@@ -366,6 +366,12 @@ final class TypedInstance implements $Instance {
     if (name == 'toString' && positionalCount == 0 && namedNames.isEmpty) {
       return $String("Instance of '${dispatchRoot.descriptor.name}'");
     }
+    if (name == 'noSuchMethod' &&
+        positionalCount == 1 &&
+        namedNames.isEmpty &&
+        typeArguments.isEmpty) {
+      return _noSuchMethod((first as $Value).$reified as Invocation, runtime);
+    }
     return _noSuchMethod(
       _typedMethodInvocation(
         name,
@@ -447,7 +453,10 @@ final class TypedInstance implements $Instance {
     }
     return switch (identifier) {
       'hashCode' => $int(identityHashCode(dispatchRoot)),
-      '==' || '!=' || 'toString' => _methodTearOff(identifier, callerLibrary),
+      '==' ||
+      '!=' ||
+      'toString' ||
+      'noSuchMethod' => _methodTearOff(identifier, callerLibrary),
       _ => _noSuchMethod(Invocation.getter(Symbol(identifier)), runtime),
     };
   }

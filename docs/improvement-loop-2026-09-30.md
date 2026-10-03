@@ -2993,3 +2993,18 @@ so the callee can bind its own optional arguments. The runnable variants of
 the pinned `regress/regress32660_test.dart` fixture now pass, as do 50 focused
 inheritance tests. Its stale `expect_fail` entry is removed under the suite's
 `negative: skip` policy. This changes compiler resolution only.
+
+## Cycle 17 pass 2: nullable noSuchMethod tear-offs
+
+The hand-maintained Object bridge lacked `noSuchMethod` method metadata and
+tear-off support for native values and null. Object method reads now return a
+callable that retains the receiver; guest objects can also invoke their
+default `noSuchMethod` through that tear-off. The pinned
+`nnbd/static_errors/unchecked_use_of_nullable_test.dart` cases 15, 59, 99,
+and 179 pass, so its stale `expect_fail` entry is removed. A distinct
+fresh/serialized regression checks invocation and guest override behavior.
+The Object binding is explicitly excluded from generation in
+`.dart_eval/bindgen.yaml`; no generated stdlib files were edited. The full
+23-driver, 15-sample AOT sweep matched all 22 execution checksums; logs are
+under `.dart_tool/improvement_loop/cycle17-pass2-full23/`. Paired controls
+found no sustained slowdown in external or closure calls.

@@ -371,6 +371,7 @@ abstract final class TypedInterop {
     if (receiver == null) {
       return switch (name) {
         'hashCode' => $int(null.hashCode),
+        'noSuchMethod' => $Object.noSuchMethodTearOff(null),
         'toString' => $Function(
           (runtime, target, r, s, c) => c == 0
               ? $String('null')

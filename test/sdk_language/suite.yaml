@@ -353,7 +353,5 @@ expect_fail:
     reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
   - path: 'control_flow_collections/map_set_ambiguity_error_test.dart'
     reason: 'MapMixin bridge cannot be applied in a with clause; SetBase binding is unavailable'
-  - path: 'nnbd/static_errors/unchecked_use_of_nullable_test.dart'
-    reason: 'cases 15, 59, 99 and 179: noSuchMethod tearoff resolution fails on int or Null'
   - path: 'spread_collections/map_set_ambiguity_error_test.dart'
     reason: 'MapMixin bridge cannot be applied in a with clause; SetBase binding is unavailable'

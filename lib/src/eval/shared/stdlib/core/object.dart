@@ -24,6 +24,18 @@ class $Object implements $Instance {
       ),
     },
     methods: {
+      'noSuchMethod': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+          params: [
+            BridgeParameter(
+              'invocation',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.invocation)),
+              false,
+            ),
+          ],
+        ),
+      ),
       '!=': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
@@ -211,6 +223,8 @@ class $Object implements $Instance {
           positionalParameterCount: 0,
           namedParameters: const [],
         );
+      case 'noSuchMethod':
+        return noSuchMethodTearOff(this);
       case 'hashCode':
         return $int($value.hashCode);
     }
@@ -426,6 +440,41 @@ class $Object implements $Instance {
   }
 
   static const $Function __toString = $Function(_toString);
+
+  /// Object is hand-maintained in bindgen.yaml because of its runtime ABI.
+  /// Null shares Object's method tear-off, with a null bound receiver.
+  static $Closure noSuchMethodTearOff($Instance? receiver) =>
+      $Closure.withNamed(
+        _noSuchMethod,
+        receiver,
+        positionalParameterCount: 1,
+        namedParameters: const [],
+      );
+
+  static $Value? _noSuchMethod(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final Object? receiver = target?.$reified;
+    if (c != 1) {
+      final count = c is int ? c : (c as List<Object?>).length + 2;
+      throw NoSuchMethodError.withInvocation(
+        receiver,
+        Invocation.method(#noSuchMethod, [
+          if (count > 0) r is $Value ? r.$reified : r,
+          if (count > 1) s is $Value ? s.$reified : s,
+          if (c is List<Object?>)
+            for (final argument in c)
+              argument is $Value ? argument.$reified : argument,
+        ]),
+      );
+    }
+    final invocation = (r as $Value).$reified as Invocation;
+    return runtime.wrap(receiver.noSuchMethod(invocation));
+  }
 
   static $Value? _toString(
     Runtime runtime,
