@@ -1598,6 +1598,36 @@ class _LoweringSession {
           _lowerCreateClosure(op, lowered);
           continue;
         }
+        if (op is objects_ir.LoadPropertyStatic &&
+            op.isLate &&
+            op.fieldName != null) {
+          lowered.add(
+            TypedOperation(
+              b._named(['rReadNamedLateFieldR']),
+              value(op.target),
+              [value(op.object)],
+              immediate: b.context.constantPool.addOrGet([op.index, op.fieldName]),
+            ),
+          );
+          continue;
+        }
+        if (op is objects_ir.SetPropertyStatic &&
+            op.isLateFinal &&
+            op.fieldName != null) {
+          lowered.add(
+            TypedOperation(
+              b._named(['writeNamedLateFinalFieldRS']),
+              null,
+              [value(op.object), value(op.value)],
+              immediate: b.context.constantPool.addOrGet([
+                op.index,
+                op.fieldName,
+                op.isLateInitialization,
+              ]),
+            ),
+          );
+          continue;
+        }
         if (op is late_ir.CreateLateLocal) {
           lowered.add(
             TypedOperation(
