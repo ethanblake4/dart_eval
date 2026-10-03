@@ -3182,3 +3182,11 @@ benefit and was reverted. The full default suite passed 2,216 tests, SDK-full
 passed 2,518 runnable fixtures, and all 23 drivers in the final paired AOT
 sweep produced matching results. Results are under
 `.dart_tool/improvement_loop/cycle18-performance-defaults-only-full23/`.
+
+## Cycle 18 cleanup
+
+The inference collector now retains `void` return-type evidence from callback
+arguments, as the earlier unification path did. A temporary differential
+probe agreed with native Dart for that case and for nullable FutureOr/function
+lower bounds. The code review also checked the tear-off metadata and the
+defaulted-closure path; no duplicate SDK-language test was added.

@@ -978,9 +978,7 @@ final class ArgumentBinder {
             collect(entry.value.type, targetParameter.type, !covariant);
           }
         }
-        if (!target.returnType.isSpec(CoreTypes.voidType)) {
-          collect(source.returnType, target.returnType, covariant);
-        }
+        collect(source.returnType, target.returnType, covariant);
         return;
       }
       if (pattern is RecordTypeRef && evidence is RecordTypeRef) {

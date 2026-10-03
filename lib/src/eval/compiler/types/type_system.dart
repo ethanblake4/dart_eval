@@ -1130,17 +1130,13 @@ final class TypeSystem {
       if (other is InterfaceTypeRef && other.isSpec(AsyncTypes.futureOr)) {
         return union.copyWith(
           nullable: outerNullable,
-          arguments: [
-            greatestLowerBound(member, memberOf(other)),
-          ],
+          arguments: [greatestLowerBound(member, memberOf(other))],
         );
       }
       if (other is InterfaceTypeRef && other.isSpec(CoreTypes.future)) {
         return other.copyWith(
           nullable: outerNullable,
-          arguments: [
-            greatestLowerBound(member, memberOf(other)),
-          ],
+          arguments: [greatestLowerBound(member, memberOf(other))],
         );
       }
       if (other is FunctionTypeRef) {
