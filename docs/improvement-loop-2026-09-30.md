@@ -4259,3 +4259,16 @@ local inherited that proof and was widened by an unrelated join. New bindings
 now discard only source-binding proof histories while preserving value facts
 and recorded boolean conditions. The original passes, an ordinary native-Dart
 alias probe matches eval, and 44 focused tests pass. No runtime work is involved.
+
+The three remaining broad-gate regressions supplied their own StackTrace values.
+Guest reconstruction must preserve those traces exactly. A weak provenance marker
+now preserves explicit Error.throwWithStackTrace arguments, and the two cold
+async/generator error-delivery entry points preserve external traces. Native
+trace runtime types and text are not used as heuristics; ordinary interpreter
+throws still receive guest frames. The Error static method is regenerated from
+SDK bindings with a narrow provenance hook; no Error getter is changed.
+
+All three originals and the earlier five trace fixtures pass fresh and serialized
+execution. Twenty-seven exception tests pass, including explicitly supplied prior
+guest traces across a native callback. Analyzer and generator checks are clean.
+The four broad-gate regressions are fixed; final full gates will confirm totals.

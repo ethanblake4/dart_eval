@@ -46,7 +46,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 
 import './stack_trace.dart';
 import 'error_hooks.dart' as hooks;
@@ -186,11 +187,10 @@ class $Error$bridge extends Error with $Bridge<Error> {
     Object? s,
     Object? c,
   ) {
-    final value = Error.throwWithStackTrace(
-      (r as $Value?)!.$reified,
-      (s as $Value?)!.$value,
-    );
-    return const $null();
+    return hooks.errorThrowWithStackTrace(runtime, null, [
+      r as $Value?,
+      s as $Value?,
+    ]);
   }
 
   @override

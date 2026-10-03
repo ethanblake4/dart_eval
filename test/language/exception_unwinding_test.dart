@@ -32,6 +32,33 @@ Iterable<(String, Runtime)> _runtimes(Program program) sync* {
 }
 
 void main() {
+  test('explicit guest traces stay unchanged across native callback roots', () {
+    final program = _compile('''
+      StackTrace capture() {
+        try { throw 'seed'; } catch (_, trace) { return trace; }
+      }
+
+      int main() {
+        final trace = capture();
+        final error = StateError('supplied trace');
+        try {
+          [0].map<String>((_) {
+            Error.throwWithStackTrace(error, trace);
+          }).single;
+        } on StateError catch (caught, supplied) {
+          if (!identical(trace, supplied)) return -1;
+          if (trace.toString() != supplied.toString()) return -2;
+          if (trace.toString() != caught.stackTrace.toString()) return -3;
+          return 1;
+        }
+        return 0;
+      }
+    ''');
+    for (final (kind, runtime) in _runtimes(program)) {
+      expect(runtime.executeLib(_library, 'main'), 1, reason: kind);
+    }
+  });
+
   test('callback traces keep caller frames and survive cached frame reuse', () {
     final program = _compile('''
       String firstLeaf() => throw 'first';

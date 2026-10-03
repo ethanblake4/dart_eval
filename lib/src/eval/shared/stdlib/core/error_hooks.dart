@@ -1,8 +1,18 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_exception_state.dart';
 
 import 'base.dart' show $null;
 import 'errors.dart';
+
+Never errorThrowWithStackTrace(
+  Runtime runtime,
+  $Value? _,
+  List<$Value?> args,
+) => Error.throwWithStackTrace(
+  args[0]!.$reified,
+  TypedExceptions.preserveTrace(args[1]!.$value as StackTrace),
+);
 
 $Value? noSuchMethodErrorWithInvocation(
   Runtime runtime,

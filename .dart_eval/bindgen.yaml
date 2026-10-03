@@ -68,6 +68,10 @@ libraries:
         implementsSdk: true
         mode: both
         implicitSupers: true
+        hooks: error_hooks.dart
+        statics:
+          throwWithStackTrace:
+            hook: errorThrowWithStackTrace
       StackOverflowError:
         file: errors.dart
       OutOfMemoryError:

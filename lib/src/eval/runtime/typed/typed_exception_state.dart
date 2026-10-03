@@ -202,6 +202,14 @@ final class TypedExceptionTransfer {
 }
 
 abstract final class TypedExceptions {
+  static final _suppliedTraces = Expando<bool>('supplied stack trace');
+
+  /// User-supplied traces retain their exact text and identity across rethrows.
+  static StackTrace preserveTrace(StackTrace trace) {
+    _suppliedTraces[trace] = true;
+    return trace;
+  }
+
   @pragma('vm:never-inline')
   static void enter(TypedProgram program, TypedFrame frame, int index) =>
       (frame.exceptions ??= TypedExceptionState()).enter(
@@ -231,9 +239,15 @@ abstract final class TypedExceptions {
     TypedFrame frame,
     Object error,
     StackTrace trace,
-    Runtime? runtime,
-  ) {
-    trace = _GuestStackTrace.capture(frame, trace);
+    Runtime? runtime, {
+    bool captureNativeTrace = true,
+  }) {
+    if (!captureNativeTrace && trace is! _GuestStackTrace) {
+      preserveTrace(trace);
+    }
+    if (_suppliedTraces[trace] != true) {
+      trace = _GuestStackTrace.capture(frame, trace);
+    }
     final thrown = error is WrappedException ? error.exception : error;
     final hostError = switch (thrown) {
       TypedInstance() => thrown.bridge,

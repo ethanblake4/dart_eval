@@ -2090,7 +2090,7 @@ abstract final class TypedMachine {
   static void _resumeAsync(TypedProgram program, TypedFrame root, int pc,
       Object? value, Object? error, StackTrace? trace, Runtime? runtime) {
     if (error != null) {
-      final transfer = TypedExceptions.handle(root.activeFrame, error, trace!, runtime);
+      final transfer = TypedExceptions.handle(root.activeFrame, error, trace!, runtime, captureNativeTrace: false);
       if (transfer == null) Error.throwWithStackTrace(error, trace);
       if (transfer.frame == null) return;
       _drive(program, TypedEntry.result(transfer.result), transfer.frame!, transfer.pc, runtime);
@@ -2102,7 +2102,7 @@ abstract final class TypedMachine {
   static void _resumeSync(TypedProgram program, TypedFrame frame, int pc, Runtime? runtime,
       Object? error, StackTrace? trace) {
     if (error != null) {
-      final transfer = TypedExceptions.handle(frame.activeFrame, error, trace!, runtime);
+      final transfer = TypedExceptions.handle(frame.activeFrame, error, trace!, runtime, captureNativeTrace: false);
       if (transfer == null) Error.throwWithStackTrace(error, trace);
       if (transfer.frame == null) return;
       _drive(program, TypedEntry.result(transfer.result), transfer.frame!, transfer.pc, runtime);
