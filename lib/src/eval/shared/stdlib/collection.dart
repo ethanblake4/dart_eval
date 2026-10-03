@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/collection/list_queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/typedefs.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/set_base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/splay_tree_map.dart';
 
 /// [EvalPlugin] for the `dart:collection` library
 class DartCollectionPlugin implements EvalPlugin {
@@ -43,6 +44,7 @@ class DartCollectionPlugin implements EvalPlugin {
     $Queue.configureForCompile(registry);
     $DoubleLinkedQueue.configureForCompile(registry);
     $HashMap.configureForCompile(registry);
+    $SplayTreeMap.configureForCompile(registry);
     $HashSet.configureForCompile(registry);
     $LinkedHashSet.configureForCompile(registry);
     $MapBase$bridge.configureForCompile(registry);
@@ -57,6 +59,7 @@ class DartCollectionPlugin implements EvalPlugin {
     $Queue.configureForRuntime(runtime);
     $DoubleLinkedQueue.configureForRuntime(runtime);
     $HashMap.configureForRuntime(runtime);
+    $SplayTreeMap.configureForRuntime(runtime);
     $HashSet.configureForRuntime(runtime);
     $LinkedHashSet.configureForRuntime(runtime);
     $MapBase$bridge.configureForRuntime(runtime);

@@ -271,6 +271,9 @@ class CollectionTypes {
   /// Bridge spec for [SetBase].
   static const setBase = BridgeTypeSpec('dart:collection', 'SetBase');
 
+  /// Bridge spec for [SplayTreeMap].
+  static const splayTreeMap = BridgeTypeSpec('dart:collection', 'SplayTreeMap');
+
   /// Bridge spec for [UnmodifiableMapView].
   static const unmodifiableMapView = BridgeTypeSpec(
     'dart:collection',

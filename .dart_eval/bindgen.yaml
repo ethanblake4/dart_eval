@@ -247,6 +247,8 @@ libraries:
         file: queue.dart
       HashMap:
         file: hash_map.dart
+      SplayTreeMap:
+        file: splay_tree_map.dart
       HashSet:
         file: hash_set.dart
       LinkedHashSet:

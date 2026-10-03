@@ -4061,3 +4061,16 @@ from 138 to 122. Final cleanup AOT sweep, all 23 drivers with 15 samples and
 alternating executable order, matched every execution checksum and the mixed
 compile code size. No runtime/hot-loop sources changed. Cycle25 continues with
 six further correctness passes; the next compiler-throughput pass is cycle27.
+
+
+## Cycle 25 correctness checkpoint 1
+
+SplayTreeMap is generated from Dart SDK sources and registered in dart:collection.
+The original import/collection_no_prefix fixture passes, as do 29 existing
+collection/base/map-constructor tests. A serialized comparator probe validates
+ordering, firstKey/lastKey and indexed reads. Targeted regeneration of the bridge
+and generated type registry is byte-identical; scoped analysis passes. Removed
+one confirmed stale expectation. No compiler, runtime or generator implementation
+changes. Generation command: dart run tool/generate_stdlib.dart
+lib/src/eval/shared/stdlib/collection/splay_tree_map.dart
+lib/src/eval/shared/types.dart.
