@@ -93,12 +93,14 @@ void compileVariableDeclarationList(
       // Initialization promotes like an assignment: only a *nullable*
       // declared type promotes, to `NonNull(declared)` — `int? x = 0` leaves
       // `x` promoted to `int`, `num? w = 0.5` to `num`, and `Object x = 0`
-      // stays `Object`. `late` and captured locals never promote.
+      // stays `Object`. Final declarations and write-captured locals do not
+      // acquire assignment promotions from their initializers.
       final binding = ctx.lookupBinding(li.name.lexeme);
       if (binding != null &&
           type != null &&
           type.nullable &&
-          l.lateKeyword == null &&
+          !l.isFinal &&
+          !l.isConst &&
           !binding.writeCaptured &&
           !initType.isSpec(CoreTypes.dynamic) &&
           initType.isAssignableTo(ctx, type.withNullable(false))) {

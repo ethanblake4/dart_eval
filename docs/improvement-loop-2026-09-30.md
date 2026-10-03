@@ -3232,3 +3232,12 @@ types. Existing tear-off and inference tests plus the required-argument static
 tear-off regression pass. The full explicit_instantiated_tearoff SDK fixture
 progresses to the separate optional runtime-callable instantiation limitation;
 its expect_fail entry remains. No runtime change or extra instruction.
+
+## Cycle 19 pass 5: initializer assignment promotion
+
+A mutable late local initializer now receives the same non-null assignment
+promotion as an eager mutable initializer. Final declarations keep their
+annotated nullable type until an explicit flow check or subsequent permitted
+first assignment. The SDK variable_initialization_promotion fixture passes;
+removed its expect_fail entry. All 21 focused existing promotion tests pass.
+No runtime or bytecode changes.
