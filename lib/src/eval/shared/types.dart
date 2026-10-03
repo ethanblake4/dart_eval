@@ -37,6 +37,9 @@ class CoreTypes {
   /// Bridge spec for [Exception].
   static const exception = BridgeTypeSpec('dart:core', 'Exception');
 
+  /// Bridge spec for [Expando].
+  static const expando = BridgeTypeSpec('dart:core', 'Expando');
+
   /// Bridge spec for [FormatException].
   static const formatException = BridgeTypeSpec('dart:core', 'FormatException');
 
@@ -88,6 +91,12 @@ class CoreTypes {
   /// Bridge spec for [Object].
   static const object = BridgeTypeSpec('dart:core', 'Object');
 
+  /// Bridge spec for [OutOfMemoryError].
+  static const outOfMemoryError = BridgeTypeSpec(
+    'dart:core',
+    'OutOfMemoryError',
+  );
+
   /// Bridge spec for [Pattern].
   static const pattern = BridgeTypeSpec('dart:core', 'Pattern');
 
@@ -108,6 +117,12 @@ class CoreTypes {
 
   /// Bridge spec for [Sink].
   static const sink = BridgeTypeSpec('dart:core', 'Sink');
+
+  /// Bridge spec for [StackOverflowError].
+  static const stackOverflowError = BridgeTypeSpec(
+    'dart:core',
+    'StackOverflowError',
+  );
 
   /// Bridge spec for [StackTrace].
   static const stackTrace = BridgeTypeSpec('dart:core', 'StackTrace');

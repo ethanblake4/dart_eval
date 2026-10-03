@@ -28,7 +28,11 @@ import 'package:dart_eval/stdlib/core.dart'
         $DoubleLinkedQueue,
         $DoubleLinkedQueueEntry,
         $ListBase,
-        $MapBase;
+        $MapBase,
+        $SetBase;
+
+import '../core/map_entry.dart';
+
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -38,7 +42,6 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
   /// Forwarded constructor for [MapBase.new]
   $MapBase$bridge();
 
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -71,6 +74,7 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
     BridgeClassType(
       $type,
       isAbstract: true,
+      isMixinClass: true,
 
       generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
 
@@ -156,6 +160,8 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       '[]=': BridgeMethodDef(
@@ -176,6 +182,8 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'map': BridgeMethodDef(
@@ -427,6 +435,8 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'clear': BridgeMethodDef(
@@ -435,6 +445,8 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'forEach': BridgeMethodDef(
@@ -528,6 +540,8 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'values': BridgeMethodDef(
@@ -652,22 +666,28 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
         });
       case 'map':
         return $Function((runtime, target, r, s, c) {
-          final result = super.map((dynamic key, dynamic value) {
-            return TypedInterop.exportExternal(
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                (key is List || key is Map || key is Set
-                    ? TypedInterop.boxExternal(key, runtime: runtime)!
-                    : runtime.wrapAlways(key)),
-                (value is List || value is Map || value is Set
-                    ? TypedInterop.boxExternal(value, runtime: runtime)!
-                    : runtime.wrapAlways(value)),
-                2,
-              ),
-              runtime: runtime,
-            ) as MapEntry<dynamic, dynamic>;
-          });
+          final result = super.map(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "MapEntry<K2, V2> Function(K, V);export=true",
+              (_callable) => (dynamic key, dynamic value) {
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (key is List || key is Map || key is Set
+                        ? TypedInterop.boxExternal(key, runtime: runtime)!
+                        : runtime.wrapAlways(key)),
+                    (value is List || value is Map || value is Set
+                        ? TypedInterop.boxExternal(value, runtime: runtime)!
+                        : runtime.wrapAlways(value)),
+                    2,
+                  ),
+                  runtime: runtime,
+                ) as MapEntry<dynamic, dynamic>;
+              },
+            ),
+          );
           return wrapMap(
             result,
             (key, value) => MapEntry(
@@ -692,20 +712,24 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
           final result = super.update(
             TypedInterop.exportExternal((r as $Value?), runtime: runtime)
                 as dynamic,
-            (dynamic value) {
-              return TypedInterop.exportExternal(
-                ((s as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (value is List || value is Map || value is Set
-                      ? TypedInterop.boxExternal(value, runtime: runtime)!
-                      : runtime.wrapAlways(value)),
-                  null,
-                  1,
-                ),
-                runtime: runtime,
-              ) as dynamic;
-            },
+            runtime.cachedCallback(
+              (s as $Value?)! as EvalCallable,
+              "V Function(V);export=true",
+              (_callable) => (dynamic value) {
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (value is List || value is Map || value is Set
+                        ? TypedInterop.boxExternal(value, runtime: runtime)!
+                        : runtime.wrapAlways(value)),
+                    null,
+                    1,
+                  ),
+                  runtime: runtime,
+                ) as dynamic;
+              },
+            ),
             ifAbsent:
                 (c is List && (c as List).length > 0
                             ? (c as List)[0] as $Value?
@@ -716,16 +740,19 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
                             : null)
                         is $null
                 ? null
-                : () {
-                    return TypedInterop.exportExternal(
-                      ((c is List && (c as List).length > 0
-                                  ? (c as List)[0] as $Value?
-                                  : null)!
-                              as EvalCallable?)
-                          ?.call(runtime, null, null, null, 0),
-                      runtime: runtime,
-                    ) as dynamic;
-                  },
+                : runtime.cachedCallback(
+                    (c is List && (c as List).length > 0
+                            ? (c as List)[0] as $Value?
+                            : null)!
+                        as EvalCallable,
+                    "V Function();export=true",
+                    (_callable) => () {
+                      return TypedInterop.exportExternal(
+                        _callable.call(runtime, null, null, null, 0),
+                        runtime: runtime,
+                      ) as dynamic;
+                    },
+                  ),
           );
           return (result is List || result is Map || result is Set
               ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -733,40 +760,57 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
         });
       case 'updateAll':
         return $Function((runtime, target, r, s, c) {
-          super.updateAll((dynamic key, dynamic value) {
-            return TypedInterop.exportExternal(
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                (key is List || key is Map || key is Set
-                    ? TypedInterop.boxExternal(key, runtime: runtime)!
-                    : runtime.wrapAlways(key)),
-                (value is List || value is Map || value is Set
-                    ? TypedInterop.boxExternal(value, runtime: runtime)!
-                    : runtime.wrapAlways(value)),
-                2,
-              ),
-              runtime: runtime,
-            ) as dynamic;
-          });
+          super.updateAll(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "V Function(K, V);export=true",
+              (_callable) => (dynamic key, dynamic value) {
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (key is List || key is Map || key is Set
+                        ? TypedInterop.boxExternal(key, runtime: runtime)!
+                        : runtime.wrapAlways(key)),
+                    (value is List || value is Map || value is Set
+                        ? TypedInterop.boxExternal(value, runtime: runtime)!
+                        : runtime.wrapAlways(value)),
+                    2,
+                  ),
+                  runtime: runtime,
+                ) as dynamic;
+              },
+            ),
+          );
           return null;
         });
       case 'removeWhere':
         return $Function((runtime, target, r, s, c) {
-          super.removeWhere((dynamic key, dynamic value) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (key is List || key is Map || key is Set
-                      ? TypedInterop.boxExternal(key, runtime: runtime)!
-                      : runtime.wrapAlways(key)),
-                  (value is List || value is Map || value is Set
-                      ? TypedInterop.boxExternal(value, runtime: runtime)!
-                      : runtime.wrapAlways(value)),
-                  2,
-                )?.$value
-                as bool;
-          });
+          super.removeWhere(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(K, V);export=true",
+              (_callable) => (dynamic key, dynamic value) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (key is List || key is Map || key is Set
+                              ? TypedInterop.boxExternal(key, runtime: runtime)!
+                              : runtime.wrapAlways(key)),
+                          (value is List || value is Map || value is Set
+                              ? TypedInterop.boxExternal(
+                                  value,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(value)),
+                          2,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+          );
           return null;
         });
       case 'putIfAbsent':
@@ -774,12 +818,16 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
           final result = super.putIfAbsent(
             TypedInterop.exportExternal((r as $Value?), runtime: runtime)
                 as dynamic,
-            () {
-              return TypedInterop.exportExternal(
-                ((s as $Value?)! as EvalCallable)(runtime, null, null, null, 0),
-                runtime: runtime,
-              ) as dynamic;
-            },
+            runtime.cachedCallback(
+              (s as $Value?)! as EvalCallable,
+              "V Function();export=true",
+              (_callable) => () {
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
+              },
+            ),
           );
           return (result is List || result is Map || result is Set
               ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -792,19 +840,25 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
         });
       case 'forEach':
         return $Function((runtime, target, r, s, c) {
-          super.forEach((dynamic key, dynamic value) {
-            ((r as $Value?)! as EvalCallable)(
-              runtime,
-              null,
-              (key is List || key is Map || key is Set
-                  ? TypedInterop.boxExternal(key, runtime: runtime)!
-                  : runtime.wrapAlways(key)),
-              (value is List || value is Map || value is Set
-                  ? TypedInterop.boxExternal(value, runtime: runtime)!
-                  : runtime.wrapAlways(value)),
-              2,
-            );
-          });
+          super.forEach(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "void Function(K, V);export=true",
+              (_callable) => (dynamic key, dynamic value) {
+                _callable.call(
+                  runtime,
+                  null,
+                  (key is List || key is Map || key is Set
+                      ? TypedInterop.boxExternal(key, runtime: runtime)!
+                      : runtime.wrapAlways(key)),
+                  (value is List || value is Map || value is Set
+                      ? TypedInterop.boxExternal(value, runtime: runtime)!
+                      : runtime.wrapAlways(value)),
+                  2,
+                );
+              },
+            ),
+          );
           return null;
         });
     }
@@ -974,13 +1028,22 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
   void addAll(Map<K, V> other) {
     final runtime = $runtime;
     $_invoke('addAll', [
-      wrapMap(
+      TypedInterop.boxExternal(
         other,
-        (key, value) => MapEntry(
-          runtime.wrapAlways(key, recursive: true),
-          runtime.wrapAlways(value, recursive: true),
-        ),
-      ),
+        runtime: runtime,
+        runtimeTypeId: runtime.internParameterizedType(CoreTypes.map, [
+          runtime.runtimeTypeArgumentAt(
+                Runtime.bridgeData[this]!.$runtimeType,
+                0,
+              ) ??
+              runtime.lookupType(CoreTypes.dynamic),
+          runtime.runtimeTypeArgumentAt(
+                Runtime.bridgeData[this]!.$runtimeType,
+                1,
+              ) ??
+              runtime.lookupType(CoreTypes.dynamic),
+        ]),
+      )!,
     ]);
   }
 
@@ -1026,7 +1089,7 @@ class $MapBase<K, V> implements $Instance {
   final MapBase<K, V> $value;
 
   @override
-  MapBase get $reified => $value;
+  MapBase<K, V> get $reified => $value;
 
   /// Wrap a [MapBase] in a [$MapBase]
   $MapBase.wrap(this.$value) : _superclass = $Object($value);
@@ -1208,15 +1271,23 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    final result = self.$value.map((dynamic key, dynamic value) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(key, recursive: true),
-        runtime.wrapAlways(value, recursive: true),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.map(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "MapEntry<K2, V2> Function(K, V);export=false",
+        (_callable) => (dynamic key, dynamic value) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(key, recursive: true),
+                runtime.wrapAlways(value, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return wrapMap(
       result,
       (key, value) => MapEntry(
@@ -1254,15 +1325,21 @@ class $MapBase<K, V> implements $Instance {
     final self = target! as $MapBase;
     final result = self.$value.update(
       (r as $Value?)!.$value,
-      (dynamic value) {
-        return ((s as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(value, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (s as $Value?)! as EvalCallable,
+        "V Function(V);export=false",
+        (_callable) => (dynamic value) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(value, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       ifAbsent:
           (c is List && (c as List).length > 0
                       ? (c as List)[0] as $Value?
@@ -1273,14 +1350,16 @@ class $MapBase<K, V> implements $Instance {
                       : null)
                   is $null
           ? null
-          : () {
-              return ((c is List && (c as List).length > 0
-                          ? (c as List)[0] as $Value?
-                          : null)!
-                      as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (c is List && (c as List).length > 0
+                      ? (c as List)[0] as $Value?
+                      : null)!
+                  as EvalCallable,
+              "V Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1296,15 +1375,23 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    self.$value.updateAll((dynamic key, dynamic value) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(key, recursive: true),
-        runtime.wrapAlways(value, recursive: true),
-        2,
-      )?.$value;
-    });
+    self.$value.updateAll(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "V Function(K, V);export=false",
+        (_callable) => (dynamic key, dynamic value) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(key, recursive: true),
+                runtime.wrapAlways(value, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return null;
   }
 
@@ -1317,15 +1404,23 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    self.$value.removeWhere((dynamic key, dynamic value) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(key, recursive: true),
-        runtime.wrapAlways(value, recursive: true),
-        2,
-      )?.$value;
-    });
+    self.$value.removeWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(K, V);export=false",
+        (_callable) => (dynamic key, dynamic value) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(key, recursive: true),
+                runtime.wrapAlways(value, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return null;
   }
 
@@ -1338,15 +1433,16 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    final result = self.$value.putIfAbsent((r as $Value?)!.$value, () {
-      return ((s as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        null,
-        null,
-        0,
-      )?.$value;
-    });
+    final result = self.$value.putIfAbsent(
+      (r as $Value?)!.$value,
+      runtime.cachedCallback(
+        (s as $Value?)! as EvalCallable,
+        "V Function();export=false",
+        (_callable) => () {
+          return _callable.call(runtime, null, null, null, 0)?.$value;
+        },
+      ),
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));
@@ -1406,15 +1502,21 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    self.$value.forEach((dynamic key, dynamic value) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(key, recursive: true),
-        runtime.wrapAlways(value, recursive: true),
-        2,
-      );
-    });
+    self.$value.forEach(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(K, V);export=false",
+        (_callable) => (dynamic key, dynamic value) {
+          _callable.call(
+            runtime,
+            null,
+            runtime.wrapAlways(key, recursive: true),
+            runtime.wrapAlways(value, recursive: true),
+            2,
+          );
+        },
+      ),
+    );
     return null;
   }
 

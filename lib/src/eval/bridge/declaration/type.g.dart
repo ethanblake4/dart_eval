@@ -37,6 +37,7 @@ BridgeClassType _$BridgeClassTypeFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const <BridgeTypeRef>[],
       isAbstract: json['isAbstract'] as bool? ?? false,
+      isMixinClass: json['isMixinClass'] as bool? ?? false,
       generics:
           (json['generics'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(
@@ -51,6 +52,7 @@ Map<String, dynamic> _$BridgeClassTypeToJson(BridgeClassType instance) =>
     <String, dynamic>{
       'type': instance.type.toJson(),
       'isAbstract': instance.isAbstract,
+      'isMixinClass': instance.isMixinClass,
       r'$extends': instance.$extends?.toJson(),
       r'$implements': instance.$implements.map((e) => e.toJson()).toList(),
       r'$with': instance.$with.map((e) => e.toJson()).toList(),

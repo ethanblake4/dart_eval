@@ -32,11 +32,7 @@ final class Intrinsics {
     final boolType = CoreTypes.bool.ref(ctx);
     if (method == 'write' &&
         args.length == 1 &&
-        type.isAssignableTo(
-          ctx,
-          CoreTypes.stringBuffer.ref(ctx),
-          forceAllowDynamic: false,
-        )) {
+        receiver.exactType?.isSpec(CoreTypes.stringBuffer) == true) {
       final buffer = receiver.boxIfNeeded(ctx);
       final isString =
           args.single.type.isSpec(CoreTypes.string) &&

@@ -137,6 +137,8 @@ final class TypedExceptionState {
       AssertionError() => $AssertionError.wrap(error),
       UnimplementedError() => $UnimplementedError.wrap(error),
       UnsupportedError() => $UnsupportedError.wrap(error),
+      StackOverflowError() => $StackOverflowError.wrap(error),
+      OutOfMemoryError() => $OutOfMemoryError.wrap(error),
       Error() => $Error.wrap(error),
       FormatException() => $FormatException.wrap(error),
       Exception() => $Exception.wrap(error),

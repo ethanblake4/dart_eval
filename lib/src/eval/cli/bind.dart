@@ -171,7 +171,10 @@ class ${packageName.toPascalCase()}Plugin implements EvalPlugin {
 }
 
 /// Config-driven binding entry point: `dart_eval bind --config <yaml>`.
-Future<void> cliBindFromConfig(String configPath) async {
+Future<void> cliBindFromConfig(
+  String configPath, {
+  Set<String>? outputFiles,
+}) async {
   final commandRoot = Directory(current);
   final projectRoot = findProjectRoot(commandRoot);
   final configFile = File(
@@ -270,6 +273,15 @@ Future<void> cliBindFromConfig(String configPath) async {
 
     for (final entry in files.entries) {
       final outFile = File(join(outDir.path, entry.key));
+      if (outputFiles != null &&
+          !outputFiles.contains(
+            relative(
+              outFile.path,
+              from: projectRoot.path,
+            ).replaceAll('\\', '/'),
+          )) {
+        continue;
+      }
       if (!outFile.parent.existsSync()) {
         outFile.parent.createSync(recursive: true);
       }
@@ -325,6 +337,10 @@ Future<void> cliBindFromConfig(String configPath) async {
     }
   }
   for (final entry in registryFiles.entries) {
+    if (outputFiles != null &&
+        !outputFiles.contains(entry.key.replaceAll('\\', '/'))) {
+      continue;
+    }
     final registryFile = File(join(projectRoot.path, entry.key));
     if (!registryFile.parent.existsSync()) {
       registryFile.parent.createSync(recursive: true);

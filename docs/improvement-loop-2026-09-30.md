@@ -3764,3 +3764,22 @@ nested patterns cannot produce unsound proofs. Seven original SDK pattern/flow
 fixtures and the disabled-flow counterpart pass their selected variants. Seventeen
 existing focused regressions, six-file analysis and diff checks pass. Seven stale
 entries removed. No runtime checks or bytecode operations added.
+## Cycle 23 pass 4: generated core bridges and SDK metadata
+
+SDK-generated VM error wrappers plus cold exception wrapping let the existing
+10000-depth frame guard satisfy all three stack-overflow fixtures. Generated
+StringBuffer subclass support preserves native constructor-time write calls before
+bridge attachment; ordinary construction retains its original wrapper and scalar
+boxing count. Intrinsics require a proven native allocation so guest overrides
+still dispatch through base-typed calls. Expando's generated operator hooks retain
+guest instance identity rather than trying to unwrap a nonexistent host value.
+Error can now be subclassed, but rethrow_error still needs guest stack frames.
+
+Bridge models and generated SDK declarations carry authentic mixin eligibility,
+abstractness and optional-default source metadata for the next compiler pass.
+JSON companions were generated with build_runner; targeted bindings were generated
+from SDK sources, without unrelated regeneration churn. The generated NSM error
+constructor uses a cold guest-receiver-preserving hook. Five original SDK fixtures
+pass natively and in eval, and three StringBuffer/HLC checks pass, including unique
+subclass/base-dispatch and serialized coverage. Scoped analysis and diff checks
+pass. Five stale entries removed; no hot-loop or frame-guard change.

@@ -15,8 +15,6 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
-import 'string_sink.dart';
-
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
@@ -26,10 +24,13 @@ import 'package:dart_eval/stdlib/core.dart'
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -38,7 +39,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -47,16 +47,21 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExp,
         $RegExpMatch,
         $StringSink;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-/// dart_eval wrapper binding for [StringBuffer]
-class $StringBuffer implements $Instance {
-  /// Configure this class for use in a [Runtime]
+/// dart_eval bridge binding for [StringBuffer]
+class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
+  /// Forwarded constructor for [StringBuffer.new]
+  $StringBuffer$bridge([super.content]);
+
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'StringBuffer.',
-      $StringBuffer.$new,
+      $StringBuffer$bridge.$new,
+      isBridge: true,
     );
   }
 
@@ -65,10 +70,10 @@ class $StringBuffer implements $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$StringBuffer]
+  /// Compile-time type specification of [$StringBuffer$bridge]
   static const $spec = BridgeTypeSpec('dart:core', 'StringBuffer');
 
-  /// Compile-time type declaration of [$StringBuffer]
+  /// Compile-time type declaration of [$StringBuffer$bridge]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$StringBuffer]
@@ -88,6 +93,7 @@ class $StringBuffer implements $Instance {
               'content',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
@@ -113,20 +119,6 @@ class $StringBuffer implements $Instance {
         ),
       ),
 
-      'writeCharCode': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'charCode',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
-              false,
-            ),
-          ],
-        ),
-      ),
-
       'writeAll': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
@@ -146,6 +138,7 @@ class $StringBuffer implements $Instance {
               'separator',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
@@ -163,8 +156,31 @@ class $StringBuffer implements $Instance {
                 nullable: true,
               ),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
+        ),
+      ),
+
+      'writeCharCode': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'charCode',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'toString': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
         ),
       ),
 
@@ -203,20 +219,154 @@ class $StringBuffer implements $Instance {
     },
     setters: {},
     fields: {},
-    wrap: true,
-    bridge: false,
+    wrap: false,
+    bridge: true,
   );
 
-  /// Wrapper for the [StringBuffer.new] constructor
+  /// Proxy for the [StringBuffer.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $StringBuffer.wrap(
-      StringBuffer(
-        (r is $Value ? r : null) == null
-            ? ""
-            : (r is $Value ? r : null)?.$reified,
-      ),
+    return $StringBuffer$bridge(
+      (r is $Value ? r : null) == null
+          ? ""
+          : (r is $Value ? r : null)!.$reified,
     );
   }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    final runtime = $runtime;
+    switch (identifier) {
+      case 'length':
+        final _length = super.length;
+        return $int(_length);
+
+      case 'isEmpty':
+        final _isEmpty = super.isEmpty;
+        return $bool(_isEmpty);
+
+      case 'isNotEmpty':
+        final _isNotEmpty = super.isNotEmpty;
+        return $bool(_isNotEmpty);
+      case 'write':
+        return $Function((runtime, target, r, s, c) {
+          super.write(
+            TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+                as Object?,
+          );
+          return null;
+        });
+      case 'writeAll':
+        return $Function((runtime, target, r, s, c) {
+          super.writeAll(
+            TypedInterop.exportIterable((r as $Value?), runtime),
+            (s is $Value ? s : null) == null ? "" : (s as $String).$value,
+          );
+          return null;
+        });
+      case 'writeln':
+        return $Function((runtime, target, r, s, c) {
+          super.writeln(
+            (r is $Value ? r : null) == null
+                ? ""
+                : TypedInterop.exportExternal(
+                    (r is $Value ? r : null),
+                    runtime: runtime,
+                  ) as Object?,
+          );
+          return null;
+        });
+      case 'writeCharCode':
+        return $Function((runtime, target, r, s, c) {
+          super.writeCharCode((r as $int).$value);
+          return null;
+        });
+      case 'toString':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.toString();
+          return $String(result);
+        });
+      case 'clear':
+        return $Function((runtime, target, r, s, c) {
+          super.clear();
+          return null;
+        });
+    }
+    return null;
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {}
+
+  @override
+  int get length => $_get('length');
+
+  @override
+  bool get isEmpty => $_get('isEmpty');
+
+  @override
+  bool get isNotEmpty => $_get('isNotEmpty');
+
+  @override
+  void write(Object? object) {
+    if (Runtime.bridgeData[this] == null) {
+      super.write(object);
+      return;
+    }
+    final runtime = $runtime;
+    $_invoke('write', [
+      (object is List || object is Map || object is Set
+          ? TypedInterop.boxExternal(object, runtime: runtime)!
+          : runtime.wrapAlways(object)),
+    ]);
+  }
+
+  @override
+  void writeAll(Iterable<dynamic> objects, [String separator = ""]) {
+    final runtime = $runtime;
+    $_invoke('writeAll', [
+      $Iterable.wrap(
+        (objects).map((e) => runtime.wrapAlways(e, recursive: true)),
+      ),
+      $String(separator),
+    ]);
+  }
+
+  @override
+  void writeln([Object? obj = ""]) {
+    final runtime = $runtime;
+    $_invoke('writeln', [
+      (obj is List || obj is Map || obj is Set
+          ? TypedInterop.boxExternal(obj, runtime: runtime)!
+          : runtime.wrapAlways(obj)),
+    ]);
+  }
+
+  @override
+  void writeCharCode(int charCode) {
+    final runtime = $runtime;
+    $_invoke('writeCharCode', [$int(charCode)]);
+  }
+
+  @override
+  String toString() {
+    final runtime = $runtime;
+    return $_invoke('toString', []);
+  }
+
+  @override
+  void clear() {
+    final runtime = $runtime;
+    $_invoke('clear', []);
+  }
+}
+
+/// dart_eval lightweight wrapper binding for [StringBuffer]
+class $StringBuffer implements $Instance {
+  /// Compile-time type specification of [$StringBuffer]
+  static const $spec = BridgeTypeSpec('dart:core', 'StringBuffer');
+
+  /// Compile-time type declaration of [$StringBuffer]
+  static const $type = BridgeTypeRef($spec);
 
   final $Instance _superclass;
 
@@ -227,7 +377,7 @@ class $StringBuffer implements $Instance {
   StringBuffer get $reified => $value;
 
   /// Wrap a [StringBuffer] in a [$StringBuffer]
-  $StringBuffer.wrap(this.$value) : _superclass = $StringSink.wrap($value);
+  $StringBuffer.wrap(this.$value) : _superclass = $Object($value);
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
@@ -247,14 +397,17 @@ class $StringBuffer implements $Instance {
       case 'write':
         return $Closure(__write.func, this);
 
-      case 'writeCharCode':
-        return $Closure(__writeCharCode.func, this);
-
       case 'writeAll':
         return $Closure(__writeAll.func, this);
 
       case 'writeln':
         return $Closure(__writeln.func, this);
+
+      case 'writeCharCode':
+        return $Closure(__writeCharCode.func, this);
+
+      case 'toString':
+        return $Closure(__toString.func, this);
 
       case 'clear':
         return $Closure(__clear.func, this);
@@ -272,19 +425,6 @@ class $StringBuffer implements $Instance {
   ) {
     final self = target! as $StringBuffer;
     self.$value.write((r as $Value?)!.$reified);
-    return null;
-  }
-
-  static const $Function __writeCharCode = $Function(_writeCharCode);
-  static $Value? _writeCharCode(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $StringBuffer;
-    self.$value.writeCharCode((r as $int).$value);
     return null;
   }
 
@@ -316,9 +456,35 @@ class $StringBuffer implements $Instance {
     self.$value.writeln(
       (r is $Value ? r : null) == null
           ? ""
-          : (r is $Value ? r : null)?.$reified,
+          : (r is $Value ? r : null)!.$reified,
     );
     return null;
+  }
+
+  static const $Function __writeCharCode = $Function(_writeCharCode);
+  static $Value? _writeCharCode(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $StringBuffer;
+    self.$value.writeCharCode((r as $int).$value);
+    return null;
+  }
+
+  static const $Function __toString = $Function(_toString);
+  static $Value? _toString(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $StringBuffer;
+    final result = self.$value.toString();
+    return $String(result);
   }
 
   static const $Function __clear = $Function(_clear);

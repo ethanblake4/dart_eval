@@ -62,10 +62,15 @@ class BridgeClassDef implements BridgeDeclaration {
 /// a method's properties when it is defined outside of dart_eval.
 @JsonSerializable(explicitToJson: true)
 class BridgeMethodDef implements BridgeDeclaration {
-  const BridgeMethodDef(this.functionDescriptor, {this.isStatic = false});
+  const BridgeMethodDef(
+    this.functionDescriptor, {
+    this.isStatic = false,
+    this.isAbstract = false,
+  });
 
   final BridgeFunctionDef functionDescriptor;
   final bool isStatic;
+  final bool isAbstract;
 
   /// Connect the generated [_$BridgeMethodDeclarationFromJson] function to the `fromJson`
   /// factory.

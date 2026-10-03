@@ -1,7 +1,22 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 
 import 'base.dart' show $null;
 import 'errors.dart';
+
+$Value? noSuchMethodErrorWithInvocation(
+  Runtime runtime,
+  $Value? _,
+  List<$Value?> args,
+) {
+  final receiver = args[0];
+  return $NoSuchMethodError.wrap(
+    NoSuchMethodError.withInvocation(
+      receiver is TypedInstance ? receiver.dispatchRoot : receiver?.$reified,
+      args[1]!.$reified as Invocation,
+    ),
+  );
+}
 
 $Value? assertionError(Runtime runtime, $Value? _, List<$Value?> args) {
   final value = args.isEmpty ? null : args.first;

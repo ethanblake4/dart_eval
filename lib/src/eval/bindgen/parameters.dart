@@ -60,6 +60,7 @@ String _parameterFrom(
       '${parameter.isNamed ? parameter.name?.replaceFirst(RegExp('^_'), '') : parameter.name}',
       ${paramConfig?.type != null ? bridgeTypeAnnotationFromName(ctx, paramConfig!.type!) : bridgeTypeAnnotationFrom(ctx, parameter.type)},
       ${(paramConfig?.optional ?? parameter.isOptional) ? 'true' : 'false'},
+      ${parameter.defaultValueCode == null ? '' : 'defaultValueSource: ${jsonEncode(parameter.defaultValueCode)},'}
     ),
   ''';
 }

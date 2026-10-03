@@ -115,6 +115,11 @@ abstract final class TypedInterop {
       ),
       subclass as $Instance?,
     );
+    if (subclass == null && instance is $StringBuffer$bridge) {
+      final wrapper = $StringBuffer.wrap(instance);
+      Runtime.bridgeData[wrapper] = Runtime.bridgeData[instance];
+      return wrapper;
+    }
     return instance;
   }
 

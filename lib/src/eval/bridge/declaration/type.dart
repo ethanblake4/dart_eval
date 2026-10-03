@@ -32,11 +32,13 @@ class BridgeClassType {
     this.$implements = const <BridgeTypeRef>[],
     this.$with = const <BridgeTypeRef>[],
     this.isAbstract = false,
+    this.isMixinClass = false,
     this.generics = const <String, BridgeGenericParam>{},
   });
 
   final BridgeTypeRef type;
   final bool isAbstract;
+  final bool isMixinClass;
   final BridgeTypeRef? $extends;
   final List<BridgeTypeRef> $implements;
   final List<BridgeTypeRef> $with;
@@ -63,6 +65,7 @@ class BridgeClassType {
   BridgeClassType copyWith({BridgeTypeRef? type}) => BridgeClassType(
     type ?? this.type,
     isAbstract: isAbstract,
+    isMixinClass: isMixinClass,
     $extends: $extends,
     $implements: $implements,
     $with: $with,

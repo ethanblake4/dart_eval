@@ -29,29 +29,22 @@ import 'package:dart_eval/stdlib/core.dart'
         $DoubleLinkedQueue,
         $DoubleLinkedQueueEntry,
         $ListBase,
-        $MapBase;
+        $MapBase,
+        $SetBase;
+
+import '../core/iterator.dart';
+
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
-import 'package:dart_eval/stdlib/math.dart'
-    hide
-        $LinkedHashMap,
-        $ListQueue,
-        $Queue,
-        $HashMap,
-        $HashSet,
-        $LinkedHashSet,
-        $DoubleLinkedQueue,
-        $DoubleLinkedQueueEntry,
-        $ListBase,
-        $MapBase;
+
+import '../math/random.dart';
 
 /// dart_eval bridge binding for [ListBase]
 class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
   /// Forwarded constructor for [ListBase.new]
   $ListBase$bridge();
 
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -84,6 +77,7 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     BridgeClassType(
       $type,
       isAbstract: true,
+      isMixinClass: true,
 
       generics: {'E': BridgeGenericParam()},
 
@@ -424,6 +418,7 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
               'separator',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
@@ -471,6 +466,7 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
               'growable',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "true",
             ),
           ],
           params: [],
@@ -754,6 +750,8 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       '[]=': BridgeMethodDef(
@@ -774,6 +772,8 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'add': BridgeMethodDef(
@@ -880,6 +880,7 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
           ],
         ),
@@ -916,6 +917,7 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
           ],
         ),
@@ -1265,6 +1267,7 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
               'skipCount',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
           ],
         ),
@@ -1389,6 +1392,8 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'reversed': BridgeMethodDef(
@@ -1496,6 +1501,8 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     fields: {},
@@ -1589,20 +1596,26 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'map':
         return $Function((runtime, target, r, s, c) {
-          final result = super.map((dynamic element) {
-            return TypedInterop.exportExternal(
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                (element is List || element is Map || element is Set
-                    ? TypedInterop.boxExternal(element, runtime: runtime)!
-                    : runtime.wrapAlways(element)),
-                null,
-                1,
-              ),
-              runtime: runtime,
-            ) as dynamic;
-          });
+          final result = super.map(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "T Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (element is List || element is Map || element is Set
+                        ? TypedInterop.boxExternal(element, runtime: runtime)!
+                        : runtime.wrapAlways(element)),
+                    null,
+                    1,
+                  ),
+                  runtime: runtime,
+                ) as dynamic;
+              },
+            ),
+          );
           return $Iterable.wrap(
             (result).map(
               (e) => (e is List || e is Map || e is Set
@@ -1613,18 +1626,29 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'where':
         return $Function((runtime, target, r, s, c) {
-          final result = super.where((dynamic element) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  null,
-                  1,
-                )?.$value
-                as bool;
-          });
+          final result = super.where(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+          );
           return $Iterable.wrap(
             (result).map(
               (e) => (e is List || e is Map || e is Set
@@ -1646,20 +1670,26 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'expand':
         return $Function((runtime, target, r, s, c) {
-          final result = super.expand((dynamic element) {
-            return TypedInterop.exportIterable(
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                (element is List || element is Map || element is Set
-                    ? TypedInterop.boxExternal(element, runtime: runtime)!
-                    : runtime.wrapAlways(element)),
-                null,
-                1,
-              ),
-              runtime,
-            );
-          });
+          final result = super.expand(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "Iterable<T> Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return TypedInterop.exportIterable(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (element is List || element is Map || element is Set
+                        ? TypedInterop.boxExternal(element, runtime: runtime)!
+                        : runtime.wrapAlways(element)),
+                    null,
+                    1,
+                  ),
+                  runtime,
+                );
+              },
+            ),
+          );
           return $Iterable.wrap(
             (result).map(
               (e) => (e is List || e is Map || e is Set
@@ -1678,39 +1708,54 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'forEach':
         return $Function((runtime, target, r, s, c) {
-          super.forEach((dynamic element) {
-            ((r as $Value?)! as EvalCallable)(
-              runtime,
-              null,
-              (element is List || element is Map || element is Set
-                  ? TypedInterop.boxExternal(element, runtime: runtime)!
-                  : runtime.wrapAlways(element)),
-              null,
-              1,
-            );
-          });
+          super.forEach(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "void Function(E);export=true",
+              (_callable) => (dynamic element) {
+                _callable.call(
+                  runtime,
+                  null,
+                  (element is List || element is Map || element is Set
+                      ? TypedInterop.boxExternal(element, runtime: runtime)!
+                      : runtime.wrapAlways(element)),
+                  null,
+                  1,
+                );
+              },
+            ),
+          );
           return null;
         });
       case 'reduce':
         return $Function((runtime, target, r, s, c) {
-          final result = super.reduce((dynamic previousValue, dynamic element) {
-            return TypedInterop.exportExternal(
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                (previousValue is List ||
-                        previousValue is Map ||
-                        previousValue is Set
-                    ? TypedInterop.boxExternal(previousValue, runtime: runtime)!
-                    : runtime.wrapAlways(previousValue)),
-                (element is List || element is Map || element is Set
-                    ? TypedInterop.boxExternal(element, runtime: runtime)!
-                    : runtime.wrapAlways(element)),
-                2,
-              ),
-              runtime: runtime,
-            ) as dynamic;
-          });
+          final result = super.reduce(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "E Function(E, E);export=true",
+              (_callable) => (dynamic previousValue, dynamic element) {
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (previousValue is List ||
+                            previousValue is Map ||
+                            previousValue is Set
+                        ? TypedInterop.boxExternal(
+                            previousValue,
+                            runtime: runtime,
+                          )!
+                        : runtime.wrapAlways(previousValue)),
+                    (element is List || element is Map || element is Set
+                        ? TypedInterop.boxExternal(element, runtime: runtime)!
+                        : runtime.wrapAlways(element)),
+                    2,
+                  ),
+                  runtime: runtime,
+                ) as dynamic;
+              },
+            ),
+          );
           return (result is List || result is Map || result is Set
               ? TypedInterop.boxExternal(result, runtime: runtime)!
               : runtime.wrapAlways(result));
@@ -1720,27 +1765,31 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
           final result = super.fold(
             TypedInterop.exportExternal((r as $Value?), runtime: runtime)
                 as dynamic,
-            (dynamic previousValue, dynamic element) {
-              return TypedInterop.exportExternal(
-                ((s as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (previousValue is List ||
-                          previousValue is Map ||
-                          previousValue is Set
-                      ? TypedInterop.boxExternal(
-                          previousValue,
-                          runtime: runtime,
-                        )!
-                      : runtime.wrapAlways(previousValue)),
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  2,
-                ),
-                runtime: runtime,
-              ) as dynamic;
-            },
+            runtime.cachedCallback(
+              (s as $Value?)! as EvalCallable,
+              "T Function(T, E);export=true",
+              (_callable) => (dynamic previousValue, dynamic element) {
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (previousValue is List ||
+                            previousValue is Map ||
+                            previousValue is Set
+                        ? TypedInterop.boxExternal(
+                            previousValue,
+                            runtime: runtime,
+                          )!
+                        : runtime.wrapAlways(previousValue)),
+                    (element is List || element is Map || element is Set
+                        ? TypedInterop.boxExternal(element, runtime: runtime)!
+                        : runtime.wrapAlways(element)),
+                    2,
+                  ),
+                  runtime: runtime,
+                ) as dynamic;
+              },
+            ),
           );
           return (result is List || result is Map || result is Set
               ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1748,18 +1797,29 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'every':
         return $Function((runtime, target, r, s, c) {
-          final result = super.every((dynamic element) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  null,
-                  1,
-                )?.$value
-                as bool;
-          });
+          final result = super.every(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+          );
           return $bool(result);
         });
       case 'join':
@@ -1771,18 +1831,29 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'any':
         return $Function((runtime, target, r, s, c) {
-          final result = super.any((dynamic element) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  null,
-                  1,
-                )?.$value
-                as bool;
-          });
+          final result = super.any(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+          );
           return $bool(result);
         });
       case 'toList':
@@ -1833,18 +1904,29 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'takeWhile':
         return $Function((runtime, target, r, s, c) {
-          final result = super.takeWhile((dynamic element) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  null,
-                  1,
-                )?.$value
-                as bool;
-          });
+          final result = super.takeWhile(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+          );
           return $Iterable.wrap(
             (result).map(
               (e) => (e is List || e is Map || e is Set
@@ -1866,18 +1948,29 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'skipWhile':
         return $Function((runtime, target, r, s, c) {
-          final result = super.skipWhile((dynamic element) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  null,
-                  1,
-                )?.$value
-                as bool;
-          });
+          final result = super.skipWhile(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+          );
           return $Iterable.wrap(
             (result).map(
               (e) => (e is List || e is Map || e is Set
@@ -1889,34 +1982,41 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
       case 'firstWhere':
         return $Function((runtime, target, r, s, c) {
           final result = super.firstWhere(
-            (dynamic element) {
-              return ((r as $Value?)! as EvalCallable)(
-                    runtime,
-                    null,
-                    (element is List || element is Map || element is Set
-                        ? TypedInterop.boxExternal(element, runtime: runtime)!
-                        : runtime.wrapAlways(element)),
-                    null,
-                    1,
-                  )?.$value
-                  as bool;
-            },
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
             orElse:
                 (s is $Value ? s : null) == null ||
                     (s is $Value ? s : null) is $null
                 ? null
-                : () {
-                    return TypedInterop.exportExternal(
-                      ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                        runtime,
-                        null,
-                        null,
-                        null,
-                        0,
-                      ),
-                      runtime: runtime,
-                    ) as dynamic;
-                  },
+                : runtime.cachedCallback(
+                    (s is $Value ? s : null)! as EvalCallable,
+                    "E Function();export=true",
+                    (_callable) => () {
+                      return TypedInterop.exportExternal(
+                        _callable.call(runtime, null, null, null, 0),
+                        runtime: runtime,
+                      ) as dynamic;
+                    },
+                  ),
           );
           return (result is List || result is Map || result is Set
               ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1925,34 +2025,41 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
       case 'lastWhere':
         return $Function((runtime, target, r, s, c) {
           final result = super.lastWhere(
-            (dynamic element) {
-              return ((r as $Value?)! as EvalCallable)(
-                    runtime,
-                    null,
-                    (element is List || element is Map || element is Set
-                        ? TypedInterop.boxExternal(element, runtime: runtime)!
-                        : runtime.wrapAlways(element)),
-                    null,
-                    1,
-                  )?.$value
-                  as bool;
-            },
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
             orElse:
                 (s is $Value ? s : null) == null ||
                     (s is $Value ? s : null) is $null
                 ? null
-                : () {
-                    return TypedInterop.exportExternal(
-                      ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                        runtime,
-                        null,
-                        null,
-                        null,
-                        0,
-                      ),
-                      runtime: runtime,
-                    ) as dynamic;
-                  },
+                : runtime.cachedCallback(
+                    (s is $Value ? s : null)! as EvalCallable,
+                    "E Function();export=true",
+                    (_callable) => () {
+                      return TypedInterop.exportExternal(
+                        _callable.call(runtime, null, null, null, 0),
+                        runtime: runtime,
+                      ) as dynamic;
+                    },
+                  ),
           );
           return (result is List || result is Map || result is Set
               ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1961,34 +2068,41 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
       case 'singleWhere':
         return $Function((runtime, target, r, s, c) {
           final result = super.singleWhere(
-            (dynamic element) {
-              return ((r as $Value?)! as EvalCallable)(
-                    runtime,
-                    null,
-                    (element is List || element is Map || element is Set
-                        ? TypedInterop.boxExternal(element, runtime: runtime)!
-                        : runtime.wrapAlways(element)),
-                    null,
-                    1,
-                  )?.$value
-                  as bool;
-            },
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
             orElse:
                 (s is $Value ? s : null) == null ||
                     (s is $Value ? s : null) is $null
                 ? null
-                : () {
-                    return TypedInterop.exportExternal(
-                      ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                        runtime,
-                        null,
-                        null,
-                        null,
-                        0,
-                      ),
-                      runtime: runtime,
-                    ) as dynamic;
-                  },
+                : runtime.cachedCallback(
+                    (s is $Value ? s : null)! as EvalCallable,
+                    "E Function();export=true",
+                    (_callable) => () {
+                      return TypedInterop.exportExternal(
+                        _callable.call(runtime, null, null, null, 0),
+                        runtime: runtime,
+                      ) as dynamic;
+                    },
+                  ),
           );
           return (result is List || result is Map || result is Set
               ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -2020,28 +2134,32 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
             (r is $Value ? r : null) == null ||
                     (r is $Value ? r : null) is $null
                 ? null
-                : (dynamic a, dynamic b) {
-                    return ((r is $Value ? r : null)! as EvalCallable?)
-                            ?.call(
-                              runtime,
-                              null,
-                              (a is List || a is Map || a is Set
-                                  ? TypedInterop.boxExternal(
-                                      a,
-                                      runtime: runtime,
-                                    )!
-                                  : runtime.wrapAlways(a)),
-                              (b is List || b is Map || b is Set
-                                  ? TypedInterop.boxExternal(
-                                      b,
-                                      runtime: runtime,
-                                    )!
-                                  : runtime.wrapAlways(b)),
-                              2,
-                            )
-                            ?.$value
-                        as int;
-                  },
+                : runtime.cachedCallback(
+                    (r is $Value ? r : null)! as EvalCallable,
+                    "int Function(E, E);export=true",
+                    (_callable) => (dynamic a, dynamic b) {
+                      return _callable
+                              .call(
+                                runtime,
+                                null,
+                                (a is List || a is Map || a is Set
+                                    ? TypedInterop.boxExternal(
+                                        a,
+                                        runtime: runtime,
+                                      )!
+                                    : runtime.wrapAlways(a)),
+                                (b is List || b is Map || b is Set
+                                    ? TypedInterop.boxExternal(
+                                        b,
+                                        runtime: runtime,
+                                      )!
+                                    : runtime.wrapAlways(b)),
+                                2,
+                              )
+                              ?.$value
+                          as int;
+                    },
+                  ),
           );
           return null;
         });
@@ -2061,34 +2179,58 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'indexWhere':
         return $Function((runtime, target, r, s, c) {
-          final result = super.indexWhere((dynamic element) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  null,
-                  1,
-                )?.$value
-                as bool;
-          }, (s is $Value ? s : null) == null ? 0 : (s as $int).$value);
+          final result = super.indexWhere(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+            (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+          );
           return $int(result);
         });
       case 'lastIndexWhere':
         return $Function((runtime, target, r, s, c) {
-          final result = super.lastIndexWhere((dynamic element) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  null,
-                  1,
-                )?.$value
-                as bool;
-          }, (s is $Value ? s : null)?.$value);
+          final result = super.lastIndexWhere(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+            (s is $Value ? s : null)?.$value,
+          );
           return $int(result);
         });
       case 'lastIndexOf':
@@ -2154,34 +2296,56 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'removeWhere':
         return $Function((runtime, target, r, s, c) {
-          super.removeWhere((dynamic element) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  null,
-                  1,
-                )?.$value
-                as bool;
-          });
+          super.removeWhere(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+          );
           return null;
         });
       case 'retainWhere':
         return $Function((runtime, target, r, s, c) {
-          super.retainWhere((dynamic element) {
-            return ((r as $Value?)! as EvalCallable)(
-                  runtime,
-                  null,
-                  (element is List || element is Map || element is Set
-                      ? TypedInterop.boxExternal(element, runtime: runtime)!
-                      : runtime.wrapAlways(element)),
-                  null,
-                  1,
-                )?.$value
-                as bool;
-          });
+          super.retainWhere(
+            runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "bool Function(E);export=true",
+              (_callable) => (dynamic element) {
+                return _callable
+                        .call(
+                          runtime,
+                          null,
+                          (element is List || element is Map || element is Set
+                              ? TypedInterop.boxExternal(
+                                  element,
+                                  runtime: runtime,
+                                )!
+                              : runtime.wrapAlways(element)),
+                          null,
+                          1,
+                        )
+                        ?.$value
+                    as bool;
+              },
+            ),
+          );
           return null;
         });
       case '+':
@@ -2805,7 +2969,17 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
   List<E> operator +(List<E> other) {
     final runtime = $runtime;
     return ($_invoke('+', [
-      $List.view(other, (e) => runtime.wrapAlways(e, recursive: true)),
+      TypedInterop.boxExternal(
+        other,
+        runtime: runtime,
+        runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+          runtime.runtimeTypeArgumentAt(
+                Runtime.bridgeData[this]!.$runtimeType,
+                0,
+              ) ??
+              runtime.lookupType(CoreTypes.dynamic),
+        ]),
+      )!,
     ]) as List).cast();
   }
 
@@ -2889,7 +3063,7 @@ class $ListBase<E> implements $Instance {
   final ListBase<E> $value;
 
   @override
-  ListBase get $reified => $value;
+  ListBase<E> get $reified => $value;
 
   /// Wrap a [ListBase] in a [$ListBase]
   $ListBase.wrap(this.$value) : _superclass = $Object($value);
@@ -3140,15 +3314,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.map((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.map(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "T Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -3167,15 +3349,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.where((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.where(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -3213,15 +3403,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.expand((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.expand(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Iterable<T> Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -3253,15 +3451,21 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    self.$value.forEach((dynamic element) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      );
-    });
+    self.$value.forEach(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(E);export=false",
+        (_callable) => (dynamic element) {
+          _callable.call(
+            runtime,
+            null,
+            runtime.wrapAlways(element, recursive: true),
+            null,
+            1,
+          );
+        },
+      ),
+    );
     return null;
   }
 
@@ -3274,15 +3478,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.reduce((dynamic previousValue, dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(previousValue, recursive: true),
-        runtime.wrapAlways(element, recursive: true),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.reduce(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "E Function(E, E);export=false",
+        (_callable) => (dynamic previousValue, dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(previousValue, recursive: true),
+                runtime.wrapAlways(element, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));
@@ -3297,18 +3509,24 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.fold((r as $Value?)!.$value, (
-      dynamic previousValue,
-      dynamic element,
-    ) {
-      return ((s as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(previousValue, recursive: true),
-        runtime.wrapAlways(element, recursive: true),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.fold(
+      (r as $Value?)!.$value,
+      runtime.cachedCallback(
+        (s as $Value?)! as EvalCallable,
+        "T Function(T, E);export=false",
+        (_callable) => (dynamic previousValue, dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(previousValue, recursive: true),
+                runtime.wrapAlways(element, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));
@@ -3323,15 +3541,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.every((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.every(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $bool(result);
   }
 
@@ -3359,15 +3585,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.any((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.any(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $bool(result);
   }
 
@@ -3445,15 +3679,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.takeWhile((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.takeWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -3491,15 +3733,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.skipWhile((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.skipWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -3519,23 +3769,31 @@ class $ListBase<E> implements $Instance {
   ) {
     final self = target! as $ListBase;
     final result = self.$value.firstWhere(
-      (dynamic element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(element, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "E Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -3552,23 +3810,31 @@ class $ListBase<E> implements $Instance {
   ) {
     final self = target! as $ListBase;
     final result = self.$value.lastWhere(
-      (dynamic element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(element, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "E Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -3585,23 +3851,31 @@ class $ListBase<E> implements $Instance {
   ) {
     final self = target! as $ListBase;
     final result = self.$value.singleWhere(
-      (dynamic element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(element, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "E Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -3689,17 +3963,21 @@ class $ListBase<E> implements $Instance {
     self.$value.sort(
       (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
-          : (dynamic a, dynamic b) {
-              return ((r is $Value ? r : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    runtime.wrapAlways(a, recursive: true),
-                    runtime.wrapAlways(b, recursive: true),
-                    2,
-                  )
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (r is $Value ? r : null)! as EvalCallable,
+              "int Function(E, E);export=false",
+              (_callable) => (dynamic a, dynamic b) {
+                return _callable
+                    .call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(a, recursive: true),
+                      runtime.wrapAlways(b, recursive: true),
+                      2,
+                    )
+                    ?.$value;
+              },
+            ),
     );
     return null;
   }
@@ -3742,15 +4020,24 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.indexWhere((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    }, (s is $Value ? s : null) == null ? 0 : (s as $int).$value);
+    final result = self.$value.indexWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+    );
     return $int(result);
   }
 
@@ -3763,15 +4050,24 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.lastIndexWhere((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    }, (s is $Value ? s : null)?.$value);
+    final result = self.$value.lastIndexWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+      (s is $Value ? s : null)?.$value,
+    );
     return $int(result);
   }
 
@@ -3895,15 +4191,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    self.$value.removeWhere((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    self.$value.removeWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return null;
   }
 
@@ -3916,15 +4220,23 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    self.$value.retainWhere((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    self.$value.retainWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return null;
   }
 

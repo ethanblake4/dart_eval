@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/enum.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/errors.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/expando.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol_literal.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/error_hooks.dart'
     as assertion_hooks;
@@ -81,7 +82,10 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($AssertionError.$declaration);
     registry.defineBridgeClass($RangeError.$declaration);
     registry.defineBridgeClass($Comparable.$declaration);
-    registry.defineBridgeClass($StringBuffer.$declaration);
+    registry.defineBridgeClass($StringBuffer$bridge.$declaration);
+    $Expando.configureForCompile(registry);
+    $StackOverflowError.configureForCompile(registry);
+    $OutOfMemoryError.configureForCompile(registry);
     registry.defineBridgeClass($Exception.$declaration);
     registry.defineBridgeClass($FormatException.$declaration);
     registry.defineBridgeClass($ArgumentError.$declaration);
@@ -89,7 +93,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Set.$declaration);
     registry.defineBridgeClass($Sink.$declaration);
     $StackTrace.configureForCompile(registry);
-    $Error.configureForCompile(registry);
+    $Error$bridge.configureForCompile(registry);
     registry.defineBridgeClass($TypeError.$declaration);
     registry.defineBridgeClass($NoSuchMethodError.$declaration);
     $UnimplementedError.configureForCompile(registry);
@@ -115,7 +119,10 @@ class DartCorePlugin implements EvalPlugin {
     $RegExp.configureForRuntime(runtime);
     $AssertionError.configureForRuntime(runtime);
     assertion_hooks.configureAssertionForRuntime(runtime);
-    $StringBuffer.configureForRuntime(runtime);
+    $StringBuffer$bridge.configureForRuntime(runtime);
+    $Expando.configureForRuntime(runtime);
+    $StackOverflowError.configureForRuntime(runtime);
+    $OutOfMemoryError.configureForRuntime(runtime);
     $RangeError.configureForRuntime(runtime);
     $Symbol.configureForRuntime(runtime);
     $Exception.configureForRuntime(runtime);
@@ -199,7 +206,7 @@ class DartCorePlugin implements EvalPlugin {
       $double.$tryParse,
     );
     $StackTrace.configureForRuntime(runtime);
-    $Error.configureForRuntime(runtime);
+    $Error$bridge.configureForRuntime(runtime);
     $UnimplementedError.configureForRuntime(runtime);
     $UnsupportedError.configureForRuntime(runtime);
     runtime.registerBridgeFuncRegisters(

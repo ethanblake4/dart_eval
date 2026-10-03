@@ -24,10 +24,13 @@ import 'package:dart_eval/stdlib/core.dart'
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -36,7 +39,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -46,31 +48,33 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExpMatch,
         $StringSink;
 
-import 'stack_trace.dart';
-import 'symbol.dart';
-
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
-
+import './stack_trace.dart';
 import 'error_hooks.dart' as hooks;
 
-/// dart_eval wrapper binding for [Error]
-class $Error implements Error, $Instance {
-  /// Configure this class for use in a [Runtime]
+/// dart_eval bridge binding for [Error]
+class $Error$bridge extends Error with $Bridge<Error> {
+  /// Forwarded constructor for [Error.new]
+  $Error$bridge();
+
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
-    runtime.registerBridgeFuncRegisters('dart:core', 'Error.', $Error.$new);
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Error.',
+      $Error$bridge.$new,
+      isBridge: true,
+    );
 
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Error.safeToString',
-      $Error.$safeToString,
+      $Error$bridge.$safeToString,
     );
 
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Error.throwWithStackTrace',
-      $Error.$throwWithStackTrace,
+      $Error$bridge.$throwWithStackTrace,
     );
   }
 
@@ -79,10 +83,10 @@ class $Error implements Error, $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$Error]
+  /// Compile-time type specification of [$Error$bridge]
   static const $spec = BridgeTypeSpec('dart:core', 'Error');
 
-  /// Compile-time type declaration of [$Error]
+  /// Compile-time type declaration of [$Error$bridge]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$Error]
@@ -155,13 +159,13 @@ class $Error implements Error, $Instance {
     },
     setters: {},
     fields: {},
-    wrap: true,
-    bridge: false,
+    wrap: false,
+    bridge: true,
   );
 
-  /// Wrapper for the [Error.new] constructor
+  /// Proxy for the [Error.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $Error.wrap(Error());
+    return $Error$bridge();
   }
 
   /// Wrapper for the [Error.safeToString] method
@@ -188,6 +192,34 @@ class $Error implements Error, $Instance {
     );
     return const $null();
   }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    final runtime = $runtime;
+    switch (identifier) {
+      case 'stackTrace':
+        final _stackTrace = super.stackTrace;
+        return _stackTrace == null
+            ? const $null()
+            : $StackTrace.wrap(_stackTrace);
+    }
+    return null;
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {}
+
+  @override
+  StackTrace? get stackTrace => $_get('stackTrace');
+}
+
+/// dart_eval lightweight wrapper binding for [Error]
+class $Error implements $Instance {
+  /// Compile-time type specification of [$Error]
+  static const $spec = BridgeTypeSpec('dart:core', 'Error');
+
+  /// Compile-time type declaration of [$Error]
+  static const $type = BridgeTypeRef($spec);
 
   final $Instance _superclass;
 
@@ -219,14 +251,194 @@ class $Error implements Error, $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     return _superclass.$setProperty(runtime, identifier, value);
   }
+}
+
+/// dart_eval wrapper binding for [StackOverflowError]
+class $StackOverflowError implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'StackOverflowError.',
+      $StackOverflowError.$new,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$StackOverflowError]
+  static const $spec = BridgeTypeSpec('dart:core', 'StackOverflowError');
+
+  /// Compile-time type declaration of [$StackOverflowError]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$StackOverflowError]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType($type, $implements: [BridgeTypeRef(CoreTypes.error, [])]),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {},
+    getters: {
+      'stackTrace': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stackTrace, []),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [StackOverflowError.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $StackOverflowError.wrap(StackOverflowError());
+  }
+
+  final $Instance _superclass;
 
   @override
-  StackTrace? get stackTrace => $value.stackTrace;
+  final StackOverflowError $value;
+
+  @override
+  StackOverflowError get $reified => $value;
+
+  /// Wrap a [StackOverflowError] in a [$StackOverflowError]
+  $StackOverflowError.wrap(this.$value) : _superclass = $Error.wrap($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'stackTrace':
+        final _stackTrace = $value.stackTrace;
+        return _stackTrace == null
+            ? const $null()
+            : $StackTrace.wrap(_stackTrace);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
+
+/// dart_eval wrapper binding for [OutOfMemoryError]
+class $OutOfMemoryError implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'OutOfMemoryError.',
+      $OutOfMemoryError.$new,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$OutOfMemoryError]
+  static const $spec = BridgeTypeSpec('dart:core', 'OutOfMemoryError');
+
+  /// Compile-time type declaration of [$OutOfMemoryError]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$OutOfMemoryError]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType($type, $implements: [BridgeTypeRef(CoreTypes.error, [])]),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {},
+    getters: {
+      'stackTrace': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stackTrace, []),
+            nullable: true,
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [OutOfMemoryError.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $OutOfMemoryError.wrap(OutOfMemoryError());
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final OutOfMemoryError $value;
+
+  @override
+  OutOfMemoryError get $reified => $value;
+
+  /// Wrap a [OutOfMemoryError] in a [$OutOfMemoryError]
+  $OutOfMemoryError.wrap(this.$value) : _superclass = $Error.wrap($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'stackTrace':
+        final _stackTrace = $value.stackTrace;
+        return _stackTrace == null
+            ? const $null()
+            : $StackTrace.wrap(_stackTrace);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
 }
 
 /// dart_eval wrapper binding for [TypeError]
 class $TypeError implements TypeError, $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -311,7 +523,6 @@ class $TypeError implements TypeError, $Instance {
 /// dart_eval wrapper binding for [NoSuchMethodError]
 class $NoSuchMethodError implements NoSuchMethodError, $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:core',
@@ -381,12 +592,10 @@ class $NoSuchMethodError implements NoSuchMethodError, $Instance {
     Object? s,
     Object? c,
   ) {
-    return $NoSuchMethodError.wrap(
-      NoSuchMethodError.withInvocation(
-        (r as $Value?)!.$reified,
-        (s as $Value?)!.$value,
-      ),
-    );
+    return hooks.noSuchMethodErrorWithInvocation(runtime, null, [
+      r as $Value?,
+      s as $Value?,
+    ]);
   }
 
   final $Instance _superclass;
@@ -422,7 +631,6 @@ class $NoSuchMethodError implements NoSuchMethodError, $Instance {
 
 /// dart_eval wrapper binding for [RangeError]
 class $RangeError implements RangeError, $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -1052,7 +1260,6 @@ class $RangeError implements RangeError, $Instance {
 /// dart_eval wrapper binding for [AssertionError]
 class $AssertionError implements AssertionError, $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:core',
@@ -1163,7 +1370,6 @@ class $AssertionError implements AssertionError, $Instance {
 
 /// dart_eval wrapper binding for [ArgumentError]
 class $ArgumentError implements ArgumentError, $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -1433,7 +1639,6 @@ class $ArgumentError implements ArgumentError, $Instance {
 /// dart_eval wrapper binding for [StateError]
 class $StateError implements StateError, $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:core',
@@ -1538,7 +1743,6 @@ class $StateError implements StateError, $Instance {
 
 /// dart_eval wrapper binding for [UnsupportedError]
 class $UnsupportedError implements UnsupportedError, $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -1647,7 +1851,6 @@ class $UnsupportedError implements UnsupportedError, $Instance {
 
 /// dart_eval wrapper binding for [UnimplementedError]
 class $UnimplementedError implements UnimplementedError, $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(

@@ -127,6 +127,7 @@ String? bindBridgeDeclaration(
   static const \$declaration = ${element is ClassElement ? 'BridgeClassDef(BridgeClassType(' : 'BridgeEnumDef('}
       \$type,
       ${element is ClassElement && isAbstract ? 'isAbstract: true,' : ''}
+      ${element is ClassElement && element.isMixinClass ? 'isMixinClass: true,' : ''}
       $enumValuesStr
       $genericsStr
       $extendsStr
@@ -388,6 +389,7 @@ String bridgeMethodDef(
       '$name': BridgeMethodDef(
         ${bridgeFunctionDef(ctx, function: method, member: member)}
         ${method.isStatic ? 'isStatic: true,' : ''}
+        ${method.isAbstract ? 'isAbstract: true,' : ''}
       ),
 ''';
 }
@@ -401,6 +403,7 @@ String bridgeGetterDef(
       '${member?.rename ?? getter.name}': BridgeMethodDef(
         ${bridgeFunctionDef(ctx, function: getter, member: member)}
         ${getter.isStatic ? 'isStatic: true,' : ''}
+        ${getter.isAbstract ? 'isAbstract: true,' : ''}
       ),
 ''';
 }
@@ -414,6 +417,7 @@ String bridgeSetterDef(
       '${member?.rename ?? setter.name}': BridgeMethodDef(
         ${bridgeFunctionDef(ctx, function: setter, member: member)}
         ${setter.isStatic ? 'isStatic: true,' : ''}
+        ${setter.isAbstract ? 'isAbstract: true,' : ''}
       ),
 ''';
 }

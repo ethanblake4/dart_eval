@@ -6,7 +6,12 @@ part 'function.g.dart';
 /// Describes a parameter of a bridged function.
 @JsonSerializable(explicitToJson: true)
 class BridgeParameter {
-  const BridgeParameter(this.name, this.type, this.optional);
+  const BridgeParameter(
+    this.name,
+    this.type,
+    this.optional, {
+    this.defaultValueSource,
+  });
 
   /// The name of the parameter.
   final String name;
@@ -16,6 +21,7 @@ class BridgeParameter {
 
   /// Whether the parameter is optional
   final bool optional;
+  final String? defaultValueSource;
 
   /// Connect the generated [_$BridgeParameterFromJson] function to the `fromJson`
   /// factory.

@@ -61,12 +61,14 @@ BridgeMethodDef _$BridgeMethodDefFromJson(Map<String, dynamic> json) =>
         json['functionDescriptor'] as Map<String, dynamic>,
       ),
       isStatic: json['isStatic'] as bool? ?? false,
+      isAbstract: json['isAbstract'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$BridgeMethodDefToJson(BridgeMethodDef instance) =>
     <String, dynamic>{
       'functionDescriptor': instance.functionDescriptor.toJson(),
       'isStatic': instance.isStatic,
+      'isAbstract': instance.isAbstract,
     };
 
 BridgeConstructorDef _$BridgeConstructorDefFromJson(

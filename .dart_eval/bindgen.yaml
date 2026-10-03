@@ -38,6 +38,20 @@ libraries:
         file: stack_trace.dart
       StringBuffer:
         file: string_buffer.dart
+        mode: both
+        implicitSupers: true
+        constructorCalls: [write]
+        methods:
+          toString:
+            include: true
+      Expando:
+        file: expando.dart
+        hooks: expando_hooks.dart
+        methods:
+          '[]':
+            hook: expandoGet
+          '[]=':
+            hook: expandoSet
       Symbol:
         file: symbol.dart
         equality:
@@ -50,12 +64,22 @@ libraries:
       Error:
         file: errors.dart
         implementsSdk: true
+        mode: both
+        implicitSupers: true
+      StackOverflowError:
+        file: errors.dart
+      OutOfMemoryError:
+        file: errors.dart
       TypeError:
         file: errors.dart
         implementsSdk: true
       NoSuchMethodError:
         file: errors.dart
         implementsSdk: true
+        hooks: error_hooks.dart
+        constructors:
+          withInvocation:
+            hook: noSuchMethodErrorWithInvocation
       RangeError:
         file: errors.dart
         implementsSdk: true

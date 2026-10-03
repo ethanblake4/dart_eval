@@ -60,6 +60,11 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
       )
       .map((e) {
         final returnType = e.returnType;
+        final constructorCall =
+            ctx.classConfig?.constructorCalls.contains(e.name) ?? false;
+        final nativeArguments = e.formalParameters
+            .map((p) => '${p.isNamed ? '${p.name}: ' : ''}${p.name}')
+            .join(', ');
         final exportIterable =
             returnType.isDartCoreIterable && returnType is InterfaceType;
         if (exportIterable) {
@@ -78,6 +83,10 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
         return '''
         @override
         $returnType ${e.isOperator ? 'operator ' : ''}${e.displayName}${e.typeParameters.isEmpty ? '' : '<${e.typeParameters.join(', ')}>'}(${parameterHeader(e.formalParameters, preserveTypes: true)}) {
+          ${constructorCall ? '''if (Runtime.bridgeData[this] == null) {
+            ${returnType is VoidType ? '' : 'return '}super.${e.displayName}($nativeArguments);
+            ${returnType is VoidType ? 'return;' : ''}
+          }''' : ''}
           final runtime = \$runtime;
           ${returnType is VoidType
             ? ''
@@ -103,16 +112,18 @@ String? _bridgeArgument(BindgenContext ctx, DartType type, String expression) {
   }
   final typeId = runtimeTypeIdFor(ctx, type, 'bridge');
   if (typeId == null) return wrapped;
-  ctx.imports.add(
-    'package:dart_eval/src/eval/runtime/runtime.dart',
-  );
+  ctx.imports.add('package:dart_eval/src/eval/runtime/runtime.dart');
   if (type.isDartCoreList || type.isDartCoreMap || type.isDartCoreSet) {
-    ctx.imports.add('package:dart_eval/src/eval/runtime/typed/typed_interop.dart');
+    ctx.imports.add(
+      'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+    );
     return 'TypedInterop.boxExternal($expression, runtime: runtime, '
         'runtimeTypeId: $typeId)!';
   }
   if (type.element?.library?.isInSdk == true) return wrapped;
-  ctx.imports.add('package:dart_eval/src/eval/runtime/typed/typed_interop.dart');
+  ctx.imports.add(
+    'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+  );
   return 'TypedInterop.annotateBridgeType($wrapped, runtime, $typeId)';
 }
 

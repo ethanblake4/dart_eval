@@ -367,6 +367,7 @@ class BindgenClassConfig {
     this.fields = const {},
     this.synthetic = const [],
     this.implicitSupers,
+    this.constructorCalls = const [],
     this.libOverride,
     this.imports = const [],
   });
@@ -444,6 +445,9 @@ class BindgenClassConfig {
 
   final bool? implicitSupers;
 
+  /// Concrete members invoked virtually before a bridge constructor returns.
+  final List<String> constructorCalls;
+
   /// Overrides the library URI recorded in generated `$spec`s.
   final String? libOverride;
 
@@ -510,6 +514,7 @@ class BindgenClassConfig {
               if (entry is YamlMap) BindgenSyntheticMember.fromYaml(entry),
         ],
         implicitSupers: _bool(yaml['implicitSupers']),
+        constructorCalls: _strList(yaml['constructorCalls']),
         libOverride: _str(yaml['overrideLibrary']),
         imports: _strList(yaml['imports']),
       );

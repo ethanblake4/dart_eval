@@ -72,6 +72,7 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     BridgeClassType(
       $type,
       isAbstract: true,
+      isMixinClass: true,
 
       generics: {'E': BridgeGenericParam()},
 
@@ -266,6 +267,8 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'forEach': BridgeMethodDef(
@@ -412,6 +415,7 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
               'separator',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
@@ -459,6 +463,7 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
               'growable',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "true",
             ),
           ],
           params: [],
@@ -475,6 +480,8 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'take': BridgeMethodDef(
@@ -742,6 +749,8 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'addAll': BridgeMethodDef(
@@ -777,6 +786,8 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'lookup': BridgeMethodDef(
@@ -794,6 +805,8 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'removeAll': BridgeMethodDef(
@@ -1030,6 +1043,8 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'length': BridgeMethodDef(
@@ -1038,6 +1053,8 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isEmpty': BridgeMethodDef(
