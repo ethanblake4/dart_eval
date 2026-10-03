@@ -106,6 +106,7 @@ void _compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
 
   _compileEnumFieldGetter(ctx, clsName, 'index', 0);
   _compileEnumFieldGetter(ctx, clsName, 'name', 1);
+  _compileEnumFieldGetter(ctx, clsName, 'dart:core::_name', 1);
   if (!methods.any((m) => m.name.lexeme == 'toString')) {
     _compileEnumToString(ctx, clsName);
   }
@@ -248,7 +249,8 @@ void _compileEnumValue(
     [],
     MachineRepresentation.object,
   );
-  final cstrName = constant.arguments?.constructorSelector?.name.name ?? '';
+  final selector = constant.arguments?.constructorSelector?.name.name;
+  final cstrName = selector == 'new' ? '' : selector ?? '';
   final offset = DeferredOrOffset.lookupStatic(
     ctx,
     ctx.library,

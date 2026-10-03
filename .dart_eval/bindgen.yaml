@@ -15,6 +15,7 @@ defaults:
 libraries:
   - uri: dart:core
     typedefs: [Comparator]
+    sourceExtensions: [EnumName, EnumByName]
     outDir: lib/src/eval/shared/stdlib/core
     registry:
       file: lib/src/eval/shared/types.dart
@@ -155,9 +156,24 @@ libraries:
       Type:
         handMaintained: true
         unnamedValueConstructor: true
-      # Spec-only entries (no `$X.wrap` exists).
       Enum:
-        include: false
+        file: enum_bindings.dart
+        hooks: enum_hooks.dart
+        statics:
+          compareByIndex:
+            hook: enumCompareByIndex
+          compareByName:
+            hook: enumCompareByName
+        synthetic:
+          - kind: getter
+            name: name
+            returns: String
+            expr: '$String($value.name)'
+          - kind: getter
+            name: _name
+            returns: String
+            expr: '$String($value.name)'
+      # Spec-only entries (no `$X.wrap` exists).
       'Null':
         include: false
       Function:

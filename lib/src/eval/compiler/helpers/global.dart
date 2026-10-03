@@ -12,6 +12,7 @@ import '../context.dart';
 import '../type.dart';
 import '../values/abi.dart';
 import '../member/member_name.dart';
+import '../declaration/enum.dart' show resolveEnumValueType;
 
 final _resolving = Expando<Set<(int, String)>>();
 
@@ -57,7 +58,12 @@ TypeRef resolveGlobalType(CompilerContext ctx, int library, String name) {
       }
       if (variable == null && owner is EnumDeclaration) {
         final type = TypeRef.lookupDeclaration(ctx, library, owner);
-        return _record(ctx, library, name, type);
+        return _record(
+          ctx,
+          library,
+          name,
+          resolveEnumValueType(ctx, type, name.substring(separator + 1)),
+        );
       }
     }
     final index = ctx.topLevelGlobalIndices[library]?[name];
@@ -124,6 +130,16 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   if (expression is FunctionExpression) return CoreTypes.function.ref(ctx);
   final constructorTearOff = _constructorTearOffType(ctx, library, expression);
   if (constructorTearOff != null) return constructorTearOff;
+  if (expression is PrefixedIdentifier) {
+    final type = ctx.visibleTypes[library]?[expression.prefix.name];
+    if (type != null &&
+        ctx.enumValueIndices[type.file]?[type.name]?.containsKey(
+              expression.identifier.name,
+            ) ==
+            true) {
+      return resolveEnumValueType(ctx, type, expression.identifier.name);
+    }
+  }
   if (expression is InstanceCreationExpression) {
     final typeName = splitConstructorTypeName(
       ctx,

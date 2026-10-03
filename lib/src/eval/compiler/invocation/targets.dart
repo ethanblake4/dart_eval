@@ -368,12 +368,11 @@ final class ConstructorCall extends CallTarget {
       }
     } else {
       final callArguments = <SSA>[
-        // Enum constructors carry two synthetic leading parameters (index,
-        // name) bound by the enum's own value materialization; direct calls
-        // — only factories are reachable — bind them to null.
+        // Generative enum constructors carry the constant's index and name.
         if (leadingArguments != null)
           ...leadingArguments!
         else if (constructor != null &&
+            !_isFactory &&
             constructor!.parent?.parent is EnumDeclaration) ...[
           BuiltinValue().push(ctx).ssa,
           BuiltinValue().push(ctx).ssa,

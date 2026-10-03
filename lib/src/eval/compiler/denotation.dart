@@ -1560,6 +1560,14 @@ final class _StaticBridgeDenotation extends Denotation {
   TypeRef readType(CompilerContext ctx, {AstNode? source}) {
     final br = owner.bridge;
     if (br is BridgeClassDef) {
+      final method = br.methods[name];
+      if (method?.isStatic == true) {
+        return CallSignature.bridge(
+          ctx,
+          method!.functionDescriptor,
+          returnFallback: CoreTypes.dynamic.ref(ctx),
+        ).toFunctionType(ctx);
+      }
       final getter = br.getters[name];
       final field = br.fields[name];
       if (getter != null) {
@@ -1584,6 +1592,14 @@ final class _StaticBridgeDenotation extends Denotation {
   }) {
     final br = owner.bridge;
     if (br is BridgeClassDef) {
+      if (br.methods[name]?.isStatic == true) {
+        return materializeTearOff(
+          ctx,
+          DeferredOrOffset(file: type.file, name: '${type.name}.$name'),
+          boundContext: boundContext,
+          typeArguments: typeArguments,
+        );
+      }
       final getter = br.getters[name];
       final field = br.fields[name];
       if (getter != null || field != null) {

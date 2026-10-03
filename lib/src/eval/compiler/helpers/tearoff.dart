@@ -338,8 +338,11 @@ Variable _bridgeTearOff(
   TypeRef? boundContext,
   List<TypeRef>? typeArguments,
 }) {
-  final bridge = declared.bridge! as BridgeFunctionDeclaration;
-  final functionDef = bridge.function;
+  final functionDef = switch (declared.bridge!) {
+    BridgeFunctionDeclaration(:final function) => function,
+    BridgeMethodDef(:final functionDescriptor) => functionDescriptor,
+    _ => throw CompileError('Cannot tear off bridged member ${offset.name}'),
+  };
   final file = offset.file ?? ctx.library;
   final externalIndex = ctx.bridgeStaticFunctionIndices[file]?[offset.name];
   if (externalIndex == null) {

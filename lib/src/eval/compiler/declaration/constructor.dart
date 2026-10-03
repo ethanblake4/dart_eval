@@ -49,7 +49,7 @@ void compileConstructorDeclaration(
   final parentName = declarationName(parent);
   final dName = ctorNameOf(d.name?.lexeme);
   final n = '$parentName.$dName';
-  final isEnum = parent is EnumDeclaration;
+  final isEnum = parent is EnumDeclaration && d.factoryKeyword == null;
 
   if (d.factoryKeyword != null && d.initializers.isNotEmpty) {
     throw CompileError('Factory constructors cannot have initializers', d);
@@ -124,7 +124,7 @@ void compileConstructorDeclaration(
     d.parameters,
     false,
     allowUnboxed: true,
-    isEnum: parent is EnumDeclaration,
+    isEnum: isEnum,
     parameterHost: d,
   );
   final parameterTypes = ctx.functionParameterTypes[ctx.currentFunctionId!]!;
@@ -138,7 +138,7 @@ void compileConstructorDeclaration(
   );
 
   final superParams = (positional: <String>[], named: <String>{});
-  var i = parent is EnumDeclaration ? 2 : 0;
+  var i = isEnum ? 2 : 0;
 
   for (final p in resolvedParams) {
     if ($redirectingInitializer != null && p is! RegularFormalParameter) {

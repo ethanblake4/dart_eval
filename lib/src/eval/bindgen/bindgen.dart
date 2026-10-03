@@ -241,6 +241,12 @@ class Bindgen implements BridgeDeclarationRegistry {
         sdkTypedefSourceForLibrary(library, libraryConfig.typedefs),
       );
     }
+    if (libraryConfig.sourceExtensions.isNotEmpty) {
+      result['extensions.dart'] = emitSdkExtensionsSource(
+        uri,
+        sdkExtensionSourceForLibrary(library, libraryConfig.sourceExtensions),
+      );
+    }
     return result;
   }
 

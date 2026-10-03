@@ -8,7 +8,9 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
-import 'package:dart_eval/src/eval/shared/stdlib/core/enum.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/enum_bindings.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/extensions.dart'
+    as core_extensions;
 import 'package:dart_eval/src/eval/shared/stdlib/core/errors.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/expando.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol_literal.dart';
@@ -37,6 +39,12 @@ import 'core/future.dart';
 import 'core/map_entry.dart';
 import 'core/print.dart';
 
+final _sdkCoreSource = DartSource(
+  'dart:core',
+  '${core_typedefs.sdkTypedefsSource.stringSource!}\n'
+      '${core_extensions.sdkExtensionsSource.stringSource!}',
+);
+
 /// [EvalPlugin] for the `dart:core` library
 class DartCorePlugin implements EvalPlugin {
   @override
@@ -44,7 +52,7 @@ class DartCorePlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
-    registry.addSource(core_typedefs.sdkTypedefsSource);
+    registry.addSource(_sdkCoreSource);
     configurePrintForCompile(registry);
     configureIdenticalForCompile(registry);
     configureSymbolLiteralsForCompile(registry);
@@ -56,7 +64,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Type.$declaration);
     registry.defineBridgeClass($null.$declaration);
     registry.defineBridgeClass($Object.$declaration);
-    registry.defineBridgeClass($enumDeclaration);
+    $Enum.configureForCompile(registry);
     registry.defineBridgeClass($bool.$declaration);
     registry.defineBridgeClass($Function.$declaration);
     registry.defineBridgeClass($Symbol.$declaration);
@@ -102,6 +110,7 @@ class DartCorePlugin implements EvalPlugin {
 
   @override
   void configureForRuntime(Runtime runtime) {
+    $Enum.configureForRuntime(runtime);
     configurePrintForRuntime(runtime);
     configureIdenticalForRuntime(runtime);
     configureSymbolLiteralsForRuntime(runtime);

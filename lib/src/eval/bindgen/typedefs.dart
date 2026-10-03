@@ -66,3 +66,53 @@ String emitTypedefDartSource(String uri, String declarations) {
   }
   return "final sdkTypedefsSource = DartSource('$uri', r'''\n$declarations\n''');";
 }
+
+/// Copies selected SDK extension declarations without changing their bodies.
+String sdkExtensionSourceForLibrary(
+  LibraryElement library,
+  Iterable<String> names,
+) {
+  final selected = names.toList();
+  if (selected.toSet().length != selected.length) {
+    throw const FormatException('Duplicate extension name in config');
+  }
+  final wanted = selected.toSet();
+  final paths = <String>{};
+  for (final extension in library.extensions) {
+    if (!wanted.contains(extension.name)) continue;
+    final source = extension.firstFragment.libraryFragment.source;
+    paths.add(source.fullName);
+  }
+  final declarations = <String, String>{};
+  for (final path in paths) {
+    final source = File(path).readAsStringSync();
+    final unit = parseString(content: source, throwIfDiagnostics: false).unit;
+    for (final extension
+        in unit.declarations.whereType<ExtensionDeclaration>()) {
+      final name = extension.name?.lexeme;
+      if (!wanted.contains(name)) continue;
+      if (declarations.containsKey(name)) {
+        throw FormatException('Duplicate extension $name');
+      }
+      declarations[name!] = source.substring(
+        extension.extensionKeyword.offset,
+        extension.body.end,
+      );
+    }
+  }
+  for (final name in selected) {
+    if (!declarations.containsKey(name)) {
+      throw FormatException('Extension $name not found in SDK source');
+    }
+  }
+  return selected.map((name) => declarations[name]!).join('\n');
+}
+
+String emitSdkExtensionsSource(String uri, String declarations) {
+  if (declarations.contains("'''")) {
+    throw const FormatException(
+      'Extension source contains a raw string delimiter',
+    );
+  }
+  return "final sdkExtensionsSource = DartSource('$uri', r'''\n$declarations\n''');";
+}

@@ -222,14 +222,21 @@ final class CallableAbi {
         (member.owner as TypeDeclMemberOwner).decl.ctx,
         node,
         parameterTypes,
-        leadingBoxed: node.parent?.parent is EnumDeclaration ? 2 : 0,
+        leadingBoxed:
+            node.parent?.parent is EnumDeclaration &&
+                node.factoryKeyword == null
+            ? 2
+            : 0,
       );
     }
     return CallableAbi.fromParameterTypes(
       parameterTypes,
       signature.returnType,
       isConstructor ? CallableKind.constructor : CallableKind.function,
-      leadingBoxed: isConstructor && node?.parent?.parent is EnumDeclaration
+      leadingBoxed:
+          isConstructor &&
+              node?.parent?.parent is EnumDeclaration &&
+              !(node is ConstructorDeclaration && node.factoryKeyword != null)
           ? 2
           : 0,
       hiddenTypeId:

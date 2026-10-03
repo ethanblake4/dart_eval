@@ -3936,3 +3936,24 @@ the private selector fixture. Existing focused tests pass (56), scoped analyzer
 passes, and three original negative privacy fixtures correctly reject their
 private identifiers. Removed five confirmed stale expectations. No runtime or
 generated stdlib changes and no duplicated SDK tests.
+
+
+## Cycle 24 correctness checkpoint 6
+
+Enum bindings now come from SDK generation. The generator can copy selected SDK
+extensions verbatim, supplying EnumName and EnumByName alongside the existing
+core typedef source. Cold comparator hooks read guest enum protocol slots in
+their native or boxed representation and preserve the SDK comparator formulas;
+these exceptional guest-protocol hooks allocate no receiver adapter. Removed
+the superseded handwritten Enum declaration. Generic static bridge method
+tear-offs reuse the existing bridge callable adapter.
+
+Enum constant inference now retains their instantiated types. Enum `.new`
+selectors normalize to the unnamed constructor, and enum factories no longer
+receive the index/name arguments reserved for generative constructors.
+Original enum_test and inference_enum_list pass in native Dart and dart_eval;
+eight existing enum/generic/callable tests and scoped analyzer checks pass.
+Targeted SDK regeneration is byte-identical for both generated files. Removed
+two stale expectations. Enhanced_enums_basic reaches a separate mixin
+super.toString failure and remains expected to fail. All six correctness passes
+are checkpointed; 15 confirmed stale entries have been removed in this cycle.
