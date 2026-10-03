@@ -13,6 +13,26 @@ import 'package:dart_eval/src/eval/shared/types.dart';
 import '../values/abi.dart';
 import '../values/value_rep.dart';
 import '../builtins.dart';
+import '../helpers/conversion.dart';
+import 'resolver.dart';
+
+/// Host buffer APIs cannot reify guest instances. Resolve their textual value
+/// in guest code first, while retaining the native paths for scalar values.
+Variable prepareStringBufferValue(CompilerContext ctx, Variable value) {
+  final type = value.exactType ?? value.type;
+  if (const [
+    CoreTypes.string,
+    CoreTypes.int,
+    CoreTypes.double,
+    CoreTypes.num,
+    CoreTypes.bool,
+    CoreTypes.nullType,
+  ].any(type.isSpec)) {
+    return value;
+  }
+  final text = CallResolver(ctx).invokeOperator(value, 'toString', []).result;
+  return convertForAssignment(ctx, text, CoreTypes.string.ref(ctx));
+}
 
 /// Fast paths consulted before member resolution on the operator and index
 /// paths — a hit emits a dedicated ALU/string op instead of a call, and the
@@ -34,12 +54,12 @@ final class Intrinsics {
         args.length == 1 &&
         receiver.exactType?.isSpec(CoreTypes.stringBuffer) == true) {
       final buffer = receiver.boxIfNeeded(ctx);
+      final value = prepareStringBufferValue(ctx, args.single);
       final isString =
-          args.single.type.isSpec(CoreTypes.string) &&
-          !args.single.type.nullable;
+          value.type.isSpec(CoreTypes.string) && !value.type.nullable;
       final argument = isString
-          ? args.single.unboxIfNeeded(ctx, false)
-          : args.single.boxIfNeeded(ctx);
+          ? value.unboxIfNeeded(ctx, false)
+          : value.boxIfNeeded(ctx);
       ctx.pushOp(BufferWrite(buffer.ssa, argument.ssa, isString: isString));
       return (
         target: buffer,

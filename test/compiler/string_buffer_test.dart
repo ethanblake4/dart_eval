@@ -2,6 +2,41 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('guest formatting happens once at constructor and write boundaries', () {
+    final program = Compiler().compile({
+      'buffer': {
+        'main.dart': '''
+int formats = 0;
+class Printable {
+  String toString() => 'v' + (++formats).toString();
+}
+class Failing {
+  String toString() { formats++; throw 'format'; }
+}
+bool main() {
+  final value = Printable();
+  final buffer = StringBuffer(value);
+  Object? nullable = value;
+  dynamic widened = value;
+  buffer.write(nullable);
+  buffer.write(widened);
+  buffer.write(null);
+  if (buffer.toString() != 'v1v2v3null' || formats != 3) return false;
+  var failures = 0;
+  try { StringBuffer(Failing()); } on String { failures++; }
+  try { buffer.write(Failing()); } on String { failures++; }
+  return failures == 2 && formats == 5 && buffer.toString() == 'v1v2v3null';
+}
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(runtime.executeLib('package:buffer/main.dart', 'main'), true);
+    }
+  });
   test(
     'StringBuffer subclasses dispatch write overrides through base types',
     () {

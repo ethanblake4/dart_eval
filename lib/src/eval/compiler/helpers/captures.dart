@@ -327,12 +327,30 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
     // Primary declaration initializers were visited in constructor scope.
     if (initializer != null && !_primaryInitializers.contains(initializer)) {
       final parent = node.parent;
-      final deferred =
+      // Global and field initializers compile as implicit functions. Locals
+      // inside collection elements need that owner before nested closures
+      // can capture them.
+      final nonlocal =
           parent is VariableDeclarationList &&
-          parent.lateKeyword != null &&
-          _functions.isNotEmpty;
+          (parent.parent is FieldDeclaration ||
+              parent.parent is TopLevelVariableDeclaration);
+      final deferred =
+          nonlocal ||
+          parent is VariableDeclarationList &&
+              parent.lateKeyword != null &&
+              _functions.isNotEmpty;
       if (deferred) _functions.add(node);
-      initializer.accept(this);
+      if (nonlocal) {
+        _scope(() {
+          final field = parent.parent;
+          if (field is FieldDeclaration && !field.isStatic && parent.isLate) {
+            _declare('#this', node);
+          }
+          initializer.accept(this);
+        });
+      } else {
+        initializer.accept(this);
+      }
       if (deferred) _functions.removeLast();
     }
   }

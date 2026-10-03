@@ -20,6 +20,7 @@ import 'package:dart_eval/src/eval/ir/types.dart';
 import '../values/abi.dart';
 import 'binder.dart';
 import 'resolver.dart';
+import 'intrinsics.dart' show prepareStringBufferValue;
 import 'bound_call.dart';
 import '../variable/value_facts.dart';
 import '../helpers/type_check.dart';
@@ -345,6 +346,15 @@ final class ConstructorCall extends CallTarget {
     }
     var result = ctx.svar('instance');
     if (externalIndex != null) {
+      final arguments = [...call.vector()];
+      if (staticType.isSpec(CoreTypes.stringBuffer) &&
+          name.isEmpty &&
+          call.positional.isNotEmpty) {
+        arguments[0] = prepareStringBufferValue(
+          ctx,
+          call.positional.first,
+        ).boxIfNeeded(ctx).ssa;
+      }
       if (classBridge is BridgeClassDef) {
         final subclass = BuiltinValue().push(ctx);
         ctx.pushOp(
@@ -352,7 +362,7 @@ final class ConstructorCall extends CallTarget {
             result,
             externalIndex!,
             subclass.ssa,
-            call.vector(),
+            arguments,
             // Wrapped bridge instances (`$Future`, `$Stream`, ...) carry no
             // type parameters themselves — the attached type-id lets `is`
             // and argument checks see `Future<int>` over the bare nominal.
@@ -364,7 +374,7 @@ final class ConstructorCall extends CallTarget {
           ),
         );
       } else {
-        ctx.pushOp(InvokeExternal(result, externalIndex!, call.vector()));
+        ctx.pushOp(InvokeExternal(result, externalIndex!, arguments));
       }
     } else {
       final callArguments = <SSA>[

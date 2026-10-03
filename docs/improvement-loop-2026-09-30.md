@@ -4085,3 +4085,10 @@ runtime operations are added. The original field_promotion_on_lhs_of_if_null
 fixture passes; removed its stale expectation. Eleven focused flow tests and
 scoped analysis pass. The distinct preserved_by_join fixture still fails at a
 nested field path and remains expected to fail.
+
+
+### Cycle 25 correctness pass 3: guest text and initializer captures
+
+StringBuffer construction and write now resolve guest object text through existing guest calls, preserving scalar fast paths and String result checks. Global and field initializer capture analysis uses the implicit function scope, so collection loop locals captured by closures have the right owner. No runtime or generated stdlib changes.
+
+The original string/interpolation_and_buffer_test.dart and regress/regress60409_test.dart pass; their stale expect_fail entries were removed. Validation: 73 focused StringBuffer/classes/async-generator/dynamic tests and 44 capture/default/field-order/late-field/mixin tests pass, with scoped analysis clean. Existing StringBuffer coverage adds fresh and serialized guest formatting, evaluation order, throwing conversions, and native bytecode paths.

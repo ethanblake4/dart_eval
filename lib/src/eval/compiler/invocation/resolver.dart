@@ -2401,7 +2401,7 @@ final class CallResolver {
               instantiateConstructorType(ctx, e, returnType, inferredCtorArgs))
         : returnType;
     final boundCall = BoundCall(
-      positional: const [],
+      positional: isConstructor ? args : const [],
       named: const [],
       runtimeTypeArguments: runtimeTypeArguments(ctx, e).isNotEmpty
           ? runtimeTypeArguments(ctx, e)
