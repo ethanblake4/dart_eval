@@ -3999,3 +3999,36 @@ individual difference to the optimization.
 Corrected correctness gates before this experiment: default 2235 passed/86
 skipped; configured SDK-full 2737 passed/557 skipped; actual SDK 2615 passed/99
 compile errors/23 runtime failures/3 skipped. There remain 122 actual failures.
+
+
+## Cycle 24 compiler throughput pass
+
+The scheduled compiler optimization targets compilation speed, per the user's
+clarification. Isolated phase instrumentation showed visibility construction at
+about 2% of compile time, so import-tree caching was not implemented. The larger
+CFG/backend phases revealed discarded work: performRegisterAllocation computed
+generic liveness and next-use maps before selecting the constrained allocator,
+which ignores those maps and computes its own liveness. Generic preparation now
+runs inside the internal allocator entry point after constrained dispatch. The
+selection predicate, both allocators, SSA checks and validation remain unchanged.
+The public CFG API is unchanged; no runtime, opcode or generated-code changes.
+
+All 105 CFG tests and 39 existing backend tests pass; scoped analyzers pass.
+AOT compiler measurements use fresh Compiler instances, affinity 0x4, 20 warmup
+compilations, 101 samples for mixed/16-stage/64-stage programs and 51 samples
+for 256-stage programs. Two rounds reverse executable order. Full serialized
+program SHA-256 hashes match across both versions for all four workloads.
+Mixed medians changed 18258 to 13571 and 14381 to 14055 microseconds; 16-stage
+pipeline 9900 to 9304 and 10482 to 9350 (6.0% and 10.8% improvement); 64-stage
+28530 to 28220 and 29581 to 27243 (1.1% and 7.9%). The 256-stage pipeline
+changed 78192 to 81045 and 76099 to 81304 (3.6% and 6.8% slower). The removed
+preparation is a small part of large-workload compilation; these measurements
+support modest gains on smaller programs, not a general throughput gain.
+Shorter 15-sample runs and all warm runs are retained under the cycle24 log
+folder. A per-operation opcode constraint cache was also tested and discarded:
+it showed no consistent benefit. No profiling hooks or scratch drivers are
+included in production sources.
+
+The final isolated 23-driver AOT sweep, 15 samples per driver, matched all
+22 execution checksums and the mixed compile size of 1354 bytes. Logs are
+under cycle24/compiler-speed-aot. Runtime and interpreter sources are unchanged.
