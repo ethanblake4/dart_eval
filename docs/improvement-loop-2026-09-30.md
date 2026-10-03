@@ -2901,3 +2901,11 @@ gate passes 994 tests after removing the duplicate tests. The full 23-driver,
 `.dart_tool/improvement_loop/cycle16-pass2-full23/`. Targeted paired 25-sample
 repeats found no sustained slowdown in calls, external calls, or inventory
 pricing after an anomalous `calls` median in the sweep.
+
+## Cycle 16 pass 4: bridge superclass tear-offs
+
+Getter-shaped reads of a bridge superclass method were not recognized as
+method tear-offs. Member lookup now considers bridge methods for this read.
+The pinned `constructor/explicit_instantiation_syntax_test.dart` fixture
+passes its runnable variants, so its stale `expect_fail` entry is removed.
+Existing super method tear-off tests pass. This changes compiler lookup only.

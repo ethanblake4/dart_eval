@@ -140,6 +140,7 @@ final class MemberLookup {
           ctx.topLevelDeclarationsMap[owner.file]?[owner.name]?.bridge;
       if (bridge is BridgeClassDef &&
           (bridge.fields.containsKey(name) ||
+              (kind == MemberKind.getter && bridge.methods.containsKey(name)) ||
               switch (kind) {
                 MemberKind.getter => bridge.getters.containsKey(name),
                 MemberKind.setter => bridge.setters.containsKey(name),

@@ -80,7 +80,6 @@ expect_fail:
   - path: 'const/factory_member_test.dart'
   - path: 'const/inference_test.dart'
   - path: 'constructor/constructor_test.dart'
-  - path: 'constructor/explicit_instantiation_syntax_test.dart'
   - path: 'constructor/external_constructor_test.dart'
   - path: 'constructor/patch_tear_off_test.dart'
   - path: 'control_flow_collections/for_dynamic_null_strong_test.dart'
