@@ -2935,3 +2935,16 @@ reads now emit a type assertion only when a class type parameter appears in
 a contravariant position in the return type. The pinned
 `covariant/callable_class_field_getter_test.dart` fixture passes, and its stale
 `expect_fail` entry is removed. Ordinary getters emit no additional bytecode.
+
+## Cycle 16 runtime performance: one-slot frame clearing
+
+Frame return cleared each object spill and outgoing list with a loop. A direct
+assignment now handles the common one-slot case. Paired 25-sample AOT call
+runs measured boxed arguments at 15.87–15.91 ms before and 15.46 ms after,
+with overflow arguments at 24.23–24.38 ms before and 23.66–24.02 ms after.
+The full 23-driver, 15-sample AOT sweep matched all 22 execution checksums;
+logs are under `.dart_tool/improvement_loop/cycle16-performance-clear1-full23/`.
+An experiment that lazily allocated the cold-dispatch state slowed calls and
+was reverted. The ordinary language/runtime gate passed 988 tests.
+SDK-full passed 2504 runnable fixtures, with 177 expected compile failures,
+56 expected runtime failures, and three skips.

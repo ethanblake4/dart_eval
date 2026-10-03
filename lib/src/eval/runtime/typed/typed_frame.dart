@@ -395,6 +395,10 @@ class TypedFrame {
 
   @pragma('vm:prefer-inline')
   static void _clearObjects(List<Object?> values) {
+    if (values.length == 1) {
+      values[0] = null;
+      return;
+    }
     for (var i = 0; i < values.length; i++) {
       values[i] = null;
     }
