@@ -32,7 +32,7 @@ void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
       final (constructors, fields, methods) = partitionClassMembers(
         d.body.members,
       );
-      final (mixinFields, mixinMethods, memberLibraries) = _mixinMembers(
+      final (mixinFields, mixinMethods, memberLibraries) = collectMixinMembers(
         ctx,
         d.withClause?.mixinTypes,
       );
@@ -119,7 +119,7 @@ void compileClassTypeAlias(CompilerContext ctx, ClassTypeAlias d) {
         MemberKind.method: {},
       };
       ctx.instanceGetterIndices[ctx.library]![clsName] = {};
-      final (mixinFields, mixinMethods, memberLibraries) = _mixinMembers(
+      final (mixinFields, mixinMethods, memberLibraries) = collectMixinMembers(
         ctx,
         d.withClause.mixinTypes,
       );
@@ -250,7 +250,7 @@ void compileMixinDeclaration(CompilerContext ctx, MixinDeclaration d) {
 /// member bodies resolve identifiers and types in the mixin's own library.
 /// Type parameters on the mixin are seeded from the clause's type arguments.
 (List<FieldDeclaration>, List<MethodDeclaration>, Map<ClassMember, int>)
-_mixinMembers(
+collectMixinMembers(
   CompilerContext ctx,
   List<NamedType>? mixinTypes, [
   // The declaration whose `with` clause is being folded — the applying class
@@ -305,7 +305,7 @@ _mixinMembers(
             c.namePart.typeName.lexeme,
           ),
           c.namePart.typeParameters?.typeParameters,
-          () => _mixinMembers(
+          () => collectMixinMembers(
             ctx,
             c.withClause!.mixinTypes,
             c,
@@ -329,8 +329,13 @@ _mixinMembers(
             a.name.lexeme,
           ),
           a.typeParameters?.typeParameters,
-          () =>
-              _mixinMembers(ctx, a.withClause.mixinTypes, a, visited, ref.file),
+          () => collectMixinMembers(
+            ctx,
+            a.withClause.mixinTypes,
+            a,
+            visited,
+            ref.file,
+          ),
         );
         memberLibraries.addAll(l);
         return (<ConstructorDeclaration>[], f, m);
@@ -629,8 +634,11 @@ void _checkInterfaceConformance(
                 ),
               ) ==
               null) {
-            (ctx.interfaceNoSuchMethodForwarderRequirements[
-                      (ctx.library, hostName)] ??= [])
+            (ctx.interfaceNoSuchMethodForwarderRequirements[(
+                      ctx.library,
+                      hostName,
+                    )] ??=
+                    [])
                 .add((member, declLib, view, name, true));
           }
           continue;
@@ -664,8 +672,11 @@ void _checkInterfaceConformance(
         }
         if (impl == null) {
           if (hasNoSuchMethod) {
-            (ctx.interfaceNoSuchMethodForwarderRequirements[
-                      (ctx.library, hostName)] ??= [])
+            (ctx.interfaceNoSuchMethodForwarderRequirements[(
+                      ctx.library,
+                      hostName,
+                    )] ??=
+                    [])
                 .add((member, declLib, view, name, false));
             if (view == MemberKind.method) {
               (ctx.noSuchMethodForwarders[(ctx.library, hostName)] ??= {}).add(
@@ -832,7 +843,8 @@ DeclarationOrBridge? _effectiveConcreteMember(
   for (final m in [...ownMethods, ...ownFields]) {
     if (!sameMember(m)) continue;
     if (m is MethodDeclaration &&
-        m.body is EmptyFunctionBody && m.externalKeyword == null) {
+        m.body is EmptyFunctionBody &&
+        m.externalKeyword == null) {
       continue;
     }
     if (m is FieldDeclaration && m.abstractKeyword != null) continue;

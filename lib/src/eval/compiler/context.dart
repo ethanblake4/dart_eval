@@ -545,6 +545,7 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, Map<String, TypeRef>>> inferredFieldTypes = {};
   Map<int, Map<String, int>> topLevelGlobalIndices = {};
   Map<int, Map<String, Map<String, int>>> enumValueIndices = {};
+  final Map<(int, String), int> enumBaseToStringOffsets = {};
   Map<int, int> runtimeGlobalInitializerMap = {};
 
   /// Every `extension` declaration in the program, with its defining

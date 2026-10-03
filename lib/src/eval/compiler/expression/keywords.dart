@@ -75,6 +75,11 @@ Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
   }
 
   final $this = ctx.lookupLocal('#this')!;
+  // Enum protocol fields share the enum's own storage; there is no guest
+  // superclass object to load.
+  if (ctx.currentClass is EnumDeclaration) {
+    return Variable.of(ctx, $this.ssa, type, rep: $this.rep);
+  }
   return Variable.ssa(
     ctx,
     LoadSuper(ctx.svar('super'), $this.ssa),

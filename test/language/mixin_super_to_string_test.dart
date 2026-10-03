@@ -3,6 +3,35 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('enum mixins retain lexical libraries and base protocol storage', () {
+    final results = runDynamicPackages({
+      'dynamic_fixtures': {
+        'layers.dart': r'''
+          const _prefix = 'layer';
+          mixin Layer<T> on Enum {
+            bool accepts(Object value) => value is T;
+            String toString() => _prefix + ':' + super.toString();
+            int get baseIndex => super.index;
+          }
+        ''',
+        'main.dart': r'''
+          import 'layers.dart';
+          const _prefix = 'wrong';
+          enum Choice with Layer<int> {
+            first, second;
+            String toString() => 'host:' + super.toString();
+          }
+          bool main() => Choice.second.toString() == 'host:layer:Choice.second'
+              && Choice.second.baseIndex == 1
+              && Choice.first.accepts(2) && !Choice.first.accepts(2.5);
+        ''',
+      },
+    }, entrypoint: dynamicFixtureLibrary);
+    for (final (mode, result) in results) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
   test('Object super.toString retains the receiver across mixin layers', () {
     const source = '''
       mixin class B {

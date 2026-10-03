@@ -1,4 +1,5 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
+import 'class.dart' show collectMixinMembers;
 import '../invocation/binder.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
@@ -97,19 +98,30 @@ void _compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
   };
   ctx.instanceGetterIndices[ctx.library]![clsName] = {};
   final (constructors, fields, methods) = partitionClassMembers(d.body.members);
+  final (mixinFields, mixinMethods, memberLibraries) = collectMixinMembers(
+    ctx,
+    d.withClause?.mixinTypes,
+  );
+  fields.insertAll(0, mixinFields);
+  methods.insertAll(0, mixinMethods);
+  final previousEnclosingLibrary = ctx.enclosingLibrary;
+  ctx.enclosingLibrary = ctx.library;
+
   // Enum values materialize through the generative constructor, which is
   // implicit when the enum declares none (factories don't count).
   if (!constructors.any((c) => c.factoryKeyword == null)) {
     ctx.currentClass = d;
-    compileDefaultConstructor(ctx, d, fields);
+    compileDefaultConstructor(ctx, d, fields, memberLibraries: memberLibraries);
   }
 
   _compileEnumFieldGetter(ctx, clsName, 'index', 0);
   _compileEnumFieldGetter(ctx, clsName, 'name', 1);
   _compileEnumFieldGetter(ctx, clsName, 'dart:core::_name', 1);
-  if (!methods.any((m) => m.name.lexeme == 'toString')) {
-    _compileEnumToString(ctx, clsName);
-  }
+  ctx.enumBaseToStringOffsets[(ctx.library, clsName)] = _compileEnumToString(
+    ctx,
+    clsName,
+    register: !methods.any((m) => m.name.lexeme == 'toString'),
+  );
 
   // Every enum value carries two synthetic instance fields (`index` and
   // `name`) at slots 0 and 1; user-declared fields follow them.
@@ -120,6 +132,7 @@ void _compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
     fields: fields,
     methods: methods,
     firstFieldIndex: 2,
+    memberLibraries: memberLibraries,
   );
 
   var idx = 0;
@@ -129,6 +142,7 @@ void _compileEnumDeclaration(CompilerContext ctx, EnumDeclaration d) {
   }
   _compileEnumValues(ctx, type);
 
+  ctx.enclosingLibrary = previousEnclosingLibrary;
   ctx.currentClass = null;
 }
 
@@ -200,7 +214,11 @@ void _compileEnumFieldGetter(
 
 /// Generates a synthetic `toString` returning `'EnumClass.valueName'`, used
 /// when the enum does not declare its own.
-void _compileEnumToString(CompilerContext ctx, String clsName) {
+int _compileEnumToString(
+  CompilerContext ctx,
+  String clsName, {
+  required bool register,
+}) {
   final pos = ctx.beginFunction('$clsName.toString');
   ctx.functionSignatures[pos] = const MachineFunctionSignature([
     MachineRepresentation.object,
@@ -224,9 +242,12 @@ void _compileEnumToString(CompilerContext ctx, String clsName) {
   final boxed = ctx.svar('enum_toString_boxed');
   ctx.pushOp(BoxString(boxed, result));
   ctx.pushOp(Return(boxed));
-  ctx.instanceDeclarationPositions[ctx.library]![clsName]![MemberKind
-          .method]!['toString'] =
-      pos;
+  if (register) {
+    ctx.instanceDeclarationPositions[ctx.library]![clsName]![MemberKind
+            .method]!['toString'] =
+        pos;
+  }
+  return pos;
 }
 
 /// Generates the initializer function for one enum constant: invokes the

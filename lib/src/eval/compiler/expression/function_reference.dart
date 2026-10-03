@@ -8,6 +8,10 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/types.dart';
 import '../variable/value_facts.dart';
 import '../errors.dart';
+import '../helpers/tearoff.dart';
+import '../invocation/accessors.dart';
+import '../member/member.dart';
+import '../member/member_name.dart';
 import 'identifier.dart';
 
 /// Handles `List<num>`, `Map<String, int>` etc. as expressions.
@@ -121,5 +125,31 @@ Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
     }
   }
 
+  if (typeArguments != null && !inner.type.nullable) {
+    final member = ctx.memberLookup
+        .tryInterfaceMember(inner.type, MemberName.method('call'), source: e)
+        ?.member;
+    final declaration = member is SourceMember
+        ? member.sourceDeclaration
+        : null;
+    if (declaration is MethodDeclaration &&
+        !declaration.isGetter &&
+        !declaration.isSetter) {
+      if (member!.signature.typeParameters.length != typeArguments.length) {
+        throw CompileError('Wrong number of function type arguments', e);
+      }
+      // A callable object's explicit instantiation applies to its call
+      // tear-off, rather than to the object's nominal type.
+      final callable = GetTarget.read(ctx, inner, 'call', source: e);
+      return instantiateRuntimeCallable(
+        ctx,
+        callable,
+        typeArguments: [
+          for (final argument in typeArguments)
+            TypeRef.fromAnnotation(ctx, ctx.library, argument),
+        ],
+      );
+    }
+  }
   return inner;
 }

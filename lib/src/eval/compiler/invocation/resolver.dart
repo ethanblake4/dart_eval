@@ -176,7 +176,29 @@ final class CallResolver {
     final body = ctx.memberLookup.lexicalSuperBody(name, MemberKind.method);
     if (body == null) {
       final getter = ctx.memberLookup.lexicalSuperBody(name, MemberKind.getter);
-      if (getter == null) return null;
+      if (getter == null) {
+        final host = ctx.currentClass;
+        if (host is! EnumDeclaration || name != 'toString') return null;
+        if (source.argumentList.arguments.isNotEmpty ||
+            source.typeArguments != null) {
+          throw CompileError('Enum.toString takes no arguments', source);
+        }
+        final library = ctx.enclosingLibrary ?? ctx.library;
+        final offset = ctx.enumBaseToStringOffsets[
+          (library, host.namePart.typeName.lexeme)
+        ]!;
+        return StaticCall(
+          DeferredOrOffset(offset: offset),
+          receiver: ctx.lookupLocal('#this')!,
+        ).emit(
+          ctx,
+          BoundCall(
+            positional: const [],
+            named: const [],
+            returnType: CoreTypes.string.ref(ctx),
+          ),
+        );
+      }
       final self = ctx.lookupLocal('#this')!;
       final value = FoldedMixinGetterCall(getter, self).emit(ctx);
       return invokeValue(site, callee: value);

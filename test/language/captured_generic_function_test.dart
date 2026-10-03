@@ -2,6 +2,40 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('explicit callable object instantiation retains override defaults', () {
+    final program = Compiler().compile({
+      'captured_generics': {
+        'main.dart': '''
+String selected = '';
+class Callable {
+  T call<T>(T value, {String label = 'base'}) => value;
+}
+class Child extends Callable {
+  T call<T>(T value, {String label = 'child'}) {
+    selected = label;
+    return value;
+  }
+}
+Function specialize(Callable value) => value<String>;
+bool main() {
+  final function = specialize(Child());
+  if (function is! String Function(String, {String label})) return false;
+  if (function('first') != 'first' || selected != 'child') return false;
+  return function('second', label: 'supplied') == 'second' && selected == 'supplied';
+}
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib('package:captured_generics/main.dart', 'main'),
+        true,
+      );
+    }
+  });
   test('stored generic instantiations use the selected closure defaults', () {
     final program = Compiler().compile({
       'captured_generics': {
