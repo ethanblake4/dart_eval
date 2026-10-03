@@ -4164,3 +4164,18 @@ Five original dot-shorthand fixtures pass fresh and serialized execution, and
 only their confirmed stale expectations are removed. Thirty ER tests pass,
 including named and optional field formals and constant defaults. The broader
 agent checks covered 35 tests; scoped analysis and formatting pass.
+
+### Cycle 26 correctness pass 3: extension interfaces and await derivation
+
+Extension types now resolve and validate their declared interfaces, including
+representation compatibility, bounds, arity, nullable-interface rejection and
+cycles. Await flattening follows promoted type-parameter bound chains while
+preserving inner nullability. Existing erased representation and call machinery
+continues to perform conversions.
+
+The original async/derive_future_type_test.dart passes fresh and serialized
+execution. Its last runtime blocker was an unwrapped host Symbol returned by a
+Future. The primitive wrapper fallback now reuses the existing SDK-generated
+Symbol wrapper after the common primitive cases. No stdlib wrapper was edited.
+Ten interface and Symbol tests pass; scoped compiler analysis is clean. The
+confirmed stale expectation is removed.

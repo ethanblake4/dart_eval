@@ -282,6 +282,8 @@ class Runtime {
       return $bool(value);
     } else if (value == null) {
       return $null();
+    } else if (value is Symbol) {
+      return $Symbol.wrap(value);
     }
     return null;
   }

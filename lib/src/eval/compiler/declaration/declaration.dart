@@ -84,11 +84,6 @@ void _validateExtensionType(
       declaration,
     );
   }
-  if (declaration.implementsClause != null) {
-    throw CompileError(
-      'Extension types with an implements clause are unsupported',
-    );
-  }
   final decl =
       ctx.types.find(ctx.library, primary.typeName.lexeme) as SourceTypeDecl;
   final parameter = decl.extensionRepresentationParameter!;
@@ -101,6 +96,7 @@ void _validateExtensionType(
   if (representation.isSpec(CoreTypes.voidType)) {
     throw CompileError('Extension type representation cannot be void');
   }
+  decl.validateExtensionInterfaces();
   for (final member in declaration.body.members) {
     final supported = switch (member) {
       MethodDeclaration() => member.isStatic,

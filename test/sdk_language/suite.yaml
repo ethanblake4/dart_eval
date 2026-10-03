@@ -68,8 +68,6 @@ exclude:
 # Same path/glob syntax as `exclude`.
 expect_fail:
   - path: 'async/await_user_defined_future_soundness_test.dart'
-  - path: 'async/derive_future_type_test.dart'
-    reason: '\$Future bridge lacks catchError/whenComplete; await on Future-implementing classes unsupported'
   - path: 'constructor/patch_tear_off_test.dart'
   - path: 'dot_shorthands/constructor/constructor_cascade_test.dart'
     reason: 'extension type declarations unsupported'

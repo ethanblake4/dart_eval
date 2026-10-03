@@ -662,10 +662,22 @@ final class TypeSystem {
     // future — `X extends Future<S>` awaits to `S`, `X extends
     // FutureOr<S>` awaits to `S`, otherwise `await x` stays `X`.
     if (t is TypeParameterTypeRef) {
-      final bound = t.effectiveBound;
-      if (bound == null) return t;
+      final initialBound = t.effectiveBound;
+      if (initialBound == null) return t;
+      TypeRef bound = initialBound;
+      final seen = <TypeParameterDef>{t.parameter};
+      while (bound is TypeParameterTypeRef) {
+        if (!seen.add(bound.parameter)) return t;
+        nullable = nullable || bound.nullable;
+        final nextBound = bound.effectiveBound;
+        if (nextBound == null) return t;
+        bound = nextBound;
+      }
       if (bound is InterfaceTypeRef && bound.decl.isSpec(AsyncTypes.futureOr)) {
-        return flatten(bound).withNullable(bound.nullable || nullable);
+        final result = flatten(bound);
+        return result.withNullable(
+          result.nullable || bound.nullable || nullable,
+        );
       }
       final instantiation = asInstanceOf(
         bound,
@@ -674,10 +686,12 @@ final class TypeSystem {
       if (instantiation == null) return t;
       // `X extends Future<A>?` awaits to `A?` — the bound's own
       // nullability distributes onto the flattened result.
-      return (interfaceArgumentsOf(instantiation).isEmpty
-              ? CoreTypes.dynamic.ref(_ctx)
-              : interfaceArgumentsOf(instantiation).first)
-          .withNullable(bound.nullable || nullable);
+      final argument = interfaceArgumentsOf(instantiation).isEmpty
+          ? CoreTypes.dynamic.ref(_ctx)
+          : interfaceArgumentsOf(instantiation).first;
+      return argument.withNullable(
+        argument.nullable || bound.nullable || nullable,
+      );
     }
     if (t.name == 'FutureOr' && interfaceArgumentsOf(t).isNotEmpty) {
       // `FutureOr<S>` unwraps once — `flatten(FutureOr<S>)` is `S`, not

@@ -304,6 +304,86 @@ final class SourceTypeDecl extends TypeDecl {
   TypeRef? extensionRepresentationFor(TypeRef type) => extensionRepresentation
       ?.substituteTypeParameters(Substitution.forInterface(type));
 
+  /// Checks interfaces independently of resolving the hierarchy, since the
+  /// representation may itself be an extension type with declared interfaces.
+  void validateExtensionInterfaces() {
+    final declaration = node;
+    if (declaration is! ExtensionTypeDeclaration) return;
+    final active = <TypeDecl>{};
+    final checked = <TypeDecl>{};
+    void checkCycles(TypeDecl declaration) {
+      if (declaration.kind != TypeDeclKind.extensionType ||
+          checked.contains(declaration)) {
+        return;
+      }
+      if (!active.add(declaration)) {
+        throw CompileError('Cyclic extension type interfaces', node);
+      }
+      for (final interface in declaration.supertypes.interfaces) {
+        final target = nominalDeclOf(interface);
+        if (target != null) checkCycles(target);
+      }
+      active.remove(declaration);
+      checked.add(declaration);
+    }
+
+    checkCycles(this);
+    final representation = extensionRepresentation!;
+    for (final clause
+        in declaration.implementsClause?.interfaces ?? const <NamedType>[]) {
+      if (clause.question != null) {
+        throw CompileError(
+          'Extension type interface cannot be nullable',
+          clause,
+        );
+      }
+      final interface = resolveClauseType(clause) as InterfaceTypeRef;
+      final target = interface.decl;
+      final parameters = target.typeParameters;
+      final arguments = interface.arguments.isEmpty
+          ? target.defaultTypeArguments
+          : interface.arguments;
+      if (clause.typeArguments != null &&
+          clause.typeArguments!.arguments.length != parameters.length) {
+        throw CompileError('Wrong number of interface type arguments', clause);
+      }
+      final applied = target.instantiate(arguments);
+      final substitution = Substitution.forInterface(applied);
+      for (var i = 0; i < parameters.length; i++) {
+        final bound = parameters[i].bound?.substituteTypeParameters(
+          substitution,
+        );
+        if (bound != null &&
+            !arguments[i].isAssignableTo(
+              ctx,
+              bound,
+              forceAllowDynamic: false,
+            )) {
+          throw CompileError(
+            'Interface type argument does not satisfy its bound',
+            clause,
+          );
+        }
+      }
+      final requiredRepresentation = target.kind == TypeDeclKind.extensionType
+          ? applied.erasedExtensionType
+          : applied;
+      final actualRepresentation = target.kind == TypeDeclKind.extensionType
+          ? representation.erasedExtensionType
+          : representation;
+      if (!actualRepresentation.isAssignableTo(
+        ctx,
+        requiredRepresentation,
+        forceAllowDynamic: false,
+      )) {
+        throw CompileError(
+          'Extension type representation is not a subtype of its interface',
+          clause,
+        );
+      }
+    }
+  }
+
   @override
   List<TypeParameterDef> computeTypeParameters() {
     final nodes = classLikeClauses(node).$4;
@@ -328,13 +408,13 @@ final class SourceTypeDecl extends TypeDecl {
 
   @override
   DeclaredSupertypes computeSupertypes() {
-    if (node is ExtensionTypeDeclaration) {
+    if (node case ExtensionTypeDeclaration(:final implementsClause)) {
       // Nullable representations do not make the nominal type an Object.
-      return DeclaredSupertypes(
-        CoreTypes.object.ref(ctx).withNullable(true),
-        const [],
-        const [],
-      );
+      return DeclaredSupertypes(CoreTypes.object.ref(ctx).withNullable(true), [
+        for (final interface
+            in implementsClause?.interfaces ?? const <NamedType>[])
+          resolveClauseType(interface),
+      ], const []);
     }
     final (extendsClause, withClause, implementsClause, _) = classLikeClauses(
       node,
