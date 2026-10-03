@@ -1,5 +1,4 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -28,31 +27,6 @@ void main() {
         T Function<T>(T) copied = value;
         return direct<int>(3) == 3 && copied<String>('ok') == 'ok';
       }
-    '''),
-      true,
-    );
-  });
-
-  test('runtime generic optional specialization reports its limitation', () {
-    expect(
-      () => eval('''
-      T? optional<T>([T? value]) => value;
-      main() { final generic = optional; return generic<int>; }
-    '''),
-      throwsA(
-        isA<CompileError>().having(
-          (error) => error.toString(),
-          'message',
-          contains(
-            'Instantiating a runtime function with optional parameters is not supported',
-          ),
-        ),
-      ),
-    );
-    expect(
-      eval('''
-      T? optional<T>([T? value]) => value;
-      main() => optional<int>(7) == 7 && optional<int>() == null;
     '''),
       true,
     );

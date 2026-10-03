@@ -505,6 +505,8 @@ TypeRef promotedMemberReadType(
 /// check strict about function variance (the looser assignability used
 /// for argument coercion treats all function types as compatible).
 /// Dart 3.9 also requires a proper subtype, excluding mutual subtypes.
+/// A type parameter remains distinct from its bound even when assignability
+/// permits the reverse conversion through that bound.
 bool canPromoteTo(
   CompilerContext ctx,
   TypeRef tested,
@@ -513,6 +515,7 @@ bool canPromoteTo(
 ) =>
     isPromotionSubtype(ctx, tested, current) &&
     (!ctx.soundFlowAnalysis(source) ||
+        tested.isTypeParameter && tested != current ||
         !isPromotionSubtype(ctx, current, tested));
 
 bool isPromotionSubtype(CompilerContext ctx, TypeRef tested, TypeRef current) {

@@ -3391,3 +3391,19 @@ analysis pass. tearoff_dynamic advances past all 15 toString cases but still
 fails a quoted noSuchMethod member-name assertion; its entry remains. Receiver
 identity before subclass construction finishes remains part of the separately
 identified constructor-linking limitation.
+## Cycle 20 correctness follow-up
+
+The full default gate found three promotion regressions: checked foreach writes
+retained a synthetic dynamic view, symbolic generic parameters were confused
+with their bounds, and boxed dynamic writes retained prior promotions. The
+binding and proper-subtype helpers now preserve those distinctions. Eleven
+foreach, loop and native HTTP tests pass, along with both proper-subtype SDK
+fixtures, number_operator_typing and guard_conversion. The obsolete optional
+stored-generic limitation test was removed; its existing supported-defaults
+coverage remains. All 22 denotation tests pass.
+
+An indexed-loop experiment exposed missing exit phis in control_flow_graph.
+Phi insertion now propagates newly inserted definitions through iterated merge
+sets. A focused branch-selected-loop regression and all 105 sibling tests pass.
+Committed and pushed to main as 558cbfa. No allocator or runtime change was
+needed for this correctness fix.

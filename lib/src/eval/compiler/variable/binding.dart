@@ -114,6 +114,11 @@ final class LocalBinding {
   /// previous value's flow facts with the stored value's facts.
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) {
     final local = current;
+    // Boxing may use the binding's promoted view; a dynamic write still
+    // clears that promotion even when its boxed value retains the old type.
+    final dynamicWrite =
+        declaredType.isSpec(CoreTypes.dynamic) &&
+        value.type.isSpec(CoreTypes.dynamic);
     if (isFinal && initialized) {
       throw CompileError('Cannot modify value of final variable $name', source);
     }
@@ -149,8 +154,19 @@ final class LocalBinding {
     // candidate that is a subtype of every other candidate is chosen —
     // when several qualify (mutual subtypes such as `List<dynamic>` and
     // `List<Object?>`) or none do, no type-of-interest promotion occurs.
+    // Synthetic initial values can have a wider type than their declared
+    // slot, such as a typed foreach variable before its first checked write.
     final promotionBase =
-        stored.type.isAssignableTo(ctx, local.type, forceAllowDynamic: false)
+        local.type.isAssignableTo(
+              ctx,
+              declaredType,
+              forceAllowDynamic: false,
+            ) &&
+            stored.type.isAssignableTo(
+              ctx,
+              local.type,
+              forceAllowDynamic: false,
+            )
         ? local.type
         : declaredType;
     final candidates = [
@@ -179,7 +195,7 @@ final class LocalBinding {
       }
       if (minimalCount > 1) retained = null;
     }
-    final localType = stored.type.isSpec(CoreTypes.dynamic)
+    final localType = dynamicWrite || stored.type.isSpec(CoreTypes.dynamic)
         ? declaredType
         : declaredType.nullable &&
               stored.type.isAssignableTo(ctx, declaredType.withNullable(false))
