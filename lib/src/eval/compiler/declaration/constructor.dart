@@ -55,7 +55,10 @@ void compileConstructorDeclaration(
     throw CompileError('Factory constructors cannot have initializers', d);
   }
 
-  final functionId = ctx.beginFunction('$n()');
+  final functionId = ctx.beginFunction(
+    '$n()',
+    displayName: 'new $parentName${dName.isEmpty ? '' : '.$dName'}',
+  );
   ctx.topLevelDeclarationPositions[ctx.library]![n] = functionId;
 
   ctx.beginScope();
@@ -582,7 +585,10 @@ void compileDefaultConstructor(
   final parentName = declarationName(parent);
   final n = '$parentName.';
 
-  ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction('$n()');
+  ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction(
+    '$n()',
+    displayName: 'new $parentName',
+  );
 
   final isEnum = parent is EnumDeclaration;
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
@@ -1192,7 +1198,11 @@ void compileAliasForwardingConstructor(
     ctx.library,
     parent.superclass,
   );
-  ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction('$n()');
+  ctx.topLevelDeclarationPositions[ctx.library]![n] = ctx.beginFunction(
+    '$n()',
+    displayName:
+        'new $parentName${constructorName.isEmpty ? '' : '.$constructorName'}',
+  );
   ctx.beginScope();
   // The alias ctor mirrors the callee's erased ABI: `B<T>`'s `T x` stays an
   // erased `T` even though this alias applies `T = int`. Resolving parameter

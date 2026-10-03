@@ -55,6 +55,28 @@ TypedProgram _recursive() {
 }
 
 void main() {
+  test(
+    'function display names survive serialization and reject truncation',
+    () {
+      final program = TypedProgram(
+        Uint8List.fromList([TypedOp.rReturn]),
+        functions: const [TypedFunction(0, debugName: 'Example.\u03bb')],
+      );
+      expect(program.functions.single.debugName, 'Example.\u03bb');
+      final bytes = program.write().buffer.asUint8List();
+      expect(
+        TypedProgram.read(bytes.buffer).functions.single.debugName,
+        'Example.\u03bb',
+      );
+      final corrupted = Uint8List.fromList(bytes);
+      // Display-name length follows the fixed 33-byte function signature.
+      ByteData.sublistView(
+        corrupted,
+      ).setUint32(76 + 33, 0xffffffff, Endian.little);
+      expect(() => TypedProgram.read(corrupted.buffer), throwsFormatException);
+    },
+  );
+
   test('function type-parameter owners round trip in parameter order', () {
     final owners = [-4, -4, -5, 7];
     final program = TypedProgram(
@@ -355,14 +377,14 @@ void main() {
       ],
     );
     final bytes = p.write().buffer.asUint8List();
-    // One argument puts descriptor metadata at 76 + 33 + 1 = 110.
+    // One argument puts descriptor metadata at 76 + 37 + 1 = 114.
     for (final (offset, value) in [
       (56, 65537),
       (60, 65537),
-      (110, 1),
-      (126, 3),
-      (130, 0xffffffff),
-      (138, 0xffffffff),
+      (114, 1),
+      (130, 3),
+      (134, 0xffffffff),
+      (142, 0xffffffff),
     ]) {
       final bad = Uint8List.fromList(bytes);
       ByteData.sublistView(bad).setUint32(offset, value, Endian.little);
@@ -437,9 +459,9 @@ void main() {
         Uint8List.fromList([TypedOp.rReturn]),
         externalCalls: const [TypedExternalCall(0, 4)],
       ).write().buffer.asUint8List();
-      // Metadata follows the 76-byte header and 33-byte function layout.
+      // Metadata follows the 76-byte header and 37-byte function layout.
       final badArguments = Uint8List.fromList(bytes);
-      ByteData.sublistView(badArguments).setUint32(113, 65539, Endian.little);
+      ByteData.sublistView(badArguments).setUint32(117, 65539, Endian.little);
       expect(
         () => TypedProgram.read(badArguments.buffer),
         throwsFormatException,
@@ -776,8 +798,8 @@ void main() {
       ],
     );
     final bytes = p.write().buffer.asUint8List();
-    // Metadata begins after the 76-byte header, 33-byte layout and one argument.
-    const metadata = 110;
+    // Metadata begins after the 76-byte header, 37-byte layout and one argument.
+    const metadata = 114;
     for (final offset in [
       48,
       metadata,
@@ -1354,11 +1376,11 @@ void main() {
       Uint8List.fromList([TypedOp.aReturn]),
       objects: ['abc'],
     ).write().buffer.asUint8List();
-    // The object pool follows the 76-byte header and 33-byte function layout.
-    final badTag = Uint8List.fromList(bytes)..[109] = 255;
+    // The object pool follows the 76-byte header and 37-byte function layout.
+    final badTag = Uint8List.fromList(bytes)..[113] = 255;
     expect(() => TypedProgram.read(badTag.buffer), throwsFormatException);
     final badString = Uint8List.fromList(bytes);
-    ByteData.sublistView(badString).setUint32(110, 0xffffffff, Endian.little);
+    ByteData.sublistView(badString).setUint32(114, 0xffffffff, Endian.little);
     expect(() => TypedProgram.read(badString.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
     ByteData.sublistView(badCount).setUint32(28, 0, Endian.little);

@@ -32,6 +32,62 @@ Iterable<(String, Runtime)> _runtimes(Program program) sync* {
 }
 
 void main() {
+  test('callback traces keep caller frames and survive cached frame reuse', () {
+    final program = _compile('''
+      String firstLeaf() => throw 'first';
+      String secondLeaf() => throw 'second';
+      String throughNative(bool first) => [0].map((_) {
+        if (first) return firstLeaf();
+        return secondLeaf();
+      }).single;
+
+      String main() {
+        StackTrace? first;
+        StackTrace? second;
+        try { throughNative(true); } catch (_, trace) { first = trace; }
+        try { throughNative(false); } catch (_, trace) { second = trace; }
+        return '\$first\\n---\\n\$second';
+      }
+    ''');
+    for (final (kind, runtime) in _runtimes(program)) {
+      final traces = (runtime.executeLib(_library, 'main') as String).split(
+        '\n---\n',
+      );
+      expect(
+        traces.first,
+        contains('firstLeaf ($_library) (guest)'),
+        reason: kind,
+      );
+      expect(
+        traces.first,
+        isNot(contains('secondLeaf ($_library) (guest)')),
+        reason: kind,
+      );
+      expect(
+        traces.last,
+        contains('secondLeaf ($_library) (guest)'),
+        reason: kind,
+      );
+      expect(
+        traces.last,
+        isNot(contains('firstLeaf ($_library) (guest)')),
+        reason: kind,
+      );
+      for (final trace in traces) {
+        expect(
+          trace.split('throughNative ($_library) (guest)'),
+          hasLength(2),
+          reason: kind,
+        );
+        expect(
+          trace.split('main ($_library) (guest)'),
+          hasLength(2),
+          reason: kind,
+        );
+      }
+    }
+  });
+
   test('bridge errors retain their first throw stack trace', () {
     final program = _compile('''
       void fail(ArgumentError error) { throw error; }

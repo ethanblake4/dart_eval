@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'typed_function.dart';
 import 'typed_class.dart';
@@ -13,21 +14,26 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 138;
+  static const version = 139;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
     final metadata = _writeMetadata(program);
+    final names = [
+      for (final function in program.functions)
+        utf8.encode(function.debugName ?? ''),
+    ];
     final result = ByteData(
       76 +
           program.functions.fold<int>(
             0,
             (size, f) =>
                 size +
-                33 +
+                37 +
                 f.typeParameterOwners.length * 4 +
                 f.argumentKinds.length,
           ) +
+          names.fold<int>(0, (size, name) => size + name.length) +
           program.integers.length * 8 +
           program.doubles.length * 8 +
           objects.length +
@@ -64,7 +70,8 @@ abstract final class TypedCodec {
     u32(program.globals.length);
     u32(program.exceptionRegions.length);
     u32(program.completionJumps.length);
-    for (final function in program.functions) {
+    for (var index = 0; index < program.functions.length; index++) {
+      final function = program.functions[index];
       for (final value in function.layout) {
         u32(value);
       }
@@ -77,6 +84,10 @@ abstract final class TypedCodec {
       for (final kind in function.argumentKinds) {
         result.setUint8(offset++, kind.index);
       }
+      final name = names[index];
+      u32(name.length);
+      result.buffer.asUint8List(offset, name.length).setAll(0, name);
+      offset += name.length;
     }
     result.buffer.asUint8List(offset, metadata.length).setAll(0, metadata);
     offset += metadata.length;
@@ -124,7 +135,7 @@ abstract final class TypedCodec {
         objectLength +
         codeLength +
         metadataLength;
-    final minimumLength = 76 + functionCount * 33 + sectionsLength;
+    final minimumLength = 76 + functionCount * 37 + sectionsLength;
     if (functionCount == 0 ||
         functionCount > 65536 ||
         classCount > 65536 ||
@@ -141,13 +152,13 @@ abstract final class TypedCodec {
     }
     final functions = <TypedFunction>[];
     for (var i = 0; i < functionCount; i++) {
-      if (offset + 33 > input.lengthInBytes - sectionsLength) {
+      if (offset + 37 > input.lengthInBytes - sectionsLength) {
         throw const FormatException('Truncated typed function layout');
       }
       final layout = List.generate(6, (_) => u32());
       final ownerCount = u32();
       if (ownerCount > 65536 ||
-          ownerCount * 4 > input.lengthInBytes - sectionsLength - offset - 5) {
+          ownerCount * 4 > input.lengthInBytes - sectionsLength - offset - 9) {
         throw const FormatException('Invalid type parameter owner count');
       }
       final owners = List.generate(ownerCount, (_) {
@@ -161,7 +172,7 @@ abstract final class TypedCodec {
         throw const FormatException('Invalid result representation');
       }
       if (kindCount > 65544 ||
-          kindCount > input.lengthInBytes - sectionsLength - offset) {
+          kindCount > input.lengthInBytes - sectionsLength - offset - 4) {
         throw const FormatException('Invalid argument representation count');
       }
       final kinds = <TypedArgumentKind>[];
@@ -172,9 +183,16 @@ abstract final class TypedCodec {
         }
         kinds.add(TypedArgumentKind.values[kind]);
       }
+      final nameLength = u32();
+      if (nameLength > input.lengthInBytes - sectionsLength - offset) {
+        throw const FormatException('Invalid function display name length');
+      }
+      final name = utf8.decode(buffer.asUint8List(offset, nameLength));
+      offset += nameLength;
       functions.add(
         TypedFunction(
           layout[0],
+          debugName: name.isEmpty ? null : name,
           intSpillCount: layout[1],
           doubleSpillCount: layout[2],
           boolSpillCount: layout[3],

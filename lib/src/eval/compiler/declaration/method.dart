@@ -523,7 +523,9 @@ void _compileInterfaceNoSuchMethodRequirements(
         ctx.library = sourceLibrary;
         ctx.enclosingLibrary = hostLibrary;
         ctx.currentClass = host;
-        compileMethodDeclaration(stub, ctx, host);
+        final functionId = compileMethodDeclaration(stub, ctx, host);
+        ctx.functionDisplayNames[functionId] =
+            '$hostName.$name (${ctx.libraryUri(hostLibrary)})';
       } finally {
         ctx.library = hostLibrary;
         ctx.enclosingLibrary = oldEnclosingLibrary;

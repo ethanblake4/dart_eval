@@ -544,6 +544,7 @@ class TypedBackend {
       functions.add(
         TypedFunction(
           base,
+          debugName: context.functionDisplayNames[functionId],
           intSpillCount: function.spills[0],
           doubleSpillCount: function.spills[1],
           boolSpillCount: function.spills[2],

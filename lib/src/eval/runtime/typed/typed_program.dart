@@ -769,6 +769,7 @@ final class _ProgramFunction extends TypedFunction {
   _ProgramFunction(TypedFunction source)
     : super(
         source.entry,
+        debugName: source.debugName,
         intSpillCount: source.intSpillCount,
         doubleSpillCount: source.doubleSpillCount,
         boolSpillCount: source.boolSpillCount,

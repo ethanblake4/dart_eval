@@ -166,7 +166,7 @@ void main() {
       Uint8List.fromList([TypedOp.rReturn]),
       globals: const [TypedGlobal(name: 'state')],
     ).write().buffer.asUint8List();
-    const global = 76 + 33;
+    const global = 76 + 37;
     for (final (offset, value) in [
       (4, TypedCodec.version - 1),
       (64, 65537),

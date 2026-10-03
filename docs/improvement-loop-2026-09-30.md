@@ -4215,3 +4215,25 @@ The untouched original passes native Dart, fresh eval and serialized eval; its
 stale expectation is removed. Twenty-six focused async, zone and type tests pass;
 scoped analysis is clean. The existing invalid-inline test now asserts verified
 native synchronous zone semantics instead of delayed catchability.
+
+### Cycle 26 correctness pass 6: guest stack traces
+
+Source function names and defining URIs travel from original compiler graph IDs
+through typed functions and codec version 139. Constructor names use native
+spelling; synthetic noSuchMethod forwarders identify their implementing library
+while retaining the interface library for signature privacy.
+
+The cold exception handler snapshots immutable frame names before unwinding or
+cached-frame reuse, formats them lazily, preserves rethrows and merges nested
+callback roots. Arbitrary thrown objects retain identity. Bridged Errors retain
+their first throw trace. Escaping exceptions retain guest frames through the
+existing throwWithStackTrace path. Source line numbers are not yet available;
+no line mapping is claimed. Interpreter dispatch and generated bindings are
+unchanged.
+
+Four original stack fixtures, including both rethrow_error variants, and the
+noSuchMethod stack neighbor pass fresh and serialized execution. Their five stale
+expectations are removed. Seventy exception and codec tests pass, including
+Unicode metadata roundtrip, callback trace merging and cached-frame snapshots;
+scoped analysis is clean. Six correctness passes are complete, with 16 confirmed
+stale entries removed. Full gates and the AOT baseline follow before performance.

@@ -7,6 +7,53 @@ import 'typed_interop.dart';
 import 'typed_program.dart';
 import 'typed_async.dart';
 import 'typed_generator.dart';
+import 'typed_instance.dart';
+
+/// Snapshot names before unwinding or reusing the interpreter's cached frames.
+/// Host callbacks can enter another machine root; each root contributes once.
+final class _GuestStackTrace implements StackTrace {
+  _GuestStackTrace(this.names, this.roots, this.hostTrace);
+
+  static final _rootIds = Expando<Object>();
+  final List<String> names;
+  final List<Object> roots;
+  final StackTrace hostTrace;
+
+  static StackTrace capture(TypedFrame frame, StackTrace trace) {
+    var root = frame;
+    final names = <String>[];
+    while (true) {
+      final name = root.function.debugName;
+      if (name != null) names.add(name);
+      final parent = root.parent;
+      if (parent == null) break;
+      root = parent;
+    }
+    if (names.isEmpty) return trace;
+    final id = _rootIds[root] ??= Object();
+    if (trace is _GuestStackTrace) {
+      if (trace.roots.contains(id)) return trace;
+      return _GuestStackTrace(
+        List.unmodifiable([...trace.names, ...names]),
+        List.unmodifiable([...trace.roots, id]),
+        trace.hostTrace,
+      );
+    }
+    return _GuestStackTrace(
+      List.unmodifiable(names),
+      List.unmodifiable([id]),
+      trace,
+    );
+  }
+
+  late final String _text = [
+    for (var i = 0; i < names.length; i++) '#$i      ${names[i]} (guest)',
+    hostTrace.toString(),
+  ].join('\n');
+
+  @override
+  String toString() => _text;
+}
 
 final class _Handler {
   late TypedExceptionRegion region;
@@ -186,16 +233,22 @@ abstract final class TypedExceptions {
     StackTrace trace,
     Runtime? runtime,
   ) {
+    trace = _GuestStackTrace.capture(frame, trace);
     final thrown = error is WrappedException ? error.exception : error;
-    if (thrown is Error) {
-      final hostError = thrown is $Value ? (thrown as $Value).$value : thrown;
-      if (hostError is Error && hostError.stackTrace == null) {
-        // Guest throws wrap bridge errors, so the VM has not yet recorded
-        // the original error's first throw trace.
-        try {
-          Error.throwWithStackTrace(hostError, trace);
-        } catch (_) {}
-      }
+    final hostError = switch (thrown) {
+      TypedInstance() => thrown.bridge,
+      $Error() ||
+      $StackOverflowError() ||
+      $OutOfMemoryError() => (thrown as $Value).$value,
+      Error() => thrown is $Value ? (thrown as $Value).$value : thrown,
+      _ => null,
+    };
+    if (hostError is Error && hostError.stackTrace == null) {
+      // Guest throws wrap bridge errors, so the VM has not yet recorded
+      // the original error's first throw trace.
+      try {
+        Error.throwWithStackTrace(hostError, trace);
+      } catch (_) {}
     }
     while (true) {
       final target = frame.exceptions?.handle(error, trace, runtime) ?? -1;
@@ -213,7 +266,11 @@ abstract final class TypedExceptions {
         final pc = frame.returnPc;
         return TypedExceptionTransfer(frame.leave(), pc, future);
       }
-      if (frame.parent == null) return null;
+      if (frame.parent == null) {
+        // Escape a nested machine entry with its guest frames intact, so the
+        // outer entry can append its caller frames on the same cold path.
+        Error.throwWithStackTrace(error, trace);
+      }
       frame = frame.leave();
     }
   }

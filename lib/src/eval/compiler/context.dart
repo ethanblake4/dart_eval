@@ -252,6 +252,7 @@ class CompilerContext with ScopeContext {
   final Map<int, ControlFlowGraph> functionGraphs = {};
   final Map<int, ControlFlowGraph> ssaFunctionGraphs = {};
   final Map<int, String> functionNames = {};
+  final Map<int, String> functionDisplayNames = {};
   final Map<int, MachineFunctionSignature> functionSignatures = {};
   final Map<int, MachineRepresentation> globalRepresentations = {};
   final Set<int> globalsLate = {};
@@ -302,12 +303,16 @@ class CompilerContext with ScopeContext {
   set flowTerminated(bool value) => _flowTerminated = value;
   bool _flowTerminated = false;
 
-  int beginFunction(String name) {
+  int beginFunction(String name, {String? displayName}) {
     finishMethod();
     final id = _nextFunctionId++;
     currentFunctionId = id;
     funcLabel = label(name);
     functionNames[id] = funcLabel!;
+    final sourceName =
+        displayName ??
+        (name.endsWith('()') ? name.substring(0, name.length - 2) : name);
+    functionDisplayNames[id] = '$sourceName (${libraryUri(library)})';
     activeGraph = ControlFlowGraph();
     final root = BasicBlock<Operation>([], label: funcLabel);
     activeGraph.append(root);

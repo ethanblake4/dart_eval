@@ -68,6 +68,7 @@ class TypedFunction {
     this.typeParameterOwners = const [],
     this.objectOutgoingCount = 0,
     this.resultKind = TypedArgumentKind.object,
+    this.debugName,
   }) : needsFrameStorage =
            intSpillCount != 0 ||
            doubleSpillCount != 0 ||
@@ -76,6 +77,9 @@ class TypedFunction {
            objectOutgoingCount != 0;
 
   final int entry;
+
+  /// Source display name, retained only for exception diagnostics.
+  final String? debugName;
   final int intSpillCount, doubleSpillCount, boolSpillCount, objectSpillCount;
   final List<TypedArgumentKind> argumentKinds;
 
