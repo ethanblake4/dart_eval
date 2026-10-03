@@ -2832,3 +2832,20 @@ fresh/serialized regression pass. The same fix cleared
 removed. The change adds one type check only to the cold `Function.apply`
 bridge path. The full 23-driver AOT sweep for the complete correctness tree
 matched all checksums and showed no consistent timing regression.
+
+## Cycle 15 performance: one named argument
+
+The dynamic named-default benchmark spends much of each call validating one
+named argument. `TypedClosureDescriptor.accepts` built a `Set` for every such
+call. A one-name path now checks membership and required names directly;
+multi-name validation keeps the existing duplicate check. Paired 20,000-call,
+25-sample AOT runs measured 731–743 ns/call before and 603–653 ns/call after.
+A fresh/serialized regression checks that a different name cannot satisfy a
+required named parameter.
+
+The final 23-driver, 15-sample AOT sweep matched all 22 execution checksums.
+Targeted paired runs ruled out apparent noise in inventory pricing, closures,
+and virtual calls. Logs are under
+`.dart_tool/improvement_loop/cycle15-performance-full23/`. A two-argument
+host callback fast path, virtual-dispatch inlining, and alternate frame-clear
+loops did not show consistent gains and were reverted.
