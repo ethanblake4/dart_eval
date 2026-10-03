@@ -4322,3 +4322,35 @@ coverage checks native numeric formatting, preserved aliases, conversion order,
 mutable captures, throwing toString, nullable values, Unicode, long text and
 constant identity in fresh and serialized execution. No SDK fixture was copied.
 Artifacts are under .dart_tool/improvement_loop/cycle26/.
+
+### Cycle 26 cleanup and final gates
+
+Astra medium reviewed the complete correctness and performance range and found
+no actionable issue. A proposed history-replay helper made the total code longer,
+so the short loops remain. The invariant language-version check is evaluated once
+per finalizer rebase, and member-fact documentation now describes nested paths.
+The test audit found no demonstrably redundant or irrelevant tests to remove.
+Five inaccurate expect_fail reason strings were removed without changing their
+expectations. Generated SDK bindings and machine files remain reproducible.
+
+The default gate passes 2282 tests / 86 skips. SDK-full passes its configured gate
+with 2737 passes / 557 skips; actual outcomes are 2666 passed / 58 compile errors /
+13 failures / 3 skipped. Actual failures fall from 116 at cycle25 to 71, with 45
+confirmed stale expectations removed during the six correctness passes and
+followups. The existing 105 CFG checks remain applicable; CFG is unchanged.
+
+The compiler-only cleanup receives a fresh AOT compilation check: both checkpoint
+and cleanup builds emit 1350 bytes on the mixed compiler benchmark, with 15-sample
+medians 17996 / 17250 us. This single pair is verification, not a speedup claim.
+The 22 runtime benchmark drivers are excluded from this cleanup-only repeat
+because this diff changes only an invariant compiler feature check, documentation
+and expectation comments; the full bidirectional 23-driver hot-loop sweep remains
+the performance checkpoint's gate. Twenty-six focused flow/exception tests and
+scoped analysis pass after cleanup. ARM64 inspection also confirms the existing
+binary-concat handler retains its load/call and stack save/restore sequence, with
+only its return branch target shifted; a cold delegate path gains one register
+move without another spill slot.
+
+Cycle27 will include the additional compilation-speed/resource pass, as requested,
+after its six correctness passes and regular generated-code/runtime performance
+work. Remaining actual failures still require further loops.

@@ -68,8 +68,8 @@ final class ValueFacts {
   final bool? constBool;
 
   /// Promoted types of promotable members *of this object* — `c._f` where
-  /// `_f` is a private final field. Keyed by member name; the value is the
-  /// promoted type the member read currently reports. Absent = none.
+  /// `_f` is a private final field. Keys include nested member paths; each value
+  /// is the promoted type the member read currently reports. Absent = none.
   final Map<String, TypeRef>? promotedMembers;
 
   /// Ordered narrowing proofs. Null avoids allocating for unpromoted locals;

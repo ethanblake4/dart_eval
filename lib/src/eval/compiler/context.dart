@@ -1043,6 +1043,7 @@ class ContextSaveState {
     AstNode source,
     Set<String> assigned,
   ) {
+    final modern = ctx.soundFlowAnalysis(source);
     for (var frame = 0; frame < locals.length; frame++) {
       for (final slot in locals[frame].entries) {
         final before = frame < entry.locals.length
@@ -1072,7 +1073,6 @@ class ContextSaveState {
         }
         var result = current;
         final finalValue = after.current;
-        final modern = ctx.soundFlowAnalysis(source);
         if (finalValue.type != before.current.type ||
             !_sameHistory(
               finalValue.facts.promotionHistory,
