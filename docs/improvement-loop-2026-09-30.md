@@ -3008,3 +3008,15 @@ The Object binding is explicitly excluded from generation in
 23-driver, 15-sample AOT sweep matched all 22 execution checksums; logs are
 under `.dart_tool/improvement_loop/cycle17-pass2-full23/`. Paired controls
 found no sustained slowdown in external or closure calls.
+
+## Cycle 17 pass 4: const redirecting factory identity
+
+Constant interning used the call site's static type as part of an instance
+key. A redirecting `const factory A() = B` therefore produced a different key
+from `const B()` for the same value. Typed instances now use their actual
+runtime type for that key. The pinned `const/factory_member_test.dart` fixture
+passes and its stale `expect_fail` entry is removed. This change is confined
+to constant interning. The full 23-driver, 15-sample AOT sweep matched all 22
+execution checksums; logs are under
+`.dart_tool/improvement_loop/cycle17-pass4-full23/`. A paired call control
+ruled out the apparent sweep timing outlier.

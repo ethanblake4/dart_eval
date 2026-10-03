@@ -22,10 +22,14 @@ extension TypedRuntimeInterop on Runtime {
   /// key even though each field holds a distinct wrapper.
   Object? internConst(Object? value, int typeId) {
     var v = value;
+    var keyTypeId = typeId;
     final List<Object?> key;
     var loose = false;
     switch (v) {
       case TypedInstance():
+        // A redirecting const factory can have a different static type from
+        // its result. Canonicalize by the instance's actual type.
+        keyTypeId = v.$getRuntimeType(this);
         final parts = <Object?>[];
         Object? level = v;
         while (level is TypedInstance) {
@@ -69,9 +73,9 @@ extension TypedRuntimeInterop on Runtime {
         key = [v];
     }
     final hash = loose
-        ? typeId
+        ? keyTypeId
         : Object.hashAll([
-            typeId,
+            keyTypeId,
             for (final part in key) identityHashCode(part),
           ]);
     final bucket = _constIntern.putIfAbsent(hash, () => []);
