@@ -179,7 +179,6 @@ expect_fail:
   - path: 'regress/regress31596_super_runtime_3_test.dart'
   - path: 'regress/regress34034_test.dart'
   - path: 'regress/regress60409_test.dart'
-  - path: 'regress/regress61222_test.dart'
   - path: 'stack_trace/demangle_ctors_test.dart'
   - path: 'stack_trace/rethrow_error_test.dart'
   - path: 'stack_trace/rethrow_nonerror_test.dart'
