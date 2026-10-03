@@ -121,15 +121,13 @@ Map<TypeParameterDef, TypeRef> inferCallableTypeArguments(
     bindings.clear();
     ctx.typeSystem.unify(callable, context, bindings);
   }
-  // Unconstrained parameters retain the existing bound-defaulting behavior.
-  for (final parameter in callable.signature.typeParameters) {
-    bindings.putIfAbsent(
-      parameter,
-      () => (parameter.bound ?? CoreTypes.dynamic.ref(ctx))
-          .substituteTypeParameters(Substitution.of(bindings))
-          .lowerTypeParameters(ctx),
-    );
-  }
+  // Defaults close this callable's bounds while preserving enclosing binders.
+  bindings.addAll(
+    ctx.typeSystem.instantiateToBounds(
+      callable.signature.typeParameters,
+      knownTypes: bindings,
+    ),
+  );
   if (useLegacyInference) return bindings;
   final substitution = Substitution.of(bindings);
   for (final parameter in callable.signature.typeParameters) {

@@ -71,7 +71,6 @@ expect_fail:
   - path: 'async/derive_future_type_test.dart'
     reason: '\$Future bridge lacks catchError/whenComplete; await on Future-implementing classes unsupported'
   - path: 'closure/tearoff_dynamic_test.dart'
-  - path: 'closure/type_arguments_test.dart'
   - path: 'constructor/external_constructor_test.dart'
   - path: 'constructor/patch_tear_off_test.dart'
   - path: 'control_flow_collections/map_set_ambiguity_test.dart'

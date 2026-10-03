@@ -3729,3 +3729,13 @@ workload. Dispatch and external-call differences did not persist; captured-void
 callbacks shifted +9.9% in the first pair and -0.8% in the second. Raw samples
 remain in cycle22/cleanup-recheck logs. No other compilation overlapped timings.
 The remaining 164 real SDK failures continue into cycle 23.
+## Cycle 23 pass 1: captured bounds in callable instantiation
+
+Generic tear-off inference now uses the existing instantiate-to-bounds solver for
+unconstrained parameters. It closes dependencies among the callable's binders
+without lowering enclosing class or method binders to dynamic. The original
+closure/type_arguments fixture passes in fresh and serialized execution; twenty
+existing inference/capture tests and scoped analysis pass. One confirmed stale
+entry removed. The investigation used an isolated checkout while SDK bindings
+were regenerated; temporary diagnostics were removed. No runtime or bytecode
+operations added and no duplicate SDK regression copied into the normal suite.
