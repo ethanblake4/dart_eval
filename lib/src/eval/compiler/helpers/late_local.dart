@@ -62,16 +62,19 @@ import 'conversion.dart';
       final loaded = ctx.svar('late_capture');
       ctx.pushOp(LoadCapture(loaded, index++));
       final original = entry.value;
+      final assigned = analysis.assignedDeclarations.contains(
+        original.captureDeclaration,
+      );
       final local = ctx.setLocal(
         entry.key,
         Variable.of(
           ctx,
           loaded,
-          analysis.assignedDeclarations.contains(original.captureDeclaration)
-              ? original.declaredType
-              : original.current.type,
+          assigned ? original.declaredType : original.current.type,
           rep: values[entry.key]!.rep,
-          facts: original.current.facts,
+          facts: assigned
+              ? original.current.facts.cleared()
+              : original.current.facts,
         ),
         declaredType: original.declaredType,
         isFinal: original.isFinal,

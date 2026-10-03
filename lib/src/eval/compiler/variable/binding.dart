@@ -99,10 +99,11 @@ final class LocalBinding {
     _ => null,
   };
 
-  bool get isLateLocal =>
-      storage is LateLocalStorage ||
-      (storage is ExceptionSlotStorage &&
-          (storage as ExceptionSlotStorage).isLateLocal);
+  bool get isLateLocal => switch (storage) {
+    LateLocalStorage() => true,
+    ExceptionSlotStorage(:final isLateLocal) => isLateLocal,
+    _ => false,
+  };
 
   /// Whether a nested closure writes to this binding — such writes can
   /// happen at any time, so flow promotions on the local are unsound.
@@ -299,6 +300,7 @@ final class LocalBinding {
     ReadLateLocal(ctx.svar('late_read'), cell),
     _current.type,
     rep: ValueRep.boxed,
+    facts: _current.facts,
   );
 
   Variable _readCell(CompilerContext ctx, SSA cell) => Variable.ssa(

@@ -18,6 +18,7 @@ import '../type.dart';
 /// representation conversions have already happened at the original call site.
 void inlineLeafCalls(CompilerContext context) {
   const maxBodyOperations = 12;
+  const maxAllocationCallerOperations = 512;
   final candidates = <int, List<cfg.Operation>>{};
   for (final entry in context.functionGraphs.entries) {
     final graph = entry.value;
@@ -86,6 +87,14 @@ void inlineLeafCalls(CompilerContext context) {
   var nextCall = 0;
   for (final entry in context.functionGraphs.entries) {
     final graph = entry.value;
+    // Expanding thousands of constant constructors inflates already large
+    // initializer graphs and slows subsequent SSA optimizations.
+    final inlineAllocations =
+        graph.graph.vertices.fold<int>(
+          0,
+          (count, id) => count + graph[id]!.code.length,
+        ) <=
+        maxAllocationCallerOperations;
     // Catch edges can leave a block before all its definitions have executed.
     if (graph.graph.vertices.any(
       (id) => graph[id]!.code.any((op) => op is exceptions.EnterTry),
@@ -113,6 +122,8 @@ void inlineLeafCalls(CompilerContext context) {
         final body = candidates[callee];
         if (callee == entry.key ||
             body == null ||
+            (!inlineAllocations &&
+                body.any((op) => op is objects.CreateClass)) ||
             op.arguments.length !=
                 context.functionSignatures[callee]!.parameters.length) {
           rewritten.add(op);

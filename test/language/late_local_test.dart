@@ -2,6 +2,44 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('late receiver facts survive reads and expire on captured writes', () {
+    final program = Compiler().compile({
+      'late_facts': {
+        'main.dart': '''
+          class C {
+            final Object _field;
+            C(this._field);
+          }
+          extension IntTag on int { String get tag => 'int'; }
+          extension ObjectTag on Object { String get tag => 'object'; }
+          String deferred() {
+            var c = C(1);
+            if (c._field is int) {
+              late var tag = c._field.tag;
+              c = C('changed');
+              return tag;
+            }
+            return 'missed';
+          }
+          String main() {
+            late final c = C(1);
+            if (c._field is int) return c._field.tag + ':' + deferred();
+            return 'missed';
+          }
+        ''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib('package:late_facts/main.dart', 'main'),
+        'int:object',
+      );
+    }
+  });
+
   test(
     'late initializers share captured state across retries and handlers',
     () {

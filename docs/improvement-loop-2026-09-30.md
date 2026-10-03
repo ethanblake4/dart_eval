@@ -3590,3 +3590,29 @@ The apparent direct-closure regression vanished in paired rechecks (candidate
 quantized; larger repeated work exercises the same unchanged path. The indexed
 aggregation checksum also matched. No runtime or interpreter code changed in
 this compiler optimization checkpoint.
+## Cycle 21 cleanup and final checks
+
+Astra medium found two deferred-local fact issues. Reassigned captures now clear
+facts together with their promoted type, and stable late reads preserve current
+facts. A single extension-selection regression exercises both directions, passes
+native Dart and eval/serialized execution, and the 12 focused flow/late tests pass.
+The late-storage predicate uses the project's pattern-switch style.
+
+Constructor expansion is now limited to callers of at most 512 operations. The
+first complete SDK gate exposed three one-minute timeouts in 10,000-element
+constant initializer graphs; all three original fixtures pass with this bound in
+a 46-second combined recheck. Other SDK outcomes were unchanged: corrected
+aggregate 2560 passed, 148 compile errors, 29 runtime failures, 3 skipped. The
+configured gate therefore accounts for 2737 passes and 557 skips; its original
+single run had 2734 passes and those three corrected timeouts. The final default
+gate passes 2229 tests with 86 skips; CFG passes 105. Scoped analysis, generated
+machine validation and diff checks pass. Astra's follow-up found no remaining
+issue in the cleanup changes.
+
+The final bounded-inlining AOT sweep again matched all 22 execution checksums
+across 23 drivers. Invoice snapshots improved 56.851 to 41.359 ms (27.3%), checksum
+1358166220 on both hosts. Timings were noisy even for the unchanged native dispatch
+control, so seven affected drivers received two extra alternating comparisons;
+logs retain the raw samples rather than treating all apparent gains as established.
+No benchmark compilation overlapped the final timed sweep. Artifacts are under
+.dart_tool/improvement_loop/cycle21. Remaining real SDK failures start cycle 22.
