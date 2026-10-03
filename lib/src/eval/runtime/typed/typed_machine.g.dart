@@ -1984,6 +1984,10 @@ abstract final class TypedMachine {
        final index = code[pc] | (code[pc + 1] << 8); pc += 2;
        TypedLateField.writeNamedFinal(r, s, program, index);
        break;
+    case 432:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       r = TypedInterop.createInvocation(runtime, r as String, s as String, c as List, index);
+       break;
     default: throw StateError('Invalid extended typed opcode');
     }
     st.pc = pc;

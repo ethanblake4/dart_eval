@@ -1,5 +1,43 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 
+enum InvocationKind { getter, setter, method }
+
+/// A language invocation keeps guest arguments boxed without a host bridge.
+final class CreateInvocation extends Operation {
+  CreateInvocation(
+    this.target,
+    this.kind,
+    this.name,
+    this.library,
+    this.payload,
+  );
+  final SSA target;
+  final InvocationKind kind;
+  final SSA name;
+  final SSA library;
+  final SSA payload;
+
+  @override
+  SSA get writesTo => target;
+  @override
+  Set<SSA> get readsFrom => {name, library, payload};
+  @override
+  Operation copyWith({Set<SSA>? readsFrom, SSA? writesTo}) {
+    final renamed = renameOperands(
+      [name, library, payload],
+      this.readsFrom,
+      readsFrom,
+    );
+    return CreateInvocation(
+      writesTo ?? target,
+      kind,
+      renamed[0],
+      renamed[1],
+      renamed[2],
+    );
+  }
+}
+
 /// Preserve a supplied null as $null at a bridge boundary. Raw null in a
 /// bridge parameter slot means that the optional argument was omitted.
 final class PrepareBridgeArgument extends Operation {

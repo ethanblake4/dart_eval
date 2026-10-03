@@ -679,23 +679,31 @@ final class NoSuchMethodCall extends CallTarget {
   @override
   CallSignature? get signature => null;
 
-  Variable _symbolFor(CompilerContext ctx, String member) {
-    final bridge =
-        ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
-    final arg = BuiltinValue(stringval: member).push(ctx).boxIfNeeded(ctx);
-    final library = member.startsWith('_')
-        ? BuiltinValue(stringval: ctx.libraryUri(ctx.library))
-              .push(ctx)
-              .boxIfNeeded(ctx)
-        : null;
+  Variable _createInvocation(
+    CompilerContext ctx,
+    InvocationKind kind,
+    String member,
+    List<Variable> values,
+  ) {
+    final payload = Variable.ssa(
+      ctx,
+      NewList(ctx.svar('invocation_payload')),
+      CoreTypes.list.ref(ctx),
+      rep: ValueRep.nativeList,
+    );
+    for (final value in values) {
+      ctx.pushOp(ListAppend(payload.ssa, value.ssa));
+    }
     return Variable.ssa(
       ctx,
-      InvokeExternal(
-        ctx.svar('sym'),
-        bridge[library == null ? 'Symbol.' : '_privateSymbolLiteral']!,
-        [arg.ssa, if (library != null) library.ssa],
+      CreateInvocation(
+        ctx.svar('inv'),
+        kind,
+        BuiltinValue(stringval: member).push(ctx).ssa,
+        BuiltinValue(stringval: ctx.libraryUri(ctx.library)).push(ctx).ssa,
+        payload.ssa,
       ),
-      CoreTypes.symbol.ref(ctx),
+      CoreTypes.invocation.ref(ctx),
     );
   }
 
@@ -703,15 +711,7 @@ final class NoSuchMethodCall extends CallTarget {
   /// member value — evaluated before argument binding on the getter-shaped
   /// `super.m(...)` path.
   Variable emitGetterValue(CompilerContext ctx) {
-    final bridge =
-        ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
-    final invocation = Variable.ssa(
-      ctx,
-      InvokeExternal(ctx.svar('inv'), bridge['Invocation.getter']!, [
-        _symbolFor(ctx, name).ssa,
-      ]),
-      CoreTypes.invocation.ref(ctx),
-    );
+    final invocation = _createInvocation(ctx, InvocationKind.getter, name, []);
     return CallResolver(ctx).invokeOperator(
       ctx.lookupLocal('#this')!,
       'noSuchMethod',
@@ -722,16 +722,9 @@ final class NoSuchMethodCall extends CallTarget {
   /// A missing superclass setter dispatches on `this`, preserving the
   /// setter-shaped invocation and the original assigned value.
   void emitSetter(CompilerContext ctx, Variable value) {
-    final bridge =
-        ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
-    final invocation = Variable.ssa(
-      ctx,
-      InvokeExternal(ctx.svar('inv'), bridge['Invocation.setter']!, [
-        _symbolFor(ctx, '$name=').ssa,
-        value.boxIfNeeded(ctx).ssa,
-      ]),
-      CoreTypes.invocation.ref(ctx),
-    );
+    final invocation = _createInvocation(ctx, InvocationKind.setter, '$name=', [
+      value.boxIfNeeded(ctx),
+    ]);
     CallResolver(
       ctx,
     ).invokeOperator(ctx.lookupLocal('#this')!, 'noSuchMethod', [invocation]);
@@ -739,9 +732,6 @@ final class NoSuchMethodCall extends CallTarget {
 
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
-    final coreLib = ctx.libraryMap['dart:core']!;
-    final bridge = ctx.bridgeStaticFunctionIndices[coreLib]!;
-
     // An abstract getter produces a getter-shaped Invocation; the fetched
     // value is then invoked as a closure.
     if (getterShaped) {
@@ -773,58 +763,43 @@ final class NoSuchMethodCall extends CallTarget {
     for (final arg in call.positional) {
       ctx.pushOp(ListAppend(list.ssa, arg.boxIfNeeded(ctx).ssa));
     }
-    final invArgs = [_symbolFor(ctx, name).ssa, list.boxIfNeeded(ctx).ssa];
-    if (call.runtimeTypeArguments.isNotEmpty) {
-      final types = Variable.ssa(
-        ctx,
-        NewList(ctx.svar('invocation_types')),
-        CoreTypes.list.ref(ctx).copyWith(arguments: [CoreTypes.type.ref(ctx)]),
-        rep: ValueRep.nativeList,
-      );
-      for (final typeId in call.runtimeTypeArguments) {
-        final type = Variable.ssa(
-          ctx,
-          LoadTypeParameter(ctx.svar('invocation_type'), typeId),
-          CoreTypes.type.ref(ctx),
-        );
-        ctx.pushOp(ListAppend(types.ssa, type.ssa));
-      }
-      invArgs.insert(1, types.boxIfNeeded(ctx).ssa);
-    }
-    if (call.named.isNotEmpty || call.runtimeTypeArguments.isNotEmpty) {
-      final mapType = CoreTypes.map
-          .ref(ctx)
-          .copyWith(
-            arguments: [CoreTypes.symbol.ref(ctx), CoreTypes.dynamic.ref(ctx)],
-          );
-      final map = Variable.ssa(
-        ctx,
-        NewMap(ctx.svar('map')),
-        mapType,
-        rep: ValueRep.nativeMap,
-      );
-      for (final entry in call.named) {
-        ctx.pushOp(
-          MapSet(
-            map.ssa,
-            _symbolFor(ctx, entry.$1).ssa,
-            entry.$2.boxIfNeeded(ctx).ssa,
-          ),
-        );
-      }
-      invArgs.add(map.boxIfNeeded(ctx).ssa);
-    }
-    final invocation = Variable.ssa(
+    final types = Variable.ssa(
       ctx,
-      InvokeExternal(
-        ctx.svar('inv'),
-        bridge[call.runtimeTypeArguments.isEmpty
-            ? 'Invocation.method'
-            : 'Invocation.genericMethod']!,
-        invArgs,
-      ),
-      CoreTypes.invocation.ref(ctx),
+      NewList(ctx.svar('invocation_types')),
+      CoreTypes.list.ref(ctx).copyWith(arguments: [CoreTypes.type.ref(ctx)]),
+      rep: ValueRep.nativeList,
     );
+    for (final typeId in call.runtimeTypeArguments) {
+      final type = Variable.ssa(
+        ctx,
+        LoadTypeParameter(ctx.svar('invocation_type'), typeId),
+        CoreTypes.type.ref(ctx),
+      );
+      ctx.pushOp(ListAppend(types.ssa, type.ssa));
+    }
+    final mapType = CoreTypes.map.ref(ctx).copyWith(
+      arguments: [CoreTypes.string.ref(ctx), CoreTypes.dynamic.ref(ctx)],
+    );
+    final map = Variable.ssa(
+      ctx,
+      NewMap(ctx.svar('map')),
+      mapType,
+      rep: ValueRep.nativeMap,
+    );
+    for (final entry in call.named) {
+      ctx.pushOp(
+        MapSet(
+          map.ssa,
+          BuiltinValue(stringval: entry.$1).push(ctx).boxIfNeeded(ctx).ssa,
+          entry.$2.boxIfNeeded(ctx).ssa,
+        ),
+      );
+    }
+    final invocation = _createInvocation(ctx, InvocationKind.method, name, [
+      list,
+      map,
+      types,
+    ]);
     return CallResolver(
       ctx,
     ).invokeOperator($this, 'noSuchMethod', [invocation]).result;

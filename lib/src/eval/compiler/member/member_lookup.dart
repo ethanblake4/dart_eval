@@ -793,10 +793,15 @@ final class MemberLookup {
                   as Map?)
               ?.containsKey(linkName(memberName, link).nameKey) ==
           true;
-      if (index != null && (kind == MemberKind.getter || hasAccessor)) {
+      final implementation = concreteMemberOn(link, memberName);
+      if (index != null &&
+          (kind == MemberKind.getter ||
+              hasAccessor &&
+                  implementation is SourceMember &&
+                  implementation.variable != null)) {
         return (link, index, links.sublist(1, i + 1));
       }
-      if (hasAccessor && concreteMemberOn(link, memberName) != null) {
+      if (hasAccessor && implementation != null) {
         return (link, null, links.sublist(1, i + 1));
       }
     }

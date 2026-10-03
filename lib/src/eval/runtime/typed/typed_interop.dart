@@ -5,6 +5,8 @@ import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/function.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/error_hooks.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/symbol_literal.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import 'typed_instance.dart';
 import 'typed_host_collections.dart';
@@ -19,6 +21,36 @@ import 'typed_async.dart';
 /// The compiler emits every scalar box and unbox operation. Host functions must
 /// use an explicit bridge wrapper, such as $Function or $Closure.
 abstract final class TypedInterop {
+  @pragma('vm:never-inline')
+  static $Invocation createInvocation(
+    Runtime? runtime,
+    String name,
+    String library,
+    List payload,
+    int kind,
+  ) {
+    final member = guestMemberSymbol(name, library, runtime: runtime);
+    final Invocation invocation;
+    if (kind == 0) {
+      invocation = Invocation.getter(member);
+    } else if (kind == 1) {
+      invocation = Invocation.setter(member, payload.single);
+    } else if (kind == 2) {
+      final positional = (payload[0] as List).cast<Object?>();
+      final named = <Symbol, Object?>{
+        for (final entry in (payload[1] as Map).entries)
+          Symbol((entry.key as $String).$value): entry.value,
+      };
+      final types = (payload[2] as List).cast<Type>();
+      invocation = types.isEmpty
+          ? Invocation.method(member, positional, named)
+          : Invocation.genericMethod(member, types, positional, named);
+    } else {
+      throw StateError('Unknown invocation kind $kind');
+    }
+    return $Invocation.wrap(languageInvocation(invocation));
+  }
+
   /// Preserve the statically known type arguments of a native bridge value.
   /// Generated generic wrappers otherwise report only their raw class type.
   static V annotateBridgeType<V extends $Value>(

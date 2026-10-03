@@ -436,6 +436,7 @@ abstract final class TypedOp {
   static const linkSuperclassRS = 429;
   static const rReadNamedLateFieldR = 430;
   static const writeNamedLateFinalFieldRS = 431;
+  static const rCreateInvocationRSC = 432;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false, 'True'),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false, 'False'),
@@ -869,5 +870,6 @@ abstract final class TypedOp {
     TypedInstruction('linkSuperclassRS', [6, 7], [], TypedImmediate.none, true, false, false, 'linkSuperclass'),
     TypedInstruction('rReadNamedLateFieldR', [6], [6], TypedImmediate.objectConstant, true, false, false, 'ReadNamedLateField'),
     TypedInstruction('writeNamedLateFinalFieldRS', [6, 7], [], TypedImmediate.objectConstant, true, false, false, 'writeNamedLateFinalField'),
+    TypedInstruction('rCreateInvocationRSC', [6, 7, 8], [6], TypedImmediate.integer, true, false, false, 'CreateInvocation'),
   ];
 }

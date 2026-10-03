@@ -1927,6 +1927,15 @@ String familyOf(String name) {
     mayThrow: true,
     extended: true,
   );
+  add(
+    'rCreateInvocationRSC',
+    'r = TypedInterop.createInvocation(runtime, r as String, s as String, c as List, index);',
+    inputs: [6, 7, 8],
+    output: 6,
+    immediate: 'integer',
+    mayThrow: true,
+    extended: true,
+  );
   return (ops: ops, extended: extendedOps);
 }
 

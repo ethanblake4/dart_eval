@@ -859,12 +859,15 @@ class TypedBackend {
   }
 
   // Contiguous scalar constants work in raw and serialized typed programs.
-  int _lateFieldDescriptor(int field, String name, {bool initializing = false}) =>
-      _lateFieldDescriptors.putIfAbsent((field, name, initializing), () {
-        final index = objects.length;
-        objects.addAll([field, name, initializing]);
-        return index;
-      });
+  int _lateFieldDescriptor(
+    int field,
+    String name, {
+    bool initializing = false,
+  }) => _lateFieldDescriptors.putIfAbsent((field, name, initializing), () {
+    final index = objects.length;
+    objects.addAll([field, name, initializing]);
+    return index;
+  });
 
   int _integer(int value) {
     final cached = _integerIndices[value];
@@ -1533,6 +1536,17 @@ class _LoweringSession {
               value(op.shim),
               value(op.parent),
             ]),
+          );
+          continue;
+        }
+        if (op is bridge.CreateInvocation) {
+          lowered.add(
+            TypedOperation(
+              b._named(['rCreateInvocationRSC']),
+              value(op.target),
+              [value(op.name), value(op.library), value(op.payload)],
+              immediate: op.kind.index,
+            ),
           );
           continue;
         }

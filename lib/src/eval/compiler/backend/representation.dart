@@ -111,6 +111,7 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       objects.InternConst() ||
       objects.CreateClass() ||
       bridge.InvokeExternal() ||
+      bridge.CreateInvocation() ||
       bridge.PrepareBridgeArgument() ||
       bridge.BridgeInstantiate() ||
       bridge.NewBridgeSuperShim() ||
@@ -334,6 +335,11 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
           bridge.InvokeExternal() ||
           closures.InvokeClosure():
         inputs(operation, object);
+        output(operation, object);
+      case bridge.CreateInvocation(:final name, :final library, :final payload):
+        constrain(name, MachineRepresentation.string);
+        constrain(library, MachineRepresentation.string);
+        constrain(payload, object);
         output(operation, object);
       case memory.LoadNull() ||
           objects.LoadUninitializedField() ||
