@@ -3885,3 +3885,21 @@ Original regress13179, regress18435 and cyclic_default_values fixtures pass;
 38 focused tests and scoped analyzer checks pass, including fresh/serialized
 escaping defaults with chained constant lists and formal-name shadowing. Removed
 the three confirmed stale expectations. No runtime changes.
+
+
+## Cycle 24 correctness checkpoint 3
+
+Nongeneric extension types now support named primary constructors and empty
+redirecting constructors. Redirect arguments are bound once, then the body is
+compiled in its declaring scope with the representation preserved directly;
+there are no wrapper objects or new runtime paths. SSA argument snapshots retain
+the constant-expression fact, while still dropping the literal-int marker.
+Named constructor tear-offs remain explicitly unsupported rather than silently
+using the primary constructor's identity adapter.
+
+The original regress_61222 fixture passes. A focused cross-library check covers
+constant defaults, caller-name shadowing, single evaluation of a supplied
+argument, and null-aware collections of nullable representations through fresh
+and serialized runtimes. All 21 existing/focused extension and default-scope
+tests pass; scoped analyzer and diff checks pass. Removed the confirmed stale
+regress_61222 expectation.

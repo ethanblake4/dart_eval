@@ -43,6 +43,49 @@ void main() {
 ''';
 
 void main() {
+  test('redirects bind arguments once in the extension declaring scope', () {
+    final program = Compiler().compile({
+      'extension_redirect': {
+        'support.dart': r'''
+const seed = 7;
+extension type const Count.primary(int value) {
+  const Count.from([int n = seed]) : this.primary(n);
+  const Count.named({int n = seed}) : this.from(n);
+}
+extension type const Maybe(Object? value) {
+  const Maybe.empty() : this(null);
+  const Maybe.present(Object value) : this(value);
+}
+''',
+        'main.dart': r'''
+import 'support.dart' as support;
+int calls = 0;
+int next() { calls++; return 3; }
+bool verify() {
+  final seed = 100;
+  const first = support.Count.named();
+  final second = support.Count.named(n: next());
+  final raw = Object();
+  final values = <support.Maybe>[
+    ?support.Maybe.empty(), ?support.Maybe.present(raw),
+  ];
+  return first.value == 7 && second.value == 3 && calls == 1 && seed == 100 &&
+      values.length == 1 && identical(values.single, raw);
+}
+void main() {}
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib('package:extension_redirect/main.dart', 'verify'),
+        true,
+      );
+    }
+  });
   for (final version in ['3.8', '3.9']) {
     test('extension representation identity with Dart $version flow rules', () {
       final program = Compiler().compile({

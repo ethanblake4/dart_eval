@@ -6,6 +6,9 @@ import '../expression/expression.dart';
 import '../type.dart';
 import '../variable.dart';
 import 'conversion.dart';
+import '../invocation/binder.dart';
+import 'default_value.dart';
+import '../member/call_signature.dart';
 
 /// An extension type's representation field is an identity projection.
 TypeRef? extensionRepresentationField(
@@ -36,33 +39,118 @@ Variable constructExtensionType(
   required bool isConst,
   required AstNode source,
 }) {
-  if (name.isNotEmpty ||
-      arguments.arguments.length != 1 ||
-      arguments.arguments.single is NamedArgument) {
-    throw CompileError(
-      'Expected one positional representation argument',
-      source,
-    );
-  }
-  final primary =
-      (declaration.node as ExtensionTypeDeclaration).namePart
-          as PrimaryConstructorDeclaration;
-  if (isConst && primary.constKeyword == null) {
-    throw CompileError('Extension type constructor is not const', source);
-  }
-  final representation = declaration.extensionRepresentation!;
-  final value = compileExpression(
-    arguments.arguments.single.argumentExpression,
+  return _ExtensionConstruction(
     ctx,
-    representation,
+    declaration,
+    instantiatedType,
+    isConst,
+    source,
+  ).emit(name, arguments);
+}
+
+/// Redirects are compiled in their declaring scope, with each supplied
+/// argument evaluated once before entering that scope.
+final class _ExtensionConstruction {
+  _ExtensionConstruction(
+    this.ctx,
+    this.declaration,
+    this.instantiatedType,
+    this.isConst,
+    this.source,
   );
-  if (isConst && !value.isConst) {
-    throw CompileError('Representation argument is not constant', source);
+
+  final CompilerContext ctx;
+  final SourceTypeDecl declaration;
+  final TypeRef instantiatedType;
+  final bool isConst;
+  final AstNode source;
+  final _active = <ConstructorDeclaration>{};
+
+  Variable emit(String name, ArgumentList arguments) {
+    final node = declaration.node as ExtensionTypeDeclaration;
+    final primary = node.namePart as PrimaryConstructorDeclaration;
+    final primaryName = primary.constructorName?.name.lexeme ?? '';
+    if (name == primaryName || name == 'new' && primaryName.isEmpty) {
+      return _primary(primary, arguments);
+    }
+    final constructor = node.body.members
+        .whereType<ConstructorDeclaration>()
+        .where((member) => (member.name?.lexeme ?? '') == name)
+        .firstOrNull;
+    if (constructor == null) {
+      throw CompileError('Unknown extension type constructor $name', source);
+    }
+    if (isConst && constructor.constKeyword == null) {
+      throw CompileError('Extension type constructor is not const', source);
+    }
+    if (!_active.add(constructor)) {
+      throw CompileError('Cyclic extension type constructor redirect', source);
+    }
+    final redirect =
+        constructor.initializers.single as RedirectingConstructorInvocation;
+    final signature = CallSignature.forDeclaration(
+      ctx,
+      declaration.library,
+      constructor,
+    );
+    final bound = ArgumentBinder(ctx).bindParameterList(
+      arguments,
+      declaration.library,
+      signature,
+      constructor,
+      source: source,
+    );
+    try {
+      return withDefaultExpressionScope(
+        ctx,
+        declaration.library,
+        constructor,
+        () {
+          for (var i = 0; i < signature.positional.length; i++) {
+            ctx.setLocal(signature.positional[i].name, bound.positional[i]);
+          }
+          for (final (name, value) in bound.named) {
+            ctx.setLocal(name, value);
+          }
+          return emit(
+            redirect.constructorName?.name ?? '',
+            redirect.argumentList,
+          );
+        },
+      );
+    } finally {
+      _active.remove(constructor);
+    }
   }
-  return convertForAssignment(
-    ctx,
-    value,
-    representation,
-    source: source,
-  ).copyWith(type: instantiatedType, isConst: isConst);
+
+  Variable _primary(
+    PrimaryConstructorDeclaration primary,
+    ArgumentList arguments,
+  ) {
+    if (arguments.arguments.length != 1 ||
+        arguments.arguments.single is NamedArgument) {
+      throw CompileError(
+        'Expected one positional representation argument',
+        source,
+      );
+    }
+    if (isConst && primary.constKeyword == null) {
+      throw CompileError('Extension type constructor is not const', source);
+    }
+    final representation = declaration.extensionRepresentation!;
+    final value = compileExpression(
+      arguments.arguments.single.argumentExpression,
+      ctx,
+      representation,
+    );
+    if (isConst && !value.isConst) {
+      throw CompileError('Representation argument is not constant', source);
+    }
+    return convertForAssignment(
+      ctx,
+      value,
+      representation,
+      source: source,
+    ).copyWith(type: instantiatedType, isConst: isConst);
+  }
 }

@@ -326,7 +326,7 @@ class Variable {
       Assign(ctx.svar(svar), ssa),
       type,
       rep: rep,
-      facts: facts.copyWith(isConst: false, isConstInt: false),
+      facts: facts.copyWith(isConstInt: false),
     );
   }
 

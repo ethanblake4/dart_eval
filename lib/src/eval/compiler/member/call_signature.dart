@@ -479,7 +479,8 @@ final class CallSignature {
           node is EnumDeclaration ||
           node is MixinDeclaration ||
           node is ClassTypeAlias ||
-          node is ExtensionDeclaration,
+          node is ExtensionDeclaration ||
+          node is ExtensionTypeDeclaration,
     );
     final ownerName = host is ExtensionDeclaration
         ? host.name?.lexeme ??

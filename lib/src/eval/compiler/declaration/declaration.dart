@@ -65,13 +65,19 @@ void _validateExtensionType(
 ) {
   final primary = declaration.namePart;
   if (primary is! PrimaryConstructorDeclaration ||
-      primary.constructorName != null ||
       primary.typeParameters != null ||
       declaration.implementsClause != null ||
-      declaration.body.members.isNotEmpty) {
+      declaration.body.members.any(
+        (member) =>
+            member is! ConstructorDeclaration ||
+            member.factoryKeyword != null ||
+            member.body is! EmptyFunctionBody ||
+            member.initializers.length != 1 ||
+            member.initializers.single is! RedirectingConstructorInvocation,
+      )) {
     throw CompileError(
-      'Only nongeneric extension types with an unnamed primary constructor '
-      'and no members or implements clause are supported',
+      'Only nongeneric extension types with primary or redirecting constructors '
+      'and no other members or implements clause are supported',
     );
   }
   final decl =

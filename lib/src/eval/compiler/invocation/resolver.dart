@@ -445,8 +445,7 @@ final class CallResolver {
 
     if (receiver case TypeLiteralReceiver(:final type)) {
       final declaration = nominalDeclOf(type);
-      if (staticMemberName.isEmpty &&
-          declaration is SourceTypeDecl &&
+      if (declaration is SourceTypeDecl &&
           declaration.kind == TypeDeclKind.extensionType) {
         return constructExtensionType(
           ctx,

@@ -146,7 +146,6 @@ expect_fail:
   - path: 'extension_type/no_inheritance_inference_test.dart'
   - path: 'extension_type/pattern_test.dart'
   - path: 'extension_type/regress_53607_test.dart'
-  - path: 'extension_type/regress_61222_test.dart'
   - path: 'extension_type/spread_test.dart'
   - path: 'extension_type/yield_test.dart'
   - path: 'external_abstract_fields/abstract_fields_test.dart'

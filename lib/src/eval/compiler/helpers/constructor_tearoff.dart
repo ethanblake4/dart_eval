@@ -3,6 +3,7 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
 import '../context.dart';
+import '../errors.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/deferred.dart';
 import '../invocation/targets.dart';
@@ -27,6 +28,14 @@ CallSignature constructorTearOffSignature(
 }) {
   final owner = nominalDeclOf(type)!;
   if (owner is SourceTypeDecl && owner.kind == TypeDeclKind.extensionType) {
+    final primary =
+        (owner.node as ExtensionTypeDeclaration).namePart
+            as PrimaryConstructorDeclaration;
+    if (constructor != null || primary.constructorName != null) {
+      throw CompileError(
+        'Named extension constructor tear-offs are unsupported',
+      );
+    }
     final parameter = owner.extensionRepresentationParameter!;
     return CallSignature(
       positional: [
