@@ -311,7 +311,6 @@ expect_fail:
   - path: 'unsorted/cyclic_default_values_test.dart'
   - path: 'unsorted/disassemble_test.dart'
   - path: 'unsorted/inference_enum_list_test.dart'
-  - path: 'unsorted/invocation_mirror_empty_arguments_test.dart'
   - path: 'unsorted/invocation_mirror_test.dart'
   - path: 'unsorted/many_named_arguments_test.dart'
   - path: 'unsorted/stack_overflow_stacktrace_test.dart'

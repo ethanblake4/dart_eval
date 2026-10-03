@@ -3,7 +3,6 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart' hide $Invocation;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
 /// Invocation needs both native factory wrappers and a subclassable bridge.
 /// Keep this binding together so factory results and guest implementations
@@ -430,12 +429,14 @@ class $Invocation implements Invocation, $Instance {
         );
       case 'namedArguments':
         final namedArguments = $value.namedArguments;
-        return wrapMap(
-          namedArguments,
-          (key, value) => MapEntry(
-            $Symbol.wrap(key),
-            runtime.wrapAlways(value, recursive: true),
-          ),
+        return $Map.wrap(
+          Map<$Value, $Value>.unmodifiable({
+            for (final entry in namedArguments.entries)
+              $Symbol.wrap(entry.key): runtime.wrapAlways(
+                entry.value,
+                recursive: true,
+              ),
+          }),
         );
       case 'isMethod':
         final isMethod = $value.isMethod;

@@ -2770,3 +2770,14 @@ function signature, matching the pinned Dart SDK. The focused regressions and
 SDK-full gate pass. A final 23-driver, 15-sample AOT sweep on the complete
 cleanup diff matched every benchmark result; logs are under
 `.dart_tool/improvement_loop/cycle14-cleanup/final-full23/`.
+
+## Cycle 15 pass 1: Invocation named arguments
+
+Native `Invocation.namedArguments` is unmodifiable, but the hand-maintained
+binding wrapped it in a mutable guest map. The binding now preserves that
+contract when wrapping the keys and values. A focused regression covers empty
+and populated named arguments in fresh and serialized programs. The exact
+`unsorted/invocation_mirror_empty_arguments_test.dart` fixture passes in both
+modes, so its stale expect-fail entry is removed. The separate
+`unsorted/invocation_mirror_test.dart` fixture still fails a missing-throw
+expectation and remains tracked.
