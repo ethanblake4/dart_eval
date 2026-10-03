@@ -65,7 +65,7 @@ Variable constructExtensionType(
   ).emit(name, arguments);
 }
 
-/// Redirects are compiled in their declaring scope, with each supplied
+/// Secondary constructors compile in their declaring scope, with each supplied
 /// argument evaluated once before entering that scope.
 final class _ExtensionConstruction {
   _ExtensionConstruction(
@@ -103,8 +103,6 @@ final class _ExtensionConstruction {
     if (!_active.add(constructor)) {
       throw CompileError('Cyclic extension type constructor redirect', source);
     }
-    final redirect =
-        constructor.initializers.single as RedirectingConstructorInvocation;
     final inferArguments = _needsTypeInference;
     final declaredSignature = CallSignature.forDeclaration(
       ctx,
@@ -132,16 +130,34 @@ final class _ExtensionConstruction {
         declaration.library,
         constructor,
         () {
+          final substitution = Substitution.forInterface(instantiatedType);
+          ctx.typeParameterScope(declaration.library).addAll({
+            for (final entry in declaration.ownTypeParams.entries)
+              entry.key: entry.value.substituteTypeParameters(substitution),
+          });
           for (var i = 0; i < signature.positional.length; i++) {
             ctx.setLocal(signature.positional[i].name, bound.positional[i]);
           }
           for (final (name, value) in bound.named) {
             ctx.setLocal(name, value);
           }
-          return emit(
-            redirect.constructorName?.name ?? '',
-            redirect.argumentList,
-          );
+          final initializer = constructor.initializers.firstOrNull;
+          if (initializer is RedirectingConstructorInvocation) {
+            return emit(
+              initializer.constructorName?.name ?? '',
+              initializer.argumentList,
+            );
+          }
+          final representationName =
+              declaration.extensionRepresentationParameter!.name!.lexeme;
+          final value = initializer is ConstructorFieldInitializer
+              ? compileExpression(
+                  initializer.expression,
+                  ctx,
+                  declaration.extensionRepresentationFor(instantiatedType),
+                )
+              : ctx.lookupLocal(representationName)!;
+          return _finish(value);
         },
       );
     } finally {
@@ -179,7 +195,7 @@ final class _ExtensionConstruction {
       throw CompileError('Extension type constructor is not const', source);
     }
     final inferArguments = _needsTypeInference;
-    var representation = inferArguments
+    final representation = inferArguments
         ? null
         : declaration.extensionRepresentationFor(instantiatedType)!;
     final value = compileExpression(
@@ -187,7 +203,11 @@ final class _ExtensionConstruction {
       ctx,
       representation,
     );
-    if (inferArguments) {
+    return _finish(value);
+  }
+
+  Variable _finish(Variable value) {
+    if (_needsTypeInference) {
       final inferred = <TypeParameterDef, TypeRef>{};
       ctx.typeSystem.unify(
         declaration.extensionRepresentation!,
@@ -195,10 +215,10 @@ final class _ExtensionConstruction {
         inferred,
       );
       _applyInferredArguments(inferred);
-      representation = declaration.extensionRepresentationFor(
-        instantiatedType,
-      )!;
     }
+    final representation = declaration.extensionRepresentationFor(
+      instantiatedType,
+    )!;
     final parameters = declaration.typeParameters;
     final applied = interfaceArgumentsOf(instantiatedType);
     if (applied.length != parameters.length) {
@@ -220,7 +240,7 @@ final class _ExtensionConstruction {
     return convertForAssignment(
       ctx,
       value,
-      representation!,
+      representation,
       source: source,
     ).copyWith(type: instantiatedType, isConst: isConst);
   }

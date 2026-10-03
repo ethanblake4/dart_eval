@@ -27,6 +27,19 @@ int? compileDeclaration(
 }) {
   if (d is ExtensionTypeDeclaration) {
     _validateExtensionType(ctx, d);
+    final previousClass = ctx.currentClass;
+    ctx.currentClass = d;
+    try {
+      for (final member in d.body.members) {
+        if (member is MethodDeclaration) {
+          compileMethodDeclaration(member, ctx, d);
+        } else if (member is FieldDeclaration) {
+          compileFieldDeclaration(0, member, ctx, d);
+        }
+      }
+    } finally {
+      ctx.currentClass = previousClass;
+    }
   } else if (d is ClassDeclaration) {
     compileClassDeclaration(ctx, d);
   } else if (d is EnumDeclaration) {
@@ -65,19 +78,15 @@ void _validateExtensionType(
   ExtensionTypeDeclaration declaration,
 ) {
   final primary = declaration.namePart;
-  if (primary is! PrimaryConstructorDeclaration ||
-      declaration.implementsClause != null ||
-      declaration.body.members.any(
-        (member) =>
-            member is! ConstructorDeclaration ||
-            member.factoryKeyword != null ||
-            member.body is! EmptyFunctionBody ||
-            member.initializers.length != 1 ||
-            member.initializers.single is! RedirectingConstructorInvocation,
-      )) {
+  if (primary is! PrimaryConstructorDeclaration) {
     throw CompileError(
-      'Only extension types with primary or redirecting constructors '
-      'and no other members or implements clause are supported',
+      'Extension type requires a primary constructor',
+      declaration,
+    );
+  }
+  if (declaration.implementsClause != null) {
+    throw CompileError(
+      'Extension types with an implements clause are unsupported',
     );
   }
   final decl =
@@ -92,6 +101,52 @@ void _validateExtensionType(
   if (representation.isSpec(CoreTypes.voidType)) {
     throw CompileError('Extension type representation cannot be void');
   }
+  for (final member in declaration.body.members) {
+    final supported = switch (member) {
+      MethodDeclaration() => member.isStatic,
+      FieldDeclaration() => member.isStatic,
+      ConstructorDeclaration() => _isRepresentationConstructor(
+        member,
+        parameter.name!.lexeme,
+      ),
+      _ => false,
+    };
+    if (!supported) {
+      throw CompileError(
+        'Only static extension type members and representation constructors '
+        'are supported',
+        member,
+      );
+    }
+  }
+}
+
+bool _isRepresentationConstructor(
+  ConstructorDeclaration constructor,
+  String representationName,
+) {
+  if (constructor.factoryKeyword != null ||
+      constructor.body is! EmptyFunctionBody ||
+      constructor.parameters.parameters.any((p) => p is SuperFormalParameter)) {
+    return false;
+  }
+  final fields = constructor.parameters.parameters
+      .whereType<FieldFormalParameter>()
+      .toList();
+  if (constructor.initializers.length == 1 &&
+      constructor.initializers.single is RedirectingConstructorInvocation) {
+    return fields.isEmpty;
+  }
+  if (fields.length == 1 && fields.single.name.lexeme == representationName) {
+    return constructor.initializers.isEmpty;
+  }
+  return fields.isEmpty &&
+      constructor.initializers.length == 1 &&
+      constructor.initializers.single is ConstructorFieldInitializer &&
+      (constructor.initializers.single as ConstructorFieldInitializer)
+              .fieldName
+              .name ==
+          representationName;
 }
 
 /// Partitions a class-like body's members into constructors, instance fields,

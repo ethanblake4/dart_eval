@@ -43,6 +43,72 @@ void main() {
 ''';
 
 void main() {
+  test(
+    'static members and secondary constructors preserve representations',
+    () {
+      final program = Compiler().compile({
+        'extension_members': {
+          'support.dart': '''
+const seed = 7;
+extension type Count(int? value) {
+  Count.regular(this.value);
+  Count.named({this.value});
+  Count.optional([this.value = seed]);
+  Count.increment(int n) : value = n + 1;
+  const Count._(this.value);
+  const Count.constNamed({this.value = seed});
+  const Count.same(int n) : value = n;
+  static const Count first = Count._(1);
+  static Count get second => Count(2);
+  static Count? get absent => null;
+}
+extension type Box<T>(T value) {
+  Box.named(this.value);
+  static Box<U> make<U, V>(U value) => Box(value);
+}
+extension type Bag<T>(List<T> value) {
+  Bag.empty() : value = <T>[];
+}
+''',
+          'main.dart': '''
+import 'dart:async';
+import 'support.dart' as support;
+int calls = 0;
+int next() { calls++; return 3; }
+bool verify() {
+  final first = support.Count.regular(next());
+  final second = support.Count.named(value: next());
+  final third = support.Count.optional();
+  final increment = support.Count.increment(next());
+  const constant = support.Count.constNamed();
+  const same = support.Count.same(9);
+  final inferred = support.Box.named(4);
+  final generic = support.Box.make<String, int>('hi');
+  final empty = support.Bag<int>.empty();
+  FutureOr<support.Count> shorthand = .regular(5);
+  return identical(first, 3) && identical(second, 3) && calls == 3 &&
+      identical(third, 7) && identical(increment, 4) && identical(constant, 7) &&
+      identical(same, 9) && empty.value is List<int> &&
+      identical(support.Count.named(), null) &&
+      support.Count.first.value == 1 && support.Count.second.value == 2 &&
+      support.Count.absent == null && [inferred] is List<int> &&
+      generic.value == 'hi' && identical(shorthand, 5);
+}
+void main() {}
+''',
+        },
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        expect(
+          runtime.executeLib('package:extension_members/main.dart', 'verify'),
+          true,
+        );
+      }
+    },
+  );
   test('generic extension representations apply use-site type arguments', () {
     final program = Compiler().compile({
       'generic_representation': {
@@ -108,6 +174,31 @@ void main() {}
       );
     }
   });
+  for (final source in [
+    "extension type E(int value) { E.wrong(this.other); }",
+    "extension type E(int value) { E.twice(this.value) : value = 2; }",
+    "extension type E(int value) { E.body(this.value) {} }",
+    "extension type E(int value) { int get doubled => value * 2; }",
+    "extension type E(int value) { E.wrong(int n) : other = n; }",
+    "extension type E<T extends num>(T value) { E.named(this.value); } "
+        "void check() { E<String>.named('wrong'); }",
+    "extension type E(int value) { const E.constant(this.value); } "
+        "int next() => 1; void check() { const E.constant(next()); }",
+  ]) {
+    test(
+      'secondary extension representation rejects invalid source: $source',
+      () {
+        expect(
+          () => Compiler().compile({
+            'extension_secondary_negative': {
+              'main.dart': '$source\nvoid main() {}',
+            },
+          }),
+          throwsA(isA<CompileError>()),
+        );
+      },
+    );
+  }
   for (final construction in [
     "Box<int>('wrong')",
     "Bag<int>(<String>['wrong'])",

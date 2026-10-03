@@ -4150,3 +4150,17 @@ The original inference_update_2/preserved_by_join_test.dart passes fresh and
 serialized execution, so its stale expectation is removed. Twelve focused flow
 tests and nine field, conjunction, pattern and private-super tests pass. The new
 aggregate regression also runs on native Dart; scoped analysis reports no issues.
+
+### Cycle 26 correctness pass 2: extension-type statics and constructors
+
+Static methods, getters and fields use the existing declaration compilers.
+Secondary representation constructors evaluate supplied arguments once, bind
+parameters in their declaration scope, and return the existing representation.
+Field-formal and initializer forms share primary-constructor conversion and
+inference. Instance members and effectful constructor bodies remain unsupported;
+there are no new runtime adapters or allocations.
+
+Five original dot-shorthand fixtures pass fresh and serialized execution, and
+only their confirmed stale expectations are removed. Thirty ER tests pass,
+including named and optional field formals and constant defaults. The broader
+agent checks covered 35 tests; scoped analysis and formatting pass.

@@ -153,6 +153,13 @@ TypeRef resolveFieldFormalType(
   final owner = nominalDeclOf(
     TypeRef.lookupDeclaration(ctx, decLibrary, $class),
   )!;
+  if (owner is SourceTypeDecl && owner.kind == TypeDeclKind.extensionType) {
+    if (param.name.lexeme !=
+        owner.extensionRepresentationParameter!.name!.lexeme) {
+      throw CompileError('Unknown extension type representation field', param);
+    }
+    return owner.extensionRepresentation!;
+  }
   return ctx.memberLookup.fieldType(
         owner.thisType,
         param.name.lexeme,
