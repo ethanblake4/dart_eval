@@ -111,8 +111,8 @@ TypeRef extensionLookupType(CompilerContext ctx, TypeRef receiver) {
 /// Binds [pattern] (an extension `on` clause, possibly containing the
 /// extension's type parameters) against [actual] or one of its instantiated
 /// supertypes, writing bindings into [bound] indexed by parameter position.
-/// Returns false when no supertype matches or a parameter is bound
-/// inconsistently.
+/// Repeated parameters collect a common supertype of their receiver arguments.
+/// Returns false when no supertype matches.
 bool _unifyOnPattern(
   CompilerContext ctx,
   TypeRef pattern,
@@ -134,9 +134,8 @@ bool _unifyOnPattern(
           : actual;
       return true;
     }
-    return previous == actual ||
-        previous.isAssignableTo(ctx, actual) ||
-        actual.isAssignableTo(ctx, previous);
+    bound[index] = ctx.typeSystem.leastUpperBound({previous, actual});
+    return true;
   }
   // FutureOr<S> matches either S or Future<S>. An actual FutureOr keeps
   // its payload through the same-declaration path below, without flattening.
@@ -246,13 +245,26 @@ List<TypeRef>? matchExtensionOn(
   if (!_unifyOnPattern(ctx, onType, receiverType, bound)) return null;
   // Unbound parameters (not constrained by the pattern) take their declared
   // bound, or dynamic when unbounded.
-  return [
+  final bindings = <TypeRef>[
     for (var i = 0; i < tps.length; i++)
       bound[i] ??
           (tps[i].bound == null
               ? CoreTypes.dynamic.ref(ctx)
               : TypeRef.fromAnnotation(ctx, ext.library, tps[i].bound!)),
   ];
+  final typeParameters = extBindingsMap(ext, bindings);
+  for (var i = 0; i < tps.length; i++) {
+    final annotation = tps[i].bound;
+    if (annotation == null) continue;
+    final declaredBound = TypeRef.fromAnnotation(
+      ctx,
+      ext.library,
+      annotation,
+      typeParameters: typeParameters,
+    );
+    if (!bindings[i].isAssignableTo(ctx, declaredBound)) return null;
+  }
+  return bindings;
 }
 
 /// [ext]'s `on` type with [bindings] substituted for its type parameters —

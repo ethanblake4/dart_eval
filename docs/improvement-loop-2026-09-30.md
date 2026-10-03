@@ -2869,3 +2869,12 @@ gate passes 999 tests. The final 23-driver, 15-sample AOT sweep matched all
 `.dart_tool/improvement_loop/cycle15-cleanup-full23/`. The `calls` driver had
 a slow candidate run in that sweep, but two additional 25-sample paired ABBA
 runs showed both executables at comparable medians once the host stabilized.
+
+## Cycle 16 pass 1: extension receiver inference
+
+Repeated type parameters in an extension receiver pattern, such as
+`Pair<T, T>`, were matched only when one actual argument was assignable to the
+other. They now infer the least upper bound. Inferred extension type arguments
+also must satisfy their declared bounds after substitution. The two pinned
+static extension fixtures and four focused generic-extension tests pass; both
+stale `expect_fail` entries are removed. This is a compiler-only change.
