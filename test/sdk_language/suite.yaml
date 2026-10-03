@@ -80,8 +80,6 @@ expect_fail:
   - path: 'constructor/constructor_test.dart'
   - path: 'constructor/external_constructor_test.dart'
   - path: 'constructor/patch_tear_off_test.dart'
-  - path: 'control_flow_collections/for_dynamic_null_strong_test.dart'
-  - path: 'control_flow_collections/for_runtime_error_test.dart'
   - path: 'control_flow_collections/map_set_ambiguity_test.dart'
   - path: 'covariant/subtyping_test.dart'
   - path: 'covariant/type_parameter_test.dart'

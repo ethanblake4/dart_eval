@@ -2,7 +2,9 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/builtins.dart';
+import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
 import 'package:dart_eval/src/eval/compiler/macros/loop.dart';
@@ -150,6 +152,19 @@ StatementInfo compileForEachLoop(
   }
 
   final elementType = _forEachElementType(ctx, itype);
+  final iterableType = CoreTypes.iterable.ref(ctx);
+  // Validate dynamic sources before reading `iterator`; element types are
+  // checked separately when each loop variable is bound.
+  if (itype.assignmentConversionTo(ctx, iterableType) ==
+      AssignmentConversion.runtimeCheck) {
+    iterable = convertForAssignment(
+      ctx,
+      iterable,
+      iterableType,
+      representation: MachineRepresentation.object,
+      source: parts.iterable,
+    );
+  }
 
   // Index pump for natively-held collections: each element is an index
   // read instead of `moveNext` + `current` bridge calls. Mutation during

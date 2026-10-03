@@ -3099,3 +3099,14 @@ passed all 2,511 runnable cases with 173 expected compile errors and 53
 expected runtime failures. The final 23-driver AOT sweep matched all 23
 baseline results, including the compile driver's 1,241 code bytes; logs are
 under `.dart_tool/improvement_loop/cycle17-cleanup-full23/`.
+
+## Cycle 18 pass 1: dynamic for-in sources
+
+A `for-in` loop over a dynamic value accepted `null` or a non-iterable value
+and then failed while looking up `iterator`. The loop compiler now performs
+the normal non-null `Iterable` assignment check before iterator access when
+the source type requires a runtime check. Element conversion remains at each
+binding, so the check does not impose the loop variable's element type on the
+whole iterable. The pinned `for_dynamic_null_strong_test.dart` and
+`for_runtime_error_test.dart` fixtures pass, as do the existing loop,
+inference, and pattern tests. Both stale `expect_fail` entries were removed.
