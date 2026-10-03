@@ -3120,3 +3120,14 @@ receiver inference, and callable inference without changing other nullable
 evidence. The pinned `inference/dynamic_nullable_test.dart` fixture and nine
 existing focused inference tests pass. Its stale `expect_fail` entry was
 removed.
+
+## Cycle 18 pass 3: implicit call tear-offs in variable patterns
+
+An irrefutable typed variable pattern tested its original value before
+performing assignment conversion. For `(IntFn callback) = callableObject`, the
+early type test rejected the object before Dart could insert its implicit
+`.call` tear-off. The compiler now omits that early test when the typed
+binding needs a call tear-off; ordinary pattern checks keep their failure
+behavior. The pinned
+`patterns/call_tear_off_test.dart` fixture passes, including its refutable
+cases. Its stale `expect_fail` entry was removed.

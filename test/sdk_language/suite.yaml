@@ -213,7 +213,6 @@ expect_fail:
   - path: 'null_aware/index_this_null_aware_equals_test.dart'
     reason: 'Expando type not bound in stdlib'
   - path: 'parameter/initializer_test.dart'
-  - path: 'patterns/call_tear_off_test.dart'
   - path: 'patterns/flow_analysis/if_case_element_error_test.dart'
   - path: 'patterns/flow_analysis/list_pattern_error_test.dart'
   - path: 'patterns/flow_analysis/null_assert_pattern_error_test.dart'

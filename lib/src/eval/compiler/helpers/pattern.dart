@@ -378,9 +378,17 @@ Variable _matchPattern(
       final bindingType = pat is DeclaredVariablePattern && pat.type != null
           ? TypeRef.fromAnnotation(ctx, ctx.library, pat.type!)
           : V.type;
+      // A callable object may first become a function through the implicit
+      // `.call` tear-off. Testing the original object would reject it.
+      final needsCallTearOff =
+          patternContext.usesAssignmentContext &&
+          bindingType.isFunctionLike &&
+          V.type.assignmentConversionTo(ctx, bindingType) ==
+              AssignmentConversion.invalid;
       if (pat is DeclaredVariablePattern &&
           pat.type != null &&
-          requireMatch != null) {
+          requireMatch != null &&
+          !needsCallTearOff) {
         requireMatch(_typeTest(ctx, pat.type, V));
         V = V.withType(matchedPatternType(ctx, pat, V.type));
       }
