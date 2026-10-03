@@ -2781,3 +2781,13 @@ and populated named arguments in fresh and serialized programs. The exact
 modes, so its stale expect-fail entry is removed. The separate
 `unsorted/invocation_mirror_test.dart` fixture still fails a missing-throw
 expectation and remains tracked.
+
+## Cycle 15 pass 2: first-class type literals
+
+Type literals carried the denoted class as their possible runtime class. This
+made chained `runtimeType` queries fold to the wrong result; getter access on
+the `Type` object could also resolve against the denoted class. Literal facts
+now describe a `Type` object, and its getters dispatch through that value.
+All three pinned first-class type-literal fixtures pass in fresh and serialized
+runtimes, as do four focused tests. Their stale expect-fail entries are removed.
+The fix changes compiler resolution only.

@@ -969,7 +969,7 @@ final class TypeParameterDenotation extends Denotation {
     CoreTypes.type.ref(ctx),
     facts: ValueFacts(
       denotedType: typeParameter,
-      possibleClasses: [typeParameter],
+      possibleClasses: [CoreTypes.type.ref(ctx)],
     ),
   );
 
@@ -1476,6 +1476,21 @@ Denotation resolveMemberAccess(
       if (type.isTypeParameter) {
         // `T.member` is an instance access on T's runtime `Type` object,
         // not a static access — dispatch dynamically.
+        return InstanceMemberDenotation(
+          ValueReceiver(value ?? typeLiteral(ctx, type, type.name)),
+          name,
+        );
+      }
+      if (!forSet &&
+          ctx.memberLookup.staticMember(type, name, MemberKind.getter) ==
+              null &&
+          ctx.memberLookup.staticMember(type, name, MemberKind.method) ==
+              null &&
+          ctx.memberLookup.hasInstanceMember(
+            CoreTypes.type.ref(ctx),
+            MemberName.getter(name),
+          )) {
+        // Object getters on a type literal read its runtime Type object.
         return InstanceMemberDenotation(
           ValueReceiver(value ?? typeLiteral(ctx, type, type.name)),
           name,

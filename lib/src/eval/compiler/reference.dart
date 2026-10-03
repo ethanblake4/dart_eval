@@ -457,7 +457,10 @@ Variable typeLiteral(CompilerContext ctx, TypeRef type, String constructorKey) {
     ctx,
     operation,
     CoreTypes.type.ref(ctx),
-    facts: ValueFacts(denotedType: type, possibleClasses: [type]),
+    facts: ValueFacts(
+      denotedType: type,
+      possibleClasses: [CoreTypes.type.ref(ctx)],
+    ),
   );
 }
 
