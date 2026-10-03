@@ -84,6 +84,19 @@ final class Devirtualizer {
     if (directOwner != null && (linkType != null || !needsLink)) {
       final member = ctx.memberLookup.concreteMemberOn(directOwner, memberName);
       if (member is! SourceMember) return target;
+      // Virtual dispatch binds omitted implementation parameters at runtime.
+      // The interface's argument vector cannot call a different layout directly.
+      final implementation = member.signature;
+      final interface = target.signature;
+      if (interface == null ||
+          implementation.positional.length != interface.positional.length ||
+          implementation.named.length != interface.named.length ||
+          implementation.named.any(
+            (parameter) =>
+                !interface.named.any((other) => other.name == parameter.name),
+          )) {
+        return target;
+      }
       return StaticCall(
         DeferredOrOffset(
           file: directOwner.file,

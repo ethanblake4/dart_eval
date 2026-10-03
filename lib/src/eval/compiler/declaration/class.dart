@@ -816,7 +816,22 @@ DeclarationOrBridge? _effectiveConcreteMember(
     if (sameMember(m)) return source(m);
   }
   if (superRef != null) {
-    return _superMemberOf(ctx, name, kind, superRef);
+    final memberName = MemberName(name, kind);
+    final owner = ctx.memberLookup.implementationOwner(superRef, memberName);
+    if (owner == null) return null;
+    final member = ctx.memberLookup.concreteMemberOn(owner, memberName);
+    if (member is SourceMember) {
+      return DeclarationOrBridge(
+        owner.file,
+        declaration: member.sourceDeclaration,
+      );
+    }
+    if (member is BridgeMember) {
+      return DeclarationOrBridge(
+        owner.file,
+        bridge: member.def as BridgeDeclaration,
+      );
+    }
   }
   return null;
 }

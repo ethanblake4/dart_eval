@@ -2982,3 +2982,14 @@ The pinned `const/inference_test.dart` fixture passes across const classes,
 lists, sets, maps, and function tear-offs; its stale `expect_fail` entry is
 removed. Four focused constructor and generic-inference test files pass.
 This changes compiler inference only.
+
+## Cycle 17 pass 3: interface implementation and call shape
+
+An abstract superclass declaration was treated as a concrete implementation
+of an interface method. Conformance now checks for a concrete superclass
+member, including bridge members. Devirtualization also keeps virtual dispatch
+when the implementation parameter layout differs from the interface layout,
+so the callee can bind its own optional arguments. The runnable variants of
+the pinned `regress/regress32660_test.dart` fixture now pass, as do 50 focused
+inheritance tests. Its stale `expect_fail` entry is removed under the suite's
+`negative: skip` policy. This changes compiler resolution only.
