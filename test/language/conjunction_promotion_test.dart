@@ -28,6 +28,35 @@ int main() => inspect(E()) * 100 + inspect(C()) * 10 + inspect(A());
 ''';
 
 void main() {
+  test('new bindings do not inherit initializer promotion chains', () {
+    final program = Compiler().compile({
+      'promotion_alias': {
+        'main.dart': '''
+typedef Exactly<T> = T Function(T);
+extension StaticType<T> on T { T check<R extends Exactly<T>>() => this; }
+num inspect(bool flag) {
+  Object source = 2;
+  source as int;
+  num alias = source;
+  if (flag) source = 3;
+  alias.check<Exactly<num>>();
+  return alias;
+}
+int main() => (inspect(true) + inspect(false)).toInt();
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib('package:promotion_alias/main.dart', 'main'),
+        4,
+      );
+    }
+  });
+
   test('conjunction promotions retain the most specific saved local type', () {
     final program = Compiler().compile({
       'conjunction_promotion': {'main.dart': _source},

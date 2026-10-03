@@ -58,6 +58,12 @@ final class LocalBinding {
     this.initialized = true,
   }) : storage = SsaStorage(),
        _current = current {
+    // Promotion chains prove facts about their source binding, not an alias
+    // initialized from its value. Other value facts remain transferable.
+    if (current.facts.promotionHistory != null ||
+        current.facts.memberPromotionHistory != null) {
+      current.facts = current.facts.copyWith(replacePromotionHistory: true);
+    }
     current.binding = this;
   }
 

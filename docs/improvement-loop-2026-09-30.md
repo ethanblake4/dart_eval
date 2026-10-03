@@ -4243,3 +4243,19 @@ pass for exception/nested_catch_rethrow_test.dart. That untouched fixture also
 passes an isolated fresh and serialized probe, so its stale expectation is
 removed too. There are now 17 confirmed stale removals in this cycle. The fresh
 SDK-full gate and final cleanup default gate will use the updated configuration.
+
+Cycle 26 broad correctness gate: actual SDK outcomes improve to 2662 passed /
+58 compile errors / 17 failures / 3 skipped, down from 116 to 75 actual failures.
+The configured run reports 2705 passes / 557 skips / 32 errors. Twenty-eight are
+stale expectations: every affected original is independently confirmed fresh
+and serialized in the frozen correctness checkout, with no negative variants.
+These 28 entries are removed, bringing confirmed stale removals to 45 this cycle.
+Four errors are genuine regressions and are being corrected before final gates.
+
+The anonymous block regression came from initializer proof chains crossing a
+new local-binding boundary. A synthetic anonymous result declared Object? kept
+an internal Object proof after its inferred return type became int; a new int
+local inherited that proof and was widened by an unrelated join. New bindings
+now discard only source-binding proof histories while preserving value facts
+and recorded boolean conditions. The original passes, an ordinary native-Dart
+alias probe matches eval, and 44 focused tests pass. No runtime work is involved.
