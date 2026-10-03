@@ -10,7 +10,7 @@ sdk_commit: 6c4009687d2c881f880127fc12b9ad7c72111d33
 # overrides are unsupported; unversioned fixtures remain eligible.
 min_sdk: '3.0'
 
-# Directories under tests/language forming the "core" set — a fast,
+# Directories under tests/language forming the "core" set â€” a fast,
 # semantics-focused subset for use during feature development
 # (`dart test test/sdk_language/core_test.dart`). The full suite runs
 # everything else and is tagged `sdk-full` (see dart_test.yaml).
@@ -54,7 +54,7 @@ core:
 # One of: skip | expect_compile_error
 negative: skip
 
-# Tests that can never pass (or are not meaningful) under dart_eval — skipped
+# Tests that can never pass (or are not meaningful) under dart_eval â€” skipped
 # unconditionally. Entries are paths relative to tests/language; a trailing
 # '/' or a glob matches whole directories.
 exclude:
@@ -139,7 +139,7 @@ expect_fail:
   - path: 'enum/enhanced_enums_basic_test.dart'
   - path: 'enum/enum_test.dart'
   - path: 'enum/initialization_near_stack_overflow_test.dart'
-    reason: 'Unknown type StackOverflowError — core type not resolvable in on-catch'
+    reason: 'Unknown type StackOverflowError â€” core type not resolvable in on-catch'
   - path: 'exception/nested_catch_rethrow_test.dart'
     reason: 'sync* YieldStatement not implemented'
   - path: 'extension_methods/null_aware_reachability_test.dart'
@@ -165,7 +165,6 @@ expect_fail:
   - path: 'external_abstract_fields/abstract_fields_test.dart'
   - path: 'external_abstract_fields/external_fields_test.dart'
   - path: 'generic_methods/explicit_instantiated_tearoff_test.dart'
-  - path: 'generic_methods/generic_invocation_all_subexpression_types_test.dart'
   - path: 'import/collection_no_prefix_test.dart'
     reason: 'dart:collection types (SplayTreeMap) not bound in stdlib'
   - path: 'inference/issue_33298_test.dart'
@@ -173,8 +172,6 @@ expect_fail:
   - path: 'inference_update_2/field_promotion_and_object_pattern_test.dart'
   - path: 'inference_update_2/no_such_method_restriction_enabled_test.dart'
   - path: 'inference_update_2/no_such_method_restriction_stack_trace_test.dart'
-  - path: 'inference_update_2/promotion_makes_new_extension_available_test.dart'
-  - path: 'inference_update_2/promotion_makes_new_extension_available_via_non_nullability_test.dart'
   - path: 'inference_using_bounds/restricting_choices_using_bounds_test.dart'
   - path: 'interceptor/interceptor_test.dart'
   - path: 'library/env_test.dart'

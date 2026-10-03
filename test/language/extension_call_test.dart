@@ -3,6 +3,20 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('implicit extension calls bind explicit types and named arguments', () {
+    const source = '''
+      class Value {}
+      extension Invoke on Value {
+        T call<T>(T Function() create, {required T fallback}) => create();
+      }
+
+      int main() => Value()<int>(() => 42, fallback: 0);
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(42), reason: mode);
+    }
+  });
+
   test('implicit extension calls bind optional positional arguments', () {
     const source = r'''
       extension Invoke on Object {

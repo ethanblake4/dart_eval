@@ -244,11 +244,84 @@ final class CallResolver {
         : null;
     final callable = direct == null ? (read ?? callee!) : null;
     if (callable != null) _checkImplicitCallable(callable.type, site);
+    if (callable != null) {
+      final extension = _implicitCallExtension(callable.type, site);
+      if (extension != null) {
+        return _invokeExtensionValue(site, () => callable, extension);
+      }
+    }
     final target = ClosureCall(callee: callable, known: direct);
     final bound = ArgumentBinder(
       ctx,
     ).bindSuppliedOnly(target, site, callee: callable);
     return (_emitValue(target, bound, callable, site), bound);
+  }
+
+  (EvalExtension, MethodDeclaration, List<TypeRef>)? _implicitCallExtension(
+    TypeRef type,
+    CallSite site,
+  ) {
+    if (type.isFunctionLike ||
+        type.isSpec(CoreTypes.dynamic) ||
+        ctx.memberLookup.hasInstanceMember(type, MemberName.method('call'))) {
+      return null;
+    }
+    return resolveExtensionMember(
+      ctx,
+      type,
+      'call',
+      arity: site.shape.positionalArity,
+    );
+  }
+
+  (Variable, BoundCall) _invokeExtensionValue(
+    CallSite site,
+    Variable Function() read,
+    (EvalExtension, MethodDeclaration, List<TypeRef>) extension,
+  ) {
+    final (ext, member, bindings) = extension;
+    final signature = CallSignature.forDeclaration(ctx, ext.library, member);
+    final extParams = ext.declaration.typeParameters?.typeParameters;
+    final arguments = ArgumentBinder(ctx).bindDeclaration(
+      ext.library,
+      member,
+      null,
+      suppliedShape: site.shape,
+      typeArguments: switch (site.source) {
+        FunctionExpressionInvocation(:final typeArguments) => typeArguments,
+        MethodInvocation(:final typeArguments) => typeArguments,
+        _ => null,
+      },
+      seedGenerics: {
+        for (var i = 0; i < bindings.length; i++)
+          extParams![i].name.lexeme: bindings[i],
+      },
+      source: site.source,
+      returnContext: site.context,
+      targetSignature: signature,
+    );
+    final target = StaticCall(
+      DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+      receiver: read().boxIfNeeded(ctx),
+      sourceDeclaration: member,
+      signature: signature,
+    );
+    final bound = BoundCall(
+      positional: arguments.positional,
+      named: arguments.named,
+      vectorOverride: arguments.vector(),
+      returnType: arguments.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
+      runtimeTypeArguments:
+          extensionCallTypeArguments(
+            ctx,
+            ext,
+            member,
+            bindings,
+            arguments.typeArguments,
+          ) ??
+          const [],
+    );
+    return (target.emit(ctx, bound), bound);
   }
 
   void _checkImplicitCallable(TypeRef type, CallSite site) {
@@ -570,14 +643,21 @@ final class CallResolver {
         // `receiver.field(...)` / `receiver.getter(...)`: the member's
         // *value* is invoked, not a method — property read then implicit
         // `.call`. The arguments evaluate before the member read.
-        final target = MemberValueCall(
-          read: readMember,
-          valueType: ctx.memberLookup.fieldType(
-            L.type,
-            e.methodName.name,
-            source: e,
-          ),
-        );
+        final factOwner = L.binding?.current ?? L;
+        final valueType =
+            factOwner.facts.promotedMembers?[e.methodName.name] ??
+            ctx.memberLookup.fieldType(L.type, e.methodName.name, source: e);
+        if (valueType != null) {
+          final extension = _implicitCallExtension(valueType, callSite());
+          if (extension != null) {
+            return _invokeExtensionValue(
+              callSite(),
+              () => readMember(ctx),
+              extension,
+            ).$1;
+          }
+        }
+        final target = MemberValueCall(read: readMember, valueType: valueType);
         final bound = ArgumentBinder(
           ctx,
         ).bindSuppliedOnly(target, callSite(), callee: null);

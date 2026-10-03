@@ -3202,3 +3202,14 @@ and then applies contextual type arguments. The pinned
 `generic/instantiate_tearoff_after_contravariance_check_test.dart` fixture
 and its two neighboring tear-off fixtures pass. Its stale `expect_fail`
 entry was removed; no ordinary test copies the fixture.
+
+## Cycle 19 pass 2: implicit extension calls
+
+Implicit extension call methods now bind against their declarations before
+closure dispatch, preserving explicit type arguments, named arguments and
+contextual inference. Promoted field calls use the same binding while keeping
+arguments before the member read. The generic invocation subexpression fixture
+and both extension-availability promotion fixtures pass; their expect_fail
+entries were removed. Existing extension, tear-off and inference tests pass.
+One focused combined generic/named/contextual test extends the existing suite.
+Runtime and generated stdlib are unchanged.
