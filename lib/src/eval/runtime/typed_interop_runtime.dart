@@ -1144,44 +1144,59 @@ extension TypedRuntimeInterop on Runtime {
     final target = _typeDescriptors[expected];
     final sourceNominal = source[0], targetNominal = target[0];
     final targetTag = target.length > 2 && target[2] < 0 ? target[2] : null;
-    if (targetTag == RuntimeTypeDescriptorTag.futureOr) {
-      if (source[1] == 1 && !_acceptsNullType(expected)) return false;
-      if (source.length == 4 &&
-          source[2] == RuntimeTypeDescriptorTag.futureOr) {
-        if (_acceptsNullType(actual) && !_acceptsNullType(expected)) {
-          return false;
-        }
-        final member = source[3];
-        if (!_isTypedDescriptorSubtypeInEnvironment(
-          member,
-          expected,
-          actualOwnerType,
-          callableTypeArguments,
-          signatureParameterRenames: signatureParameterRenames,
-        )) {
-          return false;
-        }
-        final targetMember = _typeDescriptors[target[3]];
-        if (_isTypedDescriptorSubtypeInEnvironment(
-          member,
-          target[3],
-          actualOwnerType,
-          callableTypeArguments,
-          signatureParameterRenames: signatureParameterRenames,
-        )) {
+    if (source.length == 4 && source[2] == RuntimeTypeDescriptorTag.futureOr) {
+      if (_acceptsNullType(actual) &&
+          !_acceptsNullType(expected) &&
+          !nullableExpected) {
+        return false;
+      }
+      final member = source[3];
+      if (!_isTypedDescriptorSubtypeInEnvironment(
+        member,
+        expected,
+        actualOwnerType,
+        callableTypeArguments,
+        nullableExpected: nullableExpected,
+        signatureParameterRenames: signatureParameterRenames,
+      )) {
+        return false;
+      }
+
+      // FutureOr<S> also includes Future<S>. Check that branch only for union
+      // sources, keeping ordinary subtype checks on their existing path.
+      bool futureBranchIsSubtype(int type) {
+        final row = _typeDescriptors[type];
+        final nominal = row[0];
+        if (nominal == _dynamicTypeId ||
+            nominal == _voidTypeId ||
+            nominal == _objectTypeId) {
           return true;
         }
-        final futureNominal = _typedTypeId(CoreTypes.future);
-        return targetMember[0] == futureNominal &&
-            targetMember.length > 2 &&
+        if (row.length == 4 && row[2] == RuntimeTypeDescriptorTag.futureOr) {
+          return _isTypedDescriptorSubtypeInEnvironment(
+                member,
+                row[3],
+                actualOwnerType,
+                callableTypeArguments,
+                signatureParameterRenames: signatureParameterRenames,
+              ) ||
+              futureBranchIsSubtype(row[3]);
+        }
+        return nominal == _typedTypeId(CoreTypes.future) &&
+            row.length > 2 &&
             _isTypedDescriptorSubtypeInEnvironment(
               member,
-              targetMember[2],
+              row[2],
               actualOwnerType,
               callableTypeArguments,
               signatureParameterRenames: signatureParameterRenames,
             );
       }
+
+      return futureBranchIsSubtype(expected);
+    }
+    if (targetTag == RuntimeTypeDescriptorTag.futureOr) {
+      if (source[1] == 1 && !_acceptsNullType(expected)) return false;
       if (sourceNominal == _nullTypeId &&
           (target[1] == 1 || nullableExpected)) {
         return true;

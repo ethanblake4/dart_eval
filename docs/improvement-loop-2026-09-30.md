@@ -2849,3 +2849,23 @@ and virtual calls. Logs are under
 `.dart_tool/improvement_loop/cycle15-performance-full23/`. A two-argument
 host callback fast path, virtual-dispatch inlining, and alternate frame-clear
 loops did not show consistent gains and were reverted.
+
+## Cycle 15 cleanup
+
+The requested Astra medium review found that FutureOr source descriptors could
+pass through their nominal `Object` row without checking both union branches.
+It also found that Dart normalizes several FutureOr types for Type equality and
+hashing. Runtime subtype checks now require both the member and its Future
+branch, and Type identity normalizes Object, dynamic, void, Null, Never, and
+redundant outer nullability. A fresh/serialized regression compares the
+relevant Type values and checks generic source subtyping against native Dart.
+The newly passing `nnbd/type_equality/futureOr_normalization_test.dart` fixture
+was removed from `expect_fail`.
+
+SDK-full passes with 2493 runnable fixtures, 179 expected compile failures,
+65 expected runtime failures, and three skips. The ordinary language/runtime
+gate passes 999 tests. The final 23-driver, 15-sample AOT sweep matched all
+22 execution checksums; logs are under
+`.dart_tool/improvement_loop/cycle15-cleanup-full23/`. The `calls` driver had
+a slow candidate run in that sweep, but two additional 25-sample paired ABBA
+runs showed both executables at comparable medians once the host stabilized.

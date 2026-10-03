@@ -670,8 +670,11 @@ class Runtime {
   bool runtimeTypesEqual(int id, Runtime otherRuntime, int otherId) {
     final imported = importRuntimeType(otherRuntime, otherId);
     if (id == imported) return true;
-    return _findRuntimeTypeDescriptor(_typeDescriptors[id]) ==
-        _findRuntimeTypeDescriptor(_typeDescriptors[imported]);
+    if (_findRuntimeTypeDescriptor(_typeDescriptors[id]) ==
+        _findRuntimeTypeDescriptor(_typeDescriptors[imported])) {
+      return true;
+    }
+    return _runtimeTypeSemanticKey(id) == _runtimeTypeSemanticKey(imported);
   }
 
   /// A program-independent hash for a runtime type descriptor.
@@ -749,8 +752,8 @@ class Runtime {
         final argument = descriptor[3];
         final member = _typeDescriptors[argument];
         final nominal = member[0];
-        if (nominal == _dynamicTypeId) return 'dynamic';
-        if (nominal == _voidTypeId) return 'void';
+        if (member.length == 2 && nominal == _dynamicTypeId) return 'dynamic';
+        if (member.length == 2 && nominal == _voidTypeId) return 'void';
         if (nominal == _objectTypeId && member.length == 2) {
           final object = format(argument);
           return suffix.isNotEmpty && !object.endsWith('?')
@@ -771,15 +774,15 @@ class Runtime {
     }
   }
 
-  String _runtimeTypeSemanticKey(int id) {
+  String _runtimeTypeSemanticKey(int id, {bool nullable = false}) {
     final descriptor = _typeDescriptors[id];
-    final nominal = _typeIdentities[descriptor[0]];
-    final nominalKey = nominal == null
-        ? '#${descriptor[0]}'
-        : '${nominal.library.length}:${nominal.library}'
-              '${nominal.name.length}:${nominal.name}';
+    final isNullable = nullable || descriptor[1] == 1;
     if (descriptor.length < 3 || descriptor[2] >= 0) {
-      return 'n$nominalKey?${descriptor[1]}<${descriptor.skip(2).map(_runtimeTypeSemanticKey).join(',')}>';
+      return _nominalTypeSemanticKey(
+        descriptor[0],
+        isNullable,
+        descriptor.skip(2),
+      );
     }
     return switch (descriptor[2]) {
       RuntimeTypeDescriptorTag.record =>
@@ -794,12 +797,47 @@ class Runtime {
         'p?${descriptor[1]}:'
             '${descriptor[3] < 0 ? descriptor[3] : _typeIdentities[descriptor[3]]}:'
             '${descriptor[4]}:${_runtimeTypeSemanticKey(descriptor[5])}',
-      RuntimeTypeDescriptorTag.futureOr =>
-        'u?${descriptor[1]}:${_runtimeTypeSemanticKey(descriptor[3])}',
+      RuntimeTypeDescriptorTag.futureOr => _futureOrTypeSemanticKey(
+        descriptor[3],
+        isNullable,
+      ),
       _ => throw StateError(
         'Unknown runtime type descriptor tag ${descriptor[2]}',
       ),
     };
+  }
+
+  String _nominalTypeSemanticKey(
+    int id,
+    bool nullable,
+    Iterable<int> arguments,
+  ) {
+    final nominal = _typeIdentities[id];
+    final name = nominal == null
+        ? '#$id'
+        : '${nominal.library.length}:${nominal.library}'
+              '${nominal.name.length}:${nominal.name}';
+    return 'n$name?${nullable ? 1 : 0}<${arguments.map(_runtimeTypeSemanticKey).join(',')}>';
+  }
+
+  String _futureOrTypeSemanticKey(int member, bool nullable) {
+    final descriptor = _typeDescriptors[member];
+    final nominal = descriptor[0];
+    if (descriptor.length == 2 &&
+        (nominal == _dynamicTypeId || nominal == _voidTypeId)) {
+      return _runtimeTypeSemanticKey(member);
+    }
+    if (nominal == _objectTypeId && descriptor.length == 2) {
+      return _runtimeTypeSemanticKey(member, nullable: nullable);
+    }
+    if (nominal == _nullTypeId || nominal == _typedTypeId(CoreTypes.never)) {
+      return _nominalTypeSemanticKey(
+        _typedTypeId(CoreTypes.future)!,
+        nullable || nominal == _nullTypeId || descriptor[1] == 1,
+        [member],
+      );
+    }
+    return 'u?${nullable || _acceptsNullType(member) ? 1 : 0}:${_runtimeTypeSemanticKey(member)}';
   }
 
   late TypedProgram _typedProgram;
