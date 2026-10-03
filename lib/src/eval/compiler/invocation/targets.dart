@@ -675,17 +675,19 @@ final class NoSuchMethodCall extends CallTarget {
     required this.name,
     this.getterShaped = false,
     this.restricted = false,
+    this.receiver,
   });
 
   final String name;
   final bool getterShaped;
   final bool restricted;
+  final Variable? receiver;
 
   @override
   CallSignature? get signature => null;
 
   Variable _dispatchInvocation(CompilerContext ctx, Variable invocation) {
-    final receiver = ctx.lookupLocal('#this')!;
+    final receiver = this.receiver ?? ctx.lookupLocal('#this')!;
     if (restricted) {
       final core = ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
       final error = Variable.ssa(

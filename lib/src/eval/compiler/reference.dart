@@ -1,4 +1,6 @@
 import 'helpers/global.dart';
+import 'helpers/field_storage.dart';
+import 'helpers/external.dart';
 import 'helpers/conversion.dart';
 import 'helpers/extension.dart';
 import 'member/member_name.dart';
@@ -435,6 +437,11 @@ Variable loadGlobalVariable(
 ]) {
   ensureGlobalRegistered(ctx, sourceLib, globalName);
   final type = resolveGlobalType(ctx, sourceLib, globalName);
+  final declaration =
+      ctx.topLevelDeclarationsMap[sourceLib]?[globalName]?.declaration;
+  if (declaration is VariableDeclaration && isExternalVariable(declaration)) {
+    return emitMissingExternal(ctx, globalName, kind: InvocationKind.getter);
+  }
   final gIndex = ctx.topLevelGlobalIndices[sourceLib]![globalName]!;
   return Variable.ssa(
     ctx,

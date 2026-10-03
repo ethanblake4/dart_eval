@@ -15,6 +15,7 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import '../helpers/bridge_mixin.dart';
+import '../helpers/field_storage.dart';
 
 int? compileDeclaration(
   Declaration d,
@@ -243,7 +244,7 @@ void compileClassMembers(
         layer: layer,
       ));
     }
-    if (m is FieldDeclaration) {
+    if (m is FieldDeclaration && hasInstanceFieldStorage(m)) {
       fieldIndex += m.fields.variables.length;
     }
   }

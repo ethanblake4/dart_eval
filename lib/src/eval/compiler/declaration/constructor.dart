@@ -13,6 +13,8 @@ import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../helpers/deferred_import.dart';
 import '../helpers/primary_constructor.dart';
 import '../helpers/bridge_mixin.dart';
+import '../helpers/field_storage.dart';
+import '../helpers/external.dart';
 import '../invocation/binder.dart';
 import '../invocation/call.dart';
 import '../invocation/bound_call.dart';
@@ -198,6 +200,31 @@ void compileConstructorDeclaration(
   }
   ctx.functionSignatures[ctx.topLevelDeclarationPositions[ctx.library]![n]!] =
       abi.machine;
+
+  if (d.externalKeyword != null) {
+    final firstArgument = isEnum ? 2 : 0;
+    Variable argument(int index) => Variable.of(
+      ctx,
+      SSA('arg_${index + firstArgument}'),
+      parameterTypes[index],
+      rep: abi.parameters[index + firstArgument],
+    );
+    emitMissingExternal(
+      ctx,
+      n,
+      positional: [
+        for (var j = 0; j < resolvedParams.length; j++)
+          if (!resolvedParams[j].isNamed) argument(j),
+      ],
+      named: [
+        for (var j = 0; j < resolvedParams.length; j++)
+          if (resolvedParams[j].isNamed)
+            (resolvedParams[j].name!.lexeme, argument(j)),
+      ],
+    );
+    ctx.endScope();
+    return;
+  }
 
   // Handle factory constructor
   if (d.factoryKeyword != null) {
@@ -697,6 +724,7 @@ void compileDefaultConstructor(
   final fieldIndices = <String, int>{};
   var fieldIdx0 = fieldIdx;
   for (final fd in fields) {
+    if (!hasInstanceFieldStorage(fd)) continue;
     for (final field in fd.fields.variables) {
       fieldIndices[field.name.lexeme] = fieldIdx0;
       fieldIdx0++;
@@ -810,6 +838,7 @@ Map<VariableDeclaration, Variable> _evalFieldInitializers(
     layers.last.add(fd);
   }
   for (final fd in layers.reversed.expand((layer) => layer)) {
+    if (!hasInstanceFieldStorage(fd)) continue;
     if (fd.fields.isLate) continue;
     for (final field in fd.fields.variables) {
       if (field.initializer == null) continue;
@@ -838,6 +867,7 @@ void _compileUnusedFields(
 ) {
   var fieldIdx0 = fieldIdx;
   for (final fd in fields) {
+    if (!hasInstanceFieldStorage(fd)) continue;
     for (final field in fd.fields.variables) {
       if (!usedNames.contains(field.name.lexeme)) {
         if (fd.fields.isLate) {

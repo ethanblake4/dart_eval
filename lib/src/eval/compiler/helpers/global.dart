@@ -5,6 +5,8 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import '../invocation/binder.dart';
 import 'conversion.dart';
+import 'field_storage.dart';
+import 'external.dart';
 import 'constructor_tearoff.dart';
 import '../context.dart';
 import '../type.dart';
@@ -480,6 +482,15 @@ Variable storeGlobalBinding(
     source: source,
     description: 'Cannot assign ${value.type} to global $name of type $type',
   );
+  final declaration = ctx.topLevelDeclarationsMap[library]?[name]?.declaration;
+  if (declaration is VariableDeclaration && isExternalVariable(declaration)) {
+    return emitMissingExternal(
+      ctx,
+      name,
+      kind: InvocationKind.setter,
+      positional: [stored],
+    );
+  }
   ctx.pushOp(SetGlobal(index, stored.ssa));
   return stored;
 }

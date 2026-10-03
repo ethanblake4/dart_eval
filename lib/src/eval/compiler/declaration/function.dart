@@ -19,6 +19,7 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/flow.dart';
 import '../values/abi.dart';
 import '../member/member_name.dart';
+import '../helpers/external.dart';
 
 void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
   final pos = ctx.beginFunction('${d.name.lexeme}()');
@@ -152,6 +153,40 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
       );
       stInfo = StatementInfo(willAlwaysReturn: true);
       ctx.endScope();
+    } else if (b is EmptyFunctionBody && d.externalKeyword != null) {
+      emitMissingExternal(
+        ctx,
+        d.name.lexeme,
+        kind: d.isGetter
+            ? InvocationKind.getter
+            : d.isSetter
+            ? InvocationKind.setter
+            : InvocationKind.method,
+        positional: [
+          for (var j = 0; j < resolvedParams.length; j++)
+            if (!resolvedParams[j].isNamed)
+              Variable.of(
+                ctx,
+                SSA('arg_$j'),
+                parameterTypes[j],
+                rep: abi.parameters[j],
+              ),
+        ],
+        named: [
+          for (var j = 0; j < resolvedParams.length; j++)
+            if (resolvedParams[j].isNamed)
+              (
+                resolvedParams[j].name!.lexeme,
+                Variable.of(
+                  ctx,
+                  SSA('arg_$j'),
+                  parameterTypes[j],
+                  rep: abi.parameters[j],
+                ),
+              ),
+        ],
+      );
+      stInfo = StatementInfo(willAlwaysThrow: true);
     } else {
       throw CompileError('Unsupported function body type: ${b.runtimeType}');
     }

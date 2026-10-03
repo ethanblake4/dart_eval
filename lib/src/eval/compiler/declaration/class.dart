@@ -548,6 +548,9 @@ void _checkInterfaceConformance(
 ) {
   if (_isAbstractClass(host)) return;
   final requirements = <(ClassMember, int, MemberKind)>[
+    for (final field in [...ownFields, ...mixinFields])
+      if (field.abstractKeyword != null)
+        (field, memberLibraries[field] ?? ctx.library, MemberKind.getter),
     for (final m in ownMethods)
       if (m.body is EmptyFunctionBody && m.externalKeyword == null)
         (
@@ -820,7 +823,11 @@ DeclarationOrBridge? _effectiveConcreteMember(
 
   for (final m in [...ownMethods, ...ownFields]) {
     if (!sameMember(m)) continue;
-    if (m is MethodDeclaration && m.body is EmptyFunctionBody) continue;
+    if (m is MethodDeclaration &&
+        m.body is EmptyFunctionBody && m.externalKeyword == null) {
+      continue;
+    }
+    if (m is FieldDeclaration && m.abstractKeyword != null) continue;
     return source(m);
   }
   for (var i = mixinMethods.length - 1; i >= 0; i--) {
@@ -830,6 +837,7 @@ DeclarationOrBridge? _effectiveConcreteMember(
   }
   for (var i = mixinFields.length - 1; i >= 0; i--) {
     final m = mixinFields[i];
+    if (m.abstractKeyword != null) continue;
     if (sameMember(m)) return source(m);
   }
   if (superRef != null) {

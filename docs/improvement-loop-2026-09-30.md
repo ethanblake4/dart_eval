@@ -3903,3 +3903,20 @@ argument, and null-aware collections of nullable representations through fresh
 and serialized runtimes. All 21 existing/focused extension and default-scope
 tests pass; scoped analyzer and diff checks pass. Removed the confirmed stale
 regress_61222 expectation.
+
+
+## Cycle 24 correctness checkpoint 4
+
+Abstract fields now declare accessor requirements without allocating storage or
+shadowing inherited concrete accessors. External fields also have no guest
+storage. Missing external functions, methods, constructors and accessors compile
+to explicit NoSuchMethodError throws through existing cold invocation machinery,
+including receivers that override noSuchMethod. Supplied arguments and defaults
+are evaluated normally. No runtime or opcode changes.
+
+Three original abstract/external-field and external-constructor fixtures pass;
+seven existing field/layout/operator tests pass. Additional ignored probes cover
+argument evaluation, external tear-offs/factories, wildcard parameters, checked
+abstract-field forwarding and serialization. Scoped analyzer/diff checks pass.
+Removed three stale expectations. The distinct external_effect pragma fixture
+still fails because its call and argument effects must be eliminated.

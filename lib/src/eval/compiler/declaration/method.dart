@@ -23,6 +23,7 @@ import '../values/abi.dart';
 import '../member/member_name.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
+import '../helpers/external.dart';
 
 final _restrictedForwarders = Expando<bool>(
   'restricted noSuchMethod forwarder',
@@ -247,6 +248,36 @@ int compileMethodDeclaration(
             );
             ctx.endScope();
           } else if (b is EmptyFunctionBody) {
+            if (d.externalKeyword != null) {
+              final firstArgument = hasReceiver ? 1 : 0;
+              Variable argument(int index) => Variable.of(
+                ctx,
+                SSA('arg_${index + firstArgument}'),
+                parameterTypes[index],
+                rep: abi.parameters[index + firstArgument],
+              );
+              emitMissingExternal(
+                ctx,
+                methodName,
+                kind: d.isGetter
+                    ? InvocationKind.getter
+                    : d.isSetter
+                    ? InvocationKind.setter
+                    : InvocationKind.method,
+                receiver: hasReceiver ? ctx.lookupLocal('#this') : null,
+                positional: [
+                  for (var j = 0; j < resolvedParams.length; j++)
+                    if (!resolvedParams[j].isNamed) argument(j),
+                ],
+                named: [
+                  for (var j = 0; j < resolvedParams.length; j++)
+                    if (resolvedParams[j].isNamed)
+                      (resolvedParams[j].name!.lexeme, argument(j)),
+                ],
+              );
+              ctx.endScope();
+              return StatementInfo(willAlwaysThrow: true);
+            }
             // A missing abstract member on a concrete class still has its
             // declared callable boundary before forwarding to noSuchMethod.
             final restricted = _restrictedForwarders[d] == true;

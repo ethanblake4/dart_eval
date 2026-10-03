@@ -1,5 +1,6 @@
 import '../helpers/conversion.dart';
 import '../helpers/global.dart';
+import '../helpers/external.dart';
 import '../member/member_name.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:analyzer/dart/ast/ast.dart';
@@ -23,6 +24,11 @@ void compileFieldDeclaration(
   CompilerContext ctx,
   Declaration parent,
 ) {
+  if (d.abstractKeyword != null) return;
+  if (d.externalKeyword != null) {
+    if (!d.isStatic) _compileExternalField(ctx, d, parent);
+    return;
+  }
   final parentName = declarationName(parent);
   var fieldIndex0 = fieldIndex;
   for (final field in d.fields.variables) {
@@ -153,6 +159,54 @@ void compileFieldDeclaration(
       }
 
       fieldIndex0++;
+    }
+  }
+}
+
+void _compileExternalField(
+  CompilerContext ctx,
+  FieldDeclaration declaration,
+  Declaration parent,
+) {
+  final library = ctx.enclosingLibrary ?? ctx.library;
+  final parentName = declarationName(parent);
+  for (final field in declaration.fields.variables) {
+    final type = declaration.fields.type == null
+        ? CoreTypes.dynamic.ref(ctx)
+        : TypeRef.fromAnnotation(ctx, ctx.library, declaration.fields.type!);
+    for (final setter in [false, if (!field.isFinal) true]) {
+      final position = ctx.beginFunction(
+        '$parentName.${field.name.lexeme} (external)',
+      );
+      ctx.functionSignatures[position] = MachineFunctionSignature(
+        List.filled(setter ? 2 : 1, MachineRepresentation.object),
+        MachineRepresentation.object,
+      );
+      final receiver = SSA('arg_0');
+      ctx.pushOp(Parameter(receiver, 0));
+      Variable? value;
+      if (setter) {
+        final argument = SSA('arg_1');
+        ctx.pushOp(Parameter(argument, 1));
+        ctx.functionParameterTypes[position] = [type];
+        value = Variable.of(ctx, argument, type, rep: ValueRep.boxed);
+      }
+      emitMissingExternal(
+        ctx,
+        field.name.lexeme,
+        kind: setter ? InvocationKind.setter : InvocationKind.getter,
+        receiver: Variable.of(
+          ctx,
+          receiver,
+          TypeRef.$this(ctx)!,
+          rep: ValueRep.boxed,
+        ),
+        positional: [if (value != null) value],
+      );
+      ctx.instanceDeclarationPositions[library]![parentName]![setter
+              ? MemberKind.setter
+              : MemberKind.getter]![ctx.memberNameKey(field.name.lexeme)] =
+          position;
     }
   }
 }

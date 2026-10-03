@@ -219,7 +219,8 @@ final class SourceMember extends Member {
 
   @override
   bool get isAbstract => switch (node) {
-    MethodDeclaration m => !m.isComplete,
+    MethodDeclaration m => !m.isComplete && m.externalKeyword == null,
+    FieldDeclaration f => f.abstractKeyword != null,
     _ => false,
   };
 

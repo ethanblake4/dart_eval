@@ -16,6 +16,7 @@ import '../member/member.dart';
 import '../member/member_name.dart';
 import '../type.dart';
 import 'extension.dart' show positionalArityOf;
+import 'field_storage.dart';
 import '../../ir/bridge.dart';
 import '../../ir/closures.dart';
 import '../../ir/flow.dart';
@@ -215,6 +216,7 @@ void initializeBridgeMixins(
 }) {
   var index = firstFieldIndex;
   for (final field in fields) {
+    if (!hasInstanceFieldStorage(field)) continue;
     final type = _fields[field];
     if (type != null) {
       final adapter = ctx.svar('mixin_adapter');
@@ -280,6 +282,7 @@ int compileBridgeMixinMethod(
   }
   var index = firstFieldIndex;
   for (final field in fields) {
+    if (!hasInstanceFieldStorage(field)) continue;
     if (identical(field, body.field)) break;
     index += field.fields.variables.length;
   }
