@@ -141,7 +141,6 @@ expect_fail:
   - path: 'extension_type/field_promotion_representation_nullable_test.dart'
   - path: 'extension_type/field_promotion_representation_private_test.dart'
   - path: 'extension_type/field_promotion_representation_public_test.dart'
-  - path: 'extension_type/fully_covers_test.dart'
   - path: 'extension_type/inherited_combined_member_signature_test.dart'
   - path: 'extension_type/match_against_non_extension_types_in_inference_test.dart'
   - path: 'extension_type/no_inheritance_inference_test.dart'

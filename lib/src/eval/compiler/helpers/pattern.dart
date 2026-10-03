@@ -815,15 +815,18 @@ Variable _typeTestType(
   PatternBindContext patternContext = PatternBindContext.matching,
   AstNode? source,
 }) {
-  if (V.type.isAssignableTo(ctx, slot, forceAllowDynamic: false)) {
+  final runtimeType = V.type.erasedExtensionType;
+  final runtimeSlot = slot.erasedExtensionType;
+  if (runtimeType.isAssignableTo(ctx, runtimeSlot, forceAllowDynamic: false)) {
     return BuiltinValue(boolval: true).push(ctx);
   }
 
   if (!patternContext.usesAssignmentContext &&
       ctx.soundFlowAnalysis(source) &&
-      ((V.type.isSpec(CoreTypes.nullType) && !slot.hasNullableRepresentation) ||
-          (slot.isSpec(CoreTypes.nullType) &&
-              !V.type.hasNullableRepresentation))) {
+      ((runtimeType.isSpec(CoreTypes.nullType) &&
+              !runtimeSlot.hasNullableRepresentation) ||
+          (runtimeSlot.isSpec(CoreTypes.nullType) &&
+              !runtimeType.hasNullableRepresentation))) {
     return BuiltinValue(boolval: false).push(ctx);
   }
 

@@ -3856,3 +3856,17 @@ runtime failures/3 skipped; control_flow_graph 105 passed. All 26 confirmed stal
 expectations were removed across cycle 23. There remain 138 real SDK failures.
 Cycle 24 starts with six further correctness passes and includes the scheduled
 compiler optimization pass.
+
+
+## Cycle 24 correctness checkpoint 1
+
+Extension pattern coverage now compares erased representation types when proving
+that a type test always succeeds or that Null is disjoint. Pattern bindings and
+promotions keep their nominal types. The original fully_covers SDK fixture and
+split_point fixture pass, as do 16 existing focused extension/pattern tests.
+Analyzer and diff checks pass. Removed the confirmed stale fully_covers
+expectation. No runtime changes or extra bytecode checks were added.
+
+The scheduled additional compiler pass targets compilation speed and compiler
+resource use, as clarified by Ethan. Generated-code optimization remains part of
+the regular performance step.
