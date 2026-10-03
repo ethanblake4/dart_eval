@@ -3263,3 +3263,27 @@ definitions, preserving multiple wildcard positions and outer typedef lookup.
 The class generic type-parameter and top-level typedef SDK fixtures pass; their
 stale entries were removed. Existing compiler tests, tear-offs, constructor
 inference, mixin inference and generic-bound regressions pass. No runtime edit.
+
+## Cycle 19 performance: primitive loop invariants
+
+The compiler hoists non-throwing primitive computations and their SSA copies
+into existing single-entry loop preheaders. It processes nested loops inside
+out, requires dominating operands, and leaves boxed conversions, mutable reads,
+allocations and throwing operations in place. Functions with EnterTry are
+excluded. The interpreter and bytecode format are unchanged.
+
+The new sensor_calibration benchmark models repeated sensor gain/bias correction.
+Paired 15-sample AOT runs for 500,000 readings improved from 52.03/52.90 ms to
+33.56/33.09 ms, with the same checksum. An initial pilot requiring explicit
+preheader jumps missed ordinary fall-through loops; bytecode/SSA inspection
+identified and corrected that restriction. Nested mutation and zero-iteration
+throwing arithmetic regressions pass across all dynamic fixture modes. Existing
+compiler and loop tests pass, 357 tests in the final focused run.
+
+The final 23-driver paired AOT sweep matched every execution result. The compile
+driver grew from 1,241 to 1,330 code bytes after register allocation; compile
+median remained comparable. Noisy dispatch, globals, exception and callback
+outliers were checked with longer alternating controls; dispatch and particle
+controls overlap, as do global and exception controls. Evidence is under
+.dart_tool/improvement_loop/cycle19/performance-final-full23/ and adjacent
+calibration/control logs. Full-suite validation follows in cleanup.

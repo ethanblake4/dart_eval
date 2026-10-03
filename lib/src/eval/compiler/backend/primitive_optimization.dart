@@ -7,6 +7,7 @@ import '../../ir/objects.dart' as objects;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/representation.dart';
 import '../../ir/string.dart';
+import 'loop_invariants.dart';
 
 /// Values proven to contain a native list before any list operation is lowered.
 /// Boxing and copies preserve that property; a phi does so only when all of
@@ -140,4 +141,5 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
         op is cfg.Assign ||
         op is memory.LoadInt,
   );
+  hoistLoopInvariants(graph);
 }
