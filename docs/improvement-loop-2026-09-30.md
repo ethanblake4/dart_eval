@@ -3616,3 +3616,13 @@ control, so seven affected drivers received two extra alternating comparisons;
 logs retain the raw samples rather than treating all apparent gains as established.
 No benchmark compilation overlapped the final timed sweep. Artifacts are under
 .dart_tool/improvement_loop/cycle21. Remaining real SDK failures start cycle 22.
+## Cycle 22 pass 1: symbolic generic bounds in FutureOr subtyping
+
+Cold generic signature comparison retains binder identities and actual symbolic
+bounds across recursion instead of substituting lowered fallback bounds too early.
+A signature variable is checked against FutureOr's value member before falling
+back to its bound; synthetic nominal tags no longer falsely treat symbolic
+parameters or unions as top types. The original type_parameter_vs_futureor fixture
+now passes, along with the neighboring FutureOr subtype and generic normalization
+fixtures. Nine existing focused tests and scoped analysis pass. One stale entry
+removed; no interpreter loop or new ordinary tests changed.

@@ -1,5 +1,11 @@
 part of 'runtime.dart';
 
+typedef _SignatureParameterRelations = ({
+  Map<int, int> renames,
+  Map<(int, int), int> bounds,
+  Set<(int, int)> active,
+});
+
 /// The bridge boundary accepts canonical language values. Function signatures
 /// prescribe every conversion before entering the typed register loop.
 extension TypedRuntimeInterop on Runtime {
@@ -1081,7 +1087,7 @@ extension TypedRuntimeInterop on Runtime {
     int? actualOwnerType,
     List<int> callableTypeArguments, {
     bool nullableExpected = false,
-    Map<int, int>? signatureParameterRenames,
+    _SignatureParameterRelations? signatureParameterRenames,
   }) {
     if (actual < 0 ||
         actual >= _typeDescriptors.length ||
@@ -1108,12 +1114,12 @@ extension TypedRuntimeInterop on Runtime {
       if (expectedRow.length == 6 &&
           expectedRow[2] == RuntimeTypeDescriptorTag.typeParameter &&
           expectedRow[3] < 0 &&
-          signatureParameterRenames.containsKey(expectedRow[3])) {
+          signatureParameterRenames.renames.containsKey(expectedRow[3])) {
         // Generic signatures compare by renaming their type parameters, so
         // a bound expected-side parameter is an abstract variable: it
         // accepts only the corresponding renamed variable, another variable
         // bounded by it, or a bottom type — never the variable's bound.
-        final renamed = signatureParameterRenames[expectedRow[3]]!;
+        final renamed = signatureParameterRenames.renames[expectedRow[3]]!;
         final actualRow = _typeDescriptors[actual];
         if (actualRow.length == 6 &&
             actualRow[2] == RuntimeTypeDescriptorTag.typeParameter &&
@@ -1121,18 +1127,69 @@ extension TypedRuntimeInterop on Runtime {
           if (actualRow[3] == renamed && actualRow[4] == expectedRow[4]) {
             return actualRow[1] == 0 || expectedRow[1] == 1 || nullableExpected;
           }
-          return _isTypedDescriptorSubtypeInEnvironment(
-            actualRow[5],
-            expected,
-            actualOwnerType,
-            callableTypeArguments,
-            nullableExpected: nullableExpected,
-            signatureParameterRenames: signatureParameterRenames,
-          );
+          final relation = (actual, expected);
+          if (!signatureParameterRenames.active.add(relation)) return false;
+          try {
+            final bound =
+                signatureParameterRenames.bounds[(
+                  actualRow[3],
+                  actualRow[4],
+                )] ??
+                actualRow[5];
+            return _isTypedDescriptorSubtypeInEnvironment(
+              actualRow[1] == 1 ? nullableRuntimeType(bound) : bound,
+              expected,
+              actualOwnerType,
+              callableTypeArguments,
+              nullableExpected: nullableExpected,
+              signatureParameterRenames: signatureParameterRenames,
+            );
+          } finally {
+            signatureParameterRenames.active.remove(relation);
+          }
         }
         if (actualRow[0] == _typedTypeId(CoreTypes.never)) return true;
         return actualRow[0] == _nullTypeId &&
             (expectedRow[1] == 1 || nullableExpected);
+      }
+    }
+    if (signatureParameterRenames != null &&
+        actualDescriptor.length == 6 &&
+        actualDescriptor[2] == RuntimeTypeDescriptorTag.typeParameter &&
+        signatureParameterRenames.renames.containsKey(actualDescriptor[3])) {
+      // Keep a bound signature variable symbolic when it occurs as a union
+      // member, before falling back to its signature's declared bound.
+      if (expectedDescriptor.length == 4 &&
+          expectedDescriptor[2] == RuntimeTypeDescriptorTag.futureOr &&
+          _isTypedDescriptorSubtypeInEnvironment(
+            actual,
+            expectedDescriptor[3],
+            actualOwnerType,
+            callableTypeArguments,
+            nullableExpected: nullableExpected || expectedDescriptor[1] == 1,
+            signatureParameterRenames: signatureParameterRenames,
+          )) {
+        return true;
+      }
+      final relation = (actual, expected);
+      if (!signatureParameterRenames.active.add(relation)) return false;
+      try {
+        final bound =
+            signatureParameterRenames.bounds[(
+              actualDescriptor[3],
+              actualDescriptor[4],
+            )] ??
+            actualDescriptor[5];
+        return _isTypedDescriptorSubtypeInEnvironment(
+          actualDescriptor[1] == 1 ? nullableRuntimeType(bound) : bound,
+          expected,
+          actualOwnerType,
+          callableTypeArguments,
+          nullableExpected: nullableExpected,
+          signatureParameterRenames: signatureParameterRenames,
+        );
+      } finally {
+        signatureParameterRenames.active.remove(relation);
       }
     }
     final resolvedExpected = _resolveTypeParameter(
@@ -1193,9 +1250,10 @@ extension TypedRuntimeInterop on Runtime {
       bool futureBranchIsSubtype(int type) {
         final row = _typeDescriptors[type];
         final nominal = row[0];
-        if (nominal == _dynamicTypeId ||
-            nominal == _voidTypeId ||
-            nominal == _objectTypeId) {
+        if (row.length == 2 &&
+            (nominal == _dynamicTypeId ||
+                nominal == _voidTypeId ||
+                nominal == _objectTypeId)) {
           return true;
         }
         if (row.length == 4 && row[2] == RuntimeTypeDescriptorTag.futureOr) {
@@ -1352,7 +1410,7 @@ extension TypedRuntimeInterop on Runtime {
     List<int> target,
     int? actualOwnerType, [
     List<int> callableTypeArguments = const [],
-    Map<int, int>? signatureParameterRenames,
+    _SignatureParameterRelations? signatureParameterRenames,
   ]) {
     final sourcePositional = source[3], sourceNamed = source[4];
     final targetPositional = target[3], targetNamed = target[4];
@@ -1394,7 +1452,7 @@ extension TypedRuntimeInterop on Runtime {
     List<int> target,
     int? actualOwnerType, [
     List<int> callableTypeArguments = const [],
-    Map<int, int>? signatureParameterRenames,
+    _SignatureParameterRelations? signatureParameterRenames,
   ]) {
     final sourceRequired = source[4], sourcePositional = source[5];
     final targetRequired = target[4], targetPositional = target[5];
@@ -1413,18 +1471,28 @@ extension TypedRuntimeInterop on Runtime {
     // the map is bidirectional so a parameter appearing on either side of a
     // nested contravariant check still resolves to its counterpart.
     final renames = targetParameters > 0
-        ? {
-            ...?signatureParameterRenames,
-            target[8]: source[8],
-            source[8]: target[8],
-          }
+        ? (
+            renames: {
+              ...?signatureParameterRenames?.renames,
+              target[8]: source[8],
+              source[8]: target[8],
+            },
+            bounds: {
+              ...?signatureParameterRenames?.bounds,
+              for (var i = 0; i < sourceParameters; i++)
+                (source[8], i): source[9 + i],
+              for (var i = 0; i < targetParameters; i++)
+                (target[8], i): target[9 + i],
+            },
+            active: signatureParameterRenames?.active ?? <(int, int)>{},
+          )
         : signatureParameterRenames;
     int resolveSignatureReturn(int type) {
       final descriptor = _typeDescriptors[type];
       if (renames != null &&
           descriptor.length == 6 &&
           descriptor[2] == RuntimeTypeDescriptorTag.typeParameter &&
-          renames.containsKey(descriptor[3])) {
+          renames.renames.containsKey(descriptor[3])) {
         return type;
       }
       return _resolveTypeParameter(
@@ -1535,7 +1603,7 @@ extension TypedRuntimeInterop on Runtime {
     int target,
     int? actualOwnerType, [
     List<int> callableTypeArguments = const [],
-    Map<int, int>? signatureParameterRenames,
+    _SignatureParameterRelations? signatureParameterRenames,
   ]) {
     bool isSignatureBoundParameter(int type) =>
         signatureParameterRenames != null &&
