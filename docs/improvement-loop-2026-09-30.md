@@ -3556,3 +3556,11 @@ tests pass in the combined tree. An isolated complete default run found only
 those three stale expected failures. Scoped analysis is clean. No duplicated SDK
 fixtures or ordinary tests were added. Generated machine has 225 primary and
 174 extended instructions; the new operation is confined to cold dispatch.
+
+## Cycle 21 correctness follow-up: deferred condition proofs
+
+The full default gate exposed lost recorded boolean proofs inside hidden late
+initializer closures. Capture copying now preserves value facts, write epochs
+and write-capture status, while existing deferred-write filtering rejects unstable
+dependencies. All 11 focused sound-flow/late tests and the three original late
+fixtures pass. The change adds no runtime instructions.

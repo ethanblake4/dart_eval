@@ -68,11 +68,14 @@ import 'conversion.dart';
           loaded,
           original.declaredType,
           rep: values[entry.key]!.rep,
+          facts: original.current.facts,
         ),
         declaredType: original.declaredType,
         isFinal: original.isFinal,
         initialized: original.initialized,
       );
+      local.current.writeEpoch = original.current.writeEpoch;
+      local.writeCaptured = original.writeCaptured;
       local.captureDeclaration = original.captureDeclaration;
       if (original.isLateLocal) {
         local.storage = LateLocalStorage(loaded);
