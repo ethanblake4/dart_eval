@@ -482,6 +482,8 @@ class CompilerContext with ScopeContext {
   Map<int, Map<String, Map<MemberKind, Map<String, int>>>>
   instanceDeclarationPositions = {};
   final noSuchMethodForwarders = <(int, String), Set<String>>{};
+  final interfaceNoSuchMethodForwarderRequirements =
+      <(int, String), List<(ClassMember, int, MemberKind, String, bool)>>{};
 
   /// Direct superinterface edges: descendant 'file:class' → ancestor keys.
   Map<String, List<String>> subclassEdges = {};

@@ -18,6 +18,39 @@ $Value? noSuchMethodErrorWithInvocation(
   );
 }
 
+final _languageInvocations = Expando<bool>('language invocation');
+
+/// Native public Invocation constructors use a redacted error message. A
+/// language-generated invocation retains the member spelling in diagnostics.
+Invocation languageInvocation(Invocation invocation) {
+  _languageInvocations[invocation] = true;
+  return invocation;
+}
+
+NoSuchMethodError formatLanguageNoSuchMethodError(
+  NoSuchMethodError error,
+  Invocation invocation,
+) => _languageInvocations[invocation] == true
+    ? _LanguageNoSuchMethodError(error, invocation.memberName)
+    : error;
+
+class _LanguageNoSuchMethodError extends Error implements NoSuchMethodError {
+  _LanguageNoSuchMethodError(this.error, this.memberName);
+
+  final NoSuchMethodError error;
+  final Symbol memberName;
+
+  @override
+  StackTrace? get stackTrace => error.stackTrace ?? super.stackTrace;
+
+  @override
+  String toString() {
+    final symbol = memberName.toString();
+    final name = symbol.substring(8, symbol.length - 2);
+    return error.toString().replaceFirst('has no $name ', "has no '$name' ");
+  }
+}
+
 $Value? assertionError(Runtime runtime, $Value? _, List<$Value?> args) {
   final value = args.isEmpty ? null : args.first;
   Object? message;

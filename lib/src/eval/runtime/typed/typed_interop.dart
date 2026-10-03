@@ -346,6 +346,9 @@ abstract final class TypedInterop {
     if (receiver == null) {
       final count = positionalCount + namedNames.length;
       if (name == 'toString' && count == 0) return $String('null');
+      if (name == 'noSuchMethod' && positionalCount == 1 && namedNames.isEmpty) {
+        return call(runtime, $Object.noSuchMethodTearOff(null), 1, first, null);
+      }
       throw NoSuchMethodError.withInvocation(
         null,
         Invocation.method(Symbol(name), [

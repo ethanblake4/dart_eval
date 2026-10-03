@@ -64,6 +64,8 @@ abstract class EvalFunction implements $Instance, EvalCallable {
         return $Function((runtime, target, r, s, c) => $bool(this == r));
       case 'hashCode':
         return $int(hashCode);
+      case 'noSuchMethod':
+        return $Object.noSuchMethodTearOff($Object(this));
       case 'toString':
         return $Closure.withNamed(
           _toString,

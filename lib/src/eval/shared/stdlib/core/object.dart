@@ -3,6 +3,7 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 import 'package:dart_eval/stdlib/core.dart';
+import 'error_hooks.dart' show formatLanguageNoSuchMethodError;
 
 /// dart_eval [$Instance] representation of an [Object]
 class $Object implements $Instance {
@@ -473,7 +474,11 @@ class $Object implements $Instance {
       );
     }
     final invocation = (r as $Value).$reified as Invocation;
-    return runtime.wrap(receiver.noSuchMethod(invocation));
+    try {
+      return runtime.wrap(receiver.noSuchMethod(invocation));
+    } on NoSuchMethodError catch (error) {
+      throw formatLanguageNoSuchMethodError(error, invocation);
+    }
   }
 
   static $Value? _toString(

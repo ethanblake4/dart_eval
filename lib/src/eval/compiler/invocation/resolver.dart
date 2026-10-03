@@ -1276,6 +1276,7 @@ final class CallResolver {
   }
 
   bool _needsNullableOperatorExtension(TypeRef receiver, String operator) =>
+      !receiver.isSpec(CoreTypes.dynamic) &&
       _nonNullReceiverOperators.contains(operator) &&
       extensionLookupType(ctx, receiver).nullable;
 

@@ -173,9 +173,16 @@ class Expect {
     }
   }
 
-  static void contains(dynamic needle, Iterable haystack,
+  static void contains(dynamic needle, dynamic haystack,
       [String reason = ""]) {
-    if (haystack.contains(needle)) return;
+    if (haystack is String) {
+      if (needle is! String) throw TypeError();
+      if (haystack.contains(needle)) return;
+    } else if (haystack is Iterable) {
+      if (haystack.contains(needle)) return;
+    } else {
+      throw TypeError();
+    }
     _fail('Expect.contains fails\${_getMessage(reason)}');
   }
 

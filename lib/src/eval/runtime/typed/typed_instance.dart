@@ -1,6 +1,8 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/error_hooks.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/symbol_literal.dart';
 
 import 'typed_call_site.dart';
 import 'typed_closure.dart';
@@ -22,6 +24,7 @@ Invocation _typedMethodInvocation(
   List<String> namedNames,
   List<int> typeArguments,
   Runtime? runtime,
+  String callerLibrary,
 ) {
   final count = positionalCount + namedNames.length;
   final values = TypedInterop.argList(count, first, rest);
@@ -30,14 +33,20 @@ Invocation _typedMethodInvocation(
       Symbol(namedNames[i]): values[positionalCount + i],
   };
   final arguments = values.sublist(0, positionalCount);
-  return typeArguments.isEmpty
-      ? Invocation.method(Symbol(name), arguments, namedArguments)
-      : Invocation.genericMethod(
-          Symbol(name),
-          [for (final type in typeArguments) $TypeImpl(type, runtime)],
-          arguments,
-          namedArguments,
-        );
+  return languageInvocation(
+    typeArguments.isEmpty
+        ? Invocation.method(
+            guestMemberSymbol(name, callerLibrary, runtime: runtime),
+            arguments,
+            namedArguments,
+          )
+        : Invocation.genericMethod(
+            guestMemberSymbol(name, callerLibrary, runtime: runtime),
+            [for (final type in typeArguments) $TypeImpl(type, runtime)],
+            arguments,
+            namedArguments,
+          ),
+  );
 }
 
 /// An evaluated object whose members belong to a typed program.
@@ -130,7 +139,10 @@ final class TypedInstance implements $Instance {
         runtime: runtime,
       );
     }
-    throw NoSuchMethodError.withInvocation(dispatchRoot, invocation);
+    throw formatLanguageNoSuchMethodError(
+      NoSuchMethodError.withInvocation(dispatchRoot, invocation),
+      invocation,
+    );
   }
 
   /// Cache resolution separately from register argument transfer and frame entry.
@@ -240,6 +252,7 @@ final class TypedInstance implements $Instance {
             namedNames,
             typeArguments,
             runtime,
+            callerLibrary,
           ),
           runtime,
         );
@@ -284,6 +297,7 @@ final class TypedInstance implements $Instance {
               namedNames,
               typeArguments,
               runtime,
+              callerLibrary,
             ),
             runtime,
           );
@@ -308,6 +322,7 @@ final class TypedInstance implements $Instance {
               namedNames,
               typeArguments,
               runtime,
+              callerLibrary,
             ),
             runtime,
           );
@@ -339,6 +354,7 @@ final class TypedInstance implements $Instance {
           namedNames,
           typeArguments,
           runtime,
+          callerLibrary,
         ),
         runtime,
       );
@@ -393,6 +409,7 @@ final class TypedInstance implements $Instance {
         namedNames,
         typeArguments,
         runtime,
+        callerLibrary,
       ),
       runtime,
     );
@@ -469,7 +486,14 @@ final class TypedInstance implements $Instance {
       '!=' ||
       'toString' ||
       'noSuchMethod' => _methodTearOff(identifier, callerLibrary),
-      _ => _noSuchMethod(Invocation.getter(Symbol(identifier)), runtime),
+      _ => _noSuchMethod(
+        languageInvocation(
+          Invocation.getter(
+            guestMemberSymbol(identifier, callerLibrary, runtime: runtime),
+          ),
+        ),
+        runtime,
+      ),
     };
   }
 
@@ -500,7 +524,15 @@ final class TypedInstance implements $Instance {
       parent.$setProperty(runtime, identifier, value ?? const $null());
       return;
     }
-    _noSuchMethod(Invocation.setter(Symbol('$identifier='), value), runtime);
+    _noSuchMethod(
+      languageInvocation(
+        Invocation.setter(
+          guestMemberSymbol('$identifier=', callerLibrary, runtime: runtime),
+          value,
+        ),
+      ),
+      runtime,
+    );
   }
 
   @override

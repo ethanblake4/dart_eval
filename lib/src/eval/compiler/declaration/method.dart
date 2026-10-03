@@ -21,7 +21,6 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:dart_eval/src/eval/ir/function.dart';
 import '../values/abi.dart';
 import '../member/member_name.dart';
-import '../member/member.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
 
@@ -379,10 +378,10 @@ bool _forwardsAbstractMember(
           null;
 }
 
-/// Materializes interface-only source methods through the same checked
-/// boundary as an explicitly declared abstract method. Imported declarations
-/// and class-generic interfaces still require a substituted declaring scope;
-/// inferred returns and nonliteral defaults retain their original source.
+/// Materializes source interface members through the same checked boundary as
+/// an explicitly declared abstract method. Class-generic interfaces still
+/// require a substituted declaring scope; inferred returns and nonliteral
+/// defaults retain their original source.
 void compileInterfaceNoSuchMethodForwarders(
   CompilerContext ctx,
   Declaration host,
@@ -393,64 +392,141 @@ void compileInterfaceNoSuchMethodForwarders(
       host.namePart.typeParameters != null) {
     return;
   }
+  _compileInterfaceNoSuchMethodRequirements(ctx, host);
+}
+
+/// Imported signatures resolve in their own library while registering their
+/// checked bodies on the host. Foreign private members throw directly.
+void _compileInterfaceNoSuchMethodRequirements(
+  CompilerContext ctx,
+  ClassDeclaration host,
+) {
+  final hostLibrary = ctx.library;
   final hostName = declarationName(host);
-  final names = ctx.noSuchMethodForwarders[(ctx.library, hostName)];
-  if (names == null || names.isEmpty) return;
-  final receiver = TypeRef.lookupDeclaration(ctx, ctx.library, host);
-  final positions = ctx.instanceDeclarationPositions[ctx.library]![hostName]!;
-  for (final key in names) {
-    final name = key.split('::').last;
-    if (positions[MemberKind.method]!.containsKey(name)) continue;
-    final resolved = ctx.memberLookup.tryInterfaceMember(
-      receiver,
-      MemberName(name, MemberKind.method),
-    );
-    final member = resolved?.member;
-    if (member is! SourceMember ||
-        member.library != ctx.library ||
-        member.declaringDecl!.typeParameters.isNotEmpty) {
-      continue;
+  final requirements =
+      ctx.interfaceNoSuchMethodForwarderRequirements[(hostLibrary, hostName)];
+  if (requirements == null) return;
+  final emitted = <(int, String, MemberKind)>{};
+  for (final (member, sourceLibrary, kind, name, restricted) in requirements) {
+    final owner = member.parent?.parent;
+    if (owner is Declaration && classLikeClauses(owner).$4 != null) continue;
+    final sources = <(MemberKind, String)>[];
+    if (member is MethodDeclaration) {
+      if (!member.isGetter &&
+          !member.isSetter &&
+          !_canCloneForwarderSignature(member)) {
+        continue;
+      }
+      if (member.isGetter &&
+          member.returnType == null &&
+          member.body is! EmptyFunctionBody) {
+        continue;
+      }
+      final parameters =
+          member.parameters?.parameters ?? const <FormalParameter>[];
+      final groups = [
+        ...parameters
+            .where((p) => p.isRequiredPositional)
+            .map(_forwarderParameter),
+        if (parameters.any((p) => p.isOptionalPositional))
+          '[${parameters.where((p) => p.isOptionalPositional).map(_forwarderParameter).join(', ')}]',
+        if (parameters.any((p) => p.isNamed))
+          '{${parameters.where((p) => p.isNamed).map(_forwarderParameter).join(', ')}}',
+      ];
+      final positional = parameters
+          .where((p) => !p.isNamed)
+          .map((p) => p.name!.lexeme)
+          .join(', ');
+      final named = parameters
+          .where((p) => p.isNamed)
+          .map((p) => "Symbol('${p.name!.lexeme}'): ${p.name!.lexeme}")
+          .join(', ');
+      final types = member.typeParameters?.typeParameters
+          .map((p) => p.name.lexeme)
+          .join(', ');
+      final invocation = member.isGetter
+          ? "Invocation.getter(Symbol('$name'))"
+          : member.isSetter
+          ? "Invocation.setter(Symbol('$name='), ${parameters.single.name!.lexeme})"
+          : types == null
+          ? "Invocation.method(Symbol('$name'), <dynamic>[$positional], <Symbol, dynamic>{$named})"
+          : "Invocation.genericMethod(Symbol('$name'), <Type>[$types], <dynamic>[$positional], <Symbol, dynamic>{$named})";
+      final signature = member.isGetter
+          ? '${member.returnType?.toSource() ?? 'dynamic'} get $name'
+          : member.isSetter
+          ? 'set $name(${groups.join(', ')})'
+          : '${member.returnType?.toSource() ?? 'dynamic'} ${member.operatorKeyword == null ? '' : 'operator '}$name${member.typeParameters?.toSource() ?? ''}(${groups.join(', ')})';
+      sources.add((
+        kind,
+        '${member.metadata.map((a) => a.toSource()).join(' ')} ${restricted ? '$signature => throw NoSuchMethodError.withInvocation(this, $invocation);' : '$signature;'}',
+      ));
+    } else if (member is FieldDeclaration) {
+      if (member.fields.type == null &&
+          member.fields.variables.any((v) => v.initializer != null)) {
+        continue;
+      }
+      final type = member.fields.type?.toSource() ?? 'dynamic';
+      sources.add((
+        MemberKind.getter,
+        restricted
+            ? "$type get $name => throw NoSuchMethodError.withInvocation(this, Invocation.getter(Symbol('$name')));"
+            : '$type get $name;',
+      ));
+      if (!member.fields.isFinal && !member.fields.isConst) {
+        sources.add((
+          MemberKind.setter,
+          restricted
+              ? "set $name($type value) => throw NoSuchMethodError.withInvocation(this, Invocation.setter(Symbol('$name='), value));"
+              : 'set $name($type value);',
+        ));
+      }
     }
-    final declaration = member.node;
-    if (declaration is! MethodDeclaration ||
-        !_canCloneForwarderSignature(declaration)) {
-      continue;
+    for (final (view, source) in sources) {
+      if (!emitted.add((sourceLibrary, name, view))) continue;
+      final positionKey = name.startsWith('_') && sourceLibrary != hostLibrary
+          ? '${ctx.libraryUri(sourceLibrary)}::$name'
+          : name;
+      if (ctx.instanceDeclarationPositions[hostLibrary]![hostName]![view]!
+          .containsKey(positionKey)) {
+        continue;
+      }
+      if (ctx.memberLookup.implementationOwner(
+            TypeRef.lookupDeclaration(ctx, hostLibrary, host),
+            MemberName(
+              name,
+              view,
+              privateLibraryUri: ctx.libraryUri(sourceLibrary),
+            ),
+          ) !=
+          null) {
+        continue;
+      }
+      final version = member
+          .thisOrAncestorOfType<CompilationUnit>()
+          ?.languageVersionToken;
+      final directive = version == null
+          ? ''
+          : '// @dart=${version.major}.${version.minor}\n';
+      final stub =
+          (parseString(
+                        content: '${directive}class $hostName { $source }',
+                      ).unit.declarations.single
+                      as ClassDeclaration)
+                  .body
+                  .members
+                  .single
+              as MethodDeclaration;
+      final oldEnclosingLibrary = ctx.enclosingLibrary;
+      try {
+        ctx.library = sourceLibrary;
+        ctx.enclosingLibrary = hostLibrary;
+        ctx.currentClass = host;
+        compileMethodDeclaration(stub, ctx, host);
+      } finally {
+        ctx.library = hostLibrary;
+        ctx.enclosingLibrary = oldEnclosingLibrary;
+      }
     }
-    // Defaults and annotations keep their source spelling and library.
-    // A missing optional default on an interface is supplied as null by its
-    // forwarder, even when the interface annotation itself is non-nullable.
-    final parameters = declaration.parameters!.parameters;
-    final parameterGroups = [
-      ...parameters
-          .where((p) => p.isRequiredPositional)
-          .map(_forwarderParameter),
-      if (parameters.any((p) => p.isOptionalPositional))
-        '[${parameters.where((p) => p.isOptionalPositional).map(_forwarderParameter).join(', ')}]',
-      if (parameters.any((p) => p.isNamed))
-        '{${parameters.where((p) => p.isNamed).map(_forwarderParameter).join(', ')}}',
-    ];
-    final signature = [
-      ...declaration.metadata.map((annotation) => annotation.toSource()),
-      declaration.returnType!.toSource(),
-      if (declaration.operatorKeyword != null) 'operator',
-      '${declaration.name.lexeme}${declaration.typeParameters?.toSource() ?? ''}'
-          '(${parameterGroups.join(', ')})',
-    ].join(' ');
-    final version = declaration
-        .thisOrAncestorOfType<CompilationUnit>()
-        ?.languageVersionToken;
-    final versionDirective = version == null
-        ? ''
-        : '// @dart=${version.major}.${version.minor}\n';
-    final unit = parseString(
-      content: '${versionDirective}class $hostName { $signature; }',
-    ).unit;
-    final stub =
-        (unit.declarations.single as ClassDeclaration).body.members.single
-            as MethodDeclaration;
-    ctx.instanceDeclarationsMap[ctx.library]![hostName]![name] = stub;
-    ctx.currentClass = host;
-    compileMethodDeclaration(stub, ctx, host);
   }
 }
 

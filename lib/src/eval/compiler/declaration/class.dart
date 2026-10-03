@@ -600,8 +600,15 @@ void _checkInterfaceConformance(
           ];
     for (final name in names) {
       // A private interface member from another library cannot be named by
-      // this class. Dart supplies a noSuchMethod forwarder for that slot.
-      if (name.startsWith('_') && declLib != ctx.library) continue;
+      // this class. Dart supplies a throwing forwarder for that slot.
+      if (name.startsWith('_') && declLib != ctx.library) {
+        if (hasNoSuchMethod) {
+          (ctx.interfaceNoSuchMethodForwarderRequirements[
+                    (ctx.library, hostName)] ??= [])
+              .add((member, declLib, kind, name, true));
+        }
+        continue;
+      }
       for (final view
           in kind == MemberKind.method
               ? const [MemberKind.method]
@@ -646,6 +653,9 @@ void _checkInterfaceConformance(
         }
         if (impl == null) {
           if (hasNoSuchMethod) {
+            (ctx.interfaceNoSuchMethodForwarderRequirements[
+                      (ctx.library, hostName)] ??= [])
+                .add((member, declLib, view, name, false));
             if (view == MemberKind.method) {
               (ctx.noSuchMethodForwarders[(ctx.library, hostName)] ??= {}).add(
                 name.startsWith('_')

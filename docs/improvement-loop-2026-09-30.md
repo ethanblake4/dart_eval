@@ -3795,3 +3795,19 @@ both ambiguity error fixtures' selected positive cases pass. Negative cases rema
 skipped under the existing policy. Eight existing focused tests and a unique
 adapter/callback/defaults/inheritance probe pass in direct and serialized runtimes.
 Scoped seven-file analysis and diff checks pass. Six stale entries removed.
+## Cycle 23 pass 6: checked interface accessors and Object dispatch
+
+One interface-requirements helper now emits checked method/getter/setter NSM
+forwarders and foreign-private throwing stubs, replacing the narrower duplicated
+method loop. Unsupported class-generic or inferred/nonliteral signatures remain
+on their prior path. Dynamic operators bypass statically nullable extension lookup;
+enum super expressions retain their class context. Invocation symbols retain guest
+library identity. Cold null/function Object dispatch and language-generated NSM
+error formatting match native behavior; public Invocation construction keeps its
+native formatting. No interpreter-loop changes.
+
+Four original SDK fixtures pass, along with optional-parameter/private-setter
+neighbors and three existing focused tests. Ten-file analysis passes. The SDK
+Expect.contains shim now admits String substring checks and retains Iterable
+support, exposing the separate guest-stack-frame failures. Those stack-trace
+entries remain. Four confirmed stale entries removed.

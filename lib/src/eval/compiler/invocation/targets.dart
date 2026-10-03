@@ -683,9 +683,18 @@ final class NoSuchMethodCall extends CallTarget {
     final bridge =
         ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
     final arg = BuiltinValue(stringval: member).push(ctx).boxIfNeeded(ctx);
+    final library = member.startsWith('_')
+        ? BuiltinValue(stringval: ctx.libraryUri(ctx.library))
+              .push(ctx)
+              .boxIfNeeded(ctx)
+        : null;
     return Variable.ssa(
       ctx,
-      InvokeExternal(ctx.svar('sym'), bridge['Symbol.']!, [arg.ssa]),
+      InvokeExternal(
+        ctx.svar('sym'),
+        bridge[library == null ? 'Symbol.' : '_privateSymbolLiteral']!,
+        [arg.ssa, if (library != null) library.ssa],
+      ),
       CoreTypes.symbol.ref(ctx),
     );
   }
