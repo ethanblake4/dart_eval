@@ -775,70 +775,130 @@ class Runtime {
     }
   }
 
-  String _runtimeTypeSemanticKey(int id, {bool nullable = false}) {
+  String _runtimeTypeSemanticKey(
+    int id, {
+    bool nullable = false,
+    Map<int, (int, List<int>)> binders = const {},
+    Set<(int, int)> activeBounds = const {},
+  }) {
     final descriptor = _typeDescriptors[id];
     final isNullable = nullable || descriptor[1] == 1;
+    String key(int type, {bool nullable = false}) => _runtimeTypeSemanticKey(
+      type,
+      nullable: nullable,
+      binders: binders,
+      activeBounds: activeBounds,
+    );
     if (descriptor.length < 3 || descriptor[2] >= 0) {
+      final nominal = descriptor[0];
+      if (nominal == _typedTypeId(CoreTypes.never) && isNullable) {
+        return _nominalTypeSemanticKey(_nullTypeId!, false, const []);
+      }
       return _nominalTypeSemanticKey(
-        descriptor[0],
-        isNullable,
-        descriptor.skip(2),
+        nominal,
+        isNullable &&
+            nominal != _dynamicTypeId &&
+            nominal != _voidTypeId &&
+            nominal != _nullTypeId,
+        descriptor.skip(2).map((type) => key(type)),
       );
     }
-    return switch (descriptor[2]) {
-      RuntimeTypeDescriptorTag.record =>
-        'r?${descriptor[1]}:${descriptor[3]}:${descriptor[4]}:'
-            '${[for (final type in descriptor.skip(5).take(descriptor[3])) _runtimeTypeSemanticKey(type), for (var i = 5 + descriptor[3]; i < descriptor.length; i += 2) '${_constantPool[descriptor[i]]}:${_runtimeTypeSemanticKey(descriptor[i + 1])}'].join(',')}',
-      RuntimeTypeDescriptorTag.function =>
-        'f?${descriptor[1]}:${descriptor[4]}:${descriptor[5]}:${descriptor[6]}:'
-            '${_runtimeTypeSemanticKey(descriptor[3])}:'
-            '${descriptor[7]}:${descriptor[8]}:${[for (final type in descriptor.skip(9).take(descriptor[7])) _runtimeTypeSemanticKey(type)].join(',')}:'
-            '${[for (final type in descriptor.skip(9 + descriptor[7]).take(descriptor[5])) _runtimeTypeSemanticKey(type), for (var i = 9 + descriptor[7] + descriptor[5]; i < descriptor.length; i += 3) '${_constantPool[descriptor[i]]}:${descriptor[i + 1]}:${_runtimeTypeSemanticKey(descriptor[i + 2])}'].join(',')}',
-      RuntimeTypeDescriptorTag.typeParameter =>
-        'p?${descriptor[1]}:'
-            '${descriptor[3] < 0 ? descriptor[3] : _typeIdentities[descriptor[3]]}:'
-            '${descriptor[4]}:${_runtimeTypeSemanticKey(descriptor[5])}',
-      RuntimeTypeDescriptorTag.futureOr => _futureOrTypeSemanticKey(
-        descriptor[3],
-        isNullable,
-      ),
-      _ => throw StateError(
-        'Unknown runtime type descriptor tag ${descriptor[2]}',
-      ),
-    };
+    switch (descriptor[2]) {
+      case RuntimeTypeDescriptorTag.record:
+        return 'r?${isNullable ? 1 : 0}:${descriptor[3]}:${descriptor[4]}:'
+            '${[for (final type in descriptor.skip(5).take(descriptor[3])) key(type), for (var i = 5 + descriptor[3]; i < descriptor.length; i += 2) '${_constantPool[descriptor[i]]}:${key(descriptor[i + 1])}'].join(',')}';
+      case RuntimeTypeDescriptorTag.function:
+        if (descriptor[7] > 0) {
+          // Owners identify descriptors; nesting positions identify bound
+          // variables when comparing alpha-equivalent signatures.
+          binders = {
+            ...binders,
+            descriptor[8]: (
+              binders.length,
+              descriptor.skip(9).take(descriptor[7]).toList(),
+            ),
+          };
+        }
+        return 'f?${isNullable ? 1 : 0}:${descriptor[4]}:${descriptor[5]}:${descriptor[6]}:'
+            '${key(descriptor[3])}:'
+            '${descriptor[7]}:${[for (final type in descriptor.skip(9).take(descriptor[7])) key(type)].join(',')}:'
+            '${[for (final type in descriptor.skip(9 + descriptor[7]).take(descriptor[5])) key(type), for (var i = 9 + descriptor[7] + descriptor[5]; i < descriptor.length; i += 3) '${_constantPool[descriptor[i]]}:${descriptor[i + 1]}:${key(descriptor[i + 2])}'].join(',')}';
+      case RuntimeTypeDescriptorTag.typeParameter:
+        final owner = descriptor[3];
+        final index = descriptor[4];
+        final binder = binders[owner];
+        if (binder != null) {
+          final parameter = (owner, index);
+          // A Never bound collapses its variable too. Follow dependent
+          // bounds, but keep recursive bounds symbolic.
+          if (!activeBounds.contains(parameter)) {
+            final bound = _runtimeTypeSemanticKey(
+              binder.$2[index],
+              binders: binders,
+              activeBounds: {...activeBounds, parameter},
+            );
+            if (bound ==
+                _nominalTypeSemanticKey(
+                  _typedTypeId(CoreTypes.never)!,
+                  false,
+                  const [],
+                )) {
+              return _nominalTypeSemanticKey(
+                isNullable ? _nullTypeId! : _typedTypeId(CoreTypes.never)!,
+                false,
+                const [],
+              );
+            }
+          }
+          return 'p?${isNullable ? 1 : 0}:${binder.$1}:$index';
+        }
+        return 'p?${isNullable ? 1 : 0}:'
+            '${owner < 0 ? owner : _typeIdentities[owner]}:'
+            '$index:${key(descriptor[5])}';
+      case RuntimeTypeDescriptorTag.futureOr:
+        final member = descriptor[3];
+        final memberKey = key(member);
+        String nominal(int? type, [bool nullable = false]) => type == null
+            ? 'missing-type'
+            : _nominalTypeSemanticKey(type, nullable, const []);
+        if (memberKey == nominal(_dynamicTypeId) ||
+            memberKey == nominal(_voidTypeId)) {
+          return memberKey;
+        }
+        if (memberKey == nominal(_objectTypeId) ||
+            memberKey == nominal(_objectTypeId, true)) {
+          return nominal(
+            _objectTypeId!,
+            isNullable || memberKey == nominal(_objectTypeId, true),
+          );
+        }
+        if (memberKey == nominal(_nullTypeId) ||
+            memberKey == nominal(_typedTypeId(CoreTypes.never)!)) {
+          return _nominalTypeSemanticKey(
+            _typedTypeId(CoreTypes.future)!,
+            isNullable || memberKey == nominal(_nullTypeId),
+            [memberKey],
+          );
+        }
+        return 'u?${isNullable || _acceptsNullType(member) ? 1 : 0}:$memberKey';
+      default:
+        throw StateError(
+          'Unknown runtime type descriptor tag ${descriptor[2]}',
+        );
+    }
   }
 
   String _nominalTypeSemanticKey(
     int id,
     bool nullable,
-    Iterable<int> arguments,
+    Iterable<String> arguments,
   ) {
     final nominal = _typeIdentities[id];
     final name = nominal == null
         ? '#$id'
         : '${nominal.library.length}:${nominal.library}'
               '${nominal.name.length}:${nominal.name}';
-    return 'n$name?${nullable ? 1 : 0}<${arguments.map(_runtimeTypeSemanticKey).join(',')}>';
-  }
-
-  String _futureOrTypeSemanticKey(int member, bool nullable) {
-    final descriptor = _typeDescriptors[member];
-    final nominal = descriptor[0];
-    if (descriptor.length == 2 &&
-        (nominal == _dynamicTypeId || nominal == _voidTypeId)) {
-      return _runtimeTypeSemanticKey(member);
-    }
-    if (nominal == _objectTypeId && descriptor.length == 2) {
-      return _runtimeTypeSemanticKey(member, nullable: nullable);
-    }
-    if (nominal == _nullTypeId || nominal == _typedTypeId(CoreTypes.never)) {
-      return _nominalTypeSemanticKey(
-        _typedTypeId(CoreTypes.future)!,
-        nullable || nominal == _nullTypeId || descriptor[1] == 1,
-        [member],
-      );
-    }
-    return 'u?${nullable || _acceptsNullType(member) ? 1 : 0}:${_runtimeTypeSemanticKey(member)}';
+    return 'n$name?${nullable ? 1 : 0}<${arguments.join(',')}>';
   }
 
   late TypedProgram _typedProgram;

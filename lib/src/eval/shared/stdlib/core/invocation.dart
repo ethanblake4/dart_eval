@@ -411,7 +411,7 @@ class $Invocation implements Invocation, $Instance {
         final typeArguments = $value.typeArguments;
         return $List.view(
           typeArguments,
-          (e) => $Type(e),
+          (e) => e is $Type ? e : $Type(e),
           runtime: runtime,
           runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
             runtime.lookupType(CoreTypes.type),

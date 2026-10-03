@@ -1090,6 +1090,19 @@ extension TypedRuntimeInterop on Runtime {
       return false;
     }
     if (actual == expected) return true;
+    final actualDescriptor = _typeDescriptors[actual];
+    final expectedDescriptor = _typeDescriptors[expected];
+    // Normalization can make generic signatures equal before their symbolic
+    // components are compared by the structural subtype rules below.
+    if (actualDescriptor.length >= 9 &&
+        expectedDescriptor.length >= 9 &&
+        actualDescriptor[2] == RuntimeTypeDescriptorTag.function &&
+        expectedDescriptor[2] == RuntimeTypeDescriptorTag.function &&
+        actualDescriptor[7] > 0 &&
+        expectedDescriptor[7] > 0 &&
+        _runtimeTypeSemanticKey(actual) == _runtimeTypeSemanticKey(expected)) {
+      return true;
+    }
     if (signatureParameterRenames != null) {
       final expectedRow = _typeDescriptors[expected];
       if (expectedRow.length == 6 &&

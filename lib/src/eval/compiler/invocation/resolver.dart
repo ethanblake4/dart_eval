@@ -2049,6 +2049,24 @@ final class CallResolver {
             }
           }
           aliasType = resolved;
+          final targetBridge = ctx
+              .topLevelDeclarationsMap[resolved.file]?[resolved.name]
+              ?.bridge;
+          if (targetBridge is BridgeClassDef) {
+            bridgeDecl = targetBridge;
+            sigReturn = resolved;
+            bridgeConstructorType = resolved;
+            final names = targetBridge.type.generics.keys.toList();
+            final arguments = interfaceArgumentsOf(resolved);
+            for (var i = 0; i < names.length && i < arguments.length; i++) {
+              bridgeConstructorGenerics[names[i]] = arguments[i];
+            }
+            offset = DeferredOrOffset(
+              file: resolved.file,
+              name: '${resolved.name}.',
+            );
+            break;
+          }
           sourceDecl = ctx
               .topLevelDeclarationsMap[resolved.file]!['${resolved.name}.']
               ?.declaration;

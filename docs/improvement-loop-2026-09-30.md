@@ -3475,3 +3475,16 @@ errors, 42 failed, 3 skipped. All 105 control_flow_graph tests pass. Scoped
 analysis and diff checks are clean. Cycle 20 is complete; remaining actual SDK
 failures require further cycles. Cycle 21 includes the every-third-loop compiler
 optimization pass.
+
+## Cycle 21 pass 1: normalized Type identity and alias constructors
+
+Runtime Type keys recursively normalize FutureOr and nullable top/bottom types,
+identify generic binders by nesting position, and follow bottom bounds with a
+cycle guard. Equality and hash keys agree for recursive generic signatures.
+The cold generic-function subtype check accepts normalized equivalent signatures.
+Invocation type-argument views preserve guest Type objects. Object aliases now
+resolve bridge constructors before considering synthesized source constructors.
+All four original normalization/Object-alias fixtures and 17 focused tests
+pass; four stale expect_fail entries were removed. One focused hash-set lookup
+test covers recursive generic equality/hash consistency. Analysis and diff
+checks pass. The interpreter dispatch loop is unchanged.
