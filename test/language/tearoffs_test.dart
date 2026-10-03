@@ -28,6 +28,22 @@ void main() {
       expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
     });
 
+    test('bare static generic tearoffs keep explicit type arguments', () {
+      final runtime = compiler.compileWriteAndLoad({
+        'example': {
+          'main.dart': '''
+            class Factory {
+              static T create<T>(T value) => value;
+              bool check() => (create<int>) is int Function(int);
+            }
+            bool main() => Factory().check();
+          ''',
+        },
+      });
+
+      expect(runtime.executeLib('package:example/main.dart', 'main'), true);
+    });
+
     test('reassignment replaces a known callable with a runtime value', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {

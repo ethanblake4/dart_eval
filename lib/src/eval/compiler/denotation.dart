@@ -352,7 +352,7 @@ final class StaticMemberDenotation extends Denotation {
           ? TypeRef.fromAnnotation(ctx, file, member.returnType!)
           : CoreTypes.dynamic.ref(ctx);
     }
-    return CoreTypes.function.ref(ctx);
+    return CallSignature.forDeclaration(ctx, file, member).toFunctionType(ctx);
   }
 
   @override

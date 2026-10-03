@@ -3222,3 +3222,13 @@ widenedInferredType helper before selecting storage. The pinned variables
 initialized to null fixture passes across global, static, instance and local
 bindings. Removed its expect_fail entry. All 31 existing globals/compiler model
 inference tests pass. No runtime or additional bytecode checks.
+
+## Cycle 19 pass 4: static generic method signatures
+
+An unqualified static generic method inside its class exposed bare Function
+rather than the declaration's function signature. It now uses the existing
+CallSignature conversion, so explicit instantiation retains argument and return
+types. Existing tear-off and inference tests plus the required-argument static
+tear-off regression pass. The full explicit_instantiated_tearoff SDK fixture
+progresses to the separate optional runtime-callable instantiation limitation;
+its expect_fail entry remains. No runtime change or extra instruction.
