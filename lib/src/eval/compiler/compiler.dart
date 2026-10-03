@@ -1285,12 +1285,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   void _assignBridgeStaticFunctionIndicesForClass(BridgeClassDef classDef) {
     final type = TypeRef.fromBridgeTypeRef(_ctx, classDef.type.type);
     final lib = type.file;
-    classDef.constructors.forEach((name, constructor) {
-      _assignBridgeIndex(lib, '${type.name}.$name');
-      if (constructor.nativeWrapper && classDef.bridge) {
-        _assignBridgeIndex(lib, '#${type.name}.$name');
-      }
-    });
+    classDef.constructors.forEach(
+      (name, _) => _assignBridgeIndex(lib, '${type.name}.$name'),
+    );
     classDef.methods.forEach((name, method) {
       if (method.isStatic) _assignBridgeIndex(lib, '${type.name}.$name');
     });
@@ -1317,7 +1314,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     final lib = type.file;
 
     classDef.constructors.forEach((name, constructor) {
-      if (constructor.nativeWrapper) return;
       final idc = _ctx.bridgeStaticFunctionIndices[lib]!;
       final id = '${type.name}.$name';
       final prev = classDef.wrap ? idc[id]! : idc.remove(id)!;

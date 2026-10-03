@@ -1090,12 +1090,11 @@ void _emitConstructorReturn(
 
   final bridgeInst = ctx.svar('bridge_instance');
   final bridgeType = TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
-  final prefix = bridge.constructors[constructorName]!.nativeWrapper ? '#' : '';
   ctx.pushOp(
     BridgeInstantiate(
       bridgeInst,
       ctx.bridgeStaticFunctionIndices[bridgeType
-          .file]!['$prefix${bridgeType.name}.$constructorName']!,
+          .file]!['${bridgeType.name}.$constructorName']!,
       inst,
       args,
       runtimeTypeId: ctx.runtimeTypes.idOf(

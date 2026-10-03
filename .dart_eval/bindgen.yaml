@@ -39,7 +39,7 @@ libraries:
       StringBuffer:
         file: string_buffer.dart
         mode: both
-        nativeConstructors: true
+        nativeSuper: true
         implicitSupers: true
         constructorCalls: [write]
         methods:

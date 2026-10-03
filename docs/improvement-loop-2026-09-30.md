@@ -3816,3 +3816,43 @@ Cycle 23 correctness follow-up: broad SDK testing identified inherited scrutinee
 Cycle 23 final-field correctness follow-up: an interface-only setter inherited beside a concrete final getter was incorrectly lowered to a direct field write. Storage writes now require a real field setter declaration. Checked noSuchMethod stubs construct Invocation with one appended extended cold opcode, preserving raw execution without Runtime and avoiding Symbol/Invocation external constructor calls. Primary opcode count remains 225; extended count is 177. Raw and serialized inheritance regression returns 41; original writable-final-field, mock, restriction-enabled, and dynamic-tearoff fixtures and three focused noSuchMethod tests pass. Scoped analyzer is clean. The AOT correctness reference was rebuilt before StringBuffer performance changes.
 
 Cycle 23 performance: standalone StringBuffer now uses an authentic SDK-generated native wrapper constructor. Its opt-in constructor metadata allocates separate ordinary and subclass callback IDs before lowering; guest subclasses retain the generated bridge constructor and virtual write overrides. Removed the StringBuffer-specific extra wrapper in cold attachBridge. No primary dispatch changes or extra bytecode operations. Existing StringBuffer and HLC tests pass; scoped analyzer is clean. Full 23-case AOT sweeps (15 samples, repeated with 7) match every checksum; compile bytecode remains 1354 bytes. Template rendering improved 30.0%/36.4%, JSON 15.4%/14.0%, HTTP headers 19.8%/7.5%. Isolated reverse-order JSON recheck 421.602 to338.034ms (19.8%); longer HTTP 930.006 to724.662ms (22.1%). Short unrelated outliers varied across sweeps; isolated longer exceptions were within1.7% (handled throw effectively unchanged) and callbacks improved. An oversized optional JSON recheck overlapped a followup and was cancelled; all affected logs were discarded, then both workload sides rerun in isolation. Final evidence uses isolated logs and completed full sweeps.
+
+Cycle 23 cleanup and final checkpoint: Astra found that foreign-private
+forwarders read wildcard parameters and could capture helper names. Their
+synthetic signatures now remain abstract; the checked boundary builds the
+Invocation from argument slots and throws through a compiler-bound core
+constructor. This removes the duplicated textual Invocation builders. A focused
+multi-library wildcard/shadowing case passes natively and in fresh/serialized
+eval; 43 inheritance/NSM tests and the original restriction fixture pass. Astra
+reviewed the fix and found no remaining material issue.
+
+The final StringBuffer implementation supersedes the native-constructor
+checkpoint. ARM inspection showed that the direct native constructor widened
+the BufferWrite host target and expanded interpreter code by 14 instructions.
+A metadata-only wrapper experiment was rejected because other virtual members
+and host roundtrips still require bridge metadata. The retained opt-in
+nativeSuper generator setting calls concrete SDK members directly when no guest
+subclass is attached. Constructor callbacks, bridge metadata, wrappers, and
+compiler routing retain their previous shape. Removed the extra constructor
+metadata and dual-ID machinery; all stdlib changes remain SDK-generated.
+Unsupported operator/generic native-super method forms keep the ordinary route.
+
+Final native-super AOT sweep: 23 cases, all 22 execution checksums match and
+compile output remains 1354 bytes. Template improved 28.7%, HTTP headers 12.0%,
+and JSON 22.9%. Reverse-order checks improved template 24.6%, HTTP 19.0%, JSON
+29.6%. Named dynamic calls measured 5.5%/6.3% slower in these runs, compared with
+roughly 12% in the native-constructor experiment; this modest residual is recorded
+rather than attributed conclusively to noise. Typed named-call bytecode is
+identical. The ARM64 primary interpreter has the same 52820 bytes/13205
+instructions, registers, internal branch targets and named calls as the
+correctness reference; the only normalized differences are 77 stub calls moved
+by a constant 1444-byte relocation. No primary or extended opcodes changed in
+this refinement. Standalone members, host roundtrips, guest write/length
+overrides, HLC, generator checks and analyzer pass.
+
+Final gates after the refinement: default 2233 passed/86 skipped; configured
+SDK-full 2737 passed/557 skipped; actual SDK 2599 passed/114 compile errors/24
+runtime failures/3 skipped; control_flow_graph 105 passed. All 26 confirmed stale
+expectations were removed across cycle 23. There remain 138 real SDK failures.
+Cycle 24 starts with six further correctness passes and includes the scheduled
+compiler optimization pass.

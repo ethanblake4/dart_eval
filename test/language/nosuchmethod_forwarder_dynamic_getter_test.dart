@@ -3,6 +3,61 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('restricted private forwarders bind slots and core helpers', () {
+    final packages = {
+      'dynamic_fixtures': {
+        'api.dart': '''
+          // @dart=3.7
+          import 'dart:core' hide Invocation, Symbol, NoSuchMethodError;
+          import 'dart:core' as core;
+          class Invocation {}
+          class Symbol {}
+          class NoSuchMethodError {}
+          abstract class Contract {
+            void _wild(int _, int Invocation, int Symbol, int NoSuchMethodError);
+            void _generic<_>(int _);
+            int get _getter;
+            set _setter(int Symbol);
+            int _field = 0;
+          }
+          bool rejected(Contract receiver) {
+            var count = 0;
+            try { receiver._wild(1, 2, 3, 4); }
+            on core.NoSuchMethodError { count++; }
+            try { receiver._generic<num>(1); }
+            on core.NoSuchMethodError { count++; }
+            try { receiver._getter; }
+            on core.NoSuchMethodError { count++; }
+            try { receiver._setter = 2; }
+            on core.NoSuchMethodError { count++; }
+            try { receiver._field; }
+            on core.NoSuchMethodError { count++; }
+            try { receiver._field = 3; }
+            on core.NoSuchMethodError { count++; }
+            return count == 6;
+          }
+        ''',
+        'main.dart': '''
+          import 'api.dart';
+          class Proxy implements Contract {
+            int calls = 0;
+            dynamic noSuchMethod(dynamic invocation) => ++calls;
+          }
+          bool main() {
+            final receiver = Proxy();
+            return rejected(receiver) && receiver.calls == 0;
+          }
+        ''',
+      },
+    };
+    for (final (mode, result) in runDynamicPackages(
+      packages,
+      entrypoint: dynamicFixtureLibrary,
+    )) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
   test(
     'forwarder signatures preserve colliding names and language versions',
     () {

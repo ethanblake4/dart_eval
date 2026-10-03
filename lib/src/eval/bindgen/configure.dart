@@ -12,7 +12,6 @@ String bindConfigureForRuntime(
 /// Configure this class for use in a [Runtime]
 static void configureForRuntime(Runtime runtime) {
   ${constructorsForRuntime(ctx, element, isBridge: isBridge)}
-  ${isBridge && ctx.classConfig?.nativeConstructors == true && ctx.classConfig?.mode == 'both' ? constructorsForRuntime(ctx, element) : ''}
   ${staticMethodsForRuntime(ctx, element, isBridge: isBridge)}
   ${staticGettersForRuntime(ctx, element, isBridge: isBridge)}
   ${compactStaticConstants(ctx, element)?.runtimeRegistrations ?? ''}

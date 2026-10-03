@@ -24,6 +24,10 @@ import '../member/member_name.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/targets.dart';
 
+final _restrictedForwarders = Expando<bool>(
+  'restricted noSuchMethod forwarder',
+);
+
 int compileMethodDeclaration(
   MethodDeclaration d,
   CompilerContext ctx,
@@ -245,7 +249,8 @@ int compileMethodDeclaration(
           } else if (b is EmptyFunctionBody) {
             // A missing abstract member on a concrete class still has its
             // declared callable boundary before forwarding to noSuchMethod.
-            if (!_forwardsAbstractMember(d, ctx, parent)) {
+            final restricted = _restrictedForwarders[d] == true;
+            if (!restricted && !_forwardsAbstractMember(d, ctx, parent)) {
               ctx.endScope();
               return null;
             }
@@ -255,10 +260,15 @@ int compileMethodDeclaration(
               parameterTypes[index],
               rep: abi.parameters[index + 1],
             );
-            final target = NoSuchMethodCall(name: methodName);
+            final target = NoSuchMethodCall(
+              name: methodName,
+              restricted: restricted,
+            );
             if (d.isSetter) {
               target.emitSetter(ctx, parameterValue(0));
-              stInfo = doReturn(ctx, expectedReturnType, null);
+              stInfo = restricted
+                  ? StatementInfo(willAlwaysThrow: true)
+                  : doReturn(ctx, expectedReturnType, null);
             } else {
               final forwarded = d.isGetter
                   ? target.emitGetterValue(ctx)
@@ -433,24 +443,6 @@ void _compileInterfaceNoSuchMethodRequirements(
         if (parameters.any((p) => p.isNamed))
           '{${parameters.where((p) => p.isNamed).map(_forwarderParameter).join(', ')}}',
       ];
-      final positional = parameters
-          .where((p) => !p.isNamed)
-          .map((p) => p.name!.lexeme)
-          .join(', ');
-      final named = parameters
-          .where((p) => p.isNamed)
-          .map((p) => "Symbol('${p.name!.lexeme}'): ${p.name!.lexeme}")
-          .join(', ');
-      final types = member.typeParameters?.typeParameters
-          .map((p) => p.name.lexeme)
-          .join(', ');
-      final invocation = member.isGetter
-          ? "Invocation.getter(Symbol('$name'))"
-          : member.isSetter
-          ? "Invocation.setter(Symbol('$name='), ${parameters.single.name!.lexeme})"
-          : types == null
-          ? "Invocation.method(Symbol('$name'), <dynamic>[$positional], <Symbol, dynamic>{$named})"
-          : "Invocation.genericMethod(Symbol('$name'), <Type>[$types], <dynamic>[$positional], <Symbol, dynamic>{$named})";
       final signature = member.isGetter
           ? '${member.returnType?.toSource() ?? 'dynamic'} get $name'
           : member.isSetter
@@ -458,7 +450,7 @@ void _compileInterfaceNoSuchMethodRequirements(
           : '${member.returnType?.toSource() ?? 'dynamic'} ${member.operatorKeyword == null ? '' : 'operator '}$name${member.typeParameters?.toSource() ?? ''}(${groups.join(', ')})';
       sources.add((
         kind,
-        '${member.metadata.map((a) => a.toSource()).join(' ')} ${restricted ? '$signature => throw NoSuchMethodError.withInvocation(this, $invocation);' : '$signature;'}',
+        '${member.metadata.map((a) => a.toSource()).join(' ')} $signature;',
       ));
     } else if (member is FieldDeclaration) {
       if (member.fields.type == null &&
@@ -466,19 +458,9 @@ void _compileInterfaceNoSuchMethodRequirements(
         continue;
       }
       final type = member.fields.type?.toSource() ?? 'dynamic';
-      sources.add((
-        MemberKind.getter,
-        restricted
-            ? "$type get $name => throw NoSuchMethodError.withInvocation(this, Invocation.getter(Symbol('$name')));"
-            : '$type get $name;',
-      ));
+      sources.add((MemberKind.getter, '$type get $name;'));
       if (!member.fields.isFinal && !member.fields.isConst) {
-        sources.add((
-          MemberKind.setter,
-          restricted
-              ? "set $name($type value) => throw NoSuchMethodError.withInvocation(this, Invocation.setter(Symbol('$name='), value));"
-              : 'set $name($type value);',
-        ));
+        sources.add((MemberKind.setter, 'set $name($type value);'));
       }
     }
     for (final (view, source) in sources) {
@@ -517,6 +499,7 @@ void _compileInterfaceNoSuchMethodRequirements(
                   .single
               as MethodDeclaration;
       final oldEnclosingLibrary = ctx.enclosingLibrary;
+      if (restricted) _restrictedForwarders[stub] = true;
       try {
         ctx.library = sourceLibrary;
         ctx.enclosingLibrary = hostLibrary;

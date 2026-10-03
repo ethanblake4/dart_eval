@@ -63,12 +63,6 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
       $StringBuffer$bridge.$new,
       isBridge: true,
     );
-
-    runtime.registerBridgeFuncRegisters(
-      'dart:core',
-      'StringBuffer.',
-      $StringBuffer.$new,
-    );
   }
 
   /// Configure this class for use during compilation
@@ -104,7 +98,6 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
           ],
         ),
         isFactory: false,
-        nativeWrapper: true,
       ),
     },
 
@@ -305,17 +298,23 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
   void $bridgeSet(String identifier, $Value value) {}
 
   @override
-  int get length => $_get('length');
+  int get length => Runtime.bridgeData[this]?.subclass == null
+      ? super.length
+      : $_get('length');
 
   @override
-  bool get isEmpty => $_get('isEmpty');
+  bool get isEmpty => Runtime.bridgeData[this]?.subclass == null
+      ? super.isEmpty
+      : $_get('isEmpty');
 
   @override
-  bool get isNotEmpty => $_get('isNotEmpty');
+  bool get isNotEmpty => Runtime.bridgeData[this]?.subclass == null
+      ? super.isNotEmpty
+      : $_get('isNotEmpty');
 
   @override
   void write(Object? object) {
-    if (Runtime.bridgeData[this] == null) {
+    if (Runtime.bridgeData[this]?.subclass == null) {
       super.write(object);
       return;
     }
@@ -329,6 +328,10 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
 
   @override
   void writeAll(Iterable<dynamic> objects, [String separator = ""]) {
+    if (Runtime.bridgeData[this]?.subclass == null) {
+      super.writeAll(objects, separator);
+      return;
+    }
     final runtime = $runtime;
     $_invoke('writeAll', [
       $Iterable.wrap(
@@ -340,6 +343,10 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
 
   @override
   void writeln([Object? obj = ""]) {
+    if (Runtime.bridgeData[this]?.subclass == null) {
+      super.writeln(obj);
+      return;
+    }
     final runtime = $runtime;
     $_invoke('writeln', [
       (obj is List || obj is Map || obj is Set
@@ -350,18 +357,29 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
 
   @override
   void writeCharCode(int charCode) {
+    if (Runtime.bridgeData[this]?.subclass == null) {
+      super.writeCharCode(charCode);
+      return;
+    }
     final runtime = $runtime;
     $_invoke('writeCharCode', [$int(charCode)]);
   }
 
   @override
   String toString() {
+    if (Runtime.bridgeData[this]?.subclass == null) {
+      return super.toString();
+    }
     final runtime = $runtime;
     return $_invoke('toString', []);
   }
 
   @override
   void clear() {
+    if (Runtime.bridgeData[this]?.subclass == null) {
+      super.clear();
+      return;
+    }
     final runtime = $runtime;
     $_invoke('clear', []);
   }
@@ -385,17 +403,6 @@ class $StringBuffer implements $Instance {
 
   /// Wrap a [StringBuffer] in a [$StringBuffer]
   $StringBuffer.wrap(this.$value) : _superclass = $Object($value);
-
-  /// Wrapper for the [StringBuffer.new] constructor
-  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $StringBuffer.wrap(
-      StringBuffer(
-        (r is $Value ? r : null) == null
-            ? ""
-            : (r is $Value ? r : null)!.$reified,
-      ),
-    );
-  }
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);

@@ -309,7 +309,6 @@ String bridgeConstructorDef(
             params: [${positionalParameters(ctx, element: constructor, member: member)}],
           ),
           isFactory: ${constructor.isFactory},
-          ${ctx.classConfig?.nativeConstructors == true && ctx.classConfig?.mode == 'both' ? 'nativeWrapper: true,' : ''}
       ),
       ''';
 }

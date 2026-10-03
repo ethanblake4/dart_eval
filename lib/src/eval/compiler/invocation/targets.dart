@@ -671,13 +671,40 @@ final class MemberValueCall extends CallTarget {
 /// A missing `super` member or a checked abstract-member forwarder — builds
 /// the corresponding invocation and dispatches to `noSuchMethod` on `this`.
 final class NoSuchMethodCall extends CallTarget {
-  const NoSuchMethodCall({required this.name, this.getterShaped = false});
+  const NoSuchMethodCall({
+    required this.name,
+    this.getterShaped = false,
+    this.restricted = false,
+  });
 
   final String name;
   final bool getterShaped;
+  final bool restricted;
 
   @override
   CallSignature? get signature => null;
+
+  Variable _dispatchInvocation(CompilerContext ctx, Variable invocation) {
+    final receiver = ctx.lookupLocal('#this')!;
+    if (restricted) {
+      final core = ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]!;
+      final error = Variable.ssa(
+        ctx,
+        InvokeExternal(
+          ctx.svar('noSuchMethodError'),
+          core['NoSuchMethodError.withInvocation']!,
+          [receiver.boxIfNeeded(ctx).ssa, invocation.ssa],
+        ),
+        CoreTypes.noSuchMethodError.ref(ctx),
+      );
+      final result = Variable.never(ctx);
+      ctx.pushOp(Throw(error.ssa));
+      return result;
+    }
+    return CallResolver(
+      ctx,
+    ).invokeOperator(receiver, 'noSuchMethod', [invocation]).result;
+  }
 
   Variable _createInvocation(
     CompilerContext ctx,
@@ -712,11 +739,7 @@ final class NoSuchMethodCall extends CallTarget {
   /// `super.m(...)` path.
   Variable emitGetterValue(CompilerContext ctx) {
     final invocation = _createInvocation(ctx, InvocationKind.getter, name, []);
-    return CallResolver(ctx).invokeOperator(
-      ctx.lookupLocal('#this')!,
-      'noSuchMethod',
-      [invocation],
-    ).result;
+    return _dispatchInvocation(ctx, invocation);
   }
 
   /// A missing superclass setter dispatches on `this`, preserving the
@@ -725,9 +748,7 @@ final class NoSuchMethodCall extends CallTarget {
     final invocation = _createInvocation(ctx, InvocationKind.setter, '$name=', [
       value.boxIfNeeded(ctx),
     ]);
-    CallResolver(
-      ctx,
-    ).invokeOperator(ctx.lookupLocal('#this')!, 'noSuchMethod', [invocation]);
+    _dispatchInvocation(ctx, invocation);
   }
 
   @override
@@ -748,8 +769,6 @@ final class NoSuchMethodCall extends CallTarget {
       );
       return refined == null ? result : result.copyWith(type: refined);
     }
-
-    final $this = ctx.lookupLocal('#this')!;
 
     final listType = CoreTypes.list
         .ref(ctx)
@@ -800,8 +819,6 @@ final class NoSuchMethodCall extends CallTarget {
       map,
       types,
     ]);
-    return CallResolver(
-      ctx,
-    ).invokeOperator($this, 'noSuchMethod', [invocation]).result;
+    return _dispatchInvocation(ctx, invocation);
   }
 }

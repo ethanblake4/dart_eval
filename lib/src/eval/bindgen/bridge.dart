@@ -62,6 +62,11 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
         final returnType = e.returnType;
         final constructorCall =
             ctx.classConfig?.constructorCalls.contains(e.name) ?? false;
+        final nativeSuper =
+            ctx.classConfig?.nativeSuper == true &&
+            !e.isAbstract &&
+            !e.isOperator &&
+            e.typeParameters.isEmpty;
         final nativeArguments = e.formalParameters
             .map((p) => '${p.isNamed ? '${p.name}: ' : ''}${p.name}')
             .join(', ');
@@ -83,7 +88,7 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
         return '''
         @override
         $returnType ${e.isOperator ? 'operator ' : ''}${e.displayName}${e.typeParameters.isEmpty ? '' : '<${e.typeParameters.join(', ')}>'}(${parameterHeader(e.formalParameters, preserveTypes: true)}) {
-          ${constructorCall ? '''if (Runtime.bridgeData[this] == null) {
+          ${nativeSuper || constructorCall ? '''if (${nativeSuper ? 'Runtime.bridgeData[this]?.subclass == null' : 'Runtime.bridgeData[this] == null'}) {
             ${returnType is VoidType ? '' : 'return '}super.${e.displayName}($nativeArguments);
             ${returnType is VoidType ? 'return;' : ''}
           }''' : ''}
@@ -146,6 +151,12 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
           )
           .map((e) {
             final type = e.type;
+            final nativeSuper =
+                ctx.classConfig?.nativeSuper == true &&
+                e.getter?.isAbstract == false;
+            final nativeGetter = nativeSuper
+                ? 'if (Runtime.bridgeData[this]?.subclass == null) return super.${e.displayName};'
+                : '';
             if (type is InterfaceType && type.isDartCoreList) {
               final nullable =
                   type.nullabilitySuffix == NullabilitySuffix.question;
@@ -153,6 +164,7 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
               return '''
             @override
             $type get ${e.displayName} {
+              $nativeGetter
               final result = \$_get('${e.displayName}') as List?;
               return ${nullable ? 'result?.cast<$elementType>()' : 'result!.cast<$elementType>()'};
             }
@@ -169,6 +181,7 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
                 return '''
             @override
             $type get ${e.displayName} {
+              $nativeGetter
               final runtime = \$runtime;
               final result = \$getProperty(runtime, '${e.displayName}');
               if (result == null || result is \$null) return null;
@@ -178,14 +191,14 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
               }
               return '''
           @override
-          $type get ${e.displayName} => TypedInterop.export${type.isDartCoreIterable ? 'Iterable' : 'Iterator'}<${type.typeArguments.single}>(
+          $type get ${e.displayName} => ${nativeSuper ? 'Runtime.bridgeData[this]?.subclass == null ? super.${e.displayName} : ' : ''}TypedInterop.export${type.isDartCoreIterable ? 'Iterable' : 'Iterator'}<${type.typeArguments.single}>(
             \$getProperty(\$runtime, '${e.displayName}'), \$runtime);
           ''';
             }
 
             return '''
         @override
-        $type get ${e.displayName} => \$_get('${e.displayName}');
+        $type get ${e.displayName} => ${nativeSuper ? 'Runtime.bridgeData[this]?.subclass == null ? super.${e.displayName} : ' : ''}\$_get('${e.displayName}');
         ''';
           })
           .join('\n') +
@@ -197,6 +210,10 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
                 '''
             @override
             set ${e.displayName}(${e.type} value) {
+              ${ctx.classConfig?.nativeSuper == true && e.setter?.isAbstract == false ? '''if (Runtime.bridgeData[this]?.subclass == null) {
+                super.${e.displayName} = value;
+                return;
+              }''' : ''}
               final runtime = \$runtime;
               \$_set('${e.displayName}', ${wrapVar(ctx, e.type, 'value')});
             }
