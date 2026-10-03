@@ -43,7 +43,11 @@ Variable compileAnonymousMethodInvocation(
       condition: (ctx) => compileNonNullCondition(ctx, receiver),
       thenBranch: (ctx, _) {
         if (isNullShorted(e.target)) {
-          _applyContinuationPromotions(ctx, receiver, e);
+          replayRecordedPromotions(
+            ctx,
+            e,
+            receiver.facts.nullShortedPromotions,
+          );
         }
         final v = _runBody(e, ctx, receiver, boundType);
         continuations = _continuationPromotions(ctx);
@@ -83,37 +87,6 @@ Map<String, (TypeRef, int)> _continuationPromotions(CompilerContext ctx) {
     }
   }
   return proofs;
-}
-
-void _applyContinuationPromotions(
-  CompilerContext ctx,
-  Variable receiver,
-  AstNode source,
-) {
-  for (final entry
-      in receiver.facts.nullShortedPromotions?.entries ??
-          const <MapEntry<String, (TypeRef, int)>>[]) {
-    final dot = entry.key.indexOf('.');
-    final name = dot < 0 ? entry.key : entry.key.substring(0, dot);
-    final binding = ctx.lookupBinding(name);
-    if (binding == null ||
-        binding.writeCaptured ||
-        binding.current.writeEpoch != entry.value.$2) {
-      continue;
-    }
-    if (dot < 0) {
-      if (canPromoteTo(ctx, entry.value.$1, binding.current.type, source)) {
-        binding.promote(entry.value.$1);
-      }
-    } else {
-      promoteMember(
-        ctx,
-        binding.current,
-        entry.key.substring(dot + 1),
-        entry.value.$1,
-      );
-    }
-  }
 }
 
 Variable _runBody(

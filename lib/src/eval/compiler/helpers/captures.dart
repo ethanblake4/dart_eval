@@ -66,7 +66,9 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       return;
     }
     final owner = _functions.indexOf(binding.$2);
-    if (setter) assignedDeclarations.add(binding.$1);
+    if (setter) {
+      assignedDeclarations.addAll(_patternBindings[binding.$1] ?? [binding.$1]);
+    }
     if (owner == _functions.length - 1) return;
     final declaration = binding.$1;
     if (declaration is SwitchMember) {

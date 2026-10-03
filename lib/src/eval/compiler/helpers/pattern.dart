@@ -382,12 +382,12 @@ Variable _matchPattern(
               pat.keyword!.keyword == Keyword.FINAL);
       // A `_` pattern variable is a wildcard: it matches but binds nothing.
       final bindsVariable = variableName != '_';
-      if (Abi.unboxedAcrossCalls(V.type).isBoxed) {
-        V = V.boxIfNeeded(ctx);
-      }
       final bindingType = pat is DeclaredVariablePattern && pat.type != null
           ? TypeRef.fromAnnotation(ctx, ctx.library, pat.type!)
           : V.type;
+      if (Abi.unboxedAcrossCalls(bindingType).isBoxed) {
+        V = V.boxIfNeeded(ctx);
+      }
       // A callable object may first become a function through the implicit
       // `.call` tear-off. Testing the original object would reject it.
       final needsCallTearOff =

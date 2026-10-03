@@ -3455,3 +3455,23 @@ calls, polymorphic calls and callbacks did not reproduce the large one-run
 regressions. Raw logs, sweep CSV and ARM64 comparison are under
 .dart_tool/improvement_loop/cycle20. Generated-machine validation and scoped
 analysis pass. The new loop fixture and external override dispatch tests pass.
+
+## Cycle 20 cleanup and final gates
+
+Astra medium reviewed the full cycle and sibling phi change. Consolidated
+anonymous-chain promotion replay with recorded-condition replay, removed the
+redundant this-cast rebind that bypassed cell storage protection, and simplified
+its binding guard. Review found OR-pattern writes recorded only one equivalent
+declaration; assignment metadata now records all aliases. One fresh/serialized
+async regression exposed both this issue and nullable pattern storage selected
+from an initially nonnullable subject. Pattern boxing now follows the declared
+binding type, retaining object storage for nullable scalars. All 16 async tests
+and 20 focused promotion tests pass. Astra checked the follow-up and found no
+further substantive concern in indexed-loop versioning or CFG phi propagation.
+
+Final default gate: 2,225 passed, 86 skipped. Final configured SDK-full gate:
+2,737 passed, 557 skipped; actual fixture outcomes: 2,545 passed, 150 compile
+errors, 42 failed, 3 skipped. All 105 control_flow_graph tests pass. Scoped
+analysis and diff checks are clean. Cycle 20 is complete; remaining actual SDK
+failures require further cycles. Cycle 21 includes the every-third-loop compiler
+optimization pass.

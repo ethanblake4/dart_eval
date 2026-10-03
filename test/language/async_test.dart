@@ -331,6 +331,43 @@ void main() {
     }
   });
 
+  test(
+    'OR-pattern captures lose nullable promotion after an outer write',
+    () async {
+      final program = _compile('''
+      import 'dart:async';
+
+      extension NullableMark on int? { int get mark => 1; }
+      extension NonNullableMark on int { int get mark => 2; }
+
+      Future<int> main() async {
+        final entered = Completer<void>();
+        final resume = Completer<void>();
+        if (7 case int? value || int? value) {
+          final pending = (() async {
+            if (value == null) return -1;
+            entered.complete();
+            await resume.future;
+            return value.mark;
+          })();
+          await entered.future;
+          value = null;
+          resume.complete();
+          return await pending;
+        }
+        return -2;
+      }
+    ''');
+      for (final (kind, runtime) in _runtimes(program)) {
+        expect(
+          await runtime.executeLib(_library, 'main'),
+          $int(1),
+          reason: kind,
+        );
+      }
+    },
+  );
+
   test('await in finally resumes pending returns and throws', () async {
     final program = _compile('''
       int marker = 0;

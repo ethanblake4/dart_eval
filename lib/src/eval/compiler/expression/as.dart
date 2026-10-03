@@ -73,16 +73,14 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
       localBinding?.typesOfInterest.add(type.withNullable(false));
       // A write-captured local can be clobbered by a closure at any
       // time — `x as T` can't promote it.
-      if (localBinding?.writeCaptured != true) {
-        if (localBinding != null) {
-          // Cell and handler slots retain their physical bank after a cast.
-          // The cast result can be unboxed without changing storage reads.
-          localBinding.rebind(
-            localBinding.storage is SsaStorage
-                ? result
-                : localBinding.current.withType(type),
-          );
-        }
+      if (localBinding != null && !localBinding.writeCaptured) {
+        // Cell and handler slots retain their physical bank after a cast.
+        // The cast result can be unboxed without changing storage reads.
+        localBinding.rebind(
+          localBinding.storage is SsaStorage
+              ? result
+              : localBinding.current.withType(type),
+        );
       }
     }
     return result;
@@ -142,11 +140,5 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // (todo) Mixins may need different behavior
   V = update(V, slot);
 
-  // `this as T` promotes the receiver itself — store the promoted view on
-  // the `#this` local so later `this` reads see it (anonymous-method
-  // receivers, extension receivers, and class `this` all live there).
-  if (e.expression is ThisExpression && promotes) {
-    ctx.lookupBinding('#this')?.rebind(V);
-  }
   return V;
 }

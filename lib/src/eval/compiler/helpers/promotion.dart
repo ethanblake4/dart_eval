@@ -348,6 +348,25 @@ bool _isCoreIdentical(CompilerContext ctx, MethodInvocation expression) {
   }
 }
 
+/// Replays local and member proofs whose binding write epochs still match.
+void replayRecordedPromotions(
+  CompilerContext ctx,
+  AstNode source,
+  Map<String, (TypeRef, int)>? recorded,
+) {
+  for (final entry
+      in recorded?.entries ?? const <MapEntry<String, (TypeRef, int)>>[]) {
+    _applyRecorded(
+      ctx,
+      source,
+      entry.key,
+      entry.value,
+      (local, type, member) => _apply(ctx, local, type, member),
+      const {},
+    );
+  }
+}
+
 /// Applies a recorded condition entry — `x` promotes a local directly,
 /// `x._f` promotes a member of `x`'s binding.
 void _applyRecorded(
