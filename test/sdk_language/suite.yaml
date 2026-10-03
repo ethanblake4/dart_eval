@@ -217,7 +217,6 @@ expect_fail:
   - path: 'static_weak_reference_function_apply_test.dart'
   - path: 'static_weak_reference_test.dart'
   - path: 'string/interpolation_and_buffer_test.dart'
-  - path: 'symbol/private_symbol_literal_test.dart'
   - path: 'sync_star/yield_star_downwards_inference_test.dart'
   - path: 'this_promotion/this_promotion_cascaded_test.dart'
   - path: 'this_promotion/this_promotion_disabled_test.dart'

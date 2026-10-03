@@ -41,7 +41,7 @@ void main() {
       }, prints('Symbol("foo.bar")\n'));
     });
 
-    test('Private symbol literal strips leading underscore', () {
+    test('Private symbol literal preserves its name', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''
@@ -54,7 +54,7 @@ void main() {
 
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
-      }, prints('Symbol("private")\n'));
+      }, prints('Symbol("_private")\n'));
     });
 
     test('Symbol literal can be assigned and compared', () {

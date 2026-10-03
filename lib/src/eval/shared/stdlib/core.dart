@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/enum.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/errors.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/symbol_literal.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/error_hooks.dart'
     as assertion_hooks;
 import 'package:dart_eval/src/eval/shared/stdlib/core/exceptions.dart';
@@ -45,6 +46,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.addSource(core_typedefs.sdkTypedefsSource);
     configurePrintForCompile(registry);
     configureIdenticalForCompile(registry);
+    configureSymbolLiteralsForCompile(registry);
     registry.defineBridgeClass($dynamicCls);
     assertion_hooks.configureAssertionForCompile(registry);
     registry.defineBridgeClass($voidCls);
@@ -98,6 +100,7 @@ class DartCorePlugin implements EvalPlugin {
   void configureForRuntime(Runtime runtime) {
     configurePrintForRuntime(runtime);
     configureIdenticalForRuntime(runtime);
+    configureSymbolLiteralsForRuntime(runtime);
     $String.configureForRuntime(runtime);
     $List.configureForRuntime(runtime);
     $MapEntry.configureForRuntime(runtime);

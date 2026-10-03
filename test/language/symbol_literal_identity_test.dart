@@ -14,6 +14,11 @@ int main() {
   final runtimeSymbol = Symbol('a');
   if (runtimeSymbol != #a || runtimeSymbol.hashCode != (#a).hashCode) return -7;
   if (#a == #b) return -8;
+  if (#_a == const Symbol('_a') || const Symbol('_a') == #_a) return -11;
+  if (#_a.foo == const Symbol('_a.foo') ||
+      const Symbol('_a.foo') == #_a.foo) return -12;
+  if (!same(#_a, #_a) || !same(#_a.foo, #_a.foo)) return -13;
+  if (!same(#foo._a, const Symbol('foo._a'))) return -14;
   const lookup = <Symbol, int>{#a: 1, #b: 2};
   if (lookup[const Symbol('b')] != 2) return -9;
   switch (const Symbol('a')) {

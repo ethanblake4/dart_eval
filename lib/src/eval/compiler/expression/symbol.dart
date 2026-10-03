@@ -8,21 +8,24 @@ import '../helpers/const.dart';
 import 'package:dart_eval/src/eval/ir/bridge.dart';
 
 Variable compileSymbolLiteral(SymbolLiteral l, CompilerContext ctx) {
-  var name = l.components.map((t) => t.lexeme).join('.');
-  final isPrivate = l.components.any((token) => token.lexeme.startsWith('_'));
-  if (name.startsWith('_')) {
-    name = name.substring(1);
-  }
+  final name = l.components.map((t) => t.lexeme).join('.');
+  final isPrivate = name.startsWith('_');
   final argument = BuiltinValue(stringval: name).push(ctx).boxIfNeeded(ctx);
+  final library = isPrivate
+      ? BuiltinValue(
+          stringval: ctx.libraryUri(ctx.library),
+        ).push(ctx).boxIfNeeded(ctx)
+      : null;
   final value = Variable.ssa(
     ctx,
     InvokeExternal(
       ctx.svar('symbol'),
-      ctx.bridgeStaticFunctionIndices[ctx
-          .libraryMap['dart:core']!]!['Symbol.']!,
-      [argument.ssa],
+      ctx.bridgeStaticFunctionIndices[ctx.libraryMap['dart:core']!]![isPrivate
+          ? '_privateSymbolLiteral'
+          : 'Symbol.']!,
+      [argument.ssa, if (library != null) library.ssa],
     ),
     CoreTypes.symbol.ref(ctx),
   );
-  return isPrivate ? value : internConst(ctx, value, value.type);
+  return internConst(ctx, value, value.type);
 }

@@ -3739,3 +3739,17 @@ existing inference/capture tests and scoped analysis pass. One confirmed stale
 entry removed. The investigation used an isolated checkout while SDK bindings
 were regenerated; temporary diagnostics were removed. No runtime or bytecode
 operations added and no duplicate SDK regression copied into the normal suite.
+Four neighboring closure fixtures also pass their selected SDK multitest variants.
+
+## Cycle 23 pass 2: library identity for private symbols
+
+Private literals retain their complete name and defining guest library URI and
+share canonical identity within that library. Privacy is determined by the first
+component: foo._a is public while _a.foo is private, as verified with native Dart.
+A hand-maintained cold helper supplies the guest-library identity unavailable to
+the public SDK Symbol constructor; the SDK-generated Symbol binding is unchanged.
+Its shared factory returns the interned wrapper directly without allocating a
+second wrapper. The original private-symbol fixture passes, and the triple-shift
+fixture was rechecked passing without a remaining expectation entry. Five focused
+symbol tests pass independently of other in-progress bindings. Scoped analysis and
+diff checks pass. One confirmed stale entry removed. No interpreter-loop change.
