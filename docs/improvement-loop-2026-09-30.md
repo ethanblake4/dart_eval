@@ -3241,3 +3241,15 @@ annotated nullable type until an explicit flow check or subsequent permitted
 first assignment. The SDK variable_initialization_promotion fixture passes;
 removed its expect_fail entry. All 21 focused existing promotion tests pass.
 No runtime or bytecode changes.
+
+## Cycle 19 pass 6: SDK environment definitions
+
+SDK SharedOptions -D values now apply to the fixture's environment bridge calls
+through its existing runtime plugin configuration, including imported sources.
+Host SDK library flags use literal const environment lookups; the expect config
+shim consistently describes this VM host. The existing hand-maintained bool
+binding now honors defaultValue for non-boolean environment strings. The three
+SDK environment fixtures pass and their stale entries were removed. Focused
+checks cover define isolation, empty strings, hex integers and invalid booleans.
+Touched-file analysis is clean. Generated stdlib and interpreter dispatch are
+unchanged. Arbitrary -D conditional import selection remains outside this fix.

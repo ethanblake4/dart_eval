@@ -387,18 +387,19 @@ Future<void> asyncExpectThrowsTypeErrorOrNSM(Object? computation) =>
 ''';
 
 /// `package:expect/config.dart` — queried by `variations.dart`. dart_eval
-/// reports itself as neither VM nor web configuration.
+/// uses the VM host's library availability for environment constructors.
 const expectConfigShim = '''
 final String configAsString = 'dart_eval';
-const bool isVmConfiguration = false;
+const bool isVmConfiguration = true;
 const bool isDart2jsConfiguration = false;
 const bool isDdcConfiguration = false;
 const bool isDart2WasmConfiguration = false;
-const bool isVmJitConfiguration = false;
-const bool isVmAotConfiguration = false;
+const bool isVmJitConfiguration = bool.fromEnvironment('dart.library.mirrors');
+const bool isVmAotConfiguration = !isVmJitConfiguration;
+const bool isWebConfiguration = false;
 const bool isDart2jsOss = false;
 const bool isDart2jsOssConfiguration = false;
-const bool isVm = false;
+const bool isVm = true;
 const bool isWasm = false;
 ''';
 

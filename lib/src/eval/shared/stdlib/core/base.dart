@@ -272,7 +272,11 @@ class $bool implements $Instance {
   ) {
     final name = (r as $Value).$value as String;
     final libraryValue = sdkLibraryEnvironment[name];
-    if (libraryValue != null) return $bool(libraryValue == 'true');
+    if (libraryValue != null) {
+      return $bool(
+        bool.tryParse(libraryValue) ?? (s as $Value?)?.$value ?? false,
+      );
+    }
     return $bool(
       bool.fromEnvironment(name, defaultValue: (s as $Value?)?.$value ?? false),
     );

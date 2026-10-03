@@ -28,6 +28,7 @@ import 'package:yaml/yaml.dart';
 
 import 'shims.dart';
 import 'sdk_multitest.dart';
+import 'sdk_environment.dart';
 
 String _normalizeRelPath(String relPath) => relPath.replaceAll('\\', '/');
 
@@ -583,6 +584,10 @@ Future<void> executeSdkMain(
   SdkTest test,
   List<DartSource> sources,
 ) async {
+  final source = sources.firstWhere(
+    (source) => source.uri.toString() == test.uri,
+  );
+  runtime.addPlugin(SdkEnvironmentPlugin(source.toString()));
   await runtime.executeLib(
     test.uri,
     'main',

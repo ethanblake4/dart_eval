@@ -10,7 +10,7 @@ sdk_commit: 6c4009687d2c881f880127fc12b9ad7c72111d33
 # overrides are unsupported; unversioned fixtures remain eligible.
 min_sdk: '3.0'
 
-# Directories under tests/language forming the "core" set ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a fast,
+# Directories under tests/language forming the "core" set ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â a fast,
 # semantics-focused subset for use during feature development
 # (`dart test test/sdk_language/core_test.dart`). The full suite runs
 # everything else and is tagged `sdk-full` (see dart_test.yaml).
@@ -54,7 +54,7 @@ core:
 # One of: skip | expect_compile_error
 negative: skip
 
-# Tests that can never pass (or are not meaningful) under dart_eval ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â skipped
+# Tests that can never pass (or are not meaningful) under dart_eval ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â skipped
 # unconditionally. Entries are paths relative to tests/language; a trailing
 # '/' or a glob matches whole directories.
 exclude:
@@ -70,7 +70,6 @@ expect_fail:
   - path: 'async/await_user_defined_future_soundness_test.dart'
   - path: 'async/derive_future_type_test.dart'
     reason: '\$Future bridge lacks catchError/whenComplete; await on Future-implementing classes unsupported'
-  - path: 'bool/has_environment_test.dart'
   - path: 'closure/in_initializer2_test.dart'
   - path: 'closure/tearoff_dynamic_test.dart'
   - path: 'closure/type_arguments_test.dart'
@@ -98,8 +97,6 @@ expect_fail:
     reason: 'extension type declarations unsupported'
   - path: 'dot_shorthands/equality/equality_test.dart'
     reason: 'extension type declarations unsupported'
-  - path: 'dot_shorthands/language_defined/bool_from_environment_test.dart'
-    reason: 'SharedOptions -D compile-time environment unsupported'
   - path: 'dot_shorthands/member/static_method_cascade_test.dart'
     reason: 'extension type declarations unsupported'
   - path: 'dot_shorthands/member/static_method_collection_literal_test.dart'
@@ -139,7 +136,7 @@ expect_fail:
   - path: 'enum/enhanced_enums_basic_test.dart'
   - path: 'enum/enum_test.dart'
   - path: 'enum/initialization_near_stack_overflow_test.dart'
-    reason: 'Unknown type StackOverflowError ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â core type not resolvable in on-catch'
+    reason: 'Unknown type StackOverflowError ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â core type not resolvable in on-catch'
   - path: 'exception/nested_catch_rethrow_test.dart'
     reason: 'sync* YieldStatement not implemented'
   - path: 'extension_methods/null_aware_reachability_test.dart'
@@ -174,7 +171,6 @@ expect_fail:
   - path: 'inference_update_2/no_such_method_restriction_stack_trace_test.dart'
   - path: 'inference_using_bounds/restricting_choices_using_bounds_test.dart'
   - path: 'interceptor/interceptor_test.dart'
-  - path: 'library/env_test.dart'
   - path: 'library/library5_test.dart'
   - path: 'list/list_test.dart'
   - path: 'main/no_main_test.dart'
