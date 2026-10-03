@@ -13,9 +13,14 @@ import '../invocation/accessors.dart';
 import '../member/member.dart';
 import '../member/member_name.dart';
 import 'identifier.dart';
+import 'dot_shorthand.dart';
 
 /// Handles `List<num>`, `Map<String, int>` etc. as expressions.
-Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
+Variable compileFunctionReference(
+  FunctionReference e,
+  CompilerContext ctx, [
+  TypeRef? bound,
+]) {
   final typeArguments = e.typeArguments?.arguments;
   final target = e.function;
   if (target is SimpleIdentifier &&
@@ -57,8 +62,13 @@ Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
   }
   Variable? read;
   if (typeArguments != null &&
-      (e.function is Identifier || e.function is PropertyAccess)) {
-    final reference = compileExpressionAsReference(e.function, ctx);
+      (e.function is Identifier ||
+          e.function is PropertyAccess ||
+          e.function is DotShorthandPropertyAccess)) {
+    final function = e.function;
+    final reference = function is DotShorthandPropertyAccess
+        ? compileDotShorthandReference(ctx, function, bound)
+        : compileExpressionAsReference(function, ctx);
     final type = reference.resolveType(ctx, source: e);
     if (type is FunctionTypeRef) {
       final signature = type.signature;
@@ -97,7 +107,7 @@ Variable compileFunctionReference(FunctionReference e, CompilerContext ctx) {
     }
     read = reference.getValue(ctx, e);
   }
-  final inner = read ?? compileExpression(e.function, ctx);
+  final inner = read ?? compileExpression(e.function, ctx, bound);
 
   if (receiverOf(ctx, inner) case TypeLiteralReceiver(:final type)) {
     final baseType = type;

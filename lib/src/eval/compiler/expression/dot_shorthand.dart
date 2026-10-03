@@ -47,6 +47,7 @@ bool containsLeadingShorthand(Expression e) => switch (e) {
   DotShorthandPropertyAccess() ||
   DotShorthandInvocation() ||
   DotShorthandConstructorInvocation() => true,
+  FunctionReference(:final function) => containsLeadingShorthand(function),
   PostfixExpression(:final operand) => containsLeadingShorthand(operand),
   PropertyAccess(:final target?) => containsLeadingShorthand(target),
   MethodInvocation(:final target?) => containsLeadingShorthand(target),
@@ -55,7 +56,8 @@ bool containsLeadingShorthand(Expression e) => switch (e) {
 };
 
 bool _isSelectorReceiver(AstNode source) {
-  while (source.parent is PostfixExpression) {
+  while (source.parent is PostfixExpression ||
+      source.parent is FunctionReference) {
     source = source.parent!;
   }
   return switch (source.parent) {
@@ -73,11 +75,21 @@ Variable compileDotShorthandPropertyAccess(
   DotShorthandPropertyAccess e,
   TypeRef? bound,
 ) {
+  return compileDotShorthandReference(ctx, e, bound).getValue(ctx, e);
+}
+
+/// Keeps a context-selected static member available for explicit generic
+/// tear-off instantiation, just like a spelled-out `C.member<T>` reference.
+IdentifierReference compileDotShorthandReference(
+  CompilerContext ctx,
+  DotShorthandPropertyAccess e,
+  TypeRef? bound,
+) {
   final type = _shorthandContextType(ctx, bound, e);
   return IdentifierReference.receiver(
     TypeLiteralReceiver(type),
     e.propertyName.name,
-  ).getValue(ctx, e);
+  );
 }
 
 /// `.member(args)` / `.new(args)` / `.name(args)` — a constructor invocation
@@ -110,13 +122,18 @@ Variable compileDotShorthandConstructorInvocation(
   return compileInstanceOf(
     ctx,
     staticType: type,
-    instantiatedType: type,
+    instantiatedType: _shorthandConstructorType(type, e),
     name: ctorNameOf(e.constructorName.name),
     argumentList: e.argumentList,
     isConst: e.isConst,
     source: e,
   );
 }
+
+// A selector chain's context chooses the constructor namespace. Its type
+// arguments belong to the chain result, so the constructor infers its own.
+TypeRef _shorthandConstructorType(TypeRef type, AstNode source) =>
+    _isSelectorReceiver(source) ? nominalDeclOf(type)?.rawType ?? type : type;
 
 Variable _invokeShorthandMember(
   CompilerContext ctx,
@@ -138,7 +155,7 @@ Variable _invokeShorthandMember(
     return compileInstanceOf(
       ctx,
       staticType: type,
-      instantiatedType: type,
+      instantiatedType: _shorthandConstructorType(type, source),
       name: name,
       argumentList: argumentList,
       isConst: inConstantContext,
@@ -224,7 +241,7 @@ Variable _invokeShorthandMember(
     return compileInstanceOf(
       ctx,
       staticType: type,
-      instantiatedType: type,
+      instantiatedType: _shorthandConstructorType(type, source),
       name: '',
       argumentList: argumentList,
       isConst: inConstantContext,

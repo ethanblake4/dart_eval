@@ -94,7 +94,7 @@ Variable compileExpression(
   } else if (e is PatternAssignment) {
     return compilePatternAssignment(ctx, e);
   } else if (e is FunctionReference) {
-    return compileFunctionReference(e, ctx);
+    return compileFunctionReference(e, ctx, bound);
   } else if (e is AnonymousMethodInvocation) {
     return compileAnonymousMethodInvocation(e, ctx, boundType: bound);
   }

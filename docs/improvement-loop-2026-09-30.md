@@ -4368,3 +4368,15 @@ Both untouched cascade and collection originals pass fresh and serialized modes,
 and their stale expectations are removed. A unique generic-constructor record
 probe checks retained nominal fields and a captured input snapshot; 31 focused
 representation tests pass and scoped analysis is clean.
+
+### Cycle 27 correctness pass 2: shorthand selector context and generic tear-offs
+
+Selector context now selects the constructor namespace without becoming the
+constructor's type arguments. Generic static member tear-offs reached through a
+dot shorthand retain the context-selected owner and accept their explicit method
+type arguments through `.call`. A custom `Envelope<T, U>` regression covers the
+valid call, wrong type-argument count and missing context. The SDK-shaped
+`List.generate().map()` sample was removed; SDK coverage already exercises that
+surface, while the retained cases isolate the custom generic tear-off behavior.
+The confirmed stale `dot_shorthands/type_parameter/type_parameter_test.dart`
+expectation was removed after its fresh/serialized pass.

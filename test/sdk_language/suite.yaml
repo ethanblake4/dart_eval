@@ -69,7 +69,6 @@ exclude:
 expect_fail:
   - path: 'constructor/patch_tear_off_test.dart'
   - path: 'dot_shorthands/multiple/type_alias_test.dart'
-  - path: 'dot_shorthands/type_parameter/type_parameter_test.dart'
   - path: 'extension_methods/null_aware_reachability_test.dart'
     reason: '?. on explicit extension application + expectStaticType'
   - path: 'extension_type/field_promotion_implements_test.dart'
