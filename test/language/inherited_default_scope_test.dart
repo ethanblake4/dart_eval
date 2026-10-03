@@ -3,6 +3,36 @@ import 'package:test/test.dart';
 
 void main() {
   test(
+    'escaping local defaults retain lexical constants and formal shadowing',
+    () {
+      final program = Compiler().compile({
+        'defaults': {
+          'main.dart': '''
+Function make() {
+  const values = <int>[3, 5];
+  const alias = values;
+  const seed = 7;
+  int sum([List<int> values = alias, int seed = seed]) =>
+      values[0] + values[1] + seed;
+  return sum;
+}
+int main() {
+  dynamic sum = make();
+  return sum() + sum(<int>[1, 1], 4);
+}
+''',
+        },
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        expect(runtime.executeLib('package:defaults/main.dart', 'main'), 21);
+      }
+    },
+  );
+
+  test(
     'inherited defaults resolve static constants in their declaring class',
     () {
       final program = Compiler().compile({

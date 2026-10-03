@@ -4,12 +4,26 @@ import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/reference.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
+import '../helpers/captures.dart';
+import '../helpers/default_value.dart';
+import 'expression.dart';
 
 Variable compileIdentifier(
   Identifier id,
   CompilerContext ctx, [
   TypeRef? bound,
 ]) {
+  if (ctx.compilingDefaultExpression && id is SimpleIdentifier) {
+    final declaration = capturesFor(id).lexicalConstants[id];
+    if (declaration?.initializer case final initializer?) {
+      return withDefaultExpressionScope(
+        ctx,
+        ctx.library,
+        initializer,
+        () => compileExpression(initializer, ctx, bound),
+      );
+    }
+  }
   return compileIdentifierAsReference(id, ctx).getValue(ctx, id, bound);
 }
 

@@ -321,6 +321,9 @@ class CompilerContext with ScopeContext {
 
   Declaration? currentClass;
 
+  /// Defaults rematerialize lexical constants instead of reading outer locals.
+  bool compilingDefaultExpression = false;
+
   /// The extension whose member is being compiled, if any. Extension
   /// members are instance-like (they have a receiver) but [currentClass]
   /// stays null since the `on` type isn't a declared class member scope.

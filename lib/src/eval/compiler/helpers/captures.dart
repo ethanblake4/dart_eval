@@ -14,6 +14,10 @@ CaptureAnalysis capturesFor(AstNode node) {
 /// Resolves lexical bindings before code generation, so conditional closure
 /// creation never controls whether a shared cell exists.
 class CaptureAnalysis extends RecursiveAstVisitor<void> {
+  /// Constant references can be rematerialized outside their declaring graph,
+  /// including optional defaults, without capturing an enclosing SSA value.
+  final lexicalConstants = <SimpleIdentifier, VariableDeclaration>{};
+  int _defaultDepth = 0;
   final captured = <AstNode>{};
   final declaringFunctions = <AstNode, AstNode>{};
   final assignedDeclarations = <AstNode>{};
@@ -46,12 +50,19 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
     }
   }
 
-  void _use(String name, {bool setter = false}) {
+  void _use(String name, {bool setter = false, SimpleIdentifier? source}) {
     (AstNode, AstNode)? binding;
     for (final scope in _scopes.reversed) {
       binding = scope[name];
       if (binding != null) break;
     }
+    if (source != null) {
+      if (binding?.$1 case VariableDeclaration declaration
+          when declaration.isConst) {
+        lexicalConstants[source] = declaration;
+      }
+    }
+    if (_defaultDepth != 0) return;
     if (binding == null &&
         name != '#this' &&
         _members.isNotEmpty &&
@@ -95,6 +106,16 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
     bool instance = false,
     Iterable<AstNode> initializers = const [],
   }) {
+    // Defaults resolve in the enclosing lexical scope, before formal names
+    // become visible. Their constant references do not require captures.
+    _defaultDepth++;
+    try {
+      for (final parameter in parameters?.parameters ?? <FormalParameter>[]) {
+        parameter.defaultClause?.value.accept(this);
+      }
+    } finally {
+      _defaultDepth--;
+    }
     _functions.add(node);
     _scope(() {
       if (instance) _declare('#this', node);
@@ -335,6 +356,6 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
         parent is Label) {
       return;
     }
-    _use(node.name, setter: setter);
+    _use(node.name, setter: setter, source: node);
   }
 }

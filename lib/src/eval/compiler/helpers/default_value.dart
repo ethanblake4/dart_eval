@@ -15,6 +15,7 @@ import '../errors.dart';
 import '../member/member.dart' show SourceMember;
 import '../variable.dart';
 import 'redirect_constructor.dart';
+import 'captures.dart';
 
 /// Compiles a constant default in its lexical scope, including class statics.
 T withDefaultExpressionScope<T>(
@@ -41,6 +42,7 @@ T withDefaultExpressionScope<T>(
   final previousAnonymousReceiver = ctx.anonymousThisReceiver;
   final previousDeclaringClass = ctx.memberDeclaringClass;
   final previousLocals = ctx.locals;
+  final previousDefaultExpression = ctx.compilingDefaultExpression;
   final previousTypeScope = ctx.typeScopes.remove(library);
   ctx
     ..library = library
@@ -49,6 +51,7 @@ T withDefaultExpressionScope<T>(
     ..currentExtension = owner is ExtensionDeclaration ? owner : null
     ..anonymousThisReceiver = null
     ..memberDeclaringClass = null
+    ..compilingDefaultExpression = true
     ..locals = [{}];
   try {
     return body();
@@ -65,6 +68,7 @@ T withDefaultExpressionScope<T>(
       ..currentExtension = previousExtension
       ..anonymousThisReceiver = previousAnonymousReceiver
       ..memberDeclaringClass = previousDeclaringClass
+      ..compilingDefaultExpression = previousDefaultExpression
       ..locals = previousLocals;
   }
 }
@@ -148,6 +152,12 @@ Object? evaluateDefaultValue(
           context: bound,
         );
       case SimpleIdentifier(:final name):
+        final lexicalConstant = capturesFor(
+          expression,
+        ).lexicalConstants[expression];
+        if (lexicalConstant?.initializer case final initializer?) {
+          return evaluate(initializer, context: bound);
+        }
         final staticMember = withDefaultExpressionScope(
           ctx,
           library,
@@ -391,6 +401,9 @@ int _compileDefaultThunk(
     ctx.library = library;
     return ctx.withTypeParameters(ctx.library, null, null, () {
       final thunkId = ctx.beginFunction('<default>');
+      // A default may tear off this callable or another callable whose
+      // defaults point back here. Reserve the lazy thunk before visiting it.
+      ctx.defaultThunkCache[expression] = thunkId;
       ctx.locals = [];
       ctx.exceptionDepth = 0;
       ctx.beginScope();
@@ -407,8 +420,11 @@ int _compileDefaultThunk(
       ctx.pushOp(Return(value.ssa));
       ctx.endScope();
       ctx.finishMethod();
-      return ctx.defaultThunkCache[expression] = thunkId;
+      return thunkId;
     });
+  } catch (_) {
+    ctx.defaultThunkCache.remove(expression);
+    rethrow;
   } finally {
     ctx.library = previousLibrary;
     outer.restore();

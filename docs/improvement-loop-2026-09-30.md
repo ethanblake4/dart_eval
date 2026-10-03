@@ -3870,3 +3870,18 @@ expectation. No runtime changes or extra bytecode checks were added.
 The scheduled additional compiler pass targets compilation speed and compiler
 resource use, as clarified by Ethan. Generated-code optimization remains part of
 the regular performance step.
+
+
+## Cycle 24 correctness checkpoint 2
+
+Recursive callable defaults now reserve their thunk ID before compiling the
+body, preventing self/mutual tear-offs from compiling the same thunk recursively.
+Optional defaults retain lexical constant declarations and resolve them before
+formal parameter names enter scope. Escaping callables rematerialize those
+constants without capturing values from another SSA graph. Ordinary identifier
+compilation skips the metadata lookup outside default compilation.
+
+Original regress13179, regress18435 and cyclic_default_values fixtures pass;
+38 focused tests and scoped analyzer checks pass, including fresh/serialized
+escaping defaults with chained constant lists and formal-name shadowing. Removed
+the three confirmed stale expectations. No runtime changes.
