@@ -120,6 +120,8 @@ final class SetPropertyStatic extends Operation {
   final int index;
   final SSA value;
   final bool isLateFinal;
+  final String? fieldName;
+  final bool isLateInitialization;
 
   /// The register bank [value] arrives in. Typed numeric stores can retain
   /// native values until an object read needs a box.
@@ -130,6 +132,8 @@ final class SetPropertyStatic extends Operation {
     this.index,
     this.value, {
     this.isLateFinal = false,
+    this.fieldName,
+    this.isLateInitialization = false,
     this.rep = MachineRepresentation.object,
   });
 
@@ -145,6 +149,8 @@ final class SetPropertyStatic extends Operation {
       object == other.object &&
       index == other.index &&
       isLateFinal == other.isLateFinal &&
+      fieldName == other.fieldName &&
+      isLateInitialization == other.isLateInitialization &&
       rep == other.rep &&
       value == other.value;
 
@@ -154,6 +160,8 @@ final class SetPropertyStatic extends Operation {
       index.hashCode ^
       value.hashCode ^
       isLateFinal.hashCode ^
+      fieldName.hashCode ^
+      isLateInitialization.hashCode ^
       rep.hashCode;
 
   @override
@@ -164,6 +172,8 @@ final class SetPropertyStatic extends Operation {
       index,
       inputs[1],
       isLateFinal: isLateFinal,
+      fieldName: fieldName,
+      isLateInitialization: isLateInitialization,
       rep: rep,
     );
   }
@@ -174,6 +184,7 @@ final class LoadPropertyStatic extends Operation {
   final SSA object;
   final int index;
   final bool isLate;
+  final String? fieldName;
 
   /// The bank the read lands in; `object` yields a `$Value`, a scalar bank
   /// reads the field directly into it.
@@ -184,6 +195,7 @@ final class LoadPropertyStatic extends Operation {
     this.object,
     this.index, {
     this.isLate = false,
+    this.fieldName,
     this.rep = MachineRepresentation.object,
   });
 
@@ -203,6 +215,7 @@ final class LoadPropertyStatic extends Operation {
       object == other.object &&
       index == other.index &&
       isLate == other.isLate &&
+      fieldName == other.fieldName &&
       rep == other.rep;
 
   @override
@@ -211,6 +224,7 @@ final class LoadPropertyStatic extends Operation {
       object.hashCode ^
       index.hashCode ^
       isLate.hashCode ^
+      fieldName.hashCode ^
       rep.hashCode;
 
   @override
@@ -220,6 +234,7 @@ final class LoadPropertyStatic extends Operation {
       readsFrom?.first ?? object,
       index,
       isLate: isLate,
+      fieldName: fieldName,
       rep: rep,
     );
   }

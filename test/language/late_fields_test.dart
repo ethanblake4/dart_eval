@@ -2,6 +2,44 @@ import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('late error names survive inherited private access and encoding', () {
+    final program = Compiler().compile({
+      'late_fields': {
+        'main.dart': '''
+        late final int top;
+        class Base { late final int _value; }
+        class Child extends Base {}
+        bool fails(Function action, String message) {
+          try { action(); } catch (error) {
+            return error is Error && error.toString() == message;
+          }
+          return false;
+        }
+        bool main() {
+          dynamic child = Child();
+          if (!fails(() => child._value,
+              "LateInitializationError: Field '_value' has not been initialized.")) return false;
+          child._value = 7;
+          if (!fails(() => child._value = 8,
+              "LateInitializationError: Field '_value' has already been initialized.")) return false;
+          if (!fails(() => top,
+              "LateInitializationError: Field 'top' has not been initialized.")) return false;
+          top = 9;
+          return child._value == 7 && top == 9 && fails(() => top = 10,
+              "LateInitializationError: Field 'top' has already been initialized.");
+        }
+      ''',
+      },
+    });
+    for (final candidate in [program, Program.read(program.write().buffer)]) {
+      expect(
+        Runtime.ofProgram(
+          candidate,
+        ).executeLib('package:late_fields/main.dart', 'main'),
+        true,
+      );
+    }
+  });
   test('discarded property reads preserve getter side effects', () {
     final program = Compiler().compile({
       'late_fields': {

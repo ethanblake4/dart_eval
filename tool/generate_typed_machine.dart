@@ -1910,6 +1910,23 @@ String familyOf(String name) {
     mayThrow: true,
     extended: true,
   );
+  add(
+    'rReadNamedLateFieldR',
+    'r = TypedLateField.readNamed(r, runtime!, index);',
+    inputs: [6],
+    output: 6,
+    immediate: 'runtimeConstant',
+    mayThrow: true,
+    extended: true,
+  );
+  add(
+    'writeNamedLateFinalFieldRS',
+    'TypedLateField.writeNamedFinal(r, s, runtime!, index);',
+    inputs: [6, 7],
+    immediate: 'runtimeConstant',
+    mayThrow: true,
+    extended: true,
+  );
   return (ops: ops, extended: extendedOps);
 }
 

@@ -109,6 +109,7 @@ void compileFieldDeclaration(
           receiver,
           fieldIndex0,
           isLate: d.fields.isLate,
+          fieldName: fieldName,
         ),
       );
       ctx.pushOp(Return(value));
@@ -141,6 +142,7 @@ void compileFieldDeclaration(
             fieldIndex0,
             value,
             isLateFinal: d.fields.isLate && field.isFinal,
+            fieldName: fieldName,
           ),
         );
         ctx.pushOp(Return(value));
@@ -190,6 +192,8 @@ void _compileLateFieldInitializer(
           fieldIndex,
           value.ssa,
           isLateFinal: field.isFinal,
+          fieldName: field.name.lexeme,
+          isLateInitialization: true,
         ),
       );
       return StatementInfo();

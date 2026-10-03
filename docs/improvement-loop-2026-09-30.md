@@ -3626,3 +3626,15 @@ parameters or unions as top types. The original type_parameter_vs_futureor fixtu
 now passes, along with the neighboring FutureOr subtype and generic normalization
 fixtures. Nine existing focused tests and scoped analysis pass. One stale entry
 removed; no interpreter loop or new ordinary tests changed.
+## Cycle 22 pass 2: named late-field and global diagnostics
+
+Fields and globals now use the shared LateInitializationError-compatible Error
+and precise SDK messages, including a final assignment during initialization.
+Two generated cold field operations carry a constant-pool name/slot descriptor;
+old and new accesses retain the same four-byte encoding. No TypedInstance/class
+codec or hot dispatch changes. The original late_modifier_runtime_error fixture
+passes; 78 existing focused tests and a unique inherited/private-name serialized
+regression pass. Native precise-message checks passed through the existing fixture
+with only its unavailable variations configuration import supplied locally; SDK
+sources were unchanged. Scoped analysis, diff checks and generated-machine
+validation pass (225 primary, 176 extended). One stale entry removed.

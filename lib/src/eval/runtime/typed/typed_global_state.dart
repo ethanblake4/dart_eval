@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import '../runtime.dart';
 import 'typed_machine.g.dart';
 import 'typed_program.dart';
+import 'typed_late_local.dart' show TypedLateInitializationError;
 
 /// Mutable storage belongs to a runtime, never to its shareable program.
 final class TypedGlobalState {
@@ -27,7 +28,9 @@ final class TypedGlobalState {
     final descriptor = program.globals[index];
     if (descriptor.initializerFunction < 0) {
       if (descriptor.isLate) {
-        throw StateError('Global ${descriptor.name} has not been initialized');
+        throw TypedLateInitializationError(
+          "Field '${descriptor.name.split('.').last}' has not been initialized.",
+        );
       }
       _states[index] = 2;
       return null;
@@ -42,8 +45,8 @@ final class TypedGlobalState {
       // Recursive evaluation may have initialized a final global already.
       // Mutable globals instead retain the outermost initializer's result.
       if (descriptor.isFinal && _states[index] == 2) {
-        throw StateError(
-          'Global ${descriptor.name} has already been initialized',
+        throw TypedLateInitializationError(
+          "Field '${descriptor.name.split('.').last}' has been assigned during initialization.",
         );
       }
       values[index] = value;
@@ -59,8 +62,8 @@ final class TypedGlobalState {
   void write(int index, Object? value) {
     final descriptor = program.globals[index];
     if (descriptor.isFinal && _states[index] == 2) {
-      throw StateError(
-        'Global ${descriptor.name} has already been initialized',
+      throw TypedLateInitializationError(
+        "Field '${descriptor.name.split('.').last}' has already been initialized.",
       );
     }
     values[index] = value;

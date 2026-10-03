@@ -761,6 +761,7 @@ final class FieldSlotGet extends GetTarget {
         linkSsa,
         index,
         isLate: isLate,
+        fieldName: name,
         rep: rep,
       ),
       fieldType,
@@ -1387,6 +1388,7 @@ final class FieldSlotSet extends SetTarget {
         index,
         val.ssa,
         isLateFinal: isLateFinal,
+        fieldName: name,
         rep: rep,
       ),
     );
