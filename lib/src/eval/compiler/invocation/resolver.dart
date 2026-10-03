@@ -793,7 +793,7 @@ final class CallResolver {
     final methodName = invokedName ?? e.methodName.name;
     TypeRef? mReturnType;
     BoundCall argsPair;
-    final CallTarget target;
+    CallTarget target;
     final bridgeTypeParameters = <String, TypeRef>{};
     final resolvedMember = resolved?.member;
     if (resolvedMember is BridgeMember) {
@@ -1056,6 +1056,17 @@ final class CallResolver {
         ),
         callee: null,
       );
+      final specialized = _specializeDynamicCall(
+        target as DynamicCall,
+        argsPair,
+        e,
+      );
+      if (specialized != null) {
+        // Binding supplied operands above preserves dynamic argument contexts.
+        // The specialization only supplies the concrete callee's defaults.
+        (target, argsPair) = specialized;
+        mReturnType = CoreTypes.dynamic.ref(ctx);
+      }
     } else {
       final sourceMember = resolved!.member as SourceMember;
       final declaration = sourceMember.sourceDeclaration;
@@ -1219,6 +1230,78 @@ final class CallResolver {
         vectorOverride: isStatic || resolvedMember is BridgeMember
             ? argsPair.vector()
             : null,
+      ),
+    );
+  }
+
+  /// Specialize proven allocations after evaluating dynamic operands unchanged.
+  (StaticCall, BoundCall)? _specializeDynamicCall(
+    DynamicCall target,
+    BoundCall supplied,
+    MethodInvocation invocation,
+  ) {
+    final exact = target.receiver.exactType;
+    final owner = exact == null ? null : nominalDeclOf(exact);
+    if (exact == null ||
+        exact.nullable ||
+        owner is! SourceTypeDecl ||
+        owner.typeParameters.isNotEmpty ||
+        invocation.typeArguments != null) {
+      return null;
+    }
+    final name = ctx.memberNameOf(target.name, MemberKind.method);
+    final implementation = ctx.memberLookup.implementationOwner(exact, name);
+    final member = implementation == null
+        ? null
+        : ctx.memberLookup.concreteMemberOn(implementation, name);
+    if (member is! SourceMember ||
+        member.sourceDeclaration is! MethodDeclaration ||
+        (member.sourceDeclaration as MethodDeclaration).isGetter ||
+        member.declaringDecl?.typeParameters.isNotEmpty == true) {
+      return null;
+    }
+    final refined = Devirtualizer(ctx).refine(
+      VirtualCall(
+        receiver: target.receiver.withType(exact),
+        name: target.name,
+        member: member,
+        signature: member.signature,
+      ),
+    );
+    if (refined is! StaticCall) return null;
+    final signature = refined.signature!;
+    if (signature.typeParameters.isNotEmpty ||
+        supplied.positional.length > signature.positional.length ||
+        signature.positional
+            .skip(supplied.positional.length)
+            .any((parameter) => parameter.isRequired) ||
+        signature.named.any(
+          (parameter) =>
+              parameter.isRequired &&
+              !supplied.named.any((entry) => entry.$1 == parameter.name),
+        )) {
+      return null;
+    }
+    bool accepts(Variable argument, ParameterSpec parameter) =>
+        !parameter.erased &&
+        !parameter.type.isFunctionLike &&
+        argument.type.assignmentConversionTo(ctx, parameter.type) ==
+            AssignmentConversion.none;
+    for (var i = 0; i < supplied.positional.length; i++) {
+      if (!accepts(supplied.positional[i], signature.positional[i]))
+        return null;
+    }
+    for (final (name, argument) in supplied.named) {
+      final parameter = signature.named.firstWhereOrNull((p) => p.name == name);
+      if (parameter == null || !accepts(argument, parameter)) return null;
+    }
+    return (
+      refined,
+      ArgumentBinder(ctx).bindSourceValues(
+        refined,
+        supplied.positional,
+        supplied.namedValues,
+        source: invocation,
       ),
     );
   }

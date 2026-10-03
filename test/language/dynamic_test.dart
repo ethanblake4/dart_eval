@@ -15,6 +15,52 @@ void _expectError(String source, Type expected) {
 }
 
 void main() {
+  test('dynamic defaults retain the receiver evaluated before arguments', () {
+    _expectValue('''
+      class Base {
+        int apply(int value, {int add = 7, int scale = 3}) =>
+            value * scale + add;
+      }
+      class Child extends Base {
+        int apply(int value, {int add = 9, int scale = 5}) =>
+            value * scale + add;
+      }
+      class Other {
+        int apply(int value, {int add = 100, int scale = 1}) =>
+            value * scale + add;
+      }
+      int main() {
+        dynamic receiver = Child();
+        int replace() { receiver = Other(); return 2; }
+        final first = receiver.apply(replace(), scale: 4) as int;
+        return first + (receiver.apply(2) as int);
+      }
+    ''', 119);
+  });
+
+  test(
+    'exact dynamic calls retain collection context and checked failures',
+    () {
+      _expectValue('''
+      class Receiver {
+        bool inspect(List<num> values) => values is List<int>;
+        double floating(double value) => value;
+        int apply(int value, {int add = 3}) => value + add;
+      }
+      bool main() {
+        dynamic receiver = Receiver();
+        if (!(receiver.inspect([1]) as bool)) return false;
+        var failures = 0;
+        try { receiver.floating(1); } on TypeError { failures++; }
+        try { receiver.apply('bad'); } on TypeError { failures++; }
+        try { receiver.apply(1, unknown: 2); }
+        on NoSuchMethodError { failures++; }
+        return failures == 3;
+      }
+    ''', true);
+    },
+  );
+
   group('checked dynamic conversions', () {
     test('guest code catches TypeError and still runs finally', () {
       _expectValue('''

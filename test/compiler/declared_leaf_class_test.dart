@@ -21,6 +21,32 @@ void _expectProgramResult(Program program, Object? expected) {
 }
 
 void main() {
+  test('exact dynamic allocations bind inherited named defaults directly', () {
+    final program = _compile('''
+      class Base {
+        int apply(int value, {int add = 7, int scale = 3}) =>
+            value * scale + add;
+      }
+      class Child extends Base {}
+      class Override extends Child {
+        int apply(int value, {int add = 99, int scale = 9}) => 0;
+      }
+      int main() {
+        dynamic receiver = Child();
+        var sum = 0;
+        for (var i = 0; i < 5; i++) {
+          sum += receiver.apply(i, scale: 4) as int;
+        }
+        return sum;
+      }
+    ''');
+    expect(
+      program.typedProgram.callSites.map((site) => site.name),
+      isNot(contains('apply')),
+    );
+    _expectProgramResult(program, 75);
+  });
+
   test('leaf parameter uses direct fields and method', () {
     final program = _compile('''
       class Leaf {

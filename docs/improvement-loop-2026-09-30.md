@@ -3971,3 +3971,31 @@ fixtures pass; scoped analyzer passes. Broad gates are rerun after this fix.
 
 SDK-full also confirmed regress/regress61222 now passes with the named extension
 constructor fix; removed that additional stale expectation (16 in cycle 24).
+
+
+## Cycle 24 regular performance checkpoint
+
+Dynamic calls with a proven exact nongeneric source allocation can now bind
+concrete defaults and call the implementation directly. Arguments are evaluated
+first without static parameter contexts. Specialization requires an ordinary
+concrete nongeneric method, a valid argument shape, and supplied parameters
+needing no assignment conversion; erased/function parameters retain dynamic
+dispatch. Results retain dynamic expression types. Existing devirtualization and
+argument binding supply the ABI; no runtime/interpreter changes.
+
+All 49 focused dynamic/direct-call/argument/covariance tests pass. Bytecode and
+fresh/serialized tests cover inherited defaults despite a subclass override,
+receiver mutation during argument evaluation, dynamic collection context, and
+checked failures. A full isolated 23-driver AOT sweep (15 samples, affinity 0x4)
+matched all 22 execution checksums and the mixed compile code size (1354 bytes).
+Named-default binding improved 6020 to 1000 microseconds (83.4%) and stable
+receivers 1742 to 1047 (39.9%). Longer reverse-order checks confirmed 61682 to
+10792 (82.5%) and 17134 to 11146 (34.9%). Named/stable program payloads shrink
+133/130 bytes. Unrelated timings vary: the full-sweep call-method slowdown flipped
+to 1.8% faster in the long recheck, and inventory serialization narrowed from
+9.7% to 2.8% slower. Logs retain all results rather than attributing every
+individual difference to the optimization.
+
+Corrected correctness gates before this experiment: default 2235 passed/86
+skipped; configured SDK-full 2737 passed/557 skipped; actual SDK 2615 passed/99
+compile errors/23 runtime failures/3 skipped. There remain 122 actual failures.
