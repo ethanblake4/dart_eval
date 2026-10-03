@@ -3318,3 +3318,13 @@ and unchanged compile output size, 1,330 bytes. Compile medians were 13.38 ms
 before cleanup and 12.89 ms after it. Execution timing varies between samples;
 the cleanup introduces no runtime or hot-loop changes. Results are under
 .dart_tool/improvement_loop/cycle19/performance-cleanup-full23/.
+
+## Cycle 20 pass 1: positional wildcard super parameters
+
+Super parameters forwarded through source names, so repeated `_` parameters
+or a later ordinary `_` parameter overwrote the forwarded value. Positional
+super parameters now use reserved internal aliases tied to their argument
+positions. This changes compiler binding metadata without adding bytecode.
+Original super-formal names and their aliases leave scope before the body.
+The pinned wildcard super-parameter fixture passes and its expect_fail entry
+was removed. All 16 neighboring constructor scope/inference/header tests pass.

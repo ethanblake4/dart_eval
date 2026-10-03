@@ -284,7 +284,6 @@ expect_fail:
   - path: 'void/void_check_test.dart'
   - path: 'void/void_type_callbacks_test.dart'
   - path: 'wildcard_variables/declarations/extension_type_test.dart'
-  - path: 'wildcard_variables/initializing_formal_parameters/super_test.dart'
   - path: 'const/instantiated_function_constant_test.dart'
     reason: 'runtime generic-function instantiation of closures with optional params unsupported'
   - path: 'extension_methods/null_aware_promotion_test.dart'

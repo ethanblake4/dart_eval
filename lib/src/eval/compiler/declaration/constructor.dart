@@ -157,7 +157,11 @@ void compileConstructorDeclaration(
       if (p.isNamed) {
         superParams.named.add(p.name.lexeme);
       } else {
-        superParams.positional.add(p.name.lexeme);
+        // Forward by parameter position. Wildcard names can repeat or be
+        // shared with an unrelated positional parameter.
+        final name = '#super_$i';
+        ctx.setLocal(name, vrep.copyWith(), isFinal: true);
+        superParams.positional.add(name);
       }
     }
 
@@ -495,7 +499,8 @@ void compileConstructorDeclaration(
       for (final name in {
         ...fieldFormals.keys,
         ...superParams.positional,
-        ...superParams.named,
+        for (final parameter in resolvedParams)
+          if (parameter is SuperFormalParameter) parameter.name.lexeme,
       }) {
         frame.remove(name);
       }
