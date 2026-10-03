@@ -97,12 +97,18 @@ extension TypedRuntimeInterop on Runtime {
 
   /// Normalizes a key part: boxed scalars compare by payload, strings by
   /// canonical instance (equal const strings are identical in the host),
-  /// everything else by identity (nested consts are already canonicalized).
+  /// collection wrappers by their canonical payload, and everything else by
+  /// identity (nested consts are already canonicalized).
   Object? _constKeyPart(Object? part) => switch (part) {
     $int p => p.$value,
     $double p => p.$value,
     $bool p => p.$value,
     $String p => _constKeyPart(p.$value),
+    // Boxing a canonical collection can create a fresh bridge wrapper.
+    // Its payload carries the constant's identity.
+    $List p => p.$value,
+    $Map p => p.$value,
+    $Set p => p.$value,
     $null() => null,
     String p => _constInternedStrings[p] ??= p,
     TypedClosure p => internConst(p, p.descriptor.runtimeTypeId),

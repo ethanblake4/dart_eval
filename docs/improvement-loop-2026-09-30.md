@@ -2878,3 +2878,26 @@ other. They now infer the least upper bound. Inferred extension type arguments
 also must satisfy their declared bounds after substitution. The two pinned
 static extension fixtures and four focused generic-extension tests pass; both
 stale `expect_fail` entries are removed. This is a compiler-only change.
+
+## Cycle 16 pass 2: nested const identity
+
+Const constructor keys compared freshly boxed collection wrappers by wrapper
+identity, so identical const list, map, and set field values made equal const
+objects appear distinct. Keys now use the collection payload's canonical
+identity. The pinned `implicit_creation/implicit_const_context_not_test.dart`
+fixture passes, so its stale `expect_fail` entry is removed. SDK-full also
+found five newly passing fixtures across canonicalization, const contexts, and
+spread collections; their stale entries are removed.
+
+The standard language suite no longer reruns pinned SDK fixtures directly or
+duplicates `type_object/runtime_type_test.dart`. The Invocation and FutureOr
+focused tests now keep only cases with distinct tear-off, populated-argument,
+hashing, and generic-membership behavior.
+
+SDK-full passes with 2501 runnable fixtures, 177 expected compile failures,
+59 expected runtime failures, and three skips. The ordinary language/runtime
+gate passes 994 tests after removing the duplicate tests. The full 23-driver,
+15-sample AOT sweep matched all 22 execution checksums; logs are under
+`.dart_tool/improvement_loop/cycle16-pass2-full23/`. Targeted paired 25-sample
+repeats found no sustained slowdown in calls, external calls, or inventory
+pricing after an anomalous `calls` median in the sweep.

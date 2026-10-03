@@ -1,7 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
-import '../sdk_language/sdk_language.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
@@ -27,26 +26,6 @@ void main() {
       expect(result, const DynamicFixtureResult.value(true), reason: mode);
     }
   });
-
-  test(
-    'pinned aliased constructor tear-offs run fresh and serialized',
-    () async {
-      final suite = await SdkSuite.load();
-      final fixture = suite.classify(
-        'typedef/aliased_constructor_tear_off_test.dart',
-      );
-      final sources = suite.collectSources(fixture);
-      final compiler = Compiler();
-      setSdkEntrypoints(compiler, fixture, sources);
-      final program = compiler.compileSources(sources);
-      for (final runtime in [
-        Runtime.ofProgram(program),
-        Runtime(program.write().buffer),
-      ]) {
-        await executeSdkMain(runtime, fixture, sources);
-      }
-    },
-  );
 
   test('aliased tear-offs expand parameters when invoked', () {
     final program = Compiler().compile({

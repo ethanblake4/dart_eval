@@ -1,6 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
-import '../sdk_language/sdk_language.dart';
 
 void main() {
   test('Function.apply preserves named arguments of bound methods', () {
@@ -26,20 +25,6 @@ void main() {
       Runtime(program.write().buffer),
     ]) {
       expect(runtime.executeLib('package:bound_apply/main.dart', 'main'), 3179);
-    }
-  });
-  test('pinned many_named_arguments runs fresh and serialized', () async {
-    final suite = await SdkSuite.load();
-    final fixture = suite.classify('unsorted/many_named_arguments_test.dart');
-    final sources = suite.collectSources(fixture);
-    final compiler = Compiler();
-    setSdkEntrypoints(compiler, fixture, sources);
-    final program = compiler.compileSources(sources);
-    for (final runtime in [
-      Runtime.ofProgram(program),
-      Runtime(program.write().buffer),
-    ]) {
-      await executeSdkMain(runtime, fixture, sources);
     }
   });
 }

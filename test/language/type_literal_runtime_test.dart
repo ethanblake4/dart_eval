@@ -1,6 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
-import '../sdk_language/sdk_language.dart';
 
 void main() {
   test('type object getters preserve Type facts', () {
@@ -31,24 +30,4 @@ void main() {
       );
     }
   });
-  for (final name in [
-    'first_class_types_literals_runtime_1_test.dart',
-    'first_class_types_literals_runtime_2_test.dart',
-    'first_class_types_literals_runtime_test.dart',
-  ]) {
-    test('pinned $name runs fresh and serialized', () async {
-      final suite = await SdkSuite.load();
-      final fixture = suite.classify('type_object/$name');
-      final sources = suite.collectSources(fixture);
-      final compiler = Compiler();
-      setSdkEntrypoints(compiler, fixture, sources);
-      final program = compiler.compileSources(sources);
-      for (final runtime in [
-        Runtime.ofProgram(program),
-        Runtime(program.write().buffer),
-      ]) {
-        await executeSdkMain(runtime, fixture, sources);
-      }
-    });
-  }
 }
