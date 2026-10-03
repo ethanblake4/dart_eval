@@ -68,7 +68,9 @@ TypeRef resolveGlobalType(CompilerContext ctx, int library, String name) {
     }
     final annotation = (variable?.parent as VariableDeclarationList?)?.type;
     final type = annotation == null
-        ? _infer(ctx, library, variable?.initializer)
+        ? ctx.typeFactory.widenedInferredType(
+            _infer(ctx, library, variable?.initializer),
+          )
         : TypeRef.fromAnnotation(ctx, library, annotation);
     return _record(ctx, library, name, type);
   } finally {

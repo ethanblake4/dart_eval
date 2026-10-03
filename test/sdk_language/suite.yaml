@@ -10,7 +10,7 @@ sdk_commit: 6c4009687d2c881f880127fc12b9ad7c72111d33
 # overrides are unsupported; unversioned fixtures remain eligible.
 min_sdk: '3.0'
 
-# Directories under tests/language forming the "core" set â€” a fast,
+# Directories under tests/language forming the "core" set Ã¢â‚¬â€ a fast,
 # semantics-focused subset for use during feature development
 # (`dart test test/sdk_language/core_test.dart`). The full suite runs
 # everything else and is tagged `sdk-full` (see dart_test.yaml).
@@ -54,7 +54,7 @@ core:
 # One of: skip | expect_compile_error
 negative: skip
 
-# Tests that can never pass (or are not meaningful) under dart_eval â€” skipped
+# Tests that can never pass (or are not meaningful) under dart_eval Ã¢â‚¬â€ skipped
 # unconditionally. Entries are paths relative to tests/language; a trailing
 # '/' or a glob matches whole directories.
 exclude:
@@ -139,7 +139,7 @@ expect_fail:
   - path: 'enum/enhanced_enums_basic_test.dart'
   - path: 'enum/enum_test.dart'
   - path: 'enum/initialization_near_stack_overflow_test.dart'
-    reason: 'Unknown type StackOverflowError â€” core type not resolvable in on-catch'
+    reason: 'Unknown type StackOverflowError Ã¢â‚¬â€ core type not resolvable in on-catch'
   - path: 'exception/nested_catch_rethrow_test.dart'
     reason: 'sync* YieldStatement not implemented'
   - path: 'extension_methods/null_aware_reachability_test.dart'
@@ -189,7 +189,6 @@ expect_fail:
   - path: 'nnbd/flow_analysis/unreachable_via_promotion_test.dart'
   - path: 'nnbd/flow_analysis/unreachable_via_variable_get_test.dart'
   - path: 'nnbd/inference/variable_initialization_promotion_test.dart'
-  - path: 'nnbd/inference/variables_initialized_to_null_test.dart'
   - path: 'nnbd/normalization/generic_function_type_object_normalization_test.dart'
   - path: 'nnbd/normalization/type_object_normalization_test.dart'
   - path: 'nnbd/resolution/null_assertion_null_type_test.dart'

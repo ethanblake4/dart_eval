@@ -3213,3 +3213,12 @@ and both extension-availability promotion fixtures pass; their expect_fail
 entries were removed. Existing extension, tear-off and inference tests pass.
 One focused combined generic/named/contextual test extends the existing suite.
 Runtime and generated stdlib are unchanged.
+
+## Cycle 19 pass 3: Null-typed inferred global storage
+
+The global storage prepass retained Null from `null as Null`, unlike the
+initializer compiler's existing inference widening. It now uses the same
+widenedInferredType helper before selecting storage. The pinned variables
+initialized to null fixture passes across global, static, instance and local
+bindings. Removed its expect_fail entry. All 31 existing globals/compiler model
+inference tests pass. No runtime or additional bytecode checks.
