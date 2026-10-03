@@ -7,6 +7,7 @@ import 'typed_instance.dart';
 import 'typed_native_list.dart';
 import 'typed_native_map.dart';
 import 'typed_late_field.dart';
+import 'typed_late_local.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
 import 'typed_global_state.dart';
@@ -1958,6 +1959,19 @@ abstract final class TypedMachine {
        break;
     case 424:
        e = c is TypedNativeList || c is $MappedListView;
+       break;
+    case 425:
+       final index = code[pc] | (code[pc + 1] << 8); pc += 2;
+       final metadata = runtime!.typedConstant(index) as List; r = TypedLateLocal(metadata[0] as String, metadata[1] as bool);
+       break;
+    case 426:
+       (r as TypedLateLocal).setInitializer(s);
+       break;
+    case 427:
+       r = (r as TypedLateLocal).read(runtime!);
+       break;
+    case 428:
+       (r as TypedLateLocal).write(s);
        break;
     default: throw StateError('Invalid extended typed opcode');
     }

@@ -429,6 +429,10 @@ abstract final class TypedOp {
   static const eIsCanonicalListR = 422;
   static const eIsCanonicalListS = 423;
   static const eIsCanonicalListC = 424;
+  static const rCreateLateLocal = 425;
+  static const setLateLocalInitializerRS = 426;
+  static const rReadLateLocal = 427;
+  static const writeLateLocalRS = 428;
   static const instructions = <TypedInstruction>[
     TypedInstruction('eTrue', [], [4], TypedImmediate.none, false, false, false, 'True'),
     TypedInstruction('eFalse', [], [4], TypedImmediate.none, false, false, false, 'False'),
@@ -855,5 +859,9 @@ abstract final class TypedOp {
     TypedInstruction('eIsCanonicalListR', [6], [4], TypedImmediate.none, false, false, false, 'IsCanonicalList'),
     TypedInstruction('eIsCanonicalListS', [7], [4], TypedImmediate.none, false, false, false, 'IsCanonicalList'),
     TypedInstruction('eIsCanonicalListC', [8], [4], TypedImmediate.none, false, false, false, 'IsCanonicalList'),
+    TypedInstruction('rCreateLateLocal', [], [6], TypedImmediate.runtimeConstant, true, false, false, 'CreateLateLocal'),
+    TypedInstruction('setLateLocalInitializerRS', [6, 7], [], TypedImmediate.none, true, false, false, 'setLateLocalInitializer'),
+    TypedInstruction('rReadLateLocal', [6], [6], TypedImmediate.none, true, false, false, 'ReadLateLocal'),
+    TypedInstruction('writeLateLocalRS', [6, 7], [], TypedImmediate.none, true, false, false, 'writeLateLocal'),
   ];
 }

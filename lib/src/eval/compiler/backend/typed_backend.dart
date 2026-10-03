@@ -14,6 +14,7 @@ import '../../ir/numeric.dart';
 import '../../ir/objects.dart' as objects_ir;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/closures.dart' as closures;
+import '../../ir/late.dart' as late_ir;
 import '../../ir/globals.dart' as globals;
 import '../../ir/exception.dart' as exceptions;
 import '../../ir/async.dart' as async_ir;
@@ -1586,6 +1587,43 @@ class _LoweringSession {
         }
         if (op is closures.CreateClosure) {
           _lowerCreateClosure(op, lowered);
+          continue;
+        }
+        if (op is late_ir.CreateLateLocal) {
+          lowered.add(
+            TypedOperation(
+              b._named(['rCreateLateLocal']),
+              value(op.result),
+              [],
+              immediate: b.context.constantPool.addOrGet([op.name, op.isFinal]),
+            ),
+          );
+          continue;
+        }
+        if (op is late_ir.SetLateLocalInitializer) {
+          lowered.add(
+            TypedOperation(b._named(['setLateLocalInitializerRS']), null, [
+              value(op.cell),
+              value(op.initializer),
+            ]),
+          );
+          continue;
+        }
+        if (op is late_ir.ReadLateLocal) {
+          lowered.add(
+            TypedOperation(b._named(['rReadLateLocal']), value(op.result), [
+              value(op.cell),
+            ]),
+          );
+          continue;
+        }
+        if (op is late_ir.WriteLateLocal) {
+          lowered.add(
+            TypedOperation(b._named(['writeLateLocalRS']), null, [
+              value(op.cell),
+              value(op.value),
+            ]),
+          );
           continue;
         }
         if (op is closures.NewCaptureCell || op is closures.WriteCaptureCell) {

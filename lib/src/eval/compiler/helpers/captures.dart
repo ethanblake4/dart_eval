@@ -24,9 +24,9 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
   /// write takes flow-analysis effect at the point the closure is
   /// created (or, for a closure that is an invocation argument, after
   /// the invocation completes).
-  final writes = <FunctionExpression, Set<String>>{};
-  final free = <FunctionExpression, Set<String>>{};
-  final unresolved = <FunctionExpression, Set<String>>{};
+  final writes = <AstNode, Set<String>>{};
+  final free = <AstNode, Set<String>>{};
+  final unresolved = <AstNode, Set<String>>{};
   final _scopes = <Map<String, (AstNode, AstNode)>>[];
   final _functions = <AstNode>[];
   final _members = <Set<String>>[];
@@ -60,7 +60,9 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       return;
     }
     if (binding == null) {
-      for (final function in _functions.whereType<FunctionExpression>()) {
+      for (final function in _functions.where(
+        (node) => node is FunctionExpression || node is VariableDeclaration,
+      )) {
         unresolved.putIfAbsent(function, () => {}).add(name);
       }
       return;
@@ -77,7 +79,7 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       captured.addAll(_patternBindings[declaration] ?? [declaration]);
     }
     for (final function in _functions.skip(owner + 1)) {
-      if (function is FunctionExpression) {
+      if (function is FunctionExpression || function is VariableDeclaration) {
         free.putIfAbsent(function, () => {}).add(name);
         if (setter) {
           writes.putIfAbsent(function, () => {}).add(name);
@@ -303,7 +305,14 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
     final initializer = node.initializer;
     // Primary declaration initializers were visited in constructor scope.
     if (initializer != null && !_primaryInitializers.contains(initializer)) {
+      final parent = node.parent;
+      final deferred =
+          parent is VariableDeclarationList &&
+          parent.lateKeyword != null &&
+          _functions.isNotEmpty;
+      if (deferred) _functions.add(node);
       initializer.accept(this);
+      if (deferred) _functions.removeLast();
     }
   }
 

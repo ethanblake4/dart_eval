@@ -1873,6 +1873,36 @@ String familyOf(String name) {
       extended: true,
     );
   }
+  add(
+    'rCreateLateLocal',
+    'final metadata = runtime!.typedConstant(index) as List; r = TypedLateLocal(metadata[0] as String, metadata[1] as bool);',
+    output: 6,
+    immediate: 'runtimeConstant',
+    mayThrow: true,
+    extended: true,
+  );
+  add(
+    'setLateLocalInitializerRS',
+    '(r as TypedLateLocal).setInitializer(s);',
+    inputs: [6, 7],
+    mayThrow: true,
+    extended: true,
+  );
+  add(
+    'rReadLateLocal',
+    'r = (r as TypedLateLocal).read(runtime!);',
+    inputs: [6],
+    output: 6,
+    mayThrow: true,
+    extended: true,
+  );
+  add(
+    'writeLateLocalRS',
+    '(r as TypedLateLocal).write(s);',
+    inputs: [6, 7],
+    mayThrow: true,
+    extended: true,
+  );
   return (ops: ops, extended: extendedOps);
 }
 
@@ -1965,6 +1995,7 @@ import 'typed_instance.dart';
 import 'typed_native_list.dart';
 import 'typed_native_map.dart';
 import 'typed_late_field.dart';
+import 'typed_late_local.dart';
 import 'typed_dispatch.dart';
 import 'typed_closure.dart';
 import 'typed_global_state.dart';

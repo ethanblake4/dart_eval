@@ -10,6 +10,7 @@ import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
 import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/ir/exception.dart';
 import 'package:dart_eval/src/eval/ir/closures.dart';
+import 'package:dart_eval/src/eval/ir/late.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 
@@ -26,13 +27,19 @@ final class CaptureCellStorage extends BindingStorage {
   final SSA cell;
 }
 
+final class LateLocalStorage extends BindingStorage {
+  LateLocalStorage(this.cell);
+  final SSA cell;
+}
+
 /// The value is preserved in an exception-handler slot while control may
 /// leave the `try` body. A captured binding preserves its cell instead —
 /// [cell] is then non-null and [slot] holds the cell.
 final class ExceptionSlotStorage extends BindingStorage {
-  ExceptionSlotStorage(this.slot, {this.cell});
+  ExceptionSlotStorage(this.slot, {this.cell, this.isLateLocal = false});
   final ExceptionSlot slot;
   final SSA? cell;
+  final bool isLateLocal;
 }
 
 /// A source-level local (`x`, `#this`, a pattern variable): name, declared
@@ -67,7 +74,7 @@ final class LocalBinding {
   Variable get current => _current;
 
   /// The stable source-level type of the binding.
-  final TypeRef declaredType;
+  TypeRef declaredType;
 
   /// Whether reassignment of this binding is forbidden.
   final bool isFinal;
@@ -87,9 +94,15 @@ final class LocalBinding {
   /// The capture cell SSA, when the binding is cell-captured.
   SSA? get captureCell => switch (storage) {
     CaptureCellStorage s => s.cell,
+    LateLocalStorage s => s.cell,
     ExceptionSlotStorage s => s.cell,
     _ => null,
   };
+
+  bool get isLateLocal =>
+      storage is LateLocalStorage ||
+      (storage is ExceptionSlotStorage &&
+          (storage as ExceptionSlotStorage).isLateLocal);
 
   /// Whether a nested closure writes to this binding — such writes can
   /// happen at any time, so flow promotions on the local are unsound.
@@ -122,7 +135,7 @@ final class LocalBinding {
     final dynamicWrite =
         declaredType.isSpec(CoreTypes.dynamic) &&
         value.type.isSpec(CoreTypes.dynamic);
-    if (isFinal && initialized) {
+    if (isFinal && initialized && !isLateLocal) {
       throw CompileError('Cannot modify value of final variable $name', source);
     }
 
@@ -214,6 +227,12 @@ final class LocalBinding {
       typesOfInterest.clear();
     }
 
+    if (isLateLocal) {
+      ctx.pushOp(WriteLateLocal(captureCell!, stored.ssa));
+      _applyCellWrite(localType);
+      return stored;
+    }
+
     // A binding whose cell is preserved in an exception slot still writes
     // through the cell. The trampoline restores the cell itself.
     if (storage case ExceptionSlotStorage(:final cell?)) {
@@ -261,6 +280,8 @@ final class LocalBinding {
   /// The binding's value as a read: capture-cell / exception-slot loads
   /// are materialized here. The result is a fresh unbound SSA value.
   Variable read(CompilerContext ctx) => switch (storage) {
+    LateLocalStorage s => _readLate(ctx, s.cell),
+    ExceptionSlotStorage s when s.isLateLocal => _readLate(ctx, s.cell!),
     ExceptionSlotStorage s when s.cell == null => Variable.ssa(
       ctx,
       LoadExceptionSlot(ctx.svar('protected'), s.slot),
@@ -272,6 +293,13 @@ final class LocalBinding {
     CaptureCellStorage s => _readCell(ctx, s.cell),
     _ => _current,
   };
+
+  Variable _readLate(CompilerContext ctx, SSA cell) => Variable.ssa(
+    ctx,
+    ReadLateLocal(ctx.svar('late_read'), cell),
+    _current.type,
+    rep: ValueRep.boxed,
+  );
 
   Variable _readCell(CompilerContext ctx, SSA cell) => Variable.ssa(
     ctx,
@@ -288,6 +316,7 @@ final class LocalBinding {
   /// cells lose allocation proofs because a closure can replace their value.
   void captureBinding(CompilerContext ctx, AstNode declaration) {
     captureDeclaration = declaration;
+    if (isLateLocal) return;
     final analysis = capturesFor(declaration);
     if (!analysis.captured.contains(declaration) &&
         !(declaration is SwitchMember &&
@@ -332,10 +361,16 @@ final class LocalBinding {
   /// of a `try` body — a captured binding preserves its cell instead.
   void storeInExceptionSlot(ExceptionSlot slot) {
     storage = switch (storage) {
+      LateLocalStorage s => ExceptionSlotStorage(
+        slot,
+        cell: s.cell,
+        isLateLocal: true,
+      ),
       CaptureCellStorage s => ExceptionSlotStorage(slot, cell: s.cell),
       ExceptionSlotStorage s when s.cell != null => ExceptionSlotStorage(
         slot,
         cell: s.cell,
+        isLateLocal: s.isLateLocal,
       ),
       _ => ExceptionSlotStorage(slot),
     };

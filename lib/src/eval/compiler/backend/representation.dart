@@ -7,6 +7,7 @@ import '../../ir/async.dart' as async;
 import '../../ir/generators.dart' as generators;
 import '../../ir/bridge.dart' as bridge;
 import '../../ir/closures.dart' as closures;
+import '../../ir/late.dart' as late_ir;
 import '../../ir/collection.dart' as collection;
 import '../../ir/exception.dart' as exceptions;
 import '../../ir/flow.dart' as flow;
@@ -116,6 +117,8 @@ MachineRepresentation? outputBankOf(cfg.Operation operation) =>
       closures.InvokeClosure() ||
       closures.CreateClosure() ||
       closures.NewCaptureCell() ||
+      late_ir.CreateLateLocal() ||
+      late_ir.ReadLateLocal() ||
       closures.LoadCapture() ||
       exceptions.CaughtException() ||
       exceptions.CaughtStackTrace() ||
@@ -378,6 +381,13 @@ Map<cfg.SSA, MachineRepresentation> analyzeRepresentations(
       case closures.CreateClosure():
         inputs(operation, object);
         output(operation, object);
+      case late_ir.CreateLateLocal():
+        output(operation, object);
+      case late_ir.ReadLateLocal():
+        inputs(operation, object);
+        output(operation, object);
+      case late_ir.SetLateLocalInitializer() || late_ir.WriteLateLocal():
+        inputs(operation, object);
       case closures.NewCaptureCell(:final value, :final representation):
         constrain(value, representation);
         output(operation, object);

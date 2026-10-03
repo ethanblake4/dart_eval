@@ -3523,3 +3523,18 @@ unrelated existing generator drift was excluded.
 All three original void fixtures and 15 existing callback/async/FutureOr tests
 pass. Analysis and diff checks pass; three stale entries removed. No new
 ordinary tests or interpreter changes were added for these SDK fixtures.
+
+## Cycle 21 pass 5: lazy late locals
+
+Late locals use dedicated shared storage and a hidden initializer closure over
+the original lexical bindings. Reads defer evaluation, retry thrown initializers,
+retain explicit writes across failures, and detect recursive final conflicts.
+Closures and exception handlers retain the same local storage. Four extended
+cold operations implement late-only accesses; normal locals and hot dispatch
+are unchanged. Three original SDK late fixtures pass in eval and native Dart;
+VMOptions-only excluded fixtures were executed through the existing original
+source collection/entrypoint harness without modifying sources or suite flags.
+The edge-cases stale entry was removed; field/global diagnostics remain a
+separate failing group. One focused serialized capture/retry/handler regression
+and 31 focused tests pass, plus proper-subtype and await/yield SDK regressions.
+Analysis and generated-machine validation pass: 225 primary, 173 extended.

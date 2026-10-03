@@ -6,6 +6,9 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
+import '../helpers/late_local.dart';
+import '../variable/binding.dart';
+import '../../ir/late.dart';
 
 import '../errors.dart';
 import '../type.dart';
@@ -41,6 +44,32 @@ void compileVariableDeclarationList(
       );
     }
     final init = li.initializer;
+
+    if (l.lateKeyword != null && !isWildcard) {
+      final declared = type ?? CoreTypes.dynamic.ref(ctx);
+      final cell = ctx.svar('late_local');
+      ctx.pushOp(CreateLateLocal(cell, li.name.lexeme, l.isFinal));
+      final binding = ctx.setLocal(
+        li.name.lexeme,
+        Variable.of(ctx, cell, declared, rep: ValueRep.boxed),
+        declaredType: declared,
+        isFinal: l.isFinal,
+        initialized: false,
+      );
+      binding.storage = LateLocalStorage(cell);
+      binding.captureDeclaration = li;
+      if (init != null) {
+        final (initializer, inferred) = compileLateLocalInitializer(
+          ctx,
+          li,
+          type,
+        );
+        binding.declaredType = inferred;
+        binding.rebind(binding.current.withType(inferred));
+        ctx.pushOp(SetLateLocalInitializer(cell, initializer.ssa));
+      }
+      continue;
+    }
 
     if (init != null) {
       // A `late` initializer evaluates after the declaration — recorded
@@ -104,9 +133,7 @@ void compileVariableDeclarationList(
           !binding.writeCaptured &&
           !initType.isSpec(CoreTypes.dynamic) &&
           initType.isAssignableTo(ctx, type.withNullable(false))) {
-        binding.rebind(
-          binding.current.withType(type.withNullable(false)),
-        );
+        binding.rebind(binding.current.withType(type.withNullable(false)));
       }
       // `b = cond` records the condition's promotions on `b` — `if (b)`
       // then applies them (promotion through bool locals). Before
@@ -115,7 +142,8 @@ void compileVariableDeclarationList(
       // when the initializer is bool-typed — even `Object b = cond` —
       // so `b is bool && b` can promote. `late` initializers defer
       // evaluation and never record.
-      final recordsBool = initType.isSpec(CoreTypes.bool) &&
+      final recordsBool =
+          initType.isSpec(CoreTypes.bool) &&
           (ctx.languageVersionAtLeast(li, 2, 14) ||
               (type != null &&
                   (type.isSpec(CoreTypes.bool) ||

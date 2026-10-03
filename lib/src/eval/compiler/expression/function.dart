@@ -193,7 +193,9 @@ Variable compileFunctionExpression(
             initialized: capture.value.initialized,
           );
           lb.captureDeclaration = capture.value.captureDeclaration;
-          if (capture.value.captureCell != null) {
+          if (capture.value.isLateLocal) {
+            lb.storage = LateLocalStorage(loaded);
+          } else if (capture.value.captureCell != null) {
             lb.storage = CaptureCellStorage(loaded);
           }
         }
