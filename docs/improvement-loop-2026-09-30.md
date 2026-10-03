@@ -3020,3 +3020,16 @@ to constant interning. The full 23-driver, 15-sample AOT sweep matched all 22
 execution checksums; logs are under
 `.dart_tool/improvement_loop/cycle17-pass4-full23/`. A paired call control
 ruled out the apparent sweep timing outlier.
+
+## Cycle 17 pass 5: closure missing-method behavior
+
+An unknown dynamic method on a closure leaked the runtime's internal
+`EvalUnknownPropertyException`, which guest code could not catch as
+`NoSuchMethodError`. The bridge invocation boundary now translates that
+lookup failure to the language error. Typed closures also identify themselves
+as closures in their string form. The pinned `function/local3_test.dart` and
+`function/local_function_test.dart` fixtures pass, and both stale
+`expect_fail` entries are removed. The full 23-driver, 15-sample AOT sweep
+matched all 22 execution checksums; logs are under
+`.dart_tool/improvement_loop/cycle17-pass5-full23/`. Paired telemetry and
+particle controls found no sustained slowdown.

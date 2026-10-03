@@ -17,6 +17,7 @@ import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 import 'record.dart';
+import 'exception.dart';
 import 'typed/typed_collections.dart';
 import 'typed/typed_export_adapter.dart';
 import 'typed/typed_frame.dart';

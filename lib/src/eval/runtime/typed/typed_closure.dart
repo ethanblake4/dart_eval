@@ -25,6 +25,9 @@ final class TypedCaptureCell {
 
 /// An escaping closure owns its environment, independently of cached VM frames.
 final class TypedClosure extends EvalFunction {
+  @override
+  String toString() => 'Closure';
+
   TypedClosure._(
     this.program,
     this.descriptor,

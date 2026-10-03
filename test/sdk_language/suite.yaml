@@ -169,8 +169,6 @@ expect_fail:
   - path: 'extension_type/yield_test.dart'
   - path: 'external_abstract_fields/abstract_fields_test.dart'
   - path: 'external_abstract_fields/external_fields_test.dart'
-  - path: 'function/local3_test.dart'
-  - path: 'function/local_function_test.dart'
   - path: 'generic/instantiate_tearoff_after_contravariance_check_test.dart'
   - path: 'generic_methods/explicit_instantiated_tearoff_test.dart'
   - path: 'generic_methods/generic_invocation_all_subexpression_types_test.dart'

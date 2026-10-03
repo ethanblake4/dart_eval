@@ -1632,7 +1632,18 @@ extension TypedRuntimeInterop on Runtime {
       return TypedInterop.callCallable(this, receiver, count, first, rest);
     }
     final object = receiver as $Instance;
-    final callable = object.$getProperty(this, name);
+    final $Value? callable;
+    try {
+      callable = object.$getProperty(this, name);
+    } on EvalUnknownPropertyException {
+      throw NoSuchMethodError.withInvocation(
+        object,
+        Invocation.method(Symbol(name), [
+          for (final argument in TypedInterop.argList(count, first, rest))
+            argument?.$reified,
+        ]),
+      );
+    }
     // A getter may return a guest instance whose `call` member is the
     // intended target (e.g. `list.first()` on an element with `call`).
     if (callable is TypedInstance) {
