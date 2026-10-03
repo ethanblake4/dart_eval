@@ -69,104 +69,94 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     pos,
   );
   final b = d.functionExpression.body;
-  final stInfo = ctx.withTypeParameters(
-    ctx.library,
-    owner,
-    typeParameters,
-    () {
-      ctx.functionTypeParameters[pos] = [
-        for (final ref in declaredTypeParameterRefs(
-          ctx,
-          owner,
-          typeParameters,
-        ))
-          ref.parameter,
-      ];
+  final stInfo = ctx.withTypeParameters(ctx.library, owner, typeParameters, () {
+    ctx.functionTypeParameters[pos] = [
+      for (final ref in declaredTypeParameterRefs(ctx, owner, typeParameters))
+        ref.parameter,
+    ];
 
-      final resolvedParams = resolveFPLDefaults(
+    final resolvedParams = resolveFPLDefaults(
+      ctx,
+      d.functionExpression.parameters,
+      false,
+      allowUnboxed: true,
+    );
+
+    final expectedReturnType = d.returnType == null
+        ? CoreTypes.dynamic.ref(ctx)
+        : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!);
+    final parameterTypes = ctx.functionParameterTypes[pos]!;
+    final abi = CallableAbi.fromParameterTypes(
+      parameterTypes,
+      expectedReturnType,
+      CallableKind.function,
+      isAsync: b.isAsynchronous,
+    );
+    if (b.isGenerator) {
+      setupGenerator(
         ctx,
-        d.functionExpression.parameters,
-        false,
-        allowUnboxed: true,
+        asynchronous: b.isAsynchronous,
+        returnType: d.returnType == null ? null : expectedReturnType,
+      );
+    }
+    var i = 0;
+
+    for (final p in resolvedParams) {
+      final type = parameterTypes[i];
+      final vRep = Variable.of(
+        ctx,
+        SSA('arg_$i'),
+        type,
+        rep: abi.parameters[i],
       );
 
-      final expectedReturnType = d.returnType == null
-          ? CoreTypes.dynamic.ref(ctx)
-          : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!);
-      final parameterTypes = ctx.functionParameterTypes[pos]!;
-      final abi = CallableAbi.fromParameterTypes(
-        parameterTypes,
+      // `_` parameters are wildcards: non-binding and repeatable.
+      if (p.name!.lexeme != '_') {
+        ctx.setLocal(p.name!.lexeme, vRep).captureBinding(ctx, p);
+      }
+      i++;
+    }
+
+    if (b.isAsynchronous && !b.isGenerator) {
+      setupAsyncFunction(
+        ctx,
+        returnType: d.returnType == null
+            ? null
+            : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!),
+      );
+    }
+
+    ctx.functionSignatures[pos] = abi.machine;
+    StatementInfo? stInfo;
+    if (b is BlockFunctionBody) {
+      stInfo = compileBlock(
+        b.block,
         expectedReturnType,
-        CallableKind.function,
-        isAsync: b.isAsynchronous,
-        returnsVoid: expectedReturnType.isSpec(CoreTypes.voidType),
+        ctx,
+        name: '${d.name.lexeme}()',
       );
-      if (b.isGenerator) {
-        setupGenerator(
+    } else if (b is ExpressionFunctionBody) {
+      ctx.beginScope();
+      stInfo = doReturn(
+        ctx,
+        expectedReturnType,
+        compileExpression(
+          b.expression,
           ctx,
-          asynchronous: b.isAsynchronous,
-          returnType: d.returnType == null ? null : expectedReturnType,
-        );
-      }
-      var i = 0;
-
-      for (final p in resolvedParams) {
-        final type = parameterTypes[i];
-        final vRep = Variable.of(
-          ctx,
-          SSA('arg_$i'),
-          type,
-          rep: abi.parameters[i],
-        );
-
-        // `_` parameters are wildcards: non-binding and repeatable.
-        if (p.name!.lexeme != '_') {
-          ctx.setLocal(p.name!.lexeme, vRep).captureBinding(ctx, p);
-        }
-        i++;
-      }
-
-      if (b.isAsynchronous && !b.isGenerator) {
-        setupAsyncFunction(
-          ctx,
-          returnType: d.returnType == null
-              ? null
-              : TypeRef.fromAnnotation(ctx, ctx.library, d.returnType!),
-        );
-      }
-
-      ctx.functionSignatures[pos] = abi.machine;
-      StatementInfo? stInfo;
-      if (b is BlockFunctionBody) {
-        stInfo = compileBlock(
-          b.block,
-          expectedReturnType,
-          ctx,
-          name: '${d.name.lexeme}()',
-        );
-      } else if (b is ExpressionFunctionBody) {
-        ctx.beginScope();
-        stInfo = doReturn(
-          ctx,
-          expectedReturnType,
-          compileExpression(
-            b.expression,
-            ctx,
-            // An async body's context type is the *flattened* return type.
-            b.isAsynchronous
-                ? ctx.typeSystem.flatten(expectedReturnType)
-                : expectedReturnType,
-          ),
-          isAsync: b.isAsynchronous,
-        );
-        stInfo = StatementInfo(willAlwaysReturn: true);
-        ctx.endScope();
-      } else {
-        throw CompileError('Unsupported function body type: ${b.runtimeType}');
-      }
-      return stInfo;
-    },
-  );
+          // An async body's context type is the *flattened* return type.
+          b.isAsynchronous
+              ? ctx.typeSystem.flatten(expectedReturnType)
+              : expectedReturnType,
+        ),
+        isAsync: b.isAsynchronous,
+      );
+      stInfo = StatementInfo(willAlwaysReturn: true);
+      ctx.endScope();
+    } else {
+      throw CompileError('Unsupported function body type: ${b.runtimeType}');
+    }
+    return stInfo;
+  });
 
   if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
     if (b.isAsynchronous && !b.isGenerator) {

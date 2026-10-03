@@ -1876,7 +1876,9 @@ class $StreamView<T> implements $Instance {
       );
     });
     return $Future.wrap(
-      result.then((e) => null),
+      (result as Future<dynamic>).then(
+        (e) => runtime.wrapAlways(e, recursive: true),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
         runtime.lookupType(CoreTypes.voidType),

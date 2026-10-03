@@ -1680,12 +1680,10 @@ final class CallResolver {
     return _forEachResult();
   }
 
-  Variable _forEachResult() => Variable.of(
-    ctx,
-    ctx.svar('for_each_result'),
-    CoreTypes.voidType.ref(ctx),
-    rep: ValueRep.boxed,
-  );
+  Variable _forEachResult() => BuiltinValue()
+      .push(ctx)
+      .boxIfNeeded(ctx)
+      .copyWith(type: CoreTypes.voidType.ref(ctx));
 
   /// The index-pump loop for [_tryCompileNativeForEach].
   StatementInfo _compileNativeForEachPump(

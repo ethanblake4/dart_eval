@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/ir/representation.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import '../values/abi.dart';
 import '../values/value_rep.dart';
+import '../builtins.dart';
 
 /// Fast paths consulted before member resolution on the operator and index
 /// paths — a hit emits a dedicated ALU/string op instead of a call, and the
@@ -46,12 +47,10 @@ final class Intrinsics {
       ctx.pushOp(BufferWrite(buffer.ssa, argument.ssa, isString: isString));
       return (
         target: buffer,
-        result: Variable.of(
-          ctx,
-          ctx.svar('buffer_write'),
-          CoreTypes.voidType.ref(ctx),
-          rep: ValueRep.boxed,
-        ),
+        result: BuiltinValue()
+            .push(ctx)
+            .boxIfNeeded(ctx)
+            .copyWith(type: CoreTypes.voidType.ref(ctx)),
         args: [argument],
         namedArgs: const {},
       );
@@ -88,12 +87,12 @@ final class Intrinsics {
         );
         return (
           target: collection,
-          result: Variable.of(
-            ctx,
-            ssa,
-            isList ? CoreTypes.voidType.ref(ctx) : boolType,
-            rep: isList ? ValueRep.boxed : ValueRep.bool,
-          ),
+          result: isList
+              ? BuiltinValue()
+                    .push(ctx)
+                    .boxIfNeeded(ctx)
+                    .copyWith(type: CoreTypes.voidType.ref(ctx))
+              : Variable.of(ctx, ssa, boolType, rep: ValueRep.bool),
           args: [value],
           namedArgs: const {},
         );

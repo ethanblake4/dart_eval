@@ -1,5 +1,4 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart'
     show representationForType;
 import 'package:dart_eval/src/eval/compiler/context.dart';
@@ -131,7 +130,7 @@ abstract final class Abi {
 
 /// The machine layout of one callable. The parameter list includes any
 /// receiver and hidden runtime-type slot, in the order the callee receives
-/// them. A null result means a synchronous void function.
+/// them. Void functions retain their evaluated return values.
 final class CallableAbi {
   CallableAbi(Iterable<ValueRep> parameters, this.result)
     : parameters = List<ValueRep>.unmodifiable(parameters);
@@ -172,7 +171,6 @@ final class CallableAbi {
     int leadingBoxed = 0,
     bool hiddenTypeId = false,
     bool isAsync = false,
-    bool returnsVoid = false,
     bool unboxedBoolResult = false,
   }) => CallableAbi(
     [
@@ -180,9 +178,7 @@ final class CallableAbi {
       for (final type in parameterTypes) Abi.parameter(type, kind),
       if (hiddenTypeId) ValueRep.int,
     ],
-    returnsVoid && !isAsync
-        ? null
-        : kind == CallableKind.constructor
+    kind == CallableKind.constructor
         ? ValueRep.boxed
         : Abi.result(
             returnType,
@@ -237,7 +233,6 @@ final class CallableAbi {
           isConstructor &&
           (node is ClassDeclaration ||
               node is ConstructorDeclaration && node.factoryKeyword == null),
-      returnsVoid: signature.returnType.isSpec(CoreTypes.voidType),
     );
   }
 
@@ -252,7 +247,6 @@ final class CallableAbi {
     CallableKind.method,
     leadingBoxed: declaration.isStatic ? 0 : 1,
     isAsync: declaration.body.isAsynchronous,
-    returnsVoid: returnType.isSpec(CoreTypes.voidType),
     unboxedBoolResult:
         declaration.body is ExpressionFunctionBody &&
         !declaration.body.isAsynchronous &&
@@ -275,7 +269,6 @@ final class CallableAbi {
       signature.returnType,
       CallableKind.function,
       isAsync: declaration.functionExpression.body.isAsynchronous,
-      returnsVoid: signature.returnType.isSpec(CoreTypes.voidType),
     );
   }
 

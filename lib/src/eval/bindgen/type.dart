@@ -116,6 +116,9 @@ String? _legacyRegistrySpec(String libUri, String name) {
 }
 
 String? builtinTypeFrom(BindgenContext ctx, DartType type) {
+  if (type.isDartAsyncFutureOr) {
+    return 'AsyncTypes.futureOr';
+  }
   if (type.isDartCoreNull) {
     return 'CoreTypes.nullType';
   }
@@ -575,8 +578,12 @@ String _wrapFuture(
   bool wrapPayload = true,
 }) {
   final metadata = _typeArgumentMetadata(ctx, 'future', payload, owner);
+  // A Future<void> can carry a value observable through a dynamic reference.
+  // Widen the host callback's static type before wrapping that value.
   final value = wrapPayload
-      ? '$expr.then((e) => ${wrapVar(ctx, payload, 'e', runtimeTypeOwner: owner)})'
+      ? payload is VoidType
+            ? '($expr as Future<dynamic>).then((e) => runtime.wrapAlways(e, recursive: true))'
+            : '$expr.then((e) => ${wrapVar(ctx, payload, 'e', runtimeTypeOwner: owner)})'
       : expr;
   return '\$Future.wrap($value$metadata)';
 }

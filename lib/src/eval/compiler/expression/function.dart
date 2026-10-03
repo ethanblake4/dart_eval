@@ -375,7 +375,20 @@ Variable compileFunctionExpression(
               inferredClosureReturnType!,
             );
           }
-          if (beginAsync != null && boundResolved == null) {
+          // A broad callback context such as Object Function() constrains
+          // the returned Future, rather than its payload. Infer that payload
+          // from the body, as for a closure without a contextual return.
+          final inferAsyncPayload =
+              boundResolved == null ||
+              (declaredClosureReturnType == null &&
+                  !boundResolved.isSpec(CoreTypes.voidType) &&
+                  !boundResolved.isSpec(AsyncTypes.futureOr) &&
+                  ctx.typeSystem.asInstanceOf(
+                        boundResolved,
+                        ctx.types.bySpec(CoreTypes.future),
+                      ) ==
+                      null);
+          if (beginAsync != null && inferAsyncPayload) {
             beginAsync.runtimeTypeId = ctx.runtimeTypes.idOf(
               inferredClosureReturnType!,
             );

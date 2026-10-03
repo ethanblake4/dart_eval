@@ -161,7 +161,7 @@ class $StreamController<T> implements $Instance {
                 BridgeTypeRef.genericFunction(
                   BridgeFunctionDef(
                     returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.object, [
+                      BridgeTypeRef(AsyncTypes.futureOr, [
                         BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
                       ]),
                     ),
@@ -426,7 +426,7 @@ class $StreamController<T> implements $Instance {
           BridgeTypeRef.genericFunction(
             BridgeFunctionDef(
               returns: BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, [
+                BridgeTypeRef(AsyncTypes.futureOr, [
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
                 ]),
               ),

@@ -287,7 +287,9 @@ class $StreamSubscription<T> implements $Instance {
     final self = target! as $StreamSubscription;
     final result = self.$value.cancel();
     return $Future.wrap(
-      result.then((e) => null),
+      (result as Future<dynamic>).then(
+        (e) => runtime.wrapAlways(e, recursive: true),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
         runtime.lookupType(CoreTypes.voidType),

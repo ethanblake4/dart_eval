@@ -42,9 +42,6 @@ StatementInfo doReturn(
     return StatementInfo(willAlwaysThrow: true);
   }
   if (isAsync) return doAsyncReturn(ctx, expectedReturnType, value);
-  if (expectedReturnType.isSpec(CoreTypes.voidType)) {
-    value = null;
-  }
   if (value == null) {
     if (ctx.exceptionDepth > 0) {
       final continuation = BasicBlock<Operation>([

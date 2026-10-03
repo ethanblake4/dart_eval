@@ -3510,3 +3510,16 @@ boundary. Generic setters and invocation checks already worked and were retained
 Both complete original covariant fixtures and nine existing dispatch/member/
 tear-off tests pass. Analysis and diff checks pass; two stale entries removed.
 This emits checks only on affected signatures and changes no runtime code.
+
+## Cycle 21 pass 4: observable void return values
+
+Synchronous void callables retain expression return values with a boxed result
+ABI. Native void intrinsics define an actual null value. Async closure payloads
+are inferred from their bodies under broad Object contexts. Removed the unused
+returnsVoid ABI option and its callers. The binding generator recognizes
+FutureOr metadata and preserves observable Future<void> payloads. Scoped SDK
+generation supplied only the relevant controller/subscription/view hunks;
+unrelated existing generator drift was excluded.
+All three original void fixtures and 15 existing callback/async/FutureOr tests
+pass. Analysis and diff checks pass; three stale entries removed. No new
+ordinary tests or interpreter changes were added for these SDK fixtures.
