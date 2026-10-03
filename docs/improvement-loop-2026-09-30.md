@@ -3564,3 +3564,29 @@ initializer closures. Capture copying now preserves value facts, write epochs
 and write-capture status, while existing deferred-write filtering rejects unstable
 dependencies. All 11 focused sound-flow/late tests and the three original late
 fixtures pass. The change adds no runtime instructions.
+
+## Cycle 21 follow-up and compiler optimization checkpoint
+
+Lazy initializer lowering now retains the pre-conversion value type and stable
+captured promotions. Both original SDK initialization/boolean regression fixtures
+pass, along with all 11 focused flow/late tests and the original late/subtype groups.
+
+The every-third-loop compiler pass extends the existing bounded leaf inliner to
+small nongeneric constructors of classes without descendants. Their frame type
+setup and null subclass link are unnecessary in an expanded body. All other
+allocation, frame, call and exception restrictions remain in place. Parameter
+copies retain argument evaluation order and independence. One focused native and
+serialized regression verifies expansion inside a generic caller; 14 focused
+constructor/inliner tests and scoped analysis pass.
+
+A new invoice_snapshots benchmark materializes immutable invoice rows in pages.
+Two paired 15-sample AOT runs on one core improved medians from 49.384/49.815 ms
+to 36.515/37.005 ms (about 26%), with identical checksums. Another saved pair
+improved 52.838 to 39.581 ms. The full 23-driver AOT sweep matched all 22 execution
+checksums and retained 1355-byte compile output. Event dispatch improved 12.6% in
+the sweep; dynamic-case gains were noisy and are not treated as established wins.
+The apparent direct-closure regression vanished in paired rechecks (candidate
+2.533/2.529 ms, reference 2.729/2.540 ms). The tiny async synchronous timing was
+quantized; larger repeated work exercises the same unchanged path. The indexed
+aggregation checksum also matched. No runtime or interpreter code changed in
+this compiler optimization checkpoint.

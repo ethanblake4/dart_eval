@@ -3,6 +3,41 @@ import 'package:dart_eval/src/eval/ir/flow.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('leaf constructors inline without borrowing generic caller state', () {
+    final compiler = Compiler();
+    final program = compiler.compile({
+      'test': {
+        'main.dart': '''
+          class Row {
+            final int first;
+            final int second;
+            final int third;
+            Row(this.first, this.second, this.third);
+          }
+          int make<T>(int value) {
+            final row = Row(value++, value++, value++);
+            return row.first * 100 + row.second * 10 + row.third + value;
+          }
+          int main() => make<String>(2);
+        ''',
+      },
+    });
+    final makeId = compiler.functionNames.entries
+        .singleWhere((entry) => entry.value.startsWith('make'))
+        .key;
+    final graph = compiler.functionGraphs[makeId]!;
+    expect([
+      for (final id in graph.graph.vertices)
+        ...graph[id]!.code.whereType<Call>(),
+    ], isEmpty);
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(runtime.executeLib('package:test/main.dart', 'main'), 239);
+    }
+  });
+
   test('inlined parameters remain independent and arguments evaluate once', () {
     final compiler = Compiler();
     final program = compiler.compile({

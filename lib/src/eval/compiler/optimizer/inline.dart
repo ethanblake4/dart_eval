@@ -10,7 +10,9 @@ import '../../ir/numeric.dart';
 import '../../ir/objects.dart' as objects;
 import '../../ir/primitives.dart' as primitives;
 import '../../ir/string.dart';
+import '../../ir/types.dart' as types;
 import '../context.dart';
+import '../type.dart';
 
 /// Expands short leaf bodies before SSA construction. Argument binding and
 /// representation conversions have already happened at the original call site.
@@ -35,7 +37,17 @@ void inlineLeafCalls(CompilerContext context) {
         (context.functionTypeParameters[entry.key]?.isNotEmpty ?? false)) {
       continue;
     }
-    final code = blocks.single.code;
+    final original = blocks.single.code;
+    final allocation = _leafAllocation(context, original);
+    final code = allocation == null
+        ? original
+        : [
+            for (final op in original)
+              if (op is! types.SetTypeEnvironment &&
+                  !(op is objects.LinkSuperclass &&
+                      op.superclass == allocation.target))
+                op,
+          ];
     if (code.isEmpty || code.last is! flow.Return) continue;
     final returned = code.last as flow.Return;
     if (returned.value == null) continue;
@@ -45,7 +57,7 @@ void inlineLeafCalls(CompilerContext context) {
     var valid = true;
     for (final op in code.take(code.length - 1)) {
       if (op is functions.Parameter) {
-        if (bodyOperations != 0 ||
+        if ((bodyOperations != 0 && allocation == null) ||
             op.index != parameters ||
             parameters >= signature.parameters.length ||
             op.representation != signature.parameters[parameters]) {
@@ -53,7 +65,7 @@ void inlineLeafCalls(CompilerContext context) {
           break;
         }
         parameters++;
-      } else if (!_canInline(op) ||
+      } else if ((!_canInline(op) && !identical(op, allocation)) ||
           ++bodyOperations > maxBodyOperations ||
           !op.readsFrom.every(defined.contains)) {
         valid = false;
@@ -149,6 +161,29 @@ void inlineLeafCalls(CompilerContext context) {
     }
     graph.invalidate();
   }
+}
+
+// A nongeneric leaf constructor has no type environment to install and can
+// never receive an existing subclass. Its allocation is independent of a frame.
+objects.CreateClass? _leafAllocation(
+  CompilerContext context,
+  List<cfg.Operation> code,
+) {
+  final allocations = code.whereType<objects.CreateClass>().toList();
+  if (allocations.length != 1 || code.last is! flow.Return) return null;
+  final allocation = allocations.single;
+  if ((code.last as flow.Return).value != allocation.target ||
+      context.hasSubclasses(allocation.library, allocation.name)) {
+    return null;
+  }
+  final declaration = context
+      .topLevelDeclarationsMap[allocation.library]?[allocation.name]
+      ?.declaration;
+  if (declaration == null ||
+      (classLikeClauses(declaration).$4?.typeParameters.isNotEmpty ?? false)) {
+    return null;
+  }
+  return allocation;
 }
 
 // An explicit allowlist keeps frame-dependent operations, calls, allocations,
