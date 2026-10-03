@@ -81,6 +81,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
               ? result
               : localBinding.current.withType(type),
         );
+        localBinding.promote(type);
       }
     }
     return result;

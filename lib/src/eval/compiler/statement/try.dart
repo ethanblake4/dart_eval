@@ -1,6 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assigned_locals.dart';
-import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
@@ -105,11 +104,18 @@ StatementInfo _compileTry(
   // `catch`/`finally` its slot may hold the written value, so handler entry
   // demotes it to its declared type with facts cleared.
   final tryAssigned = assignedLocalNames([bodyNode]);
+  final finallyAssigned = catchClauses.isEmpty
+      ? tryAssigned
+      : assignedLocalNames([bodyNode, ...catchClauses]);
 
-  void restoreBindings({ContextSaveState? flowInto, bool leaving = false}) {
+  void restoreBindings({
+    ContextSaveState? flowInto,
+    bool leaving = false,
+    Set<String>? demoted,
+  }) {
     ctx.restoreState(leaving ? outerState : (flowInto ?? initialState));
     if (!leaving) {
-      for (final name in tryAssigned) {
+      for (final name in demoted ?? tryAssigned) {
         final binding = ctx.lookupBinding(name);
         if (binding == null) continue;
         final value = binding.current.withType(binding.declaredType);
@@ -203,13 +209,19 @@ StatementInfo _compileTry(
       for (final (states, start) in pendingJumps) ...states.skip(start),
     ];
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [finallyBlock], parent);
-    restoreBindings();
+    restoreBindings(demoted: finallyAssigned);
     finallyEntryState = ctx.saveState();
     finalInfo = compileFinally!();
     if (completes(finalInfo)) {
       finallyExitState = ctx.saveState();
       for (final state in crossingJumps) {
-        state.applyFinallyWrites(finallyEntryState, finallyExitState);
+        state.applyFinallyWrites(
+          ctx,
+          finallyEntryState,
+          finallyExitState,
+          bodyNode,
+          finallyAssigned,
+        );
       }
       final normalCompletion =
           completes(bodyInfo) || catchBlock != null && completes(catchInfo);
@@ -229,61 +241,18 @@ StatementInfo _compileTry(
   // edges — the try body and each completing catch. An exceptional edge
   // rethrows out of `finally`; it never arrives here.
   final normalExits = [?bodyExitState, ?catchExitState];
-  for (var frame = 0; frame < ctx.locals.length; frame++) {
-    for (final entry in ctx.locals[frame].entries) {
-      final binding = entry.value;
-      var sawEdge = false;
-      var type = binding.current.type;
-      var facts = binding.current.facts;
-      var epoch = binding.current.writeEpoch;
-      for (final state in normalExits) {
-        final other = state.locals[frame][entry.key]?.current;
-        if (other == null) continue;
-        type = sawEdge && other.type != type
-            ? TypeRef.commonBaseType(ctx, {type, other.type})
-            : other.type;
-        facts = sawEdge ? facts.join(other.facts) : other.facts;
-        if (!sawEdge || other.writeEpoch > epoch) epoch = other.writeEpoch;
-        sawEdge = true;
-      }
-      // Writes inside `finally` apply on top: they show up as an epoch bump
-      // relative to the state the finally block started from.
-      if (sawEdge) {
-        final value = binding.current.copyWith(type: type, facts: facts)
-          ..writeEpoch = epoch;
-        binding.rebind(value);
-      }
-      final finallyExit = finallyExitState?.locals[frame][entry.key]?.current;
-      final finallyEntry = finallyEntryState?.locals[frame][entry.key]?.current;
-      if (finallyExit != null &&
-          finallyEntry != null &&
-          finallyExit.writeEpoch > finallyEntry.writeEpoch) {
-        binding.rebind(finallyExit.copyWith());
-      } else if (finallyExit != null && tryAssigned.contains(entry.key)) {
-        // A changed receiver makes the finally block's member promotions
-        // newer than those established in the try body. Casts do not bump
-        // its write epoch, so layer these facts separately from assignments.
-        for (final promotion
-            in finallyExit.facts.promotedMembers?.entries ??
-                const <MapEntry<String, TypeRef>>[]) {
-          if (promotion.value ==
-              finallyEntry?.facts.promotedMembers?[promotion.key]) {
-            continue;
-          }
-          final viaSuper = promotion.key.startsWith('super:');
-          final current = promotedMemberReadType(
-            ctx,
-            binding.current,
-            viaSuper ? promotion.key.substring(6) : promotion.key,
-            viaSuper,
-          );
-          if (canPromoteTo(ctx, promotion.value, current, bodyNode)) {
-            promoteMember(ctx, binding.current, promotion.key, promotion.value);
-          }
-        }
-      }
+  if (finallyEntryState != null && finallyExitState != null) {
+    for (final state in normalExits) {
+      state.applyFinallyWrites(
+        ctx,
+        finallyEntryState,
+        finallyExitState,
+        bodyNode,
+        finallyAssigned,
+      );
     }
   }
+  ctx.mergeBranchState(normalExits, includeCurrent: false);
   if (finalInfo != null && !completes(finalInfo)) return finalInfo;
   return catchBlock == null ? bodyInfo : bodyInfo | catchInfo;
 }

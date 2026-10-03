@@ -19,6 +19,8 @@ final class ValueFacts {
     this.isConstInt = false,
     this.constBool,
     this.promotedMembers,
+    this.promotionHistory,
+    this.memberPromotionHistory,
     this.truePromotions,
     this.falsePromotions,
   });
@@ -70,6 +72,11 @@ final class ValueFacts {
   /// promoted type the member read currently reports. Absent = none.
   final Map<String, TypeRef>? promotedMembers;
 
+  /// Ordered narrowing proofs. Null avoids allocating for unpromoted locals;
+  /// an empty history records that a join discarded all explicit proofs.
+  final List<TypeRef>? promotionHistory;
+  final Map<String, List<TypeRef>>? memberPromotionHistory;
+
   /// For a bool-typed value that recorded a condition expression
   /// (`bool b = x != null`): the local promotions that hold when the value
   /// is true / false — the "promotion through boolean variables" rule.
@@ -89,6 +96,9 @@ final class ValueFacts {
     bool? isConstInt,
     bool? constBool,
     Map<String, TypeRef>? promotedMembers,
+    List<TypeRef>? promotionHistory,
+    Map<String, List<TypeRef>>? memberPromotionHistory,
+    bool replacePromotionHistory = false,
     Map<String, (TypeRef, int)>? truePromotions,
     Map<String, (TypeRef, int)>? falsePromotions,
     TypeRef? nullShortedType,
@@ -104,6 +114,12 @@ final class ValueFacts {
     isConstInt: isConstInt ?? this.isConstInt,
     constBool: constBool ?? this.constBool,
     promotedMembers: promotedMembers ?? this.promotedMembers,
+    promotionHistory: replacePromotionHistory
+        ? promotionHistory
+        : promotionHistory ?? this.promotionHistory,
+    memberPromotionHistory: replacePromotionHistory
+        ? memberPromotionHistory
+        : memberPromotionHistory ?? this.memberPromotionHistory,
     truePromotions: truePromotions ?? this.truePromotions,
     falsePromotions: falsePromotions ?? this.falsePromotions,
   );
@@ -111,24 +127,73 @@ final class ValueFacts {
   /// Facts for a merged value: [exact] survives only when both inputs
   /// agree, [possibleClasses] unions only when both are known, and the
   /// const markers require both. Member promotions and recorded conditions
-  /// survive only when both edges agree on the same entry — a conservative
-  /// join; differing promotions fall back to the member's declared type.
-  ValueFacts join(ValueFacts other) => ValueFacts(
-    exact: other.exact == exact ? exact : null,
-    possibleClasses: possibleClasses.isEmpty || other.possibleClasses.isEmpty
-        ? const []
-        : {...possibleClasses, ...other.possibleClasses}.toList(),
-    denotedType: other.denotedType == denotedType ? denotedType : null,
-    callableSignature: other.callableSignature == callableSignature
-        ? callableSignature
-        : null,
-    isConst: isConst && other.isConst,
-    isConstInt: isConstInt && other.isConstInt,
-    constBool: constBool == other.constBool ? constBool : null,
-    promotedMembers: _joinMaps(promotedMembers, other.promotedMembers),
-    truePromotions: _joinMaps(truePromotions, other.truePromotions),
-    falsePromotions: _joinMaps(falsePromotions, other.falsePromotions),
-  );
+  /// retain shared proofs from their promotion histories; recorded conditions
+  /// survive only when both edges agree on the same entry.
+  ValueFacts join(ValueFacts other) {
+    final memberHistories = joinMemberHistories(other);
+    var members = _joinMaps(promotedMembers, other.promotedMembers);
+    for (final entry
+        in memberHistories?.entries ??
+            const <MapEntry<String, List<TypeRef>>>[]) {
+      if (entry.value.isEmpty) {
+        members?.remove(entry.key);
+      } else {
+        (members ??= {})[entry.key] = entry.value.last;
+      }
+    }
+    return ValueFacts(
+      exact: other.exact == exact ? exact : null,
+      possibleClasses: possibleClasses.isEmpty || other.possibleClasses.isEmpty
+          ? const []
+          : {...possibleClasses, ...other.possibleClasses}.toList(),
+      denotedType: other.denotedType == denotedType ? denotedType : null,
+      callableSignature: other.callableSignature == callableSignature
+          ? callableSignature
+          : null,
+      isConst: isConst && other.isConst,
+      isConstInt: isConstInt && other.isConstInt,
+      constBool: constBool == other.constBool ? constBool : null,
+      promotedMembers: members,
+      promotionHistory:
+          promotionHistory == null && other.promotionHistory == null
+          ? null
+          : intersectHistories(promotionHistory, other.promotionHistory),
+      memberPromotionHistory: memberHistories,
+      truePromotions: _joinMaps(truePromotions, other.truePromotions),
+      falsePromotions: _joinMaps(falsePromotions, other.falsePromotions),
+    );
+  }
+
+  static List<TypeRef> intersectHistories(List<TypeRef>? a, List<TypeRef>? b) =>
+      List.unmodifiable([
+        for (final type in a ?? const <TypeRef>[])
+          if (b?.contains(type) ?? false) type,
+      ]);
+
+  Map<String, List<TypeRef>>? joinMemberHistories(ValueFacts other) {
+    if (memberPromotionHistory == null &&
+        other.memberPromotionHistory == null) {
+      return null;
+    }
+    return Map.unmodifiable({
+      for (final key in {
+        ...?memberPromotionHistory?.keys,
+        ...?other.memberPromotionHistory?.keys,
+      })
+        key: intersectHistories(
+          memberPromotionHistory?[key],
+          other.memberPromotionHistory?[key],
+        ),
+    });
+  }
+
+  ValueFacts withPromotion(TypeRef type) =>
+      copyWith(promotionHistory: appendPromotion(promotionHistory, type));
+
+  static List<TypeRef> appendPromotion(List<TypeRef>? history, TypeRef type) =>
+      history != null && history.isNotEmpty && history.last == type
+      ? history
+      : List.unmodifiable([...?history, type]);
 
   static Map<String, V>? _joinMaps<V>(Map<String, V>? a, Map<String, V>? b) {
     if (a == null || b == null) return null;
@@ -140,8 +205,13 @@ final class ValueFacts {
   }
 
   /// This value's facts with member [name] promoted to [type].
-  ValueFacts withPromotedMember(String name, TypeRef type) =>
-      copyWith(promotedMembers: {...?promotedMembers, name: type});
+  ValueFacts withPromotedMember(String name, TypeRef type) => copyWith(
+    promotedMembers: {...?promotedMembers, name: type},
+    memberPromotionHistory: Map.unmodifiable({
+      ...?memberPromotionHistory,
+      name: appendPromotion(memberPromotionHistory?[name], type),
+    }),
+  );
 
   /// No facts survive an unknown value change, including callable signatures.
   ValueFacts cleared() => const ValueFacts();

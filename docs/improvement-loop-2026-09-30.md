@@ -4179,3 +4179,17 @@ Future. The primitive wrapper fallback now reuses the existing SDK-generated
 Symbol wrapper after the common primitive cases. No stdlib wrapper was edited.
 Ten interface and Symbol tests pass; scoped compiler analysis is clean. The
 confirmed stale expectation is removed.
+
+### Cycle 26 correctness pass 4: finally promotion histories
+
+Optional immutable proof chains retain intermediate local and member promotions.
+Shared joins intersect the chains rather than computing a least-upper-bound that
+can retain a proof absent from one incoming path. Finally proofs are rebased onto
+each normal and crossing-jump exit before joining, respecting Dart 3.8 and 3.9
+layering order. Receiver assignments, including destructuring and catch-body
+writes, demote finally entry correctly. Actual cast and conditional producers
+record histories; temporary value views do not.
+
+All three original try/finally SDK fixtures pass fresh and serialized execution,
+and their stale expectations are removed. Forty-two existing focused tests pass;
+scoped analysis is clean. No fixture copies or runtime operations were added.

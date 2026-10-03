@@ -96,8 +96,7 @@ void applyConditionPromotions(
 void _apply(CompilerContext ctx, Variable local, TypeRef type, String? member) {
   if (member == null) {
     local.binding?.typesOfInterest.add(type);
-    final promoted = local.withType(type);
-    promoted.binding?.rebind(promoted);
+    local.binding?.promote(type);
   } else {
     promoteMember(ctx, local, member, type);
   }

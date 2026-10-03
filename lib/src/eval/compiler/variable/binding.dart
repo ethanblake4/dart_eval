@@ -260,7 +260,9 @@ final class LocalBinding {
         name: local.name,
         type: localType,
         rep: local.rep,
-        facts: stored.facts.forBinding(),
+        facts: localType == declaredType
+            ? stored.facts.forBinding()
+            : stored.facts.forBinding().withPromotion(localType),
       ),
     );
     _current.writeEpoch = local.writeEpoch + 1;
@@ -274,7 +276,12 @@ final class LocalBinding {
   /// back to its declared type.
   void _applyCellWrite(TypeRef localType) {
     final value = _current.withType(writeCaptured ? declaredType : localType);
-    rebind(value.withFacts(value.facts.cleared()));
+    final facts = value.facts.cleared();
+    rebind(
+      value.withFacts(
+        value.type == declaredType ? facts : facts.withPromotion(value.type),
+      ),
+    );
     _current.writeEpoch = value.writeEpoch + 1;
   }
 
@@ -381,6 +388,10 @@ final class LocalBinding {
   /// Replaces the binding's current value's flow type (promotion, `is`
   /// narrowing, `inferType`).
   void promote(TypeRef type) {
-    _current = _current.copyWith(type: type);
+    final facts =
+        _current.facts.promotionHistory == null && _current.type != declaredType
+        ? _current.facts.withPromotion(_current.type)
+        : _current.facts;
+    _current = _current.copyWith(type: type, facts: facts.withPromotion(type));
   }
 }

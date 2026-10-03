@@ -161,6 +161,11 @@ class _AssignedLocalNames extends GeneralizingAstVisitor<void> {
   }
 
   @override
+  void visitAssignedVariablePattern(AssignedVariablePattern node) {
+    recordWrite(node.name.lexeme);
+  }
+
+  @override
   void visitPrefixExpression(PrefixExpression node) {
     if ((node.operator.lexeme == '++' || node.operator.lexeme == '--') &&
         node.operand is SimpleIdentifier) {

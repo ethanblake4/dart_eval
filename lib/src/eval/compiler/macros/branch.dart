@@ -207,6 +207,7 @@ StatementInfo macroBranch(
         final current = entry.value.current;
         if (thenType != null &&
             thenType == elseType &&
+            current.facts.promotionHistory == null &&
             isPromotionSubtype(ctx, thenType, current.type)) {
           entry.value.rebind(current.withType(thenType));
         }
