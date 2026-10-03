@@ -112,6 +112,10 @@ import '../helpers/assigned_locals.dart';
       CoreTypes.bool.ref(ctx),
     );
     ctx.typeInferenceSaveStates.removeLast();
+    if (compiledValue.type.isSpec(CoreTypes.never) || ctx.flowTerminated) {
+      ctx.flushBlock();
+      return (false, false);
+    }
     enforceConditionType(ctx, compiledValue, expression);
     final value = convertForAssignment(
       ctx,

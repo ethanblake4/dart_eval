@@ -821,8 +821,9 @@ Variable _typeTestType(
 
   if (!patternContext.usesAssignmentContext &&
       ctx.soundFlowAnalysis(source) &&
-      V.type.isSpec(CoreTypes.nullType) &&
-      !slot.hasNullableRepresentation) {
+      ((V.type.isSpec(CoreTypes.nullType) && !slot.hasNullableRepresentation) ||
+          (slot.isSpec(CoreTypes.nullType) &&
+              !V.type.hasNullableRepresentation))) {
     return BuiltinValue(boolval: false).push(ctx);
   }
 

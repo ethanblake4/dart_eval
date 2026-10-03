@@ -1,10 +1,11 @@
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
+import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes, AsyncTypes;
 import '../context.dart';
 import '../errors.dart';
 import '../type.dart';
 import 'promotion.dart';
 import 'object_pattern_type.dart';
+import 'global.dart';
 
 /// The matched value's type on a successful edge. Widening tests retain
 /// earlier proofs; record fields carry their own recursively refined types.
@@ -47,6 +48,9 @@ TypeRef matchedPatternType(
       );
     case LogicalOrPattern():
       return _patternPromotions(ctx, pattern, bound).last;
+    case RelationalPattern(:final operator, :final operand)
+        when operator.lexeme == '!=' && _isNullExpression(ctx, operand):
+      return bound.withNullable(false);
     case RecordPattern():
       final shape = recordPatternShape(ctx, pattern);
       final record =
@@ -81,6 +85,97 @@ TypeRef matchedPatternType(
     default:
       return bound;
   }
+}
+
+/// Excluding a null test or one arm of FutureOr can refine the failed edge.
+/// Other nominal exclusions have no representable promotion type.
+TypeRef unmatchedPatternType(
+  CompilerContext ctx,
+  ListPatternElement pattern,
+  TypeRef bound,
+) {
+  if (pattern is ParenthesizedPattern) {
+    return unmatchedPatternType(ctx, pattern.pattern, bound);
+  }
+  final TypeRef? tested = switch (pattern) {
+    DeclaredVariablePattern(:final type?) || WildcardPattern(:final type?) =>
+      TypeRef.fromAnnotation(ctx, ctx.library, type),
+    ObjectPattern(:final type, fields: []) => objectPatternType(ctx, type, bound),
+    ConstantPattern(:final expression) =>
+      _isNullExpression(ctx, expression) ? CoreTypes.nullType.ref(ctx) : null,
+    RelationalPattern(:final operator, :final operand)
+        when operator.lexeme == '==' =>
+      _isNullExpression(ctx, operand) ? CoreTypes.nullType.ref(ctx) : null,
+    _ => null,
+  };
+  if (tested == null) return bound;
+  if (tested.isSpec(CoreTypes.nullType) && !bound.isSpec(CoreTypes.nullType)) {
+    return bound.withNullable(false);
+  }
+  if (bound is InterfaceTypeRef && bound.decl.isSpec(AsyncTypes.futureOr)) {
+    final arguments = interfaceArgumentsOf(bound);
+    if (arguments.isEmpty) return bound;
+    final value = arguments.first;
+    final future = ctx.types.bySpec(CoreTypes.future).instantiate([value]);
+    final coversValue = value.isAssignableTo(
+      ctx,
+      tested,
+      forceAllowDynamic: false,
+    );
+    final coversFuture = future.isAssignableTo(
+      ctx,
+      tested,
+      forceAllowDynamic: false,
+    );
+    if (coversValue && !coversFuture) {
+      return future.withNullable(
+        bound.nullable && !tested.hasNullableRepresentation,
+      );
+    }
+    if (coversFuture && !coversValue) {
+      return value.withNullable(bound.nullable || value.nullable);
+    }
+  }
+  return bound;
+}
+
+bool _isNullExpression(CompilerContext ctx, Expression expression) =>
+    expression is NullLiteral ||
+    inferStaticExpressionType(
+      ctx,
+      ctx.library,
+      expression,
+    ).isSpec(CoreTypes.nullType);
+
+/// These casts cannot produce a value under sound pattern flow analysis.
+bool patternAlwaysThrows(
+  CompilerContext ctx,
+  ListPatternElement pattern,
+  TypeRef bound,
+) {
+  if (!ctx.soundFlowAnalysis(pattern)) return false;
+  return switch (pattern) {
+    ParenthesizedPattern(:final pattern) => patternAlwaysThrows(
+      ctx,
+      pattern,
+      bound,
+    ),
+    CastPattern(:final type, :final pattern) => () {
+      final target = TypeRef.fromAnnotation(ctx, ctx.library, type);
+      return target.isSpec(CoreTypes.nullType) &&
+              !bound.hasNullableRepresentation ||
+          bound.isSpec(CoreTypes.nullType) &&
+              !target.hasNullableRepresentation ||
+          patternAlwaysThrows(ctx, pattern, target);
+    }(),
+    NullAssertPattern() => bound.isSpec(CoreTypes.nullType),
+    LogicalAndPattern(:final leftOperand) => patternAlwaysThrows(
+      ctx,
+      leftOperand,
+      bound,
+    ),
+    _ => false,
+  };
 }
 
 /// The required map type uses explicit arguments or the subject's Map view.

@@ -113,12 +113,20 @@ void compileIrrefutablePattern(
     patternContext: PatternBindContext.matching,
     continuation: matching,
   );
+  final matchedType = matchedPatternType(ctx, pattern.pattern, subject.type);
+  if (patternAlwaysThrows(ctx, pattern.pattern, subject.type)) {
+    matching.canMatch = false;
+    matching.canFail = false;
+  }
+  var guardCanFail = false;
   if (guard != null) {
+    if (slot != null) _promotePatternSlot(slot, matchedType);
     final next = BasicBlock<Operation>([], label: ctx.label('guard_true'));
     // The guard also sees pattern bindings, which were not present when the
     // enclosing branch's inference context was saved.
     ctx.enterTypeInferenceContext();
     final result = compileCondition(guard.expression, ctx, next, whenFalse);
+    guardCanFail = matching.canMatch && result.$3;
     ctx.typeInferenceSaveStates.removeLast();
     final guardState = ctx.saveState();
     applyConditionPromotions(ctx, guard.expression, false);
@@ -157,7 +165,6 @@ void compileIrrefutablePattern(
   ctx.mergeBranchState(matching.failedStates);
   ctx.locals.add(bindings);
   if (slot != null) {
-    final matchedType = matchedPatternType(ctx, pattern.pattern, subject.type);
     if (slot.member == null) {
       slot.local.binding?.typesOfInterest.add(matchedType);
       if (pattern.pattern case RecordPattern record) {
@@ -171,12 +178,34 @@ void compileIrrefutablePattern(
       matchedType,
       slot.viaSuper ? 'super:${slot.member}' : slot.member,
     );
+    if (!guardCanFail) {
+      final failed = unmatchedPatternType(ctx, pattern.pattern, subject.type);
+      final live = promotableMemberSlot(ctx, source!);
+      if (live != null && failed != subject.type) {
+        _promotePatternSlot(live, failed);
+      }
+    }
   }
   return (
     BasicBlockBuilder(ctx.activeGraph, [whenTrue, whenFalse], parent),
     matching.canMatch,
     matching.canFail,
   );
+}
+
+void _promotePatternSlot(PromotionSlot slot, TypeRef type) {
+  if (slot.member == null) {
+    slot.local.binding?.promote(type);
+  } else {
+    slot.local.binding?.rebind(
+      slot.local.copyWith(
+        facts: slot.local.facts.withPromotedMember(
+          slot.viaSuper ? 'super:${slot.member}' : slot.member!,
+          type,
+        ),
+      ),
+    );
+  }
 }
 
 final class _PatternCondition implements PatternMatchContinuation {

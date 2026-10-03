@@ -19,6 +19,13 @@ class TreeShakeVisitor extends RecursiveAstVisitor<TreeShakeContext?> {
   }
 
   @override
+  TreeShakeContext? visitPatternField(PatternField node) {
+    if (node.parent is ObjectPattern) output(node.effectiveName);
+    super.visitPatternField(node);
+    return ctx;
+  }
+
+  @override
   TreeShakeContext? visitComment(Comment node) {
     // Ignore comments
     return ctx;

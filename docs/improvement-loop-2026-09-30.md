@@ -3753,3 +3753,14 @@ second wrapper. The original private-symbol fixture passes, and the triple-shift
 fixture was rechecked passing without a remaining expectation entry. Five focused
 symbol tests pass independently of other in-progress bindings. Scoped analysis and
 diff checks pass. One confirmed stale entry removed. No interpreter-loop change.
+## Cycle 23 pass 3: pattern reachability and saved subjects
+
+Failed null/FutureOr pattern edges retain representable exclusions; guards see
+matched subject promotions, and guards or casts that always throw do not create
+live outcomes. Switches carry the refined saved subject separately from a mutated
+source local. Object-pattern getter names now participate in tree shaking.
+Exclusions from object patterns are limited to empty field lists so refutable
+nested patterns cannot produce unsound proofs. Seven original SDK pattern/flow
+fixtures and the disabled-flow counterpart pass their selected variants. Seventeen
+existing focused regressions, six-file analysis and diff checks pass. Seven stale
+entries removed. No runtime checks or bytecode operations added.

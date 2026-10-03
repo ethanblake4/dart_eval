@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/pattern_condition.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/pattern.dart'
     show patternBoundNames;
+import '../helpers/pattern_type.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
 import 'package:dart_eval/src/eval/compiler/statement/break.dart';
 import 'package:dart_eval/src/eval/compiler/statement/statement.dart';
@@ -188,9 +189,20 @@ StatementInfo _compileSwitchCases(
     },
     elseBranch: (ctx, expectedReturnType) {
       // Try next case
+      final unmatched =
+          currentCase is SwitchPatternCase &&
+              currentCase.guardedPattern.whenClause == null
+          ? switchExpr.withType(
+              unmatchedPatternType(
+                ctx,
+                currentCase.guardedPattern.pattern,
+                switchExpr.type,
+              ),
+            )
+          : switchExpr;
       return _compileSwitchCases(
         ctx,
-        switchExpr,
+        unmatched,
         cases,
         index + 1,
         expectedReturnType,
