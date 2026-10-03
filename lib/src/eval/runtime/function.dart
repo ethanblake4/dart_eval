@@ -216,6 +216,15 @@ class $Function extends EvalFunction {
         runtime: runtime,
       );
     }
+    if (fn is TypedMember) {
+      return fn.invokeClosure(
+        positional.length,
+        first,
+        rest,
+        namedNames: namedNames,
+        runtime: runtime,
+      );
+    }
     if (fn is TypedInstance) {
       // `Function.apply` tears off `call` and arity-checks it directly — a
       // real `call` member that rejects the signature fails with

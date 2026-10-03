@@ -2820,3 +2820,15 @@ passes, 179 expected compile failures, 66 expected runtime failures, and
 three skips. The ordinary language/runtime gate passed 997 tests. A paired
 23-driver, 15-sample AOT sweep matched all 22 execution checksums; logs are
 under `.dart_tool/improvement_loop/cycle15-correctness-full23/`.
+
+## Cycle 15 pass 5: Function.apply on bound methods
+
+`Function.apply` forwarded bound `TypedMember` tear-offs through the generic
+callable path, which treated named values as positional arguments. It now
+passes the named-argument names to the member's existing invocation path.
+The exact `unsorted/many_named_arguments_test.dart` fixture and a focused
+fresh/serialized regression pass. The same fix cleared
+`function/apply_generic2_test.dart`; both stale expect-fail entries are
+removed. The change adds one type check only to the cold `Function.apply`
+bridge path. The full 23-driver AOT sweep for the complete correctness tree
+matched all checksums and showed no consistent timing regression.
