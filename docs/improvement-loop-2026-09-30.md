@@ -3425,3 +3425,8 @@ flow changes and emit no suspension checks or adapters. All twelve regressed
 SDK fixtures now pass, as do both proper-subtype fixtures and focused existing
 capture, loop, foreach and assignment tests. Three newly passing expect_fail
 entries were removed. Full default and SDK gates are being rerun.
+Abstract nonfinal fields remain library-wide promotion blockers. A one-line
+follow-up preserves that rule while distinguishing abstract final fields in
+noSuchMethod forwarding. The SDK abstract_field fixture and both forwarding
+fixtures pass. Default gate: 2224 passed, 86 skipped. SDK-full rerun had only
+this corrected fixture failure; final gates will run again after cleanup.

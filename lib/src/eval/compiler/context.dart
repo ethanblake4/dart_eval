@@ -570,7 +570,6 @@ class CompilerContext with ScopeContext {
       for (final member in members) {
         if (member is FieldDeclaration &&
             !member.isStatic &&
-            member.abstractKeyword == null &&
             !member.fields.isFinal) {
           for (final field in member.fields.variables) {
             final name = field.name.lexeme;
