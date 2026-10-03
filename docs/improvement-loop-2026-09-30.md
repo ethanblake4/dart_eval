@@ -4099,3 +4099,10 @@ The original string/interpolation_and_buffer_test.dart and regress/regress60409_
 Representation annotations resolve in extension type parameter scope, then substitute applied arguments during erasure and constructor binding. Finite nested representations are distinguished from declaration cycles. Primary constructors validate explicit/inferred/contextual arguments and bounds; redirect signatures specialize their representation parameters. Rich extension members remain a separate unsupported group.
 
 Validation: 23 focused extension-representation and shorthand tests pass; original extension_type/regress_53968_test.dart passes. Scoped analysis is clean. No expect_fail entries removed in this pass: the surveyed FutureOr shorthand fixtures already resolve FutureOr and still require richer extension constructor/member support.
+
+
+### Cycle 25 correctness pass 5: external-effect intrinsic
+
+Direct calls to exact nongeneric top-level external void(Object?) declarations bearing dart:core's external-effect pragma erase both the call and argument evaluation, matching the pinned SDK intrinsic. Arguments still undergo ordinary static binding in a detached block that existing reachability pruning removes before SSA/backend. Capture-write and nested function state are restored. Ordinary external declarations and tearoffs keep their throwing behavior. Recognition respects pragma shadowing and core import combinators; class-static and part declarations remain conservatively unrecognized.
+
+Original method/external_effect_test.dart passes and its stale entry was removed. Ordinary external field/constructor fixtures, existing external declaration probes, and seven targeted pragma probes pass, including fresh/serialized execution, malformed arguments, unknown names, shadowed annotations and caller state restoration. Caller IR has no erased argument call. Scoped analyzer and diff checks pass. No runtime changes.

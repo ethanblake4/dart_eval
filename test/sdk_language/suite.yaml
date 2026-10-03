@@ -153,7 +153,6 @@ expect_fail:
   - path: 'interceptor/interceptor_test.dart'
   - path: 'list/list_test.dart'
   - path: 'main/no_main_test.dart'
-  - path: 'method/external_effect_test.dart'
   - path: 'mixin_declaration/mixin_declaration_subtype_test.dart'
   - path: 'mixin_declaration/mixin_declaration_syntax_test.dart'
   - path: 'nnbd/constant_null_safety_mode_test.dart'

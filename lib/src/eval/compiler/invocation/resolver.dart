@@ -23,6 +23,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import '../helpers/constructor_type.dart';
 import '../helpers/extension_type.dart';
+import '../helpers/external.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../member/call_signature.dart';
 import '../member/resolved_member.dart';
@@ -2255,6 +2256,24 @@ final class CallResolver {
         };
       default:
         return invokeValue(site, ref: ref);
+    }
+
+    if (sourceDecl is FunctionDeclaration &&
+        isExternalEffect(ctx, offset.file!, sourceDecl)) {
+      final target = StaticCall(
+        offset,
+        sourceDeclaration: sourceDecl,
+        signature: CallSignature.forDeclaration(ctx, offset.file!, sourceDecl),
+      );
+      analyzeExternalEffectArgument(ctx, () {
+        ArgumentBinder(ctx).bindSourceTarget(
+          target,
+          e.argumentList,
+          typeArguments: e.typeArguments,
+          source: e,
+        );
+      });
+      return BuiltinValue().push(ctx).copyWith(type: CoreTypes.voidType.ref(ctx));
     }
 
     // Resolve the call kind and its declaration shape before any argument
