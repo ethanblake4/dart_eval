@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/assigned_locals.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/macros/branch.dart';
@@ -258,6 +259,28 @@ StatementInfo _compileTry(
           finallyEntry != null &&
           finallyExit.writeEpoch > finallyEntry.writeEpoch) {
         binding.rebind(finallyExit.copyWith());
+      } else if (finallyExit != null && tryAssigned.contains(entry.key)) {
+        // A changed receiver makes the finally block's member promotions
+        // newer than those established in the try body. Casts do not bump
+        // its write epoch, so layer these facts separately from assignments.
+        for (final promotion
+            in finallyExit.facts.promotedMembers?.entries ??
+                const <MapEntry<String, TypeRef>>[]) {
+          if (promotion.value ==
+              finallyEntry?.facts.promotedMembers?[promotion.key]) {
+            continue;
+          }
+          final viaSuper = promotion.key.startsWith('super:');
+          final current = promotedMemberReadType(
+            ctx,
+            binding.current,
+            viaSuper ? promotion.key.substring(6) : promotion.key,
+            viaSuper,
+          );
+          if (canPromoteTo(ctx, promotion.value, current, bodyNode)) {
+            promoteMember(ctx, binding.current, promotion.key, promotion.value);
+          }
+        }
       }
     }
   }

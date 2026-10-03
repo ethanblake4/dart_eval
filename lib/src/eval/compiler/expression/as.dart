@@ -46,7 +46,12 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   }
   final promotesLocal =
       operand is SimpleIdentifier || operand is ThisExpression;
-  final promotes = isPromotionSubtype(ctx, slot, V.type);
+  final localBinding = switch (operand) {
+    SimpleIdentifier(:final name) => ctx.lookupBinding(name),
+    ThisExpression() => ctx.lookupBinding('#this'),
+    _ => null,
+  };
+  final promotes = canPromoteTo(ctx, slot, V.type, e);
   // A cast whose operand can never be `slot` throws unconditionally. Only
   // the leaf-`Null` cases are provable: a statically-`Null` operand against
   // a type `Null` isn't assignable to, or `as Null` on a provably
@@ -62,11 +67,12 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   Variable update(Variable v, TypeRef type) {
     final result = v.withType(type);
     if (promotes && promotesLocal) {
-      result.binding?.typesOfInterest.add(type);
+      localBinding?.typesOfInterest.add(type);
+      localBinding?.typesOfInterest.add(type.withNullable(false));
       // A write-captured local can be clobbered by a closure at any
       // time — `x as T` can't promote it.
-      if (result.binding?.writeCaptured != true) {
-        result.binding?.rebind(result);
+      if (localBinding?.writeCaptured != true) {
+        localBinding?.rebind(result);
       }
     }
     return result;
@@ -129,7 +135,7 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
   // `this as T` promotes the receiver itself — store the promoted view on
   // the `#this` local so later `this` reads see it (anonymous-method
   // receivers, extension receivers, and class `this` all live there).
-  if (e.expression is ThisExpression) {
+  if (e.expression is ThisExpression && promotes) {
     ctx.lookupBinding('#this')?.rebind(V);
   }
   return V;

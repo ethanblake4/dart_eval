@@ -243,8 +243,6 @@ expect_fail:
   - path: 'set_literals/set_literal_test.dart'
   - path: 'sound_flow_analysis/pattern_matching_non_nullable_test.dart'
   - path: 'sound_flow_analysis/pattern_not_matching_null_test.dart'
-  - path: 'sound_flow_analysis/proper_subtypes_disabled_test.dart'
-  - path: 'sound_flow_analysis/proper_subtypes_test.dart'
   - path: 'spread_collections/map_set_ambiguity_test.dart'
   - path: 'stack_trace/demangle_ctors_test.dart'
   - path: 'stack_trace/rethrow_error_test.dart'

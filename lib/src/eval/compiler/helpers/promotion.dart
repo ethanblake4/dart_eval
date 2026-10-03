@@ -165,6 +165,7 @@ void _visitPromotions(
         for (final entry in recorded.entries) {
           _applyRecorded(
             ctx,
+            expression,
             entry.key,
             entry.value,
             promote,
@@ -228,6 +229,7 @@ void _visitPromotions(
 /// `x._f` promotes a member of `x`'s binding.
 void _applyRecorded(
   CompilerContext ctx,
+  AstNode source,
   String key,
   (TypeRef, int) recorded,
   PromotionApply promote,
@@ -245,11 +247,22 @@ void _applyRecorded(
       binding.current.writeEpoch != recorded.$2) {
     return;
   }
-  promote(
-    binding.current,
-    recorded.$1,
-    dot < 0 ? null : key.substring(dot + 1),
-  );
+  final member = dot < 0 ? null : key.substring(dot + 1);
+  final viaSuper = member?.startsWith('super:') ?? false;
+  final current = member == null
+      ? binding.current.type
+      : promotedMemberReadType(
+          ctx,
+          binding.current,
+          viaSuper ? member.substring(6) : member,
+          viaSuper,
+        );
+  // A cached boolean can replay an older promotion over a newer one.
+  // Sound flow analysis preserves the newer type for mutual subtypes.
+  if (!canPromoteTo(ctx, recorded.$1, current, source)) {
+    return;
+  }
+  promote(binding.current, recorded.$1, member);
 }
 
 /// The promotion slot [target] addresses — the local itself when
@@ -390,7 +403,7 @@ void _promoteSlot(
     // A nullable tested type cannot promote a non-nullable local when
     // it is not a subtype of the local's current type.
     local.binding?.typesOfInterest.add(tested.withNullable(false));
-    final promotedTo = isPromotionSubtype(ctx, tested, local.type)
+    final promotedTo = canPromoteTo(ctx, tested, local.type, target)
         ? tested
         : null;
     if (promotedTo != null) {
@@ -408,7 +421,7 @@ void _promoteSlot(
     promote(local, memberType.withNullable(false), memberKey);
     return;
   }
-  if (isPromotionSubtype(ctx, tested, memberType)) {
+  if (canPromoteTo(ctx, tested, memberType, target)) {
     promote(local, promotionView(memberType, tested), memberKey);
   }
 }
@@ -491,6 +504,17 @@ TypeRef promotedMemberReadType(
 /// Whether [tested] narrows [current] for `is`-promotion — a subtype
 /// check strict about function variance (the looser assignability used
 /// for argument coercion treats all function types as compatible).
+/// Dart 3.9 also requires a proper subtype, excluding mutual subtypes.
+bool canPromoteTo(
+  CompilerContext ctx,
+  TypeRef tested,
+  TypeRef current,
+  AstNode? source,
+) =>
+    isPromotionSubtype(ctx, tested, current) &&
+    (!ctx.soundFlowAnalysis(source) ||
+        !isPromotionSubtype(ctx, current, tested));
+
 bool isPromotionSubtype(CompilerContext ctx, TypeRef tested, TypeRef current) {
   // `x is C` where x is a type parameter produces the intersection `T&C`:
   // model it as the tested type — the value genuinely is a C afterwards.

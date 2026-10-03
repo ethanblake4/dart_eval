@@ -3345,3 +3345,14 @@ inherited tear-off equality failure; its expect_fail entry remains. A focused
 valid-source regression selects closures with distinct positional and named
 defaults before instantiation, checked fresh and serialized. Existing tear-off,
 extension and export tests pass; touched-file analysis is clean.
+
+## Cycle 20 pass 3: proper-subtype promotion
+
+Sound flow analysis requires a proper subtype for promotion; mutual subtypes
+such as List<dynamic> and List<Object?> no longer replace one another. The
+shared promotion check keeps Dart 3.8 behavior. Assignments retain valid
+types of interest for dynamic locals, casts update source bindings through
+exception slots, and finally member promotions layer on a receiver reassigned
+by the try body. Both proper_subtypes SDK fixtures pass and their stale entries
+were removed. All 28 focused existing promotion and exception tests pass.
+No additional runtime checks or interpreter changes.

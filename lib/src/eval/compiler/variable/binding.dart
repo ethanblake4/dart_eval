@@ -3,6 +3,7 @@ import 'package:dart_eval/src/eval/compiler/context.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/captures.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
+import 'package:dart_eval/src/eval/compiler/helpers/promotion.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/src/eval/compiler/values/value_rep.dart';
@@ -148,10 +149,16 @@ final class LocalBinding {
     // candidate that is a subtype of every other candidate is chosen —
     // when several qualify (mutual subtypes such as `List<dynamic>` and
     // `List<Object?>`) or none do, no type-of-interest promotion occurs.
+    final promotionBase =
+        stored.type.isAssignableTo(ctx, local.type, forceAllowDynamic: false)
+        ? local.type
+        : declaredType;
     final candidates = [
       for (final type in typesOfInterest)
         if (stored.type.isAssignableTo(ctx, type, forceAllowDynamic: false) &&
-            type.isAssignableTo(ctx, declaredType, forceAllowDynamic: false))
+            type.isAssignableTo(ctx, declaredType, forceAllowDynamic: false) &&
+            type != promotionBase &&
+            canPromoteTo(ctx, type, promotionBase, source))
           type,
     ];
     TypeRef? retained;
@@ -172,14 +179,12 @@ final class LocalBinding {
       }
       if (minimalCount > 1) retained = null;
     }
-    final localType =
-        declaredType.isSpec(CoreTypes.dynamic) ||
-            stored.type.isSpec(CoreTypes.dynamic)
+    final localType = stored.type.isSpec(CoreTypes.dynamic)
         ? declaredType
         : declaredType.nullable &&
               stored.type.isAssignableTo(ctx, declaredType.withNullable(false))
         ? declaredType.withNullable(false)
-        : retained ?? declaredType;
+        : retained ?? promotionBase;
 
     if (localType == declaredType && !ctx.soundFlowAnalysis(source)) {
       typesOfInterest.clear();
