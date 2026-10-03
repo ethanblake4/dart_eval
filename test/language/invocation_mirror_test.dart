@@ -3,6 +3,23 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('Object toString rejects arguments on dynamic calls and tear-offs', () {
+    for (final (mode, result) in runDynamicFixture('''
+int main() {
+  dynamic object = Object();
+  dynamic stringify = object.toString;
+  int result = object.toString() is String && stringify() is String ? 1 : 0;
+  try { object.toString(42); } on NoSuchMethodError { result += 2; }
+  try { object.toString(x: 37); } on NoSuchMethodError { result += 4; }
+  try { stringify(42); } on NoSuchMethodError { result += 8; }
+  try { stringify(x: 37); } on NoSuchMethodError { result += 16; }
+  return result;
+}
+''')) {
+      expect(result, const DynamicFixtureResult.value(31), reason: mode);
+    }
+  });
+
   test('noSuchMethod argument collections are immutable', () {
     for (final (mode, result) in runDynamicFixture('''
 class Handler {

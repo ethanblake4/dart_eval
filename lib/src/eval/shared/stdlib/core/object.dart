@@ -205,7 +205,12 @@ class $Object implements $Instance {
       case '!=':
         return $Closure(__not_equals.func, this);
       case 'toString':
-        return $Closure(__toString.func, this);
+        return $Closure.withNamed(
+          __toString.func,
+          this,
+          positionalParameterCount: 0,
+          namedParameters: const [],
+        );
       case 'hashCode':
         return $int($value.hashCode);
     }
@@ -429,6 +434,21 @@ class $Object implements $Instance {
     Object? s,
     Object? c,
   ) {
+    if (c != 0) {
+      final count = c is int ? c : (c as List<Object?>).length + 2;
+      final arguments = [
+        if (count > 0) r,
+        if (count > 1) s,
+        if (c is List<Object?>) ...c,
+      ];
+      throw NoSuchMethodError.withInvocation(
+        target!.$reified,
+        Invocation.method(#toString, [
+          for (final argument in arguments)
+            argument is $Value ? argument.$reified : argument,
+        ]),
+      );
+    }
     return $String(target!.$reified.toString());
   }
 

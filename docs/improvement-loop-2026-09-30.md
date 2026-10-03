@@ -2791,3 +2791,12 @@ now describe a `Type` object, and its getters dispatch through that value.
 All three pinned first-class type-literal fixtures pass in fresh and serialized
 runtimes, as do four focused tests. Their stale expect-fail entries are removed.
 The fix changes compiler resolution only.
+
+## Cycle 15 pass 3: Object.toString invocation checks
+
+The hand-maintained `Object.toString` bridge accepted extra positional
+arguments, and its tear-off omitted the empty named-parameter signature. It
+now rejects invalid calls with `NoSuchMethodError` and exposes the correct
+signature. The exact `unsorted/invocation_mirror_test.dart` fixture and focused
+fresh/serialized dynamic-call tests pass. Its stale expect-fail entry is
+removed. This change stays in the cold Object bridge path.
