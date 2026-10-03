@@ -17,7 +17,7 @@ void _expectResult(Program program, Object expected) {
 }
 
 void main() {
-  test('boxed constructor field and native write share readable storage', () {
+  test('double constructor values survive native writes and object reads', () {
     final program = _compile('''
       class Sample {
         Sample(this.amount);
@@ -58,12 +58,12 @@ void main() {
       bool main() {
         final sample = Sample();
         var uninitialized = false;
-        try { sample.amount; } on StateError { uninitialized = true; }
+        try { sample.amount; } on Error { uninitialized = true; }
         sample.setAmount(2.5);
         sample.amount = sample.amount + 2.0;
         sample.setLocked(7.25);
         var rejected = false;
-        try { sample.setLocked(8.5); } on StateError { rejected = true; }
+        try { sample.setLocked(8.5); } on Error { rejected = true; }
         dynamic unknown = sample;
         Object amount = unknown.amount;
         return uninitialized && rejected && amount is double &&

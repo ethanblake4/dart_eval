@@ -91,6 +91,34 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
           _ => null,
         };
         if (source != null) code[i] = cfg.Assign(op.target, source);
+      } else if (op is objects.SetPropertyStatic &&
+          !op.isLateFinal &&
+          op.rep == MachineRepresentation.object) {
+        final primitive = switch (definition(op.value)) {
+          primitives.BoxInt(:final source) => (
+            source,
+            MachineRepresentation.integer,
+          ),
+          primitives.BoxDouble(:final source) => (
+            source,
+            MachineRepresentation.doublePrecision,
+          ),
+          primitives.BoxBool(:final source) => (
+            source,
+            MachineRepresentation.boolean,
+          ),
+          _ => null,
+        };
+        if (primitive != null) {
+          code[i] = objects.SetPropertyStatic(
+            op.object,
+            op.index,
+            primitive.$1,
+            fieldName: op.fieldName,
+            isLateInitialization: op.isLateInitialization,
+            rep: primitive.$2,
+          );
+        }
       } else if (op is alu.IntAdd) {
         final left = definition(op.left), right = definition(op.right);
         if (right is memory.LoadInt && right.value == 1) {

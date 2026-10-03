@@ -19,6 +19,35 @@ void checkBoth(Program program, Object? expected) {
 }
 
 void main() {
+  test('primitive field stores retain Object reads and escaped aliases', () {
+    final program = compile('''
+      class Row {
+        final Object integer;
+        final Object decimal;
+        final Object flag;
+        Row(this.integer, this.decimal, this.flag);
+      }
+      bool main() {
+        Object integer = 1000;
+        Object decimal = -0.0;
+        Object flag = true;
+        final row = Row(integer, decimal, flag);
+        final escaped = <Object>[integer, decimal, flag];
+        dynamic unknown = row;
+        return unknown.integer == escaped[0] &&
+            (unknown.decimal as double).isNegative &&
+            identical(unknown.flag, escaped[2]);
+      }
+    ''');
+    checkBoth(program, true);
+    final names = program.typedProgram.instructions.map(
+      (entry) => entry.$2.name,
+    );
+    expect(names, contains(matches(r'^setProperty[RSC][AB]$')));
+    expect(names, contains(matches(r'^setProperty[RSC]F$')));
+    expect(names, contains(matches(r'^setProperty[RSC]E$')));
+  });
+
   test('native List writes keep shared index and value representations', () {
     final program = compile('''
       int main() {

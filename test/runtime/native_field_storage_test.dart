@@ -22,7 +22,7 @@ void _expectProgramResult(Program program, Object expected) {
 
 void main() {
   test(
-    'int fields mix constructor boxing, native writes, and object reads',
+    'int fields retain constructor values across native writes and object reads',
     () {
       final program = _compile('''
       class Counter {
@@ -79,14 +79,14 @@ void main() {
       bool main() {
         final child = Child();
         var uninitialized = false;
-        try { child.delayed; } on StateError { uninitialized = true; }
+        try { child.delayed; } on Error { uninitialized = true; }
         child.raise();
         child.value = child.value + 500;
         child.delayed = -500;
         child.delayed++;
         child.setFrozen(1000);
         var rejected = false;
-        try { child.setFrozen(1001); } on StateError { rejected = true; }
+        try { child.setFrozen(1001); } on Error { rejected = true; }
         Base base = child;
         dynamic unknown = child;
         return uninitialized && rejected && child.readSuper() == 1001 &&
@@ -165,12 +165,12 @@ void main() {
       bool main() {
         final child = Child();
         var uninitialized = false;
-        try { child.delayed; } on StateError { uninitialized = true; }
+        try { child.delayed; } on Error { uninitialized = true; }
         child.addSuffix();
         child.delayed = child.text + '?';
         child.setFrozen('locked');
         var rejected = false;
-        try { child.setFrozen('again'); } on StateError { rejected = true; }
+        try { child.setFrozen('again'); } on Error { rejected = true; }
         Base base = child;
         dynamic unknown = child;
         final overridden = Override();

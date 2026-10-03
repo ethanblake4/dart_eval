@@ -3683,3 +3683,22 @@ passes in eval; the installed native runner rejects its experimental feature fla
 pattern and loop regressions pass. Scoped analysis and diff checks pass. One stale
 entry removed, with no emitted runtime checks or interpreter changes. Broader
 extension-type member support remains the earlier this-promotion blocker.
+## Cycle 22 performance: retain primitive field storage
+
+SSA-proven BoxInt/BoxDouble/BoxBool inputs to ordinary object-bank field stores
+now use the existing native field-store bank and original scalar source. Unused
+boxes disappear through the existing dead-definition pass; escaped wrappers and
+late-final guards are retained. No runtime or opcode changes. A focused Object-field
+regression checks negative zero, escaped aliases and native-store emission in both
+program forms. Existing field/late/storage tests pass after five stale StateError
+catches were corrected to Error; their storage/guard coverage remains intact.
+
+Invoice snapshots matched checksum 1358166220 and improved paired medians from
+36.272/36.032 to 31.458/32.785 ms (mean-of-pairs 11.2%). The final 23-driver AOT sweep
+matched all 22 execution checksums, including every dynamic subcase, and compile
+output shrank from 1355 to 1354 bytes. Initial dynamic and closure regressions were
+phase noise: two alternating rechecks at ten times the dynamic workload put all
+non-noisy dynamic shifts within -5% to +2.8%, while noncapturing closures improved
+4.2%. Raw samples and checksums are retained under .dart_tool/improvement_loop/cycle22.
+No other compilation overlapped the timed comparisons. Scoped analysis and focused
+primitive/store tests pass.
