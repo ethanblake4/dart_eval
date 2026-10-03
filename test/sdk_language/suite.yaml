@@ -78,7 +78,6 @@ expect_fail:
   - path: 'closure/tearoff_dynamic_test.dart'
   - path: 'closure/type_arguments_test.dart'
   - path: 'const/factory_member_test.dart'
-  - path: 'const/inference_test.dart'
   - path: 'constructor/constructor_test.dart'
   - path: 'constructor/external_constructor_test.dart'
   - path: 'constructor/patch_tear_off_test.dart'

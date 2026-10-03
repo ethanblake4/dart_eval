@@ -37,6 +37,9 @@ Variable compileInstanceCreation(
   }
 
   var staticType = receiver.type;
+  if (e.isConst && bound != null) {
+    bound = ctx.typeSystem.constantContextType(bound);
+  }
   if (bound != null) bound = inferContextType(ctx, staticType, bound);
   var instantiatedType = staticType.withNullable(type.question != null);
   // A typedef instantiation (`P1()` where `P1 = B2<int>`) constructs the

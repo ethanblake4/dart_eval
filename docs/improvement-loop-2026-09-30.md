@@ -2971,3 +2971,14 @@ The same fix made the pinned
 fixture pass, so its stale `expect_fail` entry is removed.
 Final SDK-full passed 2505 runnable fixtures, with 177 expected compile
 failures, 55 expected runtime failures, and three skips.
+
+## Cycle 17 pass 1: least closure in const contexts
+
+Constant constructor and collection literals previously retained free type
+parameters from their context, such as the enclosing `T` in `List<T>`.
+Constant contexts now replace free parameters with the least type for their
+variance position, while preserving a generic function's own parameters.
+The pinned `const/inference_test.dart` fixture passes across const classes,
+lists, sets, maps, and function tear-offs; its stale `expect_fail` entry is
+removed. Four focused constructor and generic-inference test files pass.
+This changes compiler inference only.

@@ -789,6 +789,82 @@ final class TypeSystem {
     ),
   };
 
+  /// Constant contexts close free type parameters to the least type at each
+  /// variance position. A parameter inside a function's own generic
+  /// signature is bound there and remains unchanged.
+  TypeRef constantContextType(TypeRef type) =>
+      _constantContextType(type, true, const {});
+
+  TypeRef _constantContextType(
+    TypeRef type,
+    bool covariant,
+    Set<TypeParameterDef> bound,
+  ) => switch (type) {
+    TypeParameterTypeRef(:final parameter) =>
+      bound.contains(parameter)
+          ? type
+          : covariant
+          ? CoreTypes.never.ref(_ctx).withNullable(type.nullable)
+          : CoreTypes.object.ref(_ctx).withNullable(true),
+    InterfaceTypeRef(:final arguments) =>
+      arguments.isEmpty
+          ? type
+          : type.copyWith(
+              arguments: [
+                for (final argument in arguments)
+                  _constantContextType(argument, covariant, bound),
+              ],
+            ),
+    RecordTypeRef(:final positional, :final named) => RecordTypeRef(
+      [
+        for (final field in positional)
+          _constantContextType(field, covariant, bound),
+      ],
+      {
+        for (final entry in named.entries)
+          entry.key: _constantContextType(entry.value, covariant, bound),
+      },
+      nullable: type.nullable,
+    ),
+    FunctionTypeRef() => _constantFunctionType(type, covariant, bound),
+    UnknownTypeRef() => type,
+  };
+
+  TypeRef _constantFunctionType(
+    FunctionTypeRef type,
+    bool covariant,
+    Set<TypeParameterDef> bound,
+  ) {
+    final signature = type.signature;
+    final localBound = {...bound, ...signature.typeParameters};
+    return type.copyWith(
+      signature: FunctionSignature(
+        typeParameters: signature.typeParameters,
+        positional: [
+          for (final field in signature.positional)
+            _constantContextType(field, !covariant, localBound),
+        ],
+        requiredPositional: signature.requiredPositional,
+        named: {
+          for (final entry in signature.named.entries)
+            entry.key: (
+              type: _constantContextType(
+                entry.value.type,
+                !covariant,
+                localBound,
+              ),
+              required: entry.value.required,
+            ),
+        },
+        returnType: _constantContextType(
+          signature.returnType,
+          covariant,
+          localBound,
+        ),
+      ),
+    );
+  }
+
   /// Given a set of [types], find their closest common ancestor type —
   /// every type's declaration-shaped chain (extends above interfaces above
   /// mixins, in declaration order) contributing to a layer-frequency pick,
