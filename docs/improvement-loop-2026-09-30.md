@@ -3920,3 +3920,19 @@ argument evaluation, external tear-offs/factories, wildcard parameters, checked
 abstract-field forwarding and serialization. Scoped analyzer/diff checks pass.
 Removed three stale expectations. The distinct external_effect pragma fixture
 still fails because its call and argument effects must be eliminated.
+
+
+## Cycle 24 correctness checkpoint 5
+
+Prefixed typedefs now enter the alias table even though they have no cached
+nominal type. Both prefixed and unprefixed aliases preserve the library where
+they were declared. Private member lookup uses lexical library identity and
+only falls back to raw member names in that defining library. Foreign private
+interface slots receive throwing forwarders when no inherited implementation
+exists, without requiring a user noSuchMethod override.
+
+All five original prefixed alias/mixin/private-member fixtures pass, as does
+the private selector fixture. Existing focused tests pass (56), scoped analyzer
+passes, and three original negative privacy fixtures correctly reject their
+private identifiers. Removed five confirmed stale expectations. No runtime or
+generated stdlib changes and no duplicated SDK tests.

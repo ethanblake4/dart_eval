@@ -506,6 +506,17 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           final res = <String, TypeRef>{};
           for (final childName in dop.children!.keys) {
             final child = dop.children![childName]!;
+            if (!child.isBridge &&
+                child.declaration is TypeAlias &&
+                child.declaration is! ClassTypeAlias) {
+              final alias = child.declaration! as TypeAlias;
+              _ctx.typeAliases.putIfAbsent(
+                libraryIndex,
+                () => {},
+              )['$name.$childName'] = alias;
+              _ctx.typeAliasFiles[alias] = child.sourceLib;
+              continue;
+            }
             final cached = declarationTypes[child];
             if (cached == null) continue;
             res['$name.$childName'] = cached;
@@ -536,7 +547,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             declarationOrBridge.declaration is! ClassTypeAlias) {
           final alias = declarationOrBridge.declaration! as TypeAlias;
           _ctx.typeAliases.putIfAbsent(libraryIndex, () => {})[name] = alias;
-          _ctx.typeAliasFiles[alias] = libraryIndex;
+          _ctx.typeAliasFiles[alias] = declarationOrBridge.sourceLib;
           continue;
         }
         final type = declarationTypes[declarationOrBridge];

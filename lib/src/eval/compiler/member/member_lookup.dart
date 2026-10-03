@@ -647,13 +647,13 @@ final class MemberLookup {
     return decl.declaredMember(linkName(name, link), forImplementation: true);
   }
 
-  /// [name] qualified with [link]'s library: a private member folded in
+  /// [name] qualified with the lexical library: a private member folded in
   /// from another library is stored under `uri::_name`.
   MemberName linkName(MemberName name, TypeRef link) => MemberName(
     name.name,
     name.kind,
     privateLibraryUri: name.name.startsWith('_')
-        ? name.privateLibraryUri ?? ctx.libraryUri(link.file)
+        ? name.privateLibraryUri ?? ctx.libraryUri(ctx.library)
         : null,
   );
 

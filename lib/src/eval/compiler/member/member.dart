@@ -544,13 +544,21 @@ extension TypeDeclMembers on TypeDecl {
     final self = this;
     if (self is SourceTypeDecl) {
       final map = ctx.instanceDeclarationsMap[library]?[this.name];
-      // Position tables qualify private names as `uri::_x`; the instance
-      // map stores the raw `_x` — probe both spellings.
+      final privateUri = name.name.startsWith('_')
+          ? name.privateLibraryUri ?? ctx.libraryUri(ctx.library)
+          : null;
+      // Folded private members use `uri::_x`; a class's own members use
+      // raw `_x`. The raw spelling is visible only in its defining library.
       Object? probe(String key) {
+        if (privateUri != null && !key.contains('::')) {
+          key = '$privateUri::$key';
+        }
         final found = map?[key];
         if (found != null) return found;
         final sep = key.lastIndexOf('::');
-        return sep < 0 ? null : map?[key.substring(sep + 2)];
+        return sep < 0 || key.substring(0, sep) != ctx.libraryUri(library)
+            ? null
+            : map?[key.substring(sep + 2)];
       }
 
       Object? found;
@@ -558,7 +566,10 @@ extension TypeDeclMembers on TypeDecl {
         case MemberKind.method:
           found = probe(name.nameKey);
           if (found == null && !forImplementation) {
-            final prefix = '${name.name}@';
+            final prefix =
+                privateUri == null || privateUri == ctx.libraryUri(library)
+                ? '${name.name}@'
+                : '$privateUri::${name.name}@';
             for (final entry
                 in map?.entries ??
                     const Iterable<MapEntry<String, Declaration>>.empty()) {

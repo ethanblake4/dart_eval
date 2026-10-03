@@ -605,7 +605,11 @@ void _checkInterfaceConformance(
       // A private interface member from another library cannot be named by
       // this class. Dart supplies a throwing forwarder for that slot.
       if (name.startsWith('_') && declLib != ctx.library) {
-        if (hasNoSuchMethod) {
+        if (ctx.memberLookup.implementationOwner(
+              hostType,
+              MemberName(name, kind, privateLibraryUri: ctx.libraryUri(declLib)),
+            ) ==
+            null) {
           (ctx.interfaceNoSuchMethodForwarderRequirements[
                     (ctx.library, hostName)] ??= [])
               .add((member, declLib, kind, name, true));
