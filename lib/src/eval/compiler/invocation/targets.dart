@@ -649,9 +649,8 @@ final class MemberValueCall extends CallTarget {
   }
 }
 
-/// `super.m(...)` with no concrete member — builds an `Invocation.method`
-/// or `Invocation.getter` describing the call and dispatches to
-/// `noSuchMethod` on `this`.
+/// A missing `super` member or a checked abstract-member forwarder — builds
+/// the corresponding invocation and dispatches to `noSuchMethod` on `this`.
 final class NoSuchMethodCall extends CallTarget {
   const NoSuchMethodCall({required this.name, this.getterShaped = false});
 
@@ -747,7 +746,24 @@ final class NoSuchMethodCall extends CallTarget {
       ctx.pushOp(ListAppend(list.ssa, arg.boxIfNeeded(ctx).ssa));
     }
     final invArgs = [_symbolFor(ctx, name).ssa, list.boxIfNeeded(ctx).ssa];
-    if (call.named.isNotEmpty) {
+    if (call.runtimeTypeArguments.isNotEmpty) {
+      final types = Variable.ssa(
+        ctx,
+        NewList(ctx.svar('invocation_types')),
+        CoreTypes.list.ref(ctx).copyWith(arguments: [CoreTypes.type.ref(ctx)]),
+        rep: ValueRep.nativeList,
+      );
+      for (final typeId in call.runtimeTypeArguments) {
+        final type = Variable.ssa(
+          ctx,
+          LoadTypeParameter(ctx.svar('invocation_type'), typeId),
+          CoreTypes.type.ref(ctx),
+        );
+        ctx.pushOp(ListAppend(types.ssa, type.ssa));
+      }
+      invArgs.insert(1, types.boxIfNeeded(ctx).ssa);
+    }
+    if (call.named.isNotEmpty || call.runtimeTypeArguments.isNotEmpty) {
       final mapType = CoreTypes.map
           .ref(ctx)
           .copyWith(
@@ -772,7 +788,13 @@ final class NoSuchMethodCall extends CallTarget {
     }
     final invocation = Variable.ssa(
       ctx,
-      InvokeExternal(ctx.svar('inv'), bridge['Invocation.method']!, invArgs),
+      InvokeExternal(
+        ctx.svar('inv'),
+        bridge[call.runtimeTypeArguments.isEmpty
+            ? 'Invocation.method'
+            : 'Invocation.genericMethod']!,
+        invArgs,
+      ),
       CoreTypes.invocation.ref(ctx),
     );
     return CallResolver(

@@ -3488,3 +3488,15 @@ All four original normalization/Object-alias fixtures and 17 focused tests
 pass; four stale expect_fail entries were removed. One focused hash-set lookup
 test covers recursive generic equality/hash consistency. Analysis and diff
 checks pass. The interpreter dispatch loop is unchanged.
+
+## Cycle 21 pass 2: checked noSuchMethod forwarding
+
+Generalized existing checked abstract-operator bodies to source methods,
+getters and setters on concrete hosts. Existing parameter/default and return
+boundaries now apply before and after noSuchMethod. Generic forwarded calls
+construct Invocation.genericMethod with actual type arguments and the expected
+named-map slot. Invocation is explicitly handMaintained; its generic constructor
+casts the host type iterable without reifying guest argument values.
+Both failing arguments/abstract-override fixtures and partial-instantiation
+neighbor pass; four existing forwarding regressions pass. Analysis is clean,
+two stale entries removed. No hot interpreter or generated stdlib changes.

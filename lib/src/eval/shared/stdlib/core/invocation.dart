@@ -368,7 +368,7 @@ class $Invocation implements Invocation, $Instance {
     return $Invocation.wrap(
       Invocation.genericMethod(
         (r as $Value?)!.$value,
-        (s as $Value?)!.$value,
+        ((s as $Value?)!.$value as Iterable).cast<Type>(),
         arg2!.$value,
         (arg3OrNull?.$reified as Map?)?.cast<Symbol, Object?>(),
       ),

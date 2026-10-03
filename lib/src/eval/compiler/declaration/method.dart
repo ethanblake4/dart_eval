@@ -242,29 +242,53 @@ int compileMethodDeclaration(
             );
             ctx.endScope();
           } else if (b is EmptyFunctionBody) {
-            // An abstract operator on a concrete class with noSuchMethod
-            // still has a checked callable boundary before forwarding.
-            if (!_forwardsAbstractOperator(d, ctx, parent)) {
+            // A missing abstract member on a concrete class still has its
+            // declared callable boundary before forwarding to noSuchMethod.
+            if (!_forwardsAbstractMember(d, ctx, parent)) {
               ctx.endScope();
               return null;
             }
-            final forwarded = NoSuchMethodCall(name: methodName).emit(
+            Variable parameterValue(int index) => Variable.of(
               ctx,
-              BoundCall(
-                positional: [
-                  for (var index = 0; index < resolvedParams.length; index++)
-                    Variable.of(
-                      ctx,
-                      SSA('arg_${index + 1}'),
-                      parameterTypes[index],
-                      rep: abi.parameters[index + 1],
-                    ),
-                ],
-                named: const [],
-                returnType: CoreTypes.dynamic.ref(ctx),
-              ),
+              SSA('arg_${index + 1}'),
+              parameterTypes[index],
+              rep: abi.parameters[index + 1],
             );
-            stInfo = doReturn(ctx, expectedReturnType, forwarded);
+            final target = NoSuchMethodCall(name: methodName);
+            if (d.isSetter) {
+              target.emitSetter(ctx, parameterValue(0));
+              stInfo = doReturn(ctx, expectedReturnType, null);
+            } else {
+              final forwarded = d.isGetter
+                  ? target.emitGetterValue(ctx)
+                  : target.emit(
+                      ctx,
+                      BoundCall(
+                        positional: [
+                          for (var i = 0; i < resolvedParams.length; i++)
+                            if (!resolvedParams[i].isNamed) parameterValue(i),
+                        ],
+                        named: [
+                          for (var i = 0; i < resolvedParams.length; i++)
+                            if (resolvedParams[i].isNamed)
+                              (
+                                resolvedParams[i].name!.lexeme,
+                                parameterValue(i),
+                              ),
+                        ],
+                        runtimeTypeArguments: [
+                          for (final ref in declaredTypeParameterRefs(
+                            ctx,
+                            methodOwner,
+                            methodTypeParameters,
+                          ))
+                            ctx.runtimeTypes.idOf(ref),
+                        ],
+                        returnType: CoreTypes.dynamic.ref(ctx),
+                      ),
+                    );
+              stInfo = doReturn(ctx, expectedReturnType, forwarded);
+            }
           } else {
             throw CompileError('Unknown function body type ${b.runtimeType}');
           }
@@ -320,13 +344,13 @@ int compileMethodDeclaration(
   return pos;
 }
 
-bool _forwardsAbstractOperator(
+bool _forwardsAbstractMember(
   MethodDeclaration method,
   CompilerContext ctx,
   Declaration parent,
 ) {
   // Object's concrete identity operator remains inherited.
-  if (!method.isOperator ||
+  if (method.isStatic ||
       method.name.lexeme == '==' ||
       parent is! ClassDeclaration ||
       parent.abstractKeyword != null) {
@@ -341,7 +365,14 @@ bool _forwardsAbstractOperator(
           null &&
       lookup.implementationOwner(
             receiver,
-            MemberName(method.name.lexeme, MemberKind.method),
+            MemberName(
+              method.name.lexeme,
+              method.isGetter
+                  ? MemberKind.getter
+                  : method.isSetter
+                  ? MemberKind.setter
+                  : MemberKind.method,
+            ),
           ) ==
           null;
 }
