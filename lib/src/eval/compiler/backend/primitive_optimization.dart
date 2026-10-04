@@ -8,6 +8,7 @@ import '../../ir/primitives.dart' as primitives;
 import '../../ir/representation.dart';
 import '../../ir/string.dart';
 import 'loop_invariants.dart';
+import 'native_list_read_reuse.dart';
 
 /// Values proven to contain a native list before any list operation is lowered.
 /// Boxing and copies preserve that property; a phi does so only when all of
@@ -41,7 +42,10 @@ Set<cfg.SSA> inferNativeListValues(
 }
 
 /// Simplifies proven primitive conversions on a private SSA graph.
-void optimizePrimitives(cfg.ControlFlowGraph graph) {
+void optimizePrimitives(
+  cfg.ControlFlowGraph graph, {
+  int? filledListConstructorId,
+}) {
   Iterable<cfg.Operation> operations() sync* {
     for (final id in graph.graph.vertices) {
       yield* graph[id]!.code;
@@ -116,6 +120,10 @@ void optimizePrimitives(cfg.ControlFlowGraph graph) {
       }
     }
   }
+  reuseFreshNativeListReads(
+    graph,
+    filledListConstructorId: filledListConstructorId,
+  );
   _reuseNativeFieldReads(graph, definitions);
   _fuseStringConcatenations(graph);
   // Catch edges can leave before a block's last definition has executed.

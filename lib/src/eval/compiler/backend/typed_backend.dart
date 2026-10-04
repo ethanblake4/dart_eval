@@ -938,7 +938,13 @@ class _LoweringSession {
     // Skip the clone's SSA reindex: optimizePrimitives and lower() mutate the
     // copy before emit() rebuilds SSA metadata itself.
     sourceGraph = b.context.ssaFunctionGraphs[id]!.clone(refresh: false);
-    optimizePrimitives(sourceGraph);
+    optimizePrimitives(
+      sourceGraph,
+      filledListConstructorId:
+          b.context.bridgeStaticFunctionIndices[b
+              .context
+              .libraryMap['dart:core']]?['List.filled'],
+    );
     representations = analyzeRepresentations(
       sourceGraph,
       functions: b.context.functionSignatures,

@@ -4475,3 +4475,29 @@ recovers that context from applied Map<K, V> through the existing bridge
 positional-context path. The unchanged mixed benchmark returns 87 natively,
 fresh and serialized; seven focused neighbors pass, and an invalid callback
 result still throws TypeError. No stdlib, adapter or runtime change was added.
+
+### Cycle 27 performance: reuse reads of fresh list storage
+
+The compiler reuses an already successful indexed read when both the fresh
+guest list allocation and index have the same SSA definitions. It carries facts
+only along forward edges with one predecessor. Writes, calls, unknown storage
+and effectful operations clear the facts; joins, loop backedges, exception
+handlers and asynchronous functions retain their existing reads. A streaming
+prefilter avoids building SSA lookup data for functions without a fresh list
+allocation and at least two reads. No interpreter, opcode or stdlib code changed.
+
+The interval-overlap benchmark removes two list reads and two conversions from
+its main function: six indexed reads become four, and bytecode shrinks from 841
+to 831 bytes with unchanged spills. Five focused tests pass in fresh and
+serialized execution, including effectful host storage and intervening writes.
+The final 23-case AOT sweeps preserve all 22 execution checksums in both orders
+and the compile benchmark's 1350-byte output.
+
+Separate executable interval timings varied with measurement order. A causal
+check instead loads both serialized programs into the same AOT interpreter,
+alternates 31 sample pairs after five warmup pairs, and reverses program loading
+order. Both programs return 414413016 for 100000 appointments. Median paired
+savings are 4614 and 6955 microseconds, about 2.6% and 4.0% of the corresponding
+reference medians. These measurements support the bytecode reduction without
+claiming the larger gains seen in some separate-executable runs. Artifacts are
+under .dart_tool/improvement_loop/cycle27.
