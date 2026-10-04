@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/runtime/typed/typed_closure.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_host_collections.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_call_site.dart';
 
 import 'stream_subscription.dart';
 
@@ -802,15 +803,21 @@ class $Stream implements $Instance {
       ),
       'transform': BridgeMethodDef(
         BridgeFunctionDef(
+          generics: {'S': BridgeGenericParam()},
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.stream, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
             ]),
           ),
           params: [
             BridgeParameter(
               'streamTransformer',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef(AsyncTypes.streamTransformer, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
+                ]),
+              ),
               false,
             ),
           ],
@@ -1749,9 +1756,27 @@ class $Stream implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final $target = target!.$value as Stream;
-    final $transformer = (r as $Value?)!.$value as StreamTransformer;
-    return $Stream.wrap($target.transform($transformer));
+    final transformer = r as $Value;
+    final nativeTransformer = transformer.$value as StreamTransformer;
+    final subclass = Runtime.bridgeData[nativeTransformer]?.subclass;
+    if (subclass is TypedInstance &&
+        subclass.resolve(TypedMemberKind.method, 'bind') != null) {
+      // Keep the source's existing witness when both ends are guest values.
+      // A native bind round trip maps the source into a raw Stream<dynamic>.
+      return subclass.invokeBridge('bind', [target], runtime: runtime)!;
+    }
+    final source = TypedInterop.stream(target, runtime);
+    final outputType = runtime.runtimeTypeArgumentAt(
+      transformer.$getRuntimeType(runtime),
+      1,
+    );
+    return $Stream.wrap(
+      source.transform(nativeTransformer),
+      runtime: runtime,
+      runtimeTypeId: outputType == null
+          ? null
+          : runtime.internParameterizedType(CoreTypes.stream, [outputType]),
+    );
   }
 
   /// The instantiated type id (in [runtime]'s descriptor table), when the

@@ -46,10 +46,18 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
           ctx.currentClass is! ExtensionTypeDeclaration
       ? LoadThis(ctx.svar('this'), receiver.ssa)
       : Assign(ctx.svar('this'), receiver.ssa);
-  return Variable.ssa(ctx, operation, receiver.type, rep: receiver.rep)
-    // Keep the binding so this-member promotions (`this._f`) resolve their
-    // recorded facts through `#this`.
-    ..binding = receiver.binding;
+  final value = Variable.ssa(
+    ctx,
+    operation,
+    receiver.type,
+    rep: receiver.rep,
+    facts: receiver.facts,
+  );
+  // LoadThis produces the dispatch root, not #this's lexical storage link.
+  // A binding would let boxing replace that result with the lexical link.
+  // Copy the flow facts so this-member promotions still apply to the root.
+  if (operation is! LoadThis) value.binding = receiver.binding;
+  return value;
 }
 
 Variable compileSuperExpression(SuperExpression e, CompilerContext ctx) {
