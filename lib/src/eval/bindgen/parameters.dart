@@ -315,7 +315,8 @@ String argumentAccessor(
         type.isDartCoreObject ||
         type is DynamicType ||
         exportValues && _isDartCoreIterator(type) ||
-        _isDartCoreSink(type)) {
+        _isDartCoreSink(type) ||
+        _isDartAsyncStream(type)) {
       paramBuffer.write(
         _exportValue(
           ctx,
@@ -422,6 +423,11 @@ bool _isDartCoreIterator(DartType type) =>
     type.element.name == 'Iterator' &&
     type.element.library.uri.toString() == 'dart:core';
 
+bool _isDartAsyncStream(DartType type) =>
+    type is InterfaceType &&
+    type.element.name == 'Stream' &&
+    type.element.library.uri.toString() == 'dart:async';
+
 bool _isDartCoreSink(DartType type) =>
     type is InterfaceType &&
     type.element.name == 'Sink' &&
@@ -477,6 +483,38 @@ String _exportValue(
         ? '$source == null || $source is \$null ? null : $exported'
         : exported;
   }
+  if (_isDartAsyncStream(type)) {
+    final stream = type as InterfaceType;
+    final payloadType = stream.typeArguments.single;
+    final payload = dartTypeErased(
+      payloadType,
+      nativeOwner: nativeTypeParameters ? ctx.classElement : null,
+      localTypeParameters: localTypeParameters,
+    );
+    final typeId = runtimeTypeIdFor(
+      ctx,
+      payloadType,
+      owner,
+      methodTypeArguments: 'runtime.bridgeCallTypeArguments',
+    )!;
+    final conversion = _streamPayloadConversion(
+      payloadType,
+      'payload',
+      nativeOwner: nativeTypeParameters ? ctx.classElement : null,
+      localTypeParameters: localTypeParameters,
+    );
+    final exported =
+        '(() { final streamPayloadType = $typeId; '
+        'return TypedInterop.stream($source, runtime, exportErrors: true)'
+        '.map((value) => TypedInterop.exportStreamPayload<$payload>('
+        'value, runtime, streamPayloadType, (payload) => $conversion))'
+        '.cast<$payload>(); })()';
+    if (type.nullabilitySuffix == NullabilitySuffix.question) {
+      ctx.imports.add('package:dart_eval/stdlib/core.dart');
+      return '$source == null || $source is \$null ? null : $exported';
+    }
+    return exported;
+  }
   if (_isDartCoreIterator(type)) {
     return 'TypedInterop.exportIterator($source, runtime)';
   }
@@ -491,6 +529,36 @@ String _exportValue(
   }
   return 'TypedInterop.exportExternal($source, runtime: runtime) '
       'as ${dartTypeErased(type, nativeOwner: nativeTypeParameters ? ctx.classElement : null, localTypeParameters: localTypeParameters)}';
+}
+
+String _streamPayloadConversion(
+  DartType type,
+  String source, {
+  InterfaceElement? nativeOwner,
+  Iterable<TypeParameterElement> localTypeParameters = const [],
+}) {
+  String native(DartType value) => dartTypeErased(
+    value,
+    nativeOwner: nativeOwner,
+    localTypeParameters: localTypeParameters,
+  );
+  final exported = 'TypedInterop.exportExternal($source, runtime: runtime)';
+  if (type.isDartCoreList && type is InterfaceType) {
+    final element = type.typeArguments.single;
+    final conversion = _streamPayloadConversion(
+      element,
+      'element',
+      nativeOwner: nativeOwner,
+      localTypeParameters: localTypeParameters,
+    );
+    final list =
+        'TypedInterop.exportStreamList<${native(element)}>('
+        '$source, runtime, (element) => $conversion)';
+    return type.nullabilitySuffix == NullabilitySuffix.question
+        ? '$exported == null ? null : $list'
+        : list;
+  }
+  return '$exported as ${native(type)}';
 }
 
 String _nativeCallbackReturnType(

@@ -1715,7 +1715,7 @@ _resolveImportsAndExports(
     result[l] = visibleDeclarationsLib;
   }
 
-  final processedImports = <String>{};
+  final processedImports = <(Library, int, String)>{};
 
   // Extension members compile separately from top-level declarations. Add
   // dependencies only for members selected by the same compilation rule,
@@ -1761,7 +1761,9 @@ _resolveImportsAndExports(
   while (worklist.isNotEmpty || seedExtensionDependencies()) {
     final library = worklist.removeLast();
     Map<int, Set<String>> applyUsedDeclarations = {};
-    for (final dec in (usedDeclarationsForLibrary[libraryIds[library]] ?? {})) {
+    for (final dec
+        in (usedDeclarationsForLibrary[libraryIds[library]] ??
+            const <String>{})) {
       final ids = usedIdentifiers[library]?[dec];
       if (ids == null) continue;
       final importsWithImplicitSelf = [
@@ -1788,11 +1790,13 @@ _resolveImportsAndExports(
         usedSelf.add(declaration.key);
       }
 
-      for (final import in importsWithImplicitSelf) {
+      for (final (importIndex, import) in importsWithImplicitSelf.indexed) {
         // The scan of this import's declarations is specific to [dec]: each
         // used declaration contributes its own identifier set, so dedupe per
         // (library, import, dec) rather than per (library, import).
-        final iid = '${library.uri}:${import.uri}:$dec';
+        // Same-URI imports can expose different names through prefixes and
+        // combinators. Each directive must contribute its dependencies.
+        final iid = (library, importIndex, dec);
         if (processedImports.contains(iid)) {
           continue;
         }

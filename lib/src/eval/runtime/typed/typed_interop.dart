@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:dart_eval/src/eval/runtime/class.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
@@ -100,10 +101,50 @@ abstract final class TypedInterop {
   }
 
   /// Guest Stream implementations keep their own listen dispatch.
-  static Stream<Object?> stream(Object? value, Runtime runtime) =>
-      value is TypedInstance
-      ? _GuestHostStream(value, runtime)
-      : (value as $Value).$value as Stream<Object?>;
+  /// Native SDK argument boundaries opt into exporting errors.
+  static Stream<Object?> stream(
+    Object? value,
+    Runtime runtime, {
+    bool exportErrors = false,
+  }) {
+    final guest = value is TypedInstance
+        ? value
+        : value is $Value && value.$value is $Bridge
+        ? bridgeGuest(value.$value as $Bridge)
+        : null;
+    return guest != null
+        ? _GuestHostStream(guest, runtime, exportErrors: exportErrors)
+        : (value as $Value).$value as Stream<Object?>;
+  }
+
+  /// Native payloads retain their own generic checks. Guest payloads must
+  /// satisfy the formal descriptor before the statically emitted conversion
+  /// creates a lazy native collection view.
+  static T exportStreamPayload<T>(
+    Object? value,
+    Runtime runtime,
+    int expectedType,
+    T Function(Object?) export,
+  ) {
+    if (value is! $Value) return value as T;
+    if (!runtime.isTypedValueType(value, expectedType)) {
+      throwTypeError(runtime, value, expectedType);
+    }
+    return export(value);
+  }
+
+  /// Reuse the checked collection export for writes; adapt nested reads only
+  /// when its host generic type has been erased.
+  static List<E> exportStreamList<E>(
+    Object? value,
+    Runtime runtime,
+    E Function(Object?) exportElement,
+  ) {
+    final native = exportExternal(value, runtime: runtime) as List;
+    return native is List<E>
+        ? native
+        : _ExportedStreamList<E>(native.cast<Object?>(), exportElement);
+  }
 
   /// Adapts guest iterators returned to an SDK superclass implementation.
   static Iterator<T> exportIterator<T>(Object? value, Runtime runtime) {
@@ -596,10 +637,28 @@ final class TypedTypeError extends TypeError {
   String toString() => "type '$actual' is not a subtype of type '$expected'";
 }
 
+final class _ExportedStreamList<E> extends ListBase<E> {
+  _ExportedStreamList(this.backing, this.exportElement);
+  final List<Object?> backing;
+  final E Function(Object?) exportElement;
+
+  @override
+  int get length => backing.length;
+  @override
+  set length(int value) => backing.length = value;
+  @override
+  E operator [](int index) => exportElement(backing[index]);
+  @override
+  void operator []=(int index, E value) => backing[index] = value;
+  @override
+  void add(E value) => backing.add(value);
+}
+
 final class _GuestHostStream extends Stream<Object?> {
-  _GuestHostStream(this.receiver, this.runtime);
+  _GuestHostStream(this.receiver, this.runtime, {this.exportErrors = false});
   final TypedInstance receiver;
   final Runtime runtime;
+  final bool exportErrors;
 
   @override
   StreamSubscription<Object?> listen(
@@ -657,10 +716,13 @@ final class _GuestHostStream extends Stream<Object?> {
                 (runtime, target, r, s, c) {
                   final trace =
                       (s as $StackTrace?)?.$value ?? StackTrace.current;
+                  final error = exportErrors
+                      ? TypedInterop.exportExternal(r, runtime: runtime)
+                      : r;
                   if (onError is void Function(Object, StackTrace)) {
-                    onError(r!, trace);
+                    onError(error!, trace);
                   } else {
-                    Function.apply(onError, [r]);
+                    Function.apply(onError, [error]);
                   }
                   return null;
                 },

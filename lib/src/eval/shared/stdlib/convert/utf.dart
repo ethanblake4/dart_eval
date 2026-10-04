@@ -41,6 +41,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -65,12 +67,8 @@ import 'package:dart_eval/stdlib/async.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import './converter.dart';
-
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
-
 import './byte_conversion.dart';
 import './codec.dart';
 import '../typed_data/typed_data.dart';
@@ -334,7 +332,30 @@ class $Utf8Decoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $Utf8Decoder;
-    final result = self.$value.bind((r as $Value?)!.$value);
+    final result = self.$value.bind(
+      (() {
+        final streamPayloadType = runtime.internParameterizedType(
+          CoreTypes.list,
+          [runtime.lookupType(CoreTypes.int)],
+        );
+        return TypedInterop.stream((r as $Value?), runtime, exportErrors: true)
+            .map(
+              (value) => TypedInterop.exportStreamPayload<List<int>>(
+                value,
+                runtime,
+                streamPayloadType,
+                (payload) => TypedInterop.exportStreamList<int>(
+                  payload,
+                  runtime,
+                  (element) =>
+                      TypedInterop.exportExternal(element, runtime: runtime)
+                          as int,
+                ),
+              ),
+            )
+            .cast<List<int>>();
+      })(),
+    );
     return $Stream.wrap(
       result.map((e) => $String(e)),
       runtime: runtime,
@@ -733,7 +754,30 @@ class $Utf8Codec implements $Instance {
     Object? c,
   ) {
     final self = target! as $Utf8Codec;
-    final result = self.$value.decodeStream((r as $Value?)!.$value);
+    final result = self.$value.decodeStream(
+      (() {
+        final streamPayloadType = runtime.internParameterizedType(
+          CoreTypes.list,
+          [runtime.lookupType(CoreTypes.int)],
+        );
+        return TypedInterop.stream((r as $Value?), runtime, exportErrors: true)
+            .map(
+              (value) => TypedInterop.exportStreamPayload<List<int>>(
+                value,
+                runtime,
+                streamPayloadType,
+                (payload) => TypedInterop.exportStreamList<int>(
+                  payload,
+                  runtime,
+                  (element) =>
+                      TypedInterop.exportExternal(element, runtime: runtime)
+                          as int,
+                ),
+              ),
+            )
+            .cast<List<int>>();
+      })(),
+    );
     return $Future.wrap(
       result.then((e) => $String(e)),
       runtime: runtime,
@@ -996,7 +1040,23 @@ class $Utf8Encoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $Utf8Encoder;
-    final result = self.$value.bind((r as $Value?)!.$value);
+    final result = self.$value.bind(
+      (() {
+        final streamPayloadType = runtime.lookupType(CoreTypes.string);
+        return TypedInterop.stream((r as $Value?), runtime, exportErrors: true)
+            .map(
+              (value) => TypedInterop.exportStreamPayload<String>(
+                value,
+                runtime,
+                streamPayloadType,
+                (payload) =>
+                    TypedInterop.exportExternal(payload, runtime: runtime)
+                        as String,
+              ),
+            )
+            .cast<String>();
+      })(),
+    );
     return $Stream.wrap(
       result.map(
         (e) => $List.view(
