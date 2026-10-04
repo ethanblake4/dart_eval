@@ -296,6 +296,8 @@ class CompilerContext with ScopeContext {
   /// One forwarding body per bridged function, shared by its tear-offs.
   final Map<int, int> bridgeTearOffAdapterIds = {};
   final Map<int, TypeRef> functionRuntimeTypes = {};
+  bool hasWeakTearOffReferences = false;
+  final inlinedCallees = <int, Set<int>>{};
   int? currentFunctionId;
   int _nextFunctionId = 0;
   late ControlFlowGraph activeGraph;

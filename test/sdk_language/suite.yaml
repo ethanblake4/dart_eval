@@ -66,11 +66,4 @@ exclude:
 # like the SDK's own .status files): any non-passing outcome satisfies the
 # suite; a test that starts passing fails loudly so the entry gets removed.
 # Same path/glob syntax as `exclude`.
-expect_fail:
-  - path: 'interceptor/interceptor_test.dart'
-  - path: 'list/list_test.dart'
-  - path: 'main/no_main_test.dart'
-  - path: 'static_weak_reference_function_apply_test.dart'
-  - path: 'static_weak_reference_test.dart'
-  - path: 'unsorted/checked_method_error_order_test.dart'
-  - path: 'unsorted/disassemble_test.dart'
+expect_fail: []

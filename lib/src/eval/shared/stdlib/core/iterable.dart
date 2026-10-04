@@ -804,7 +804,19 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   );
 
   /// Wrap an [Iterable] in an [$Iterable]
-  $Iterable.wrap(this.$value);
+  $Iterable.wrap(this.$value, {int? runtimeTypeId, Runtime? runtime})
+    : _runtimeTypeId = runtimeTypeId,
+      _runtime = runtime,
+      _hasListType = false;
+
+  $Iterable._listView(this.$value, {int? runtimeTypeId, Runtime? runtime})
+    : _runtimeTypeId = runtimeTypeId,
+      _runtime = runtime,
+      _hasListType = true;
+
+  final int? _runtimeTypeId;
+  final Runtime? _runtime;
+  final bool _hasListType;
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -877,7 +889,9 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   }
 
   @override
-  int $getRuntimeType(Runtime runtime) => runtime.lookupType($type.spec!);
+  int $getRuntimeType(Runtime runtime) => _runtimeTypeId == null
+      ? runtime.lookupType($type.spec!)
+      : runtime.importRuntimeType(_runtime ?? runtime, _runtimeTypeId);
 
   @override
   Iterable<E> get $reified => $value;
@@ -1168,7 +1182,24 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final $this = target?.$value as Iterable;
     final growable = (r as $Value?)?.$value as bool? ?? true;
     final $result = $this.toList(growable: growable);
-    return $List.wrap($result);
+    if (target is $Iterable && target._hasListType) {
+      return $List.wrap(
+        $result,
+        runtime: target._runtime,
+        runtimeTypeId: target._runtimeTypeId,
+      );
+    }
+    final elementType = runtime.runtimeTypeArgumentAt(
+      target!.$getRuntimeType(runtime),
+      0,
+    );
+    return $List.wrap(
+      $result,
+      runtime: runtime,
+      runtimeTypeId: elementType == null
+          ? null
+          : runtime.internParameterizedType(CoreTypes.list, [elementType]),
+    );
   }
 
   @override

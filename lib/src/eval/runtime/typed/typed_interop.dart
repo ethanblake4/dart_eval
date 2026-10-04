@@ -21,6 +21,25 @@ import 'typed_async.dart';
 /// The compiler emits every scalar box and unbox operation. Host functions must
 /// use an explicit bridge wrapper, such as $Function or $Closure.
 abstract final class TypedInterop {
+  /// Construct cast diagnostics only after the existing type check fails.
+  @pragma('vm:never-inline')
+  static Never throwTypeError(
+    Runtime runtime,
+    Object? value,
+    int expectedType, [
+    TypedFrame? frame,
+  ]) {
+    if (frame != null) {
+      expectedType = runtime.resolveTypedEnvironmentType(
+        expectedType,
+        callableTypeArguments: frame.effectiveTypeArguments,
+        typeEnvironment: frame.typeEnvironment,
+        actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
+      );
+    }
+    throw TypedTypeError(runtime, value, expectedType);
+  }
+
   @pragma('vm:never-inline')
   static $Invocation createInvocation(
     Runtime? runtime,
@@ -378,7 +397,9 @@ abstract final class TypedInterop {
     if (receiver == null) {
       final count = positionalCount + namedNames.length;
       if (name == 'toString' && count == 0) return $String('null');
-      if (name == 'noSuchMethod' && positionalCount == 1 && namedNames.isEmpty) {
+      if (name == 'noSuchMethod' &&
+          positionalCount == 1 &&
+          namedNames.isEmpty) {
         return call(runtime, $Object.noSuchMethodTearOff(null), 1, first, null);
       }
       throw NoSuchMethodError.withInvocation(
@@ -520,6 +541,24 @@ abstract final class TypedInterop {
   static Runtime _runtime(Runtime? runtime) =>
       runtime ??
       (throw StateError('A Runtime is required to invoke dart_eval objects'));
+}
+
+final class TypedTypeError extends TypeError {
+  TypedTypeError(this._runtime, this._value, this._expectedType);
+
+  final Runtime _runtime;
+  final Object? _value;
+  final int _expectedType;
+
+  late final String actual = _value == null
+      ? 'Null'
+      : _value is $Value
+      ? _runtime.runtimeTypeToString(_value.$getRuntimeType(_runtime))
+      : _value.runtimeType.toString();
+  late final String expected = _runtime.runtimeTypeToString(_expectedType);
+
+  @override
+  String toString() => "type '$actual' is not a subtype of type '$expected'";
 }
 
 final class _GuestHostStream extends Stream<Object?> {

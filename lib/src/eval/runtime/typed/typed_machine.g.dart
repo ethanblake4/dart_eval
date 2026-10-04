@@ -1434,7 +1434,7 @@ abstract final class TypedMachine {
             typeEnvironment: frame.typeEnvironment,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           )) {
-            throw TypeError();
+            TypedInterop.throwTypeError(runtime, r, index, frame);
           }
         }
        break;

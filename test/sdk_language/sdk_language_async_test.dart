@@ -129,6 +129,7 @@ int check() => completed;
     final sources = [source, _asyncHelperSource];
     final compiler = Compiler();
     setSdkEntrypoints(compiler, sdkTest, sources);
+    compiler.entrypointFunctions['/${sdkTest.relPath}']!.add('check');
     final runtime = Runtime.ofProgram(compiler.compileSources(sources));
 
     await executeSdkMain(runtime, sdkTest, sources);

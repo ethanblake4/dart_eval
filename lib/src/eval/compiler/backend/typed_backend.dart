@@ -42,6 +42,7 @@ import '../context.dart';
 import '../invocation/deferred.dart';
 import 'representation.dart';
 import 'primitive_optimization.dart';
+import 'weak_reachability.dart';
 import '../member/member.dart';
 import '../member/member_name.dart';
 
@@ -151,6 +152,7 @@ class TypedBackend {
   final _classIndices = <(int, String), int>{};
   final _callSites = <TypedCallSite>[];
   final _closures = <TypedClosureDescriptor>[];
+  Set<int>? _strongFunctions;
   final _closureCalls = <TypedClosureCall>[];
   final _externalCalls = <TypedExternalCall>[];
   final _exceptionRegions = <TypedExceptionRegion>[];
@@ -192,8 +194,20 @@ class TypedBackend {
     if (reachable.isEmpty) {
       throw ArgumentError('No typed entrypoints were found');
     }
+    final rootIds = {...seen};
+    if (context.hasWeakTearOffReferences) {
+      for (final graph in context.ssaFunctionGraphs.values) {
+        graph.removeUnusedDefines(
+          canRemove: (op) =>
+              op is cfg.Assign ||
+              op is objects_ir.InternConst ||
+              op is closures.CreateClosure && op.captures.isEmpty,
+        );
+      }
+    }
     final classAllocations = <objects_ir.CreateClass>[];
     final reachableGlobals = <int>{};
+
     var scanned = 0;
     void extendReachable() {
       for (; scanned < reachable.length; scanned++) {
@@ -212,6 +226,7 @@ class TypedBackend {
         for (final block in graph.graph.vertices) {
           for (final op in graph[block]!.code) {
             if (op is flow.Call || op is closures.CreateClosure) {
+              if (op is closures.CreateClosure && op.weak) continue;
               final callee = _resolveFunction(switch (op) {
                 flow.Call(:final target) => target,
                 closures.CreateClosure(:final target) => target,
@@ -245,9 +260,7 @@ class TypedBackend {
                   context.instanceDeclarationPositions[op.library]![op.name]!;
               for (final group in members.values) {
                 for (final target in group.values) {
-                  if (target >= 0 && seen.add(target)) {
-                    reachable.add(target);
-                  }
+                  if (target >= 0 && seen.add(target)) reachable.add(target);
                 }
               }
             }
@@ -265,7 +278,7 @@ class TypedBackend {
           .instanceDeclarationPositions[allocation.library]![allocation.name]!;
       for (final group in memberGroups.values) {
         for (final id in group.values) {
-          if (id < 0) continue;
+          if (id < 0 || !seen.contains(id)) continue;
           for (final param
               in context.functionParameters[id] ?? const <FormalParameter>[]) {
             final (_, thunk) = compileParameterDefault(
@@ -284,6 +297,13 @@ class TypedBackend {
       }
     }
     extendReachable();
+    if (context.hasWeakTearOffReferences) {
+      _strongFunctions = strongFunctions(context, rootIds, _resolveFunction);
+      for (final id in _strongFunctions!) {
+        if (seen.add(id)) reachable.add(id);
+      }
+      extendReachable();
+    }
     final indices = {
       for (var i = 0; i < reachable.length; i++) reachable[i]: i,
     };
@@ -333,7 +353,9 @@ class TypedBackend {
       final declaringType =
           context.visibleTypes[allocation.library]?[allocation.name];
       for (final id in memberIds) {
-        if (id < 0 || boundReceiverIds.contains(indices[id])) {
+        if (id < 0 ||
+            !indices.containsKey(id) ||
+            boundReceiverIds.contains(indices[id])) {
           continue;
         }
         final parameters =
@@ -486,7 +508,7 @@ class TypedBackend {
       }
       for (final entry in methods.entries) {
         final id = entry.value;
-        if (id < 0) continue;
+        if (id < 0 || !indices.containsKey(id)) continue;
         final functionId = indices[id]!;
         final signatures = boundSignatures[functionId];
         if (signatures == null) continue;
@@ -518,6 +540,7 @@ class TypedBackend {
     }
     final bytes = BytesBuilder();
     final functions = <TypedFunction>[];
+    var fieldSlotCount = 0;
     for (var index = 0; index < compiled.length; index++) {
       final function = compiled[index];
       final functionId = reachable[index];
@@ -532,6 +555,10 @@ class TypedBackend {
           opcode = TypedOp.extendedBase + code[pc + 1];
         }
         final instruction = TypedOp.instructions[opcode];
+        if (instruction.immediate == TypedImmediate.field) {
+          final capacity = data.getUint16(pc + 1 + escape, Endian.little) + 1;
+          if (capacity > fieldSlotCount) fieldSlotCount = capacity;
+        }
         if (instruction.immediate == TypedImmediate.branch) {
           data.setUint32(
             pc + 1 + escape,
@@ -569,6 +596,7 @@ class TypedBackend {
       objects: objects,
       functions: functions,
       classes: classes,
+      fieldSlotCount: fieldSlotCount,
       callSites: _callSites,
       externalCalls: _externalCalls,
       closures: _closures,
@@ -829,7 +857,8 @@ class TypedBackend {
             .name]![kind]!;
     return {
       for (final entry in members.entries)
-        if (entry.value >= 0) entry.key: indices[entry.value]!,
+        if (entry.value >= 0 && indices.containsKey(entry.value))
+          entry.key: indices[entry.value]!,
     };
   }
 
@@ -1128,6 +1157,10 @@ class _LoweringSession {
   /// overflow area, registers the closure descriptor, and emits `rCreateClosure`.
   void _lowerCreateClosure(closures.CreateClosure op, List<cfg.Operation> out) {
     final sourceFunctionId = b._resolveFunction(op.target);
+    if (op.weak && !b._strongFunctions!.contains(sourceFunctionId)) {
+      out.add(TypedOperation(b._named(['rNull']), value(op.result), []));
+      return;
+    }
     for (var i = 0; i < op.captures.length; i++) {
       out.add(
         TypedOperation(

@@ -41,7 +41,7 @@ bool isExternalEffect(
         arguments?.length == 1 &&
         arguments!.single is SimpleStringLiteral &&
         (arguments.single as SimpleStringLiteral).value == 'external-effect' &&
-        _isCorePragma(ctx, library, annotation);
+        isCorePragma(ctx, library, annotation);
   })) {
     return false;
   }
@@ -59,7 +59,7 @@ bool isExternalEffect(
       ).isSpec(CoreTypes.voidType);
 }
 
-bool _isCorePragma(CompilerContext ctx, int library, Annotation annotation) {
+bool isCorePragma(CompilerContext ctx, int library, Annotation annotation) {
   final name = annotation.name;
   final String? prefix;
   if (name is SimpleIdentifier && name.name == 'pragma') {

@@ -746,7 +746,7 @@ String familyOf(String name) {
             typeEnvironment: frame.typeEnvironment,
             actualOwnerType: frame.typeEnvironmentOwnerType(runtime),
           )) {
-            throw TypeError();
+            TypedInterop.throwTypeError(runtime, r, index, frame);
           }
         }''',
     inputs: [6],

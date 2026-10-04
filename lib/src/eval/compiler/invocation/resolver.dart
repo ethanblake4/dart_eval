@@ -24,6 +24,7 @@ import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import '../helpers/constructor_type.dart';
 import '../helpers/extension_type.dart';
 import '../helpers/external.dart';
+import '../helpers/weak_tearoff.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/mixin_application.dart';
 import '../member/call_signature.dart';
 import '../member/resolved_member.dart';
@@ -699,6 +700,16 @@ final class CallResolver {
       final memberDecl = resolved?.member is SourceMember
           ? (resolved!.member as SourceMember).node
           : null;
+      if (memberDecl is MethodDeclaration) {
+        final weak = compileWeakTearOffReference(
+          ctx,
+          (resolved!.member as SourceMember).library,
+          memberDecl,
+          e,
+          bound: bound,
+        );
+        if (weak != null) return weak;
+      }
       if (memberDecl is FieldDeclaration ||
           (memberDecl is MethodDeclaration && memberDecl.isGetter)) {
         return invokeValue(
@@ -2302,6 +2313,16 @@ final class CallResolver {
         return invokeValue(site, ref: ref);
     }
 
+    if (sourceDecl != null) {
+      final weak = compileWeakTearOffReference(
+        ctx,
+        offset.file!,
+        sourceDecl,
+        e,
+        bound: bound,
+      );
+      if (weak != null) return weak;
+    }
     if (sourceDecl is FunctionDeclaration &&
         isExternalEffect(ctx, offset.file!, sourceDecl)) {
       final target = StaticCall(

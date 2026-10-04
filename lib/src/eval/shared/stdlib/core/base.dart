@@ -2,6 +2,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/exception.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
@@ -1046,6 +1047,15 @@ class $String implements $Instance {
     Object? c,
   ) {
     target as $String;
+    if (TypedInterop.callableCount(c) != 1) {
+      throw NoSuchMethodError.withInvocation(
+        target.$value,
+        Invocation.method(#codeUnitAt, [
+          for (final argument in TypedInterop.callableArgs(r, s, c))
+            argument?.$reified,
+        ]),
+      );
+    }
     final index = (r as $Value?) as $int;
     return $int(target.$value.codeUnitAt(index.$value));
   }

@@ -604,9 +604,13 @@ extension TypeDeclMembers on TypeDecl {
               privateLibraryUri: name.privateLibraryUri,
             ).key,
           );
-          if (found == null) {
+          if (found == null ||
+              found is MethodDeclaration &&
+                  !found.isComplete &&
+                  found.externalKeyword == null) {
             final bare = probe(name.nameKey);
-            if (!forImplementation || bare is VariableDeclaration) {
+            if (bare is VariableDeclaration ||
+                found == null && !forImplementation) {
               found = bare;
             }
           }
@@ -618,9 +622,12 @@ extension TypeDeclMembers on TypeDecl {
               privateLibraryUri: name.privateLibraryUri,
             ).key,
           );
-          if (found == null) {
+          if (found == null ||
+              found is MethodDeclaration &&
+                  !found.isComplete &&
+                  found.externalKeyword == null) {
             final bare = probe(name.nameKey);
-            if (!forImplementation ||
+            if (found == null && !forImplementation ||
                 (bare is VariableDeclaration &&
                     (!(bare.isFinal || bare.isConst) ||
                         ((bare.parent as VariableDeclarationList).isLate &&

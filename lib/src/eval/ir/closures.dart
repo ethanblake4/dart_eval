@@ -13,6 +13,9 @@ final class CreateClosure extends Operation {
   final bool boundReceiver;
   final bool hasEnvironment;
 
+  /// Links only when another reachable operation retains the target.
+  final bool weak;
+
   /// Marks the synthetic `<generic function adapter>` closure: instantiations
   /// of the same callable to the same signature compare equal across sites.
   final bool isInstantiationAdapter;
@@ -40,6 +43,7 @@ final class CreateClosure extends Operation {
     this.isInstantiationAdapter = false,
     this.instantiationTypeArguments = const [],
     this.hasEnvironment = true,
+    this.weak = false,
     this.positionalDefaults = const [],
     this.namedDefaults = const [],
     this.requiredNamed = const [],
@@ -69,6 +73,7 @@ final class CreateClosure extends Operation {
       isInstantiationAdapter: isInstantiationAdapter,
       instantiationTypeArguments: instantiationTypeArguments,
       hasEnvironment: hasEnvironment,
+      weak: weak,
       positionalDefaults: positionalDefaults,
       namedDefaults: namedDefaults,
       requiredNamed: requiredNamed,

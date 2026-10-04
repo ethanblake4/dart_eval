@@ -28,6 +28,7 @@ import 'package:yaml/yaml.dart';
 
 import 'shims.dart';
 import 'sdk_multitest.dart';
+import 'sdk_native_environment.dart';
 import 'sdk_environment.dart';
 
 String _normalizeRelPath(String relPath) => relPath.replaceAll('\\', '/');
@@ -576,7 +577,57 @@ void setSdkEntrypoints(
   compiler.entrypoints
     ..clear()
     ..add('/${test.relPath}');
-  if (_usesAsyncHelper(sources)) compiler.entrypoints.add(_asyncHelperUri);
+  compiler.entrypointFunctions
+    ..clear()
+    ..['/${test.relPath}'] = {'main'};
+  if (_usesAsyncHelper(sources)) {
+    compiler.entrypoints.add(_asyncHelperUri);
+    compiler.entrypointFunctions[_asyncHelperUri] = {'drainAsyncTests'};
+  }
+}
+
+/// Whether [error] is the compiler's missing-entrypoint failure for a
+/// runtime-error fixture that has no executable `main` in its library.
+///
+/// The SDK runner reports a missing `main` when it launches a test. dart_eval
+/// currently detects that condition while compiling entrypoints, so normalize
+/// only this exact failure at the launcher boundary. Parse declarations so a
+/// commented-out `main` does not count, and follow parts but not imports.
+bool isExpectedMissingSdkMainError(
+  Object error,
+  SdkTest test,
+  List<DartSource> sources,
+) {
+  if (test.kind != TestKind.runtimeError ||
+      error is! ArgumentError ||
+      error.message != 'No typed entrypoints were found') {
+    return false;
+  }
+
+  final byUri = {for (final source in sources) source.uri: source};
+  final visited = <Uri>{};
+
+  bool hasMain(Uri uri) {
+    if (!visited.add(uri)) return false;
+    final source = byUri[uri];
+    if (source == null) return false;
+    final unit = parseString(
+      content: source.toString(),
+      throwIfDiagnostics: false,
+    ).unit;
+    if (unit.declarations.whereType<FunctionDeclaration>().any(
+      (declaration) => declaration.name.lexeme == 'main',
+    )) {
+      return true;
+    }
+    for (final part in unit.directives.whereType<PartDirective>()) {
+      final path = part.uri.stringValue;
+      if (path != null && hasMain(uri.resolve(path))) return true;
+    }
+    return false;
+  }
+
+  return !hasMain(Uri.parse(test.uri));
 }
 
 Future<void> executeSdkMain(
@@ -584,6 +635,20 @@ Future<void> executeSdkMain(
   SdkTest test,
   List<DartSource> sources,
 ) async {
+  final rootSource = sources
+      .where((source) => source.uri.toString() == test.uri)
+      .firstOrNull;
+  if (rootSource != null && rootSource.toString().contains('Platform.script')) {
+    final checkout = Directory(
+      p.join('.dart_tool', 'sdk_language', SuiteConfig.load().sdkCommit),
+    );
+    final script = File(
+      p.join(checkout.path, 'tests', 'language', test.relPath),
+    );
+    if (script.existsSync()) {
+      runtime.addPlugin(SdkNativeEnvironment(script.absolute.uri, checkout));
+    }
+  }
   final source = sources.firstWhere(
     (source) => source.uri.toString() == test.uri,
   );
@@ -703,6 +768,12 @@ Future<TestOutcome> runSdkTestSources(
   final Program program;
   try {
     program = compiler.compileSources(sources);
+  } on ArgumentError catch (error) {
+    return isExpectedMissingSdkMainError(error, test, sources)
+        ? TestOutcome.passed
+        : test.kind == TestKind.negative
+        ? TestOutcome.failed
+        : TestOutcome.compileError;
   } on CompileError {
     return test.kind == TestKind.negative
         ? TestOutcome.passed

@@ -49,8 +49,11 @@ DynamicFixtureResult _execute(Runtime runtime, String entrypoint) {
   try {
     return DynamicFixtureResult.value(runtime.executeLib(entrypoint, 'main'));
   } on RuntimeException catch (error) {
-    return DynamicFixtureResult.error(error.caughtException.runtimeType);
+    return DynamicFixtureResult.error(_errorType(error.caughtException));
   } catch (error) {
-    return DynamicFixtureResult.error(error.runtimeType);
+    return DynamicFixtureResult.error(_errorType(error));
   }
 }
+
+Type _errorType(Object error) =>
+    error is TypeError ? TypeError : error.runtimeType;

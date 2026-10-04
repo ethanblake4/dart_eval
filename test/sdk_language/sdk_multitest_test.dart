@@ -179,7 +179,7 @@ void main() { C(); }
     },
   );
 
-  test('compiler StateErrors cannot satisfy runtime-error cases', () async {
+  test('missing entrypoints follow each SDK fixture contract', () async {
     for (final isolated in [false, true]) {
       for (final kind in [
         TestKind.runnable,
@@ -187,13 +187,15 @@ void main() { C(); }
         TestKind.negative,
       ]) {
         final fixture = SdkTest('no_entrypoint.dart', kind);
-        final sources = [DartSource(fixture.uri, '// void main() {}')];
+        final sources = [DartSource(fixture.uri, '/* void main() {} */')];
         final outcome = isolated
             ? await runSdkTestSourcesIsolated(fixture, sources)
             : await runSdkTestSources(fixture, Compiler(), sources);
         expect(
           outcome,
-          kind == TestKind.negative
+          kind == TestKind.runtimeError
+              ? TestOutcome.passed
+              : kind == TestKind.negative
               ? TestOutcome.failed
               : TestOutcome.compileError,
         );

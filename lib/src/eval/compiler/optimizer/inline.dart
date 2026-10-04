@@ -130,6 +130,11 @@ void inlineLeafCalls(CompilerContext context) {
           continue;
         }
         final prefix = 'inline${nextCall++}';
+        if (context.hasWeakTearOffReferences) {
+          context.inlinedCallees
+              .putIfAbsent(entry.key, () => <int>{})
+              .add(callee!);
+        }
         final locals = <cfg.SSA, cfg.SSA>{};
         cfg.SSA local(cfg.SSA value) => locals.putIfAbsent(value, () {
           var name = '$prefix:${value.name}';

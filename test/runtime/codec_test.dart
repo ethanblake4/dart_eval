@@ -1376,11 +1376,11 @@ void main() {
       Uint8List.fromList([TypedOp.aReturn]),
       objects: ['abc'],
     ).write().buffer.asUint8List();
-    // The object pool follows the 76-byte header and 37-byte function layout.
-    final badTag = Uint8List.fromList(bytes)..[113] = 255;
+    // The object pool follows the header, function layout and slot capacity.
+    final badTag = Uint8List.fromList(bytes)..[117] = 255;
     expect(() => TypedProgram.read(badTag.buffer), throwsFormatException);
     final badString = Uint8List.fromList(bytes);
-    ByteData.sublistView(badString).setUint32(114, 0xffffffff, Endian.little);
+    ByteData.sublistView(badString).setUint32(118, 0xffffffff, Endian.little);
     expect(() => TypedProgram.read(badString.buffer), throwsFormatException);
     final badCount = Uint8List.fromList(bytes);
     ByteData.sublistView(badCount).setUint32(28, 0, Endian.little);

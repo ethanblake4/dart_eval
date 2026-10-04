@@ -63,6 +63,15 @@ Future<void> main(List<String> args) async {
     final Program program;
     try {
       program = compiler.compileSources(sources);
+    } on ArgumentError catch (error, stack) {
+      if (isExpectedMissingSdkMainError(error, variant, sources)) {
+        print('${prefix}PASSED (expected runtime error: $error)');
+      } else {
+        failed = true;
+        print('${prefix}COMPILE ERROR: $error');
+        _printDiagnostic(error, stack);
+      }
+      continue;
     } on CompileError catch (error, stack) {
       if (variant.kind == TestKind.negative) {
         print('${prefix}PASSED (expected compile error: $error)');

@@ -14,7 +14,7 @@ import 'typed_exception.dart';
 /// Versioned little-endian bytecode payload embedded in a Program.
 abstract final class TypedCodec {
   static const magic = 0x54564544; // DEVT
-  static const version = 140;
+  static const version = 141;
 
   static ByteData write(TypedProgram program) {
     final objects = _writeObjects(program.objects);
@@ -117,7 +117,10 @@ abstract final class TypedCodec {
       return value;
     }
 
-    if (u32() != magic || u32() != version) {
+    final formatMagic = u32();
+    final formatVersion = u32();
+    if (formatMagic != magic ||
+        (formatVersion != version && formatVersion != 140)) {
       throw const FormatException('Unsupported typed bytecode format');
     }
     final entry = u32();
@@ -219,6 +222,7 @@ abstract final class TypedCodec {
       globals,
       exceptionRegions,
       completionJumps,
+      fieldSlotCount,
     ) = _readMetadata(
       ByteData.view(buffer, offset, metadataLength),
       classCount,
@@ -230,6 +234,7 @@ abstract final class TypedCodec {
       globalCount,
       exceptionRegionCount,
       completionJumpCount,
+      hasFieldSlotCount: formatVersion >= 141,
     );
     offset += metadataLength;
     final integers = List.generate(integerCount, (_) {
@@ -254,6 +259,7 @@ abstract final class TypedCodec {
       objects: objects,
       functions: functions,
       classes: classes,
+      fieldSlotCount: fieldSlotCount,
       callSites: callSites,
       exports: exports,
       externalCalls: externalCalls,
@@ -423,6 +429,7 @@ abstract final class TypedCodec {
       u32(completion.target);
       u32(completion.targetDepth);
     }
+    u32(program.fieldSlotCount);
     return bytes.takeBytes();
   }
 
@@ -436,6 +443,7 @@ abstract final class TypedCodec {
     List<TypedGlobal>,
     List<TypedExceptionRegion>,
     List<TypedCompletionJump>,
+    int,
   )
   _readMetadata(
     ByteData input,
@@ -447,8 +455,9 @@ abstract final class TypedCodec {
     int closureCallCount,
     int globalCount,
     int exceptionRegionCount,
-    int completionJumpCount,
-  ) {
+    int completionJumpCount, {
+    bool hasFieldSlotCount = true,
+  }) {
     var offset = 0;
     void require(int count) {
       if (count > input.lengthInBytes - offset) {
@@ -816,6 +825,7 @@ abstract final class TypedCodec {
       completionJumpCount,
       (_) => TypedCompletionJump(u32(), u32(), u32()),
     );
+    final fieldSlotCount = hasFieldSlotCount ? u32() : 0;
     if (offset != input.lengthInBytes) {
       throw const FormatException('Invalid typed class metadata length');
     }
@@ -829,6 +839,7 @@ abstract final class TypedCodec {
       globals,
       exceptionRegions,
       completionJumps,
+      fieldSlotCount,
     );
   }
 

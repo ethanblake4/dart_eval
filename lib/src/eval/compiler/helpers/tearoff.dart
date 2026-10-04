@@ -34,6 +34,7 @@ Variable materializeTearOff(
   List<TypeRef>? typeArguments,
   Map<String, TypeRef>? memberTypeParameters,
   TypeRef? runtimeSignatureReceiver,
+  bool weak = false,
 }) {
   final Declaration declaration;
   if (offset.className != null) {
@@ -269,6 +270,7 @@ Variable materializeTearOff(
       positionalCount: positional.length,
       namedNames: named.map(formalParameterName).toList(),
       hasEnvironment: false,
+      weak: weak,
       positionalDefaults: [for (final d in positionalDefaults) d.$1],
       namedDefaults: [for (final d in namedDefaults) d.$1],
       defaultThunks: [

@@ -102,6 +102,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   /// eliminated.
   final entrypoints = ['/main.dart'];
 
+  /// Select exported function roots for an entrypoint library, keyed by the
+  /// same URI or filename suffix as [entrypoints]. Unselected libraries keep
+  /// exporting all their functions.
+  final entrypointFunctions = <String, Set<String>>{};
+
   /// The diagnostic mode to use when parsing.
   var diagnosticMode = DiagnosticMode.throwIfError;
 
@@ -969,7 +974,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                     .topLevelDeclarationPositions[_ctx.libraryMap[library]]
                     ?.keys ??
                 const <String>[])
-          if (!(_ctx.extensionMemberFunctions[_ctx.libraryMap[library]]
+          if ((entrypointFunctions.entries
+                      .firstWhereOrNull((entry) => library.endsWith(entry.key))
+                      ?.value
+                      .contains(name) ??
+                  true) &&
+              !(_ctx.extensionMemberFunctions[_ctx.libraryMap[library]]
                       ?.contains(name) ??
                   false))
             (library, name),

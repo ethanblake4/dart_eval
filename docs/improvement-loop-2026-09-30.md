@@ -4668,3 +4668,41 @@ variance originals pass fresh and serialized execution. Nineteen focused tests
 pass and scoped analysis is clean. The six original expect_fail entries are
 removed. The six correctness passes are checkpointed; runtime and weak-reference
 supplements still await the full AOT gate before their checkpoint.
+
+### Cycle 28 supplementary correctness and runtime gate
+
+Weak tear-offs use semantic strong reachability while preserving embedding
+dispatch tables and explicit exported roots. SDK launch roots select main and
+the asynchronous drain helper; the public compiler keeps its existing export
+behavior unless function roots are explicitly selected. Concrete folded mixin
+fields take precedence over abstract accessors. Codec 141 records independent
+static field-slot capacity and still reads codec 140 payloads.
+
+List bulk writes preserve host storage typing and range-error order. Sublist
+and toList preserve guest element types across runtimes. The SDK harness uses
+the original fixture and SDK package resolution for native re-entry, and
+normalizes only the exact missing-main launch failure. String index calls keep
+their existing arity checks. Failed casts report actual and expected types;
+contextual expected types resolve before throwing, with formatting deferred
+until the error is displayed.
+
+The first AOT sweep exposed an 18% EventBus host regression from repeated type
+metadata reconstruction. Reusing List metadata removed it, improving identical
+program execution by 15-18% against the corrected intermediate version. Lazy
+diagnostics improved failed conversions by 3.5-9.2% against eager formatting.
+Richer diagnostics retain a measured 6-15% failure-only cost against the former
+plain TypeError. Both final 23-case AOT sweeps matched all 22 runtime checksums;
+the compile benchmark retained 1350 code bytes. EventBus compared with cycle 27
+at +4.0% and -2.37%. Integer-field and captured-callback outliers did not repeat
+in bounded controls. Linux-x64 dispatch keeps its 352-byte frame; cold dispatch
+uses 184 bytes rather than 176, and dispatch text grew by 165 bytes. These are
+Linux assembly observations alongside Windows AOT timing, not identical ABIs.
+
+The unrestricted SDK run passes all 2737 eligible fixtures, with three existing
+skips and no failures. All seven remaining expect_fail entries are removed.
+The default run exposed six obsolete test contracts and one passing stale
+expect_fail entry. TypeError comparisons now accept subclasses, the async
+harness explicitly exports its extra check function, and missing-entrypoint
+expectations follow the launch classification. The duplicate commented-main
+control is removed. All 51 affected focused tests pass; the final default gate
+will run after the performance and cleanup steps.

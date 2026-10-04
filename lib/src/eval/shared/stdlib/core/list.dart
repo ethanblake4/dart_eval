@@ -64,7 +64,11 @@ class $List<E> implements List<E>, $Instance {
     );
   }
 
-  late final $Iterable _superclass = $Iterable.wrap($value);
+  late final $Iterable _superclass = $Iterable._listView(
+    $value,
+    runtimeTypeId: _runtimeTypeId,
+    runtime: _runtime,
+  );
 
   static const $type = BridgeTypeRef(CoreTypes.list);
 
@@ -1250,18 +1254,19 @@ class $List<E> implements List<E>, $Instance {
     }
   }
 
-  List<Object?> _checkedElements(Runtime runtime, Iterable values) {
-    final checked = values.toList(growable: false);
-    for (final value in checked) {
+  List<E> _checkedElements(Runtime runtime, Iterable values) {
+    final checked = <E>[];
+    for (final value in values) {
       _checkElement(runtime, value);
+      checked.add(value as E);
     }
     return checked;
   }
 
-  Iterable<Object?> _checkedIterable(Runtime runtime, Iterable values) sync* {
+  Iterable<E> _checkedIterable(Runtime runtime, Iterable values) sync* {
     for (final value in values) {
       _checkElement(runtime, value);
-      yield value;
+      yield value as E;
     }
   }
 
@@ -1707,11 +1712,16 @@ class $List<E> implements List<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as List;
+    final wrapper = target as $List;
+    final $this = wrapper.$value;
     final start = (r as $Value?)?.$value as int;
     final end = (s as $Value?)?.$value as int?;
     final $result = $this.sublist(start, end);
-    return $List.wrap($result);
+    return $List.wrap(
+      $result,
+      runtimeTypeId: wrapper.$getRuntimeType(runtime),
+      runtime: runtime,
+    );
   }
 
   @override
@@ -1752,12 +1762,14 @@ class $List<E> implements List<E>, $Instance {
     final end = (s as $Value?)?.$value as int;
     final iterable = ((c as List<Object?>)[0] as $Value?)?.$value as Iterable;
     final skipCount = (c as List).length > 1
-        ? (c[1] as $Value?)?.$value as int? ?? 0
+        ? (c[1] as $Value?)?.$value as int
         : 0;
     $this.setRange(
       start,
       end,
-      wrapper._checkedIterable(runtime, iterable),
+      identical($this, iterable)
+          ? iterable
+          : wrapper._checkedIterable(runtime, iterable),
       skipCount,
     );
     return null;

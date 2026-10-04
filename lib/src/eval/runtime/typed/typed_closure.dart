@@ -516,7 +516,19 @@ final class TypedClosure extends EvalFunction {
             ? typeEnvironmentForCall(typeArguments)
             : null,
       )) {
-        throw TypeError();
+        final expectedType = runtime.resolveTypedEnvironmentType(
+          typeId,
+          actualOwnerType: ownerType,
+          callableTypeArguments: parameterTypes != null
+              ? const []
+              : typeArguments.isEmpty
+              ? definingTypeArguments
+              : typeArguments,
+          typeEnvironment: parameterTypes == null
+              ? typeEnvironmentForCall(typeArguments)
+              : null,
+        );
+        TypedInterop.throwTypeError(runtime, value, expectedType);
       }
       return;
     }

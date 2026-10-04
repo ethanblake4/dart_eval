@@ -24,6 +24,7 @@ class TypedProgram {
     int objectSpillCount = 0,
     List<TypedFunction>? functions,
     List<TypedClass> classes = const [],
+    this.fieldSlotCount = 0,
     List<TypedCallSite> callSites = const [],
     List<TypedExport> exports = const [],
     List<TypedExternalCall> externalCalls = const [],
@@ -104,6 +105,10 @@ class TypedProgram {
 
   /// The pool is immutable; referenced objects retain their identity and state.
   final List<Object?> objects;
+
+  /// Static slot operands can refer to a class whose allocation is unreachable.
+  /// Its required capacity remains independent of the allocated class table.
+  final int fieldSlotCount;
   int get intSpillCount => functions[entryFunction].intSpillCount;
   int get doubleSpillCount => functions[entryFunction].doubleSpillCount;
   int get boolSpillCount => functions[entryFunction].boolSpillCount;
@@ -502,6 +507,9 @@ class TypedProgram {
   }
 
   void _validate() {
+    if (fieldSlotCount < 0 || fieldSlotCount > 65536) {
+      throw const FormatException('Invalid typed field slot capacity');
+    }
     if (functions.isEmpty ||
         functions.length > 65536 ||
         entryFunction < 0 ||
@@ -556,7 +564,7 @@ class TypedProgram {
             : code.length,
     };
     final maxFieldCount = classes.fold<int>(
-      0,
+      fieldSlotCount,
       (count, type) => type.valueCount > count ? type.valueCount : count,
     );
     var pc = 0;
