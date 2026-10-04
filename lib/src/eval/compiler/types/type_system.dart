@@ -485,9 +485,20 @@ final class TypeSystem {
           return;
         case TypeParameterTypeRef(:final parameter):
           occurrences[parameter] = (occurrences[parameter] ?? 0) | variance;
-        case InterfaceTypeRef(:final arguments):
-          for (final argument in arguments) {
-            visit(argument, variance);
+        case InterfaceTypeRef(:final decl, :final arguments):
+          for (final (i, argument) in arguments.indexed) {
+            final declared = i < decl.typeParameters.length
+                ? decl.typeParameters[i].variance
+                : TypeParameterVariance.covariant;
+            visit(
+              argument,
+              declared == TypeParameterVariance.invariant
+                  ? 3
+                  : declared == TypeParameterVariance.contravariant &&
+                        variance != 3
+                  ? 3 - variance
+                  : variance,
+            );
           }
         case RecordTypeRef(:final positional, :final named):
           for (final field in [...positional, ...named.values]) {
@@ -511,6 +522,27 @@ final class TypeSystem {
 
     visit(type, 1);
     return occurrences;
+  }
+
+  /// Closes call-owned parameters when an argument supplies no upward evidence.
+  /// Covariant contexts choose the upper bound; negative or invariant contexts
+  /// choose Never. Parameters from the caller's lexical scope remain intact.
+  TypeRef unconstrainedInferenceContext(
+    TypeRef type,
+    Set<TypeParameterDef> parameters,
+  ) {
+    final occurrences = _parameterVariances(type);
+    return type.substituteTypeParameters(
+      Substitution.of({
+        for (final parameter in parameters)
+          if (occurrences[parameter] case final occurrence?)
+            parameter: occurrence == 1
+                ? (parameter.bound ??
+                          CoreTypes.object.ref(_ctx).withNullable(true))
+                      .lowerTypeParameters(_ctx, only: parameters)
+                : CoreTypes.never.ref(_ctx),
+      }),
+    );
   }
 
   /// Recursive-bound holes use the opposite extremum in function parameters.
@@ -938,8 +970,8 @@ final class TypeSystem {
 
   /// The pairwise LUB step behind [leastUpperBound]: function and parameter
   /// rules precede interface subtyping. A shared declaration merges arguments
-    /// according to their declared variance, and incomparable types intersect
-    /// their superinterface *instantiations*
+  /// according to their declared variance, and incomparable types intersect
+  /// their superinterface *instantiations*
   /// — the set element keeps its type arguments, so `Comparable<num>` and
   /// `Comparable<String>` never meet — then takes the unique deepest.
   TypeRef _pairwiseUpperBound(TypeRef a, TypeRef b) {
@@ -1528,8 +1560,8 @@ final class TypeSystem {
           generics.length != targetGenerics.length) {
         return false;
       }
-        final parameters = nominalDeclOf(from)?.typeParameters;
-        for (var i = 0; i < targetGenerics.length && i < generics.length; i++) {
+      final parameters = nominalDeclOf(from)?.typeParameters;
+      for (var i = 0; i < targetGenerics.length && i < generics.length; i++) {
         final variance = parameters != null && i < parameters.length
             ? parameters[i].variance
             : TypeParameterVariance.covariant;

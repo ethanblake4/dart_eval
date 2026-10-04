@@ -7,6 +7,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import '../helpers/constructor_type.dart';
+import '../reference.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import '../builtins.dart';
@@ -588,9 +589,31 @@ final class ArgumentBinder {
       // its remaining type parameters act as inference variables (`[1]`
       // under `Iterable<T>` still produces `List<int>` and binds T to int),
       // while the erased formal would clamp the argument to `dynamic`.
-      final argBound =
+      var argBound =
           unifyPattern?.substituteTypeParameters(argumentSubstitution) ??
           coercionType;
+      final noUpwardArguments =
+          parameterDefs.isNotEmpty &&
+          argBound is InterfaceTypeRef &&
+          argBound.decl.typeParameters.any((p) => p.hasExplicitVariance) &&
+          switch (argument) {
+            ExpressionArg(expression: InstanceCreationExpression e) =>
+              e.argumentList.arguments.isEmpty &&
+                  e.constructorName.type.typeArguments == null,
+            ExpressionArg(expression: MethodInvocation e) =>
+              e.target == null &&
+                  e.argumentList.arguments.isEmpty &&
+                  e.typeArguments == null &&
+                  IdentifierReference(null, e.methodName.name).denotation(ctx)
+                      is TypeLiteralDenotation,
+            _ => false,
+          };
+      if (noUpwardArguments) {
+        argBound = ctx.typeSystem.unconstrainedInferenceContext(
+          argBound,
+          parameterDefs,
+        );
+      }
       var arg0 = _compileArg(ctx, argument, argBound);
       if (unifyPattern != null) {
         // Inference reads the argument's own type — coercion below may
@@ -610,7 +633,8 @@ final class ArgumentBinder {
             for (final entry in candidates.entries)
               if ((solved[entry.key] == null ||
                       solved[entry.key] is TypeParameterTypeRef &&
-                          (solved[entry.key] as TypeParameterTypeRef).parameter ==
+                          (solved[entry.key] as TypeParameterTypeRef)
+                                  .parameter ==
                               entry.key) &&
                   entry.value.lower.isEmpty &&
                   entry.value.upper.isNotEmpty)

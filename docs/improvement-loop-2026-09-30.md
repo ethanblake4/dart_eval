@@ -4453,3 +4453,11 @@ corrections do not change the interpreter or add runtime adapters.
 The full survey also exposed two incidental successes: the original mixin
 subtype and wildcard extension-type fixtures. Both pass fresh and serialized;
 their stale expectations were removed, leaving 31 expected failures.
+
+The unconstrained-variance regression is corrected by closing call-owned
+parameters for argument-free constructors in explicit-variance contexts. The
+shared occurrence walker composes nominal variance. Native and evaluator reified
+choices match: Object? for the covariant list and Never for contravariant and
+invariant lists. Nine variance originals and six generic regression originals
+pass fresh and serialized, seventeen focused neighbors pass, and scoped
+analysis is clean. Caller lexical parameters remain intact.
