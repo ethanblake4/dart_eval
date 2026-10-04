@@ -29,6 +29,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/record.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/stack_trace.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/stopwatch.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/string_buffer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/typedefs.dart'
@@ -80,6 +81,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($List.$declaration);
     registry.defineBridgeClass($Map.$declaration);
     registry.defineBridgeClass($MapEntry.$declaration);
+    $Stopwatch.configureForCompile(registry);
     registry.defineBridgeClass($Duration.$declaration);
     registry.defineBridgeClass($Future.$declaration);
     registry.defineBridgeClass($Stream.$declaration);
@@ -122,6 +124,7 @@ class DartCorePlugin implements EvalPlugin {
     $MapEntry.configureForRuntime(runtime);
     $Iterable$bridge.configureForRuntime(runtime);
     $Iterable.configureForRuntime(runtime);
+    $Stopwatch.configureForRuntime(runtime);
     $Duration.configureForRuntime(runtime);
     $Future.configureForRuntime(runtime);
     $DateTime.configureForRuntime(runtime);

@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/collection/queue.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/typedefs.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/set_base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection/splay_tree_map.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/unmodifiable_list_view.dart';
 
 /// [EvalPlugin] for the `dart:collection` library
 class DartCollectionPlugin implements EvalPlugin {
@@ -39,6 +40,7 @@ class DartCollectionPlugin implements EvalPlugin {
       }
     '''),
     );
+    $UnmodifiableListView.configureForCompile(registry);
     $LinkedHashMap.configureForCompile(registry);
     $ListQueue.configureForCompile(registry);
     $Queue.configureForCompile(registry);
@@ -54,6 +56,7 @@ class DartCollectionPlugin implements EvalPlugin {
 
   @override
   void configureForRuntime(Runtime runtime) {
+    $UnmodifiableListView.configureForRuntime(runtime);
     $LinkedHashMap.configureForRuntime(runtime);
     $ListQueue.configureForRuntime(runtime);
     $Queue.configureForRuntime(runtime);

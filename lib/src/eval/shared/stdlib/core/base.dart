@@ -688,6 +688,44 @@ class $String implements $Instance {
           ],
         ),
       ),
+      'replaceFirstMapped': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'from',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)),
+              false,
+            ),
+            BridgeParameter(
+              'replace',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.string),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'match',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.match)),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'startIndex',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+              true,
+              defaultValueSource: '0',
+            ),
+          ],
+        ),
+      ),
       'replaceFirst': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
@@ -974,6 +1012,8 @@ class $String implements $Instance {
         return $Closure(__replaceAll.func, this);
       case 'replaceAllMapped':
         return $Closure(__replaceAllMapped.func, this);
+      case 'replaceFirstMapped':
+        return $Closure(__replaceFirstMapped.func, this);
       case 'replaceFirst':
         return $Closure(__replaceFirst.func, this);
       case 'replaceRange':
@@ -1223,6 +1263,34 @@ class $String implements $Instance {
         final result = replace.call(runtime, null, $Match.wrap(match), null, 1);
         return (result as $Value).$reified as String;
       }),
+    );
+  }
+
+  static const $Function __replaceFirstMapped = $Function(_replaceFirstMapped);
+
+  static $Value? _replaceFirstMapped(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final from = (r as $Value).$reified as Pattern;
+    final replace = s as EvalCallable;
+    final optionalArguments = c is List<Object?> ? c : const <Object?>[];
+    final firstOptionalArgument = optionalArguments.isEmpty
+        ? null
+        : optionalArguments.first;
+    final startIndex =
+        ((c is int ? c : 2 + optionalArguments.length) > 2) &&
+            firstOptionalArgument is $int
+        ? firstOptionalArgument.$value
+        : 0;
+    return $String(
+      (target as $String).$value.replaceFirstMapped(from, (match) {
+        final result = replace.call(runtime, null, $Match.wrap(match), null, 1);
+        return (result as $Value).$reified as String;
+      }, startIndex),
     );
   }
 

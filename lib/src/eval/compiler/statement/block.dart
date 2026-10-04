@@ -13,9 +13,7 @@ StatementInfo compileBlock(
 }) {
   ctx.beginScope();
 
-  var willAlwaysReturn = false;
-  var willAlwaysThrow = false;
-  var willAlwaysBreak = false;
+  var result = StatementInfo();
 
   for (final s in b.statements) {
     final stInfo = compileStatement(
@@ -25,25 +23,13 @@ StatementInfo compileBlock(
       skipClassBoxing: skipClassBoxing,
     );
 
-    if (stInfo.willAlwaysBreak) {
-      willAlwaysBreak = true;
-      break;
-    }
-    if (stInfo.willAlwaysThrow) {
-      willAlwaysThrow = true;
-      break;
-    }
-    if (stInfo.willAlwaysReturn) {
-      willAlwaysReturn = true;
+    if (!stInfo.canCompleteNormally) {
+      result = stInfo;
       break;
     }
   }
 
   ctx.endScope();
 
-  return StatementInfo(
-    willAlwaysReturn: willAlwaysReturn,
-    willAlwaysThrow: willAlwaysThrow,
-    willAlwaysBreak: willAlwaysBreak,
-  );
+  return result;
 }

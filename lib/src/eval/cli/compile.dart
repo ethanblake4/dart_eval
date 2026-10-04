@@ -126,7 +126,24 @@ void cliCompile(String outputName) {
 
   final ts = DateTime.now().millisecondsSinceEpoch;
 
-  final programSource = compiler.compile(data);
+  final languageVersions = {
+    for (final package in packageConfig.packages)
+      package.name: switch (package.languageVersion) {
+        null => null,
+        final version => Version(version.major, version.minor, 0),
+      },
+  };
+  final programSource = compiler.compileSources(
+    data.entries.expand(
+      (package) => package.value.entries.map(
+        (file) => DartSource(
+          'package:${package.key}/${file.key}',
+          file.value,
+          languageVersion: languageVersions[package.key],
+        ),
+      ),
+    ),
+  );
 
   final out = programSource.write();
 

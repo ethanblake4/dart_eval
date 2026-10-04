@@ -539,7 +539,7 @@ class Bindgen implements BridgeDeclarationRegistry {
           .where(
             (c) => c.include && !c.handMaintained && !c.handMaintainedWrapper,
           )
-          .map((c) => '\$${c.wrapperName ?? c.name}')
+          .map((c) => wrapperIdentifier(c.wrapperName ?? c.name))
           .toList();
       if (hidden != null && hidden.isNotEmpty) {
         return "import '$uri' hide ${hidden.join(', ')};";
@@ -637,13 +637,8 @@ class Bindgen implements BridgeDeclarationRegistry {
     );
   }
 
-  String _wrapperName(BindgenContext ctx, InterfaceElement element) {
-    final configured = ctx.classConfig?.wrapperName;
-    if (configured != null) {
-      return configured.startsWith(r'$') ? configured : '\$$configured';
-    }
-    return '\$${element.name}';
-  }
+  String _wrapperName(BindgenContext ctx, InterfaceElement element) =>
+      ctx.wrapperName(element);
 
   String? _$instance(BindgenContext ctx, ClassElement element) {
     final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
@@ -681,7 +676,7 @@ ${bindTypeSpec(ctx, element)}
 /// Compile-time type declaration of [$wrapperName\$bridge]
 ${bindBridgeType(ctx, element)}
 ${compactStaticConstants(ctx, element)?.typeDeclarations ?? ''}
-/// Compile-time class declaration of [\$${element.name}]
+/// Compile-time class declaration of [$wrapperName]
 ${bindBridgeDeclaration(ctx, element, isBridge: true)}
 ${$constructors(ctx, element, isBridge: true)}
 ${$staticMethods(ctx, element)}
@@ -730,7 +725,7 @@ ${bindTypeSpec(ctx, element)}
 /// Compile-time type declaration of [$wrapperName]
 ${bindBridgeType(ctx, element)}
 ${compactStaticConstants(ctx, element)?.typeDeclarations ?? ''}
-/// Compile-time class declaration of [\$${element.name}]
+/// Compile-time class declaration of [$wrapperName]
 ${bindBridgeDeclaration(ctx, element)}
 ${$constructors(ctx, element)}
 ${$staticMethods(ctx, element)}
@@ -917,7 +912,7 @@ class $wrapperName implements \$Instance {
   ${bindTypeSpec(ctx, element)}
   /// Compile-time type declaration of [$wrapperName]
   ${bindBridgeType(ctx, element)}
-  /// Compile-time class declaration of [\$${element.name}]
+  /// Compile-time class declaration of [$wrapperName]
   ${bindBridgeDeclaration(ctx, element)}
   ${$enumValues(ctx, element)}
   ${$staticMethods(ctx, element)}

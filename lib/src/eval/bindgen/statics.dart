@@ -50,7 +50,7 @@ String _$constructor(
       ? '.${constructor.name}'
       : '';
   final fullyQualifiedConstructorId = isBridge
-      ? '\$${element.name}\$bridge$sdkNamedConstructor'
+      ? '${ctx.wrapperName(element)}\$bridge$sdkNamedConstructor'
       : '${element.name}$sdkNamedConstructor';
 
   final String body;
@@ -65,7 +65,7 @@ String _$constructor(
         '$fullyQualifiedConstructorId('
         '${argumentAccessors(ctx, constructor.formalParameters, registers: true, exportValues: bridgeFactory, member: member).join(', ')})';
     body = '''
-    ${bridgeFactory ? 'final result = $invocation; return ${wrapVar(ctx, element.thisType, 'result')};' : 'return ${isBridge ? invocation : '\$${element.name}.wrap($invocation)'};'}''';
+    ${bridgeFactory ? 'final result = $invocation; return ${wrapVar(ctx, element.thisType, 'result')};' : 'return ${isBridge ? invocation : '${ctx.wrapperName(element)}.wrap($invocation)'};'}''';
   }
 
   return '''

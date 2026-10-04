@@ -51,10 +51,7 @@ StatementInfo compileLabeledStatement(
   ctx.labels.removeLast();
   final parent = ctx.builder;
   ContextSaveState? fallthroughState;
-  if (!result.willAlwaysReturn &&
-      !result.willAlwaysThrow &&
-      !result.willAlwaysBreak &&
-      !ctx.flowTerminated) {
+  if (result.canCompleteNormally && !ctx.flowTerminated) {
     ctx.resolveBranchStateDiscontinuity(initialState);
     fallthroughState = ctx.saveState();
     ctx.pushOp(Jump(exit.label!));

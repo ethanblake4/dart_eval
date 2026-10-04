@@ -140,10 +140,7 @@ StatementInfo macroBranch(
   final thenState = ctx.saveState();
   ctx.uninferTypes();
   final thenEndsFlow = ctx.flowTerminated;
-  if (!thenResult.willAlwaysReturn &&
-      !thenResult.willAlwaysThrow &&
-      !thenResult.willAlwaysBreak &&
-      !thenEndsFlow) {
+  if (thenResult.canCompleteNormally && !thenEndsFlow) {
     ctx.resolveBranchStateDiscontinuity(initialState);
     ctx.pushOp(Jump(endBlock.label!));
     final tail = ctx.flushBlock();
@@ -165,10 +162,7 @@ StatementInfo macroBranch(
   ctx.flowReachable = enclosingReachable;
   final elseEndsFlow = ctx.flowTerminated;
   final elseState = ctx.saveState();
-  if (!elseResult.willAlwaysReturn &&
-      !elseResult.willAlwaysThrow &&
-      !elseResult.willAlwaysBreak &&
-      !elseEndsFlow) {
+  if (elseResult.canCompleteNormally && !elseEndsFlow) {
     ctx.resolveBranchStateDiscontinuity(initialState);
     ctx.pushOp(Jump(endBlock.label!));
     final tail = ctx.flushBlock();
@@ -181,17 +175,9 @@ StatementInfo macroBranch(
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [endBlock], branches);
   ctx.builder.float(endBlock);
   final thenContinues =
-      thenReachable &&
-      !thenEndsFlow &&
-      !thenResult.willAlwaysReturn &&
-      !thenResult.willAlwaysThrow &&
-      !thenResult.willAlwaysBreak;
+      thenReachable && !thenEndsFlow && thenResult.canCompleteNormally;
   final elseContinues =
-      elseReachable &&
-      !elseEndsFlow &&
-      !elseResult.willAlwaysReturn &&
-      !elseResult.willAlwaysThrow &&
-      !elseResult.willAlwaysBreak;
+      elseReachable && !elseEndsFlow && elseResult.canCompleteNormally;
   ctx.restoreState(
     !thenContinues && elseContinues
         ? elseState
@@ -225,6 +211,9 @@ StatementInfo macroBranch(
     // analyzes, so keep compiling, but report that control never continues
     // (willAlwaysThrow doubles as the "unreachable" marker elsewhere).
     return info.copyWith(
+      willAlwaysReturnOrThrow:
+          (!thenReachable || thenResult.willAlwaysReturnOrThrow) &&
+          (!elseReachable || elseResult.willAlwaysReturnOrThrow),
       willAlwaysThrow:
           markNeverTerminates(ctx).willAlwaysThrow || info.willAlwaysThrow,
     );

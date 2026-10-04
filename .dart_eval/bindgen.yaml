@@ -249,6 +249,8 @@ libraries:
         file: linked_hash_map.dart
       UnmodifiableMapView:
         include: false # Guest maps need a source-level delegating view.
+      UnmodifiableListView:
+        file: unmodifiable_list_view.dart
       ListQueue:
         file: list_queue.dart
       Queue:
@@ -319,6 +321,12 @@ libraries:
     functions:
       - jsonEncode
       - jsonDecode
+  - uri: dart:developer
+    outDir: lib/src/eval/shared/stdlib/developer
+    imports:
+      - package:dart_eval/stdlib/core.dart
+    functions:
+      - log
   - uri: dart:io
     outDir: lib/src/eval/shared/stdlib/io
     registry:
@@ -428,5 +436,15 @@ libraries:
         file: typed_data.dart
       Uint8List:
         file: typed_data.dart
+      Uint16List:
+        file: typed_data.dart
       Uint32List:
+        file: typed_data.dart
+      Float32List:
+        file: typed_data.dart
+      Float64List:
+        file: typed_data.dart
+      Int32List:
+        file: typed_data.dart
+      Int64List:
         file: typed_data.dart

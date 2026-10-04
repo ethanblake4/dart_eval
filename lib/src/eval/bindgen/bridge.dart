@@ -34,7 +34,7 @@ String _$forwardedConstructor(
       ? '.${constructor.name}'
       : '';
   final fullyQualifiedConstructorId =
-      '\$${element.name}\$bridge$namedConstructor';
+      '${ctx.wrapperName(element)}\$bridge$namedConstructor';
 
   return '''
   /// Forwarded constructor for [${element.name}.$name]

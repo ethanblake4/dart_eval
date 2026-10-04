@@ -173,7 +173,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
     return stInfo;
   });
 
-  if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+  if (stInfo.canCompleteNormally) {
     if (b.isAsynchronous && !b.isGenerator) {
       asyncComplete(ctx, null);
       ctx.endScope();
@@ -183,7 +183,7 @@ void compileFunctionDeclaration(FunctionDeclaration d, CompilerContext ctx) {
 
   ctx.endScope();
 
-  if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+  if (stInfo.canCompleteNormally) {
     ctx.pushOp(Return(null));
   }
 }

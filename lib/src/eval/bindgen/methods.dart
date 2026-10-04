@@ -42,11 +42,11 @@ String $methods(BindgenContext ctx, InterfaceElement element) {
               '(runtime, target, r, s, c);';
         } else if (expr != null) {
           body =
-              'final self = target! as \$${element.name};\n'
+              'final self = target! as ${ctx.wrapperName(element)};\n'
               'return $expr;';
         } else {
           body =
-              'final self = target! as \$${element.name};\n'
+              'final self = target! as ${ctx.wrapperName(element)};\n'
               '${returnsValue ? 'final result = ' : ''}'
               '${callOp.format('self.\$value', argumentAccessors(ctx, e.formalParameters, callable: true, member: member))};\n'
               'return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union, runtimeTypeOwner: 'self')};';
@@ -79,7 +79,7 @@ String _syntheticMethodBodies(BindgenContext ctx, InterfaceElement element) {
               '(runtime, target, r, s, c);';
         } else {
           body =
-              'final self = target! as \$${element.name};\n'
+              'final self = target! as ${ctx.wrapperName(element)};\n'
               'return ${s.expr ?? 'null'};';
         }
         return '''

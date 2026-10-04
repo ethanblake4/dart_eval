@@ -17,6 +17,11 @@ class $Set<E> implements Set<E>, $Instance {
 
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:core', 'Set.', __$Set$new);
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Set.identity',
+      __$Set$identity,
+    );
     runtime.registerBridgeFuncRegisters('dart:core', 'Set.from', __$Set$from);
   }
 
@@ -32,6 +37,18 @@ class $Set<E> implements Set<E>, $Instance {
     ),
     constructors: {
       '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+          params: [],
+          generics: {'E': BridgeGenericParam()},
+        ),
+        isFactory: true,
+      ),
+      'identity': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.set, [
@@ -264,6 +281,19 @@ class $Set<E> implements Set<E>, $Instance {
   static $Value? __$Set$new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Set<Object?>.wrap(
       TypedCollections.newSet(runtime),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
+  }
+
+  static $Value? __$Set$identity(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $Set<Object?>.wrap(
+      LinkedHashSet<Object?>.identity(),
       runtimeTypeId: runtime.bridgeConstructorTypeId,
       runtime: runtime,
     );

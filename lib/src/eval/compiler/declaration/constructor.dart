@@ -338,7 +338,7 @@ void compileConstructorDeclaration(
       throw CompileError('Unknown function body type ${b.runtimeType}', d);
     }
 
-    if (!(stInfo.willAlwaysReturn || stInfo.willAlwaysThrow)) {
+    if (!stInfo.willAlwaysReturnOrThrow) {
       throw CompileError(
         'Factory constructor must always return a value or throw',
         d,

@@ -58,7 +58,7 @@ String enumValuesForRuntime(BindgenContext ctx, EnumElement element) {
     runtime.registerBridgeEnumValues(
       '$uri',
       '${element.name}',
-      \$${element.name}._\$values
+      ${ctx.wrapperName(element)}._\$values
     );
   ''';
 }
@@ -94,7 +94,7 @@ String _syntheticConstructorsForRuntime(
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.${s.name}',
-      \$${element.name}.${memberWrapperName(s.name)}
+      ${ctx.wrapperName(element)}.${memberWrapperName(s.name)}
     );
   ''',
       )
@@ -122,7 +122,7 @@ String constructorForRuntime(
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '$fullyQualifiedConstructorId',
-      \$${element.name}${isBridge ? '\$bridge' : ''}.${memberWrapperName(staticName)}
+      ${ctx.wrapperName(element)}${isBridge ? '\$bridge' : ''}.${memberWrapperName(staticName)}
       $bridgeParam
     );
   ''';
@@ -160,7 +160,7 @@ String _syntheticStaticsForRuntime(
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.${s.name}',
-      \$${element.name}.${memberWrapperName(s.name)}
+      ${ctx.wrapperName(element)}.${memberWrapperName(s.name)}
     );
   ''',
       )
@@ -180,7 +180,7 @@ String staticMethodForRuntime(
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.$name',
-      \$${element.name}${isBridge ? '\$bridge' : ''}.${memberWrapperName(name!)}
+      ${ctx.wrapperName(element)}${isBridge ? '\$bridge' : ''}.${memberWrapperName(name!)}
     );
   ''';
 }
@@ -220,7 +220,7 @@ String _syntheticStaticGettersForRuntime(
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.${s.name}*g',
-      \$${element.name}.${memberWrapperName(s.name)}
+      ${ctx.wrapperName(element)}.${memberWrapperName(s.name)}
     );
   ''',
       )
@@ -240,7 +240,7 @@ String staticGetterForRuntime(
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.$name*g',
-      \$${element.name}${isBridge ? '\$bridge' : ''}.${memberWrapperName(name!)}
+      ${ctx.wrapperName(element)}${isBridge ? '\$bridge' : ''}.${memberWrapperName(name!)}
     );
   ''';
 }
@@ -272,7 +272,7 @@ String staticSetterForRuntime(
     runtime.registerBridgeFuncRegisters(
       '$uri',
       '${element.name}.$name*s',
-      \$${element.name}${isBridge ? '\$bridge' : ''}.set${memberWrapperName(name!)}
+      ${ctx.wrapperName(element)}${isBridge ? '\$bridge' : ''}.set${memberWrapperName(name!)}
     );
   ''';
 }

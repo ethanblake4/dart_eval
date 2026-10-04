@@ -126,11 +126,23 @@ class StatementInfo {
     this.willAlwaysReturn = false,
     this.willAlwaysThrow = false,
     this.willAlwaysBreak = false,
-  });
+    bool? willAlwaysReturnOrThrow,
+  }) : willAlwaysReturnOrThrow =
+           willAlwaysReturnOrThrow ?? (willAlwaysReturn || willAlwaysThrow);
 
   final bool willAlwaysReturn;
   final bool willAlwaysThrow;
   final bool willAlwaysBreak;
+
+  /// Every path returns or throws, even when the exit kinds differ.
+  /// Breaks and continues do not satisfy this guarantee.
+  final bool willAlwaysReturnOrThrow;
+
+  bool get canCompleteNormally =>
+      !willAlwaysReturnOrThrow &&
+      !willAlwaysReturn &&
+      !willAlwaysThrow &&
+      !willAlwaysBreak;
 
   /// Joins the infos of two alternative control-flow paths (e.g. try body vs.
   /// catch block): a `willAlwaysX` flag survives only if it holds on *both*
@@ -140,6 +152,8 @@ class StatementInfo {
       willAlwaysReturn: willAlwaysReturn && other.willAlwaysReturn,
       willAlwaysThrow: willAlwaysThrow && other.willAlwaysThrow,
       willAlwaysBreak: willAlwaysBreak && other.willAlwaysBreak,
+      willAlwaysReturnOrThrow:
+          willAlwaysReturnOrThrow && other.willAlwaysReturnOrThrow,
     );
   }
 
@@ -147,11 +161,14 @@ class StatementInfo {
     bool? willAlwaysReturn,
     bool? willAlwaysThrow,
     bool? willAlwaysBreak,
+    bool? willAlwaysReturnOrThrow,
   }) {
     return StatementInfo(
       willAlwaysReturn: willAlwaysReturn ?? this.willAlwaysReturn,
       willAlwaysThrow: willAlwaysThrow ?? this.willAlwaysThrow,
       willAlwaysBreak: willAlwaysBreak ?? this.willAlwaysBreak,
+      willAlwaysReturnOrThrow:
+          willAlwaysReturnOrThrow ?? this.willAlwaysReturnOrThrow,
     );
   }
 }

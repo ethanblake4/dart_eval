@@ -117,6 +117,8 @@ StatementInfo compileSwitchStatement(
   return result.copyWith(
     willAlwaysBreak: false,
     willAlwaysThrow: result.willAlwaysThrow && breakStates.isEmpty,
+    willAlwaysReturnOrThrow:
+        result.willAlwaysReturnOrThrow && breakStates.isEmpty,
   );
 }
 
@@ -251,9 +253,7 @@ StatementInfo _executeMatchingCases(
   int startIndex,
   TypeRef? expectedReturnType,
 ) {
-  var willAlwaysReturn = false;
-  var willAlwaysThrow = false;
-  var willAlwaysBreak = false;
+  var result = StatementInfo();
 
   // Find the first case with statements starting from startIndex
   int executionIndex = startIndex;
@@ -295,16 +295,10 @@ StatementInfo _executeMatchingCases(
       expectedReturnType,
     );
     if (sharedBody) ctx.endScope();
-    willAlwaysReturn = stmtInfo.willAlwaysReturn;
-    willAlwaysThrow = stmtInfo.willAlwaysThrow;
-    willAlwaysBreak = stmtInfo.willAlwaysBreak;
+    result = stmtInfo;
   }
 
-  return StatementInfo(
-    willAlwaysReturn: willAlwaysReturn,
-    willAlwaysThrow: willAlwaysThrow,
-    willAlwaysBreak: willAlwaysBreak,
-  );
+  return result;
 }
 
 StatementInfo _executeSwitchBlock(
@@ -312,25 +306,15 @@ StatementInfo _executeSwitchBlock(
   List<Statement> statements,
   TypeRef? expectedReturnType,
 ) {
-  var willAlwaysReturn = false;
-  var willAlwaysThrow = false;
-  var willAlwaysBreak = false;
+  var result = StatementInfo();
 
   ctx.beginScope();
 
   for (final stmt in statements) {
     final stmtInfo = compileStatement(stmt, expectedReturnType, ctx);
 
-    if (stmtInfo.willAlwaysBreak) {
-      willAlwaysBreak = true;
-      break;
-    }
-    if (stmtInfo.willAlwaysThrow) {
-      willAlwaysThrow = true;
-      break;
-    }
-    if (stmtInfo.willAlwaysReturn) {
-      willAlwaysReturn = true;
+    if (!stmtInfo.canCompleteNormally) {
+      result = stmtInfo;
       break;
     }
   }
@@ -341,9 +325,7 @@ StatementInfo _executeSwitchBlock(
   // Emit the jump to the switch's end so the SSA edge matches an explicit
   // `break` exactly.
   if (statements.isNotEmpty &&
-      !willAlwaysReturn &&
-      !willAlwaysThrow &&
-      !willAlwaysBreak &&
+      result.canCompleteNormally &&
       !ctx.flowTerminated) {
     final label = findJumpLabel(
       ctx,
@@ -353,14 +335,10 @@ StatementInfo _executeSwitchBlock(
       kind: 'break',
     );
     jumpToLabel(ctx, label, label.breakTarget!);
-    willAlwaysBreak = true;
+    result = StatementInfo(willAlwaysBreak: true);
   }
 
-  return StatementInfo(
-    willAlwaysReturn: willAlwaysReturn,
-    willAlwaysThrow: willAlwaysThrow,
-    willAlwaysBreak: willAlwaysBreak,
-  );
+  return result;
 }
 
 /// A `case e:` expression must have a primitive `==` — a user-declared

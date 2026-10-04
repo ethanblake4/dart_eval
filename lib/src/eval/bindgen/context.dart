@@ -51,6 +51,12 @@ class BindgenContext {
   /// True when running under a sidecar config (`--config`).
   bool get configMode => config != null;
 
+  /// Dart identifier of the wrapper currently being emitted.
+  String wrapperName(InterfaceElement element) {
+    final name = classConfig?.wrapperName ?? element.name!;
+    return wrapperIdentifier(name);
+  }
+
   /// Per-member config for [name] of [kind] on the current class.
   BindgenMemberConfig? memberConfig(String name, String kind) =>
       classConfig?.memberConfig(kind, name);
@@ -130,3 +136,7 @@ class BindgenContext {
     );
   }
 }
+
+/// Normalize a configured wrapper identifier, accepting an optional `$`.
+String wrapperIdentifier(String name) =>
+    name.startsWith(r'$') ? name : '\$$name';

@@ -14,6 +14,9 @@ class TreeShakeVisitor extends RecursiveAstVisitor<TreeShakeContext?> {
   @override
   TreeShakeContext? visitNamedType(NamedType node) {
     output(node.name.lexeme);
+    // `C.named()` can parse C as an import prefix, whose name is a token
+    // rather than a SimpleIdentifier child. Keep both ambiguous segments.
+    output(node.importPrefix?.name.lexeme);
     super.visitNamedType(node);
     return ctx;
   }

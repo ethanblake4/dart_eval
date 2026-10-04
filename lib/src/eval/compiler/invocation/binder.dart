@@ -1401,6 +1401,15 @@ final class ArgumentBinder {
         final members = interfaceArgumentsOf(pattern);
         if (members.isEmpty) return;
         final member = members.first;
+        // Matching unions constrain their value arguments directly. Treating
+        // FutureOr<R> as a plain value would incorrectly infer FutureOr<R>
+        // for the constructor parameter itself.
+        if (evidence is InterfaceTypeRef &&
+            evidence.isSpec(AsyncTypes.futureOr)) {
+          final arguments = interfaceArgumentsOf(evidence);
+          if (arguments.isNotEmpty) collect(member, arguments.first, covariant);
+          return;
+        }
         final future = ctx.typeSystem.asInstanceOf(
           evidence,
           ctx.types.bySpec(CoreTypes.future),
@@ -1661,6 +1670,8 @@ final class ArgumentBinder {
           }
         }
       }
+      // A caller's type parameter is a resolved argument, even though it is
+      // symbolic. Only the constructor's own placeholder needs inference.
       inferParameterNames = {
         for (final name in classParameters)
           if (typeArguments == null &&
@@ -1669,7 +1680,11 @@ final class ArgumentBinder {
                       .parameter
                       .hasExplicitVariance ||
               seeds[name] == null ||
-              seeds[name]!.isTypeParameter ||
+              seeds[name] is TypeParameterTypeRef &&
+                  (seeds[name] as TypeParameterTypeRef).parameter ==
+                      (target.signature!.typeParameterRefs[name]
+                              as TypeParameterTypeRef)
+                          .parameter ||
               seeds[name]!.hasSchemaHoles ||
               seeds[name]!.hasInferenceVariables)
             name,

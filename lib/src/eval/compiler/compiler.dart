@@ -32,6 +32,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/developer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/typed_data.dart';
@@ -108,6 +109,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     DartCollectionPlugin(),
     DartConvertPlugin(),
     DartCorePlugin(),
+    DartDeveloperPlugin(),
     DartIoPlugin(),
     DartMathPlugin(),
     DartTypedDataPlugin(),
@@ -429,26 +431,17 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     }
 
+    final referencedNames = <String>{};
     // Resolve the export and import relationship of the libraries
     final (visibleDeclarations, visibleExtensions) = _resolveImportsAndExports(
       reachableLibraries,
       discoveredIdentifiers,
       computedEntrypoints,
       libraryIndexMap,
+      referencedNames,
       _ctx,
       () => _bridgeStaticFunctionIdx++,
     );
-    final referencedNames = <String>{};
-    for (final library in reachableLibraries) {
-      for (final declaration in library.declarations) {
-        final names = DeclarationOrBridge.nameOf(declaration);
-        for (final name in names.isEmpty ? const ['#'] : names) {
-          referencedNames.addAll(
-            discoveredIdentifiers[library]?[name] ?? const {},
-          );
-        }
-      }
-    }
 
     // Populate lookup tables [_topLevelDeclarationsMap],
     // [_instanceDeclarationsMap], and [_topLevelGlobalIndices], and generate
@@ -905,9 +898,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           if (member is! MethodDeclaration) continue;
           // An implicit extension invocation `value(...)` never names `call`
           // in the AST, but still needs its extension implementation.
-          if (!member.isOperator &&
-              member.name.lexeme != 'call' &&
-              !referencedNames.contains(member.name.lexeme)) {
+          if (!_isReferencedExtensionMember(member, referencedNames)) {
             continue;
           }
           compileMethodDeclaration(
@@ -1480,6 +1471,7 @@ _resolveImportsAndExports(
   Map<Library, Map<String, Set<String>>> usedIdentifiers,
   Set<Uri> entrypoints,
   Map<Library, int> libraryIds,
+  Set<String> referencedNames,
   CompilerContext ctx,
   int Function() allocateBridgeIndex,
 ) {
@@ -1713,8 +1705,47 @@ _resolveImportsAndExports(
 
   final processedImports = <String>{};
 
+  // Extension members compile separately from top-level declarations. Add
+  // dependencies only for members selected by the same compilation rule,
+  // then revisit selection when those dependencies expose more member calls.
+  bool seedExtensionDependencies() {
+    referencedNames.clear();
+    for (final library in libraries) {
+      final used = usedDeclarationsForLibrary[libraryIds[library]] ?? {};
+      final identifiers = usedIdentifiers[library] ?? {};
+      final names = entrypoints.contains(library.uri) ? identifiers.keys : used;
+      for (final name in names) {
+        referencedNames.addAll(identifiers[name] ?? const {});
+      }
+    }
+
+    var added = false;
+    for (final library in libraries) {
+      for (final extension in extensionsOf(library)) {
+        for (var i = 0; i < extension.members.length; i++) {
+          final member = extension.members[i];
+          if (!_isReferencedExtensionMember(member, referencedNames)) continue;
+          // Synthetic keys process dependencies without retaining the whole
+          // extension AST, which would name all of its unused members too.
+          final key = '#extension:${extension.name}:$i';
+          final identifiers = usedIdentifiers[library]!;
+          if (identifiers.containsKey(key)) continue;
+          final visitor = TreeShakeVisitor();
+          extension.declaration.onClause?.accept(visitor);
+          extension.declaration.typeParameters?.accept(visitor);
+          member.accept(visitor);
+          identifiers[key] = visitor.ctx.identifiers;
+          (usedDeclarationsForLibrary[libraryIds[library]!] ??= {}).add(key);
+          if (!worklist.contains(library)) worklist.add(library);
+          added = true;
+        }
+      }
+    }
+    return added;
+  }
+
   /// Run tree-shaking
-  while (worklist.isNotEmpty) {
+  while (worklist.isNotEmpty || seedExtensionDependencies()) {
     final library = worklist.removeLast();
     Map<int, Set<String>> applyUsedDeclarations = {};
     for (final dec in (usedDeclarationsForLibrary[libraryIds[library]] ?? {})) {
@@ -1836,6 +1867,16 @@ String _accessorBaseName(String name) {
   }
   return name;
 }
+
+bool _isReferencedExtensionMember(ClassMember member, Set<String> names) =>
+    switch (member) {
+      FieldDeclaration() => member.isStatic,
+      MethodDeclaration() =>
+        member.isOperator ||
+            member.name.lexeme == 'call' ||
+            names.contains(member.name.lexeme),
+      _ => false,
+    };
 
 bool _combinatorListAccepts(
   Iterable<Combinator> combinators,

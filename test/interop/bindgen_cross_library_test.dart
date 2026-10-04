@@ -316,6 +316,7 @@ libraries:
     classes:
       BindgenConfig:
         file: config.dart
+        wrapperName: CustomConfig
 ''')..resolveDefaults();
     final collection = AnalysisContextCollection(
       includedPaths: [Directory.current.absolute.path],
@@ -343,7 +344,7 @@ libraries:
 
     expect(
       wrapVar(ctx, (element as ClassElement).thisType, 'value'),
-      r'$BindgenConfig.wrap(value)',
+      r'$CustomConfig.wrap(value)',
     );
     expect(ctx.imports, contains('../../types/config.dart'));
   });

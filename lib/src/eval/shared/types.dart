@@ -277,6 +277,12 @@ class CollectionTypes {
   /// Bridge spec for [SplayTreeMap].
   static const splayTreeMap = BridgeTypeSpec('dart:collection', 'SplayTreeMap');
 
+  /// Bridge spec for [UnmodifiableListView].
+  static const unmodifiableListView = BridgeTypeSpec(
+    'dart:collection',
+    'UnmodifiableListView',
+  );
+
   /// Bridge spec for [UnmodifiableMapView].
   static const unmodifiableMapView = BridgeTypeSpec(
     'dart:collection',
@@ -448,8 +454,23 @@ class TypedDataTypes {
   /// Bridge spec for [ByteData].
   static const byteData = BridgeTypeSpec('dart:typed_data', 'ByteData');
 
+  /// Bridge spec for [Float32List].
+  static const float32List = BridgeTypeSpec('dart:typed_data', 'Float32List');
+
+  /// Bridge spec for [Float64List].
+  static const float64List = BridgeTypeSpec('dart:typed_data', 'Float64List');
+
+  /// Bridge spec for [Int32List].
+  static const int32List = BridgeTypeSpec('dart:typed_data', 'Int32List');
+
+  /// Bridge spec for [Int64List].
+  static const int64List = BridgeTypeSpec('dart:typed_data', 'Int64List');
+
   /// Bridge spec for [TypedData].
   static const typedData = BridgeTypeSpec('dart:typed_data', 'TypedData');
+
+  /// Bridge spec for [Uint16List].
+  static const uint16List = BridgeTypeSpec('dart:typed_data', 'Uint16List');
 
   /// Bridge spec for [Uint32List].
   static const uint32List = BridgeTypeSpec('dart:typed_data', 'Uint32List');

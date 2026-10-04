@@ -5,6 +5,93 @@ import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('renamed wrappers preserve SDK names and evaluated lifecycle', () async {
+    final directory = Directory(
+      'test',
+    ).absolute.createTempSync('bindgen_rename_');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final source = File(p.join(directory.path, 'native.dart'))
+      ..writeAsStringSync('''
+class Image {
+  Image(this.width);
+  final int width;
+  static void Function(Image)? onCreate;
+  static void Function(Image)? onDispose;
+  static Image create(int width) {
+    final image = Image(width);
+    onCreate?.call(image);
+    return image;
+  }
+  List<StackTrace>? debugGetOpenHandleStackTraces() => [StackTrace.current];
+  void dispose() => onDispose?.call(this);
+}
+''');
+    final config = BindgenConfig.parse(r'''
+libraries:
+  - uri: dart:core
+    classes:
+      int:
+        handMaintained: true
+        file: package:dart_eval/stdlib/core.dart
+      List:
+        handMaintained: true
+        file: package:dart_eval/stdlib/core.dart
+      StackTrace:
+        handMaintained: true
+        file: package:dart_eval/stdlib/core.dart
+  - uri: package:bindgen/native.dart
+    classes:
+      Image:
+        wrapperName: $UiImage
+        overrideLibrary: package:bindgen/native.dart
+''')..resolveDefaults();
+    final generated = (await Bindgen().parse(
+      source,
+      'native.eval.dart',
+      'package:bindgen/native.dart',
+      false,
+      config: config,
+      libraryConfig: config.libraries.last,
+    ))!;
+    expect(generated, isNot(contains(r'$Image')));
+    File(p.join(directory.path, 'native.eval.dart')).writeAsStringSync('''
+import 'native.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+$generated
+''');
+    File(p.join(directory.path, 'run.dart')).writeAsStringSync(r"""
+import 'native.eval.dart';
+import 'native.dart' as native;
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/stdlib/core.dart';
+void main() {
+  final compiler = Compiler()..defineBridgeClass($UiImage.$declaration);
+  final program = compiler.compile({'main': {'main.dart': '''
+    import 'package:bindgen/native.dart';
+    int main() {
+      final image = Image(4);
+      image.debugGetOpenHandleStackTraces();
+      image.dispose();
+      return image.width + Image(3).width;
+    }
+  '''}});
+  final runtime = Runtime.ofProgram(program);
+  $UiImage.configureForRuntime(runtime);
+  int disposedWidth = 0;
+  native.Image.onDispose = (image) { disposedWidth = image.width; };
+  final result = runtime.executeLib('package:main/main.dart', 'main');
+  if ((result != 7 && result != $int(7)) || disposedWidth != 4) {
+    throw StateError('Wrong renamed lifecycle result: $result');
+  }
+}
+""");
+    final result = await Process.run(Platform.resolvedExecutable, [
+      'run',
+      p.join(directory.path, 'run.dart'),
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
   test(
     'generated unary and binary minus dispatch through distinct keys',
     () async {

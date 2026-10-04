@@ -126,6 +126,11 @@ class _CachedSource {
 
   DartCompilationUnit load(DiagnosticMode mode) => _unit ??= switch (contents) {
     null => source.load(mode),
-    final text => parseDartSource(source.uri, text, mode),
+    final text => parseDartSource(
+      source.uri,
+      text,
+      mode,
+      languageVersion: source.languageVersion,
+    ),
   };
 }

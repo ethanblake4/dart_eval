@@ -160,8 +160,7 @@ StatementInfo _compileTry(
   if (finallyBlock != null) ctx.builder.link(entry, finallyBlock);
   ctx.builder = BasicBlockBuilder(ctx.activeGraph, [bodyBlock], parent);
   ctx.exceptionDepth++;
-  bool completes(StatementInfo info) =>
-      !info.willAlwaysReturn && !info.willAlwaysThrow && !info.willAlwaysBreak;
+  bool completes(StatementInfo info) => info.canCompleteNormally;
   void finishProtected(StatementInfo info) {
     if (completes(info)) {
       ctx.pushOp(LeaveTry());

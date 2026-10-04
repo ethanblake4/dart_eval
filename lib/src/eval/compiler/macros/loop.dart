@@ -96,10 +96,7 @@ StatementInfo macroLoop(
   ctx.labels.removeLast();
   ctx.endScope();
   ContextSaveState? bodyExitState;
-  if (!result.willAlwaysReturn &&
-      !result.willAlwaysThrow &&
-      !result.willAlwaysBreak &&
-      !ctx.flowTerminated) {
+  if (result.canCompleteNormally && !ctx.flowTerminated) {
     ctx.resolveBranchStateDiscontinuity(initialState);
     bodyExitState = ctx.saveState();
     ctx.pushOp(Jump(continueTarget.label!));

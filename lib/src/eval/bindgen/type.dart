@@ -335,11 +335,11 @@ String? wrapType(
     if (import != null) {
       ctx.imports.add(import);
     }
-    final wName = configuredClass.wrapperName ?? name;
+    final wName = wrapperIdentifier(configuredClass.wrapperName ?? name);
     if (configuredClass.unnamedValueConstructor) {
-      return '$unionStr\$$wName($expr)';
+      return '$unionStr$wName($expr)';
     }
-    return '$unionStr\$$wName.wrap($expr)';
+    return '$unionStr$wName.wrap($expr)';
   }
 
   if (configuredClass != null &&
@@ -348,10 +348,10 @@ String? wrapType(
       configuredClass.file != null &&
       element.library?.isInSdk == false) {
     ctx.imports.add(configuredClass.file!);
-    final wName = configuredClass.wrapperName ?? name;
+    final wName = wrapperIdentifier(configuredClass.wrapperName ?? name);
     return configuredClass.unnamedValueConstructor
-        ? '$unionStr\$$wName($expr)'
-        : '$unionStr\$$wName.wrap($expr)';
+        ? '$unionStr$wName($expr)'
+        : '$unionStr$wName.wrap($expr)';
   }
 
   final defaultCstr = {'int', 'num', 'double', 'bool', 'String', 'Object'};
@@ -451,11 +451,11 @@ String? wrapType(
       final arg = generic.typeArguments.first;
       return unionStr + _wrapFuture(ctx, arg, expr, runtimeTypeOwner);
     }
-    final wName = wrapperName ?? boundName;
+    final wName = wrapperIdentifier(wrapperName ?? boundName);
     if (unnamedValueConstructor) {
-      return '$unionStr\$$wName($expr)';
+      return '$unionStr$wName($expr)';
     }
-    return '$unionStr\$$wName.wrap($expr)';
+    return '$unionStr$wName.wrap($expr)';
   }
 
   final typeEl = type.element!;
