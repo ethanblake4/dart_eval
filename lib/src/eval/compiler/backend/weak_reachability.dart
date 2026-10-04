@@ -3,6 +3,7 @@ import 'package:analyzer/dart/ast/ast.dart' show FormalParameter;
 import 'package:dart_eval/dart_eval_bridge.dart' show CoreTypes;
 
 import '../../ir/bridge.dart' as bridge;
+import '../../ir/async.dart' as async;
 import '../../ir/closures.dart' as closures;
 import '../../ir/collection.dart' as collection;
 import '../../ir/flow.dart' as flow;
@@ -28,7 +29,8 @@ Set<int> strongFunctions(
   final classes = <_Class>{};
   final selectors = <String>{'toString', 'hashCode', '==', 'noSuchMethod'};
   final escaped = <_Class>{};
-  final callbacks = <int>{};
+  // Exported values cross the same opaque boundary as host callback returns.
+  final callbacks = {...roots};
   final values = <(int, cfg.SSA), Set<_Class>>{};
   final callableValues = <(int, cfg.SSA), Set<int>>{};
   final parameters = <(int, int), Set<_Class>>{};
@@ -77,6 +79,12 @@ Set<int> strongFunctions(
   }
   while (changed) {
     changed = false;
+    final unresolvedCalls = <(int, closures.InvokeClosure)>[];
+    if (escaped.isNotEmpty) {
+      // Fields and capture cells use a shared conservative heap summary.
+      add(escaped, heap);
+      add(callbacks, heapCallables);
+    }
     for (final key in classes.toList()) {
       final type = context.visibleTypes[key.$1]?[key.$2];
       final bridgeSubclass =
@@ -199,11 +207,32 @@ Set<int> strongFunctions(
                 id,
                 op.target,
               ), globalCallables[index] ?? const <int>{});
-            case bridge.InvokeExternal():
+            case bridge.InvokeExternal() || bridge.BridgeInstantiate():
               add(escaped, inputClasses);
               add(callbacks, inputCallables);
-              merge(values, (id, op.target), [unknown, ...inputClasses]);
-              merge(callableValues, (id, op.target), inputCallables);
+              final typeId = switch (op) {
+                bridge.InvokeExternal(:final returnTypeId) => returnTypeId,
+                bridge.BridgeInstantiate(:final runtimeTypeId) => runtimeTypeId,
+                _ => -1,
+              };
+              final type = typeId < 0
+                  ? null
+                  : context.runtimeTypes.list[typeId];
+              if (type == null ||
+                  mayContainGuest(type) ||
+                  type is FunctionTypeRef ||
+                  type.isSpec(CoreTypes.function)) {
+                merge(values, (id, op.writesTo!), [unknown, ...inputClasses]);
+                merge(callableValues, (id, op.writesTo!), inputCallables);
+              }
+            case objects.DynamicEquals():
+              final receiverClasses = values[(id, op.left)];
+              if (receiverClasses == null ||
+                  receiverClasses.isEmpty ||
+                  receiverClasses.contains(unknown)) {
+                add(escaped, inputClasses);
+                add(callbacks, inputCallables);
+              }
             case objects.InvokeDynamic(:final name) ||
                 objects.LoadPropertyDynamic(:final name) ||
                 objects.SetPropertyDynamic(:final name):
@@ -263,7 +292,25 @@ Set<int> strongFunctions(
               }
             case closures.InvokeClosure():
               add(selectors, ['call']);
-              for (final callee in valueCallables(id, [op.closure]).toList()) {
+              final callees = valueCallables(id, [op.closure]).toSet();
+              for (final key in values[(id, op.closure)] ?? const <_Class>{}) {
+                final groups =
+                    context.instanceDeclarationPositions[key.$1]?[key.$2];
+                if (groups == null) continue;
+                for (final group in groups.values) {
+                  for (final member in group.entries) {
+                    if (member.value >= 0 &&
+                        member.key.split('::').last == 'call') {
+                      callees.add(member.value);
+                    }
+                  }
+                }
+              }
+              if (callees.isEmpty ||
+                  (values[(id, op.closure)]?.contains(unknown) ?? false)) {
+                unresolvedCalls.add((id, op));
+              }
+              for (final callee in callees) {
                 final count =
                     context.functionSignatures[callee]!.parameters.length;
                 for (var i = 0; i < count; i++) {
@@ -300,6 +347,11 @@ Set<int> strongFunctions(
                   op is objects.LoadThis ||
                   op is objects.LoadSuper ||
                   op is bridge.PrepareBridgeArgument ||
+                  op is bridge.CreateInvocation ||
+                  op is async.Await ||
+                  op is collection.NewRecord ||
+                  op is collection.SetToList ||
+                  op is collection.MapKeys ||
                   op is primitives.BoxList ||
                   op is primitives.BoxMap ||
                   op is primitives.BoxSet ||
@@ -331,6 +383,14 @@ Set<int> strongFunctions(
               }
           }
         }
+      }
+    }
+    // Let guest callable provenance converge before treating a call as opaque.
+    if (!changed) {
+      for (final (id, op) in unresolvedCalls) {
+        final arguments = [...op.positional, ...op.named.values];
+        add(escaped, valueClasses(id, arguments));
+        add(callbacks, valueCallables(id, arguments));
       }
     }
   }

@@ -61,6 +61,7 @@ int value() { events += 'v'; return 1; }
 int marker() { events += 'm'; return 0; }
 dynamic wrong() { events += 'u'; return 'wrong'; }
 String inferred<T>(T first, T second) => '$T';
+R project<A, R>(R Function(A) callback, A value) => callback(value);
 C Function(B) chain<A, B, C>(A Function(B) first, B Function(A) second,
     C Function(B) last) => last;
 T apply<T>(T Function(T) callback, T value, {int marker = 0}) {
@@ -68,6 +69,12 @@ T apply<T>(T Function(T) callback, T value, {int marker = 0}) {
   return callback(value);
 }
 bool main() {
+  final String? nullable = null;
+  final length = project((x) => x?.length, nullable)..check<Exactly<int?>>();
+  final even = project((x) => x?.length.isEven, nullable)..check<Exactly<bool?>>();
+  if (length != null || even != null) return false;
+  final emptySetLength = project((x) => x.length, <int>{})..check<Exactly<int>>();
+  if (emptySetLength != 0) return false;
   final later = chain(
     (x) => [x]..check<Exactly<List<Object?>>>(),
     (y) => {y}..check<Exactly<Set<Object?>>>(),

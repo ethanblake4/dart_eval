@@ -449,7 +449,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     for (final library in reachableLibraries) {
       final libraryIndex = libraryIndexMap[library]!;
       for (final declarationOrBridge in library.declarations) {
-        _populateLookupTablesForDeclaration(libraryIndex, declarationOrBridge);
+        _populateLookupTablesForDeclaration(
+          libraryIndex,
+          declarationOrBridge,
+          visibleDeclarations[library]!,
+        );
       }
       // Extensions declared in a tree-shaken library are removed from its
       // `declarations` (their name is never referenced as an identifier), but
@@ -1088,6 +1092,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   void _populateLookupTablesForDeclaration(
     int libraryIndex,
     DeclarationOrBridge declarationOrBridge,
+    Map<String, DeclarationOrPrefix> visibleDeclarations,
   ) {
     _topLevelDeclarationsMap.putIfAbsent(libraryIndex, () => {});
     _instanceDeclarationsMap.putIfAbsent(libraryIndex, () => {});
@@ -1124,7 +1129,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       lowerPrimaryConstructor(declaration);
     }
     if (declaration is ClassDeclaration) {
-      lowerValueClass(declaration);
+      lowerValueClass(declaration, visibleDeclarations);
     }
 
     // Extensions declare no top-level name binding themselves; their

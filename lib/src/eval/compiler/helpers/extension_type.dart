@@ -157,82 +157,7 @@ final class _ExtensionConstruction {
             ctx.setLocal(name, value);
           }
           if (constructor.factoryKeyword != null) {
-            final redirect = constructor.redirectedConstructor;
-            if (redirect != null) {
-              final (typeName, constructorName) = splitConstructorTypeName(
-                ctx,
-                declaration.library,
-                redirect.type,
-                redirect.name?.name,
-              );
-              var target =
-                  ctx.visibleTypes[declaration.library]?[typeName] ??
-                  (throw CompileError(
-                    'Unknown factory target $typeName',
-                    redirect,
-                  ));
-              final typeArguments = redirect.type.typeArguments;
-              if (typeArguments != null) {
-                target = nominalDeclOf(target)!.instantiate([
-                  for (final argument in typeArguments.arguments)
-                    TypeRef.fromAnnotation(ctx, declaration.library, argument),
-                ]);
-              }
-              final targetDecl = nominalDeclOf(target);
-              if (targetDecl is! SourceTypeDecl ||
-                  targetDecl.node is! ExtensionTypeDeclaration) {
-                throw CompileError(
-                  'Expected extension type factory target',
-                  redirect,
-                );
-              }
-              final result =
-                  _ExtensionConstruction(
-                    ctx,
-                    targetDecl,
-                    target,
-                    isConst,
-                    source,
-                    active: _active,
-                  ).emit(
-                    constructorName,
-                    arguments,
-                    suppliedShape: CallShape.values(
-                      bound.positional,
-                      bound.namedValues,
-                    ),
-                  );
-              return _finish(
-                result.copyWith(
-                  type: targetDecl.extensionRepresentationFor(target)!,
-                ),
-              );
-            }
-            final result =
-                StaticCall(
-                  DeferredOrOffset.lookupStatic(
-                    ctx,
-                    declaration.library,
-                    declaration.name,
-                    name,
-                  ),
-                  sourceDeclaration: constructor,
-                  signature: signature,
-                ).emit(
-                  ctx,
-                  BoundCall(
-                    positional: bound.positional,
-                    named: bound.named,
-                    returnType: instantiatedType,
-                    runtimeTypeArguments: [
-                      for (final argument in interfaceArgumentsOf(
-                        instantiatedType,
-                      ))
-                        ctx.runtimeTypes.idOf(argument),
-                    ],
-                  ),
-                );
-            return result.copyWith(type: instantiatedType)..binding = null;
+            return _factory(constructor, name, signature, bound);
           }
           final initializer = constructor.initializers.firstOrNull;
           if (initializer is RedirectingConstructorInvocation) {
@@ -256,6 +181,77 @@ final class _ExtensionConstruction {
     } finally {
       _active.remove(constructor);
     }
+  }
+
+  Variable _factory(
+    ConstructorDeclaration constructor,
+    String name,
+    CallSignature signature,
+    BoundCall bound,
+  ) {
+    final redirect = constructor.redirectedConstructor;
+    if (redirect == null) {
+      final result =
+          StaticCall(
+            DeferredOrOffset.lookupStatic(
+              ctx,
+              declaration.library,
+              declaration.name,
+              name,
+            ),
+            sourceDeclaration: constructor,
+            signature: signature,
+          ).emit(
+            ctx,
+            BoundCall(
+              positional: bound.positional,
+              named: bound.named,
+              returnType: instantiatedType,
+              runtimeTypeArguments: [
+                for (final argument in interfaceArgumentsOf(instantiatedType))
+                  ctx.runtimeTypes.idOf(argument),
+              ],
+            ),
+          );
+      return result.copyWith(type: instantiatedType)..binding = null;
+    }
+    final (typeName, constructorName) = splitConstructorTypeName(
+      ctx,
+      declaration.library,
+      redirect.type,
+      redirect.name?.name,
+    );
+    var target =
+        ctx.visibleTypes[declaration.library]?[typeName] ??
+        (throw CompileError('Unknown factory target $typeName', redirect));
+    final typeArguments = redirect.type.typeArguments;
+    if (typeArguments != null) {
+      target = nominalDeclOf(target)!.instantiate([
+        for (final argument in typeArguments.arguments)
+          TypeRef.fromAnnotation(ctx, declaration.library, argument),
+      ]);
+    }
+    final targetDecl = nominalDeclOf(target);
+    if (targetDecl is! SourceTypeDecl ||
+        targetDecl.node is! ExtensionTypeDeclaration) {
+      throw CompileError('Expected extension type factory target', redirect);
+    }
+    final result =
+        _ExtensionConstruction(
+          ctx,
+          targetDecl,
+          target,
+          isConst,
+          source,
+          active: _active,
+        ).emit(
+          constructorName,
+          null,
+          suppliedShape: CallShape.values(bound.positional, bound.namedValues),
+        );
+    return _finish(
+      result.copyWith(type: targetDecl.extensionRepresentationFor(target)!),
+    );
   }
 
   bool get _needsTypeInference =>

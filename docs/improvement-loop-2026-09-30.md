@@ -4728,3 +4728,36 @@ bytes to 40, with unchanged spills. Standalone 31-sample ABBA results were
 median paired improvement. Both programs matched native checksum 505853876.
 That candidate is also removed. The realistic benchmark remains for future
 performance sweeps; neither rejected optimization adds compiler machinery.
+
+### Cycle 28 cleanup and final gates
+
+Astra medium reviewed the cycle and its final cleanup diff. The factory
+construction path is extracted from the extension-type constructor binder,
+and four redundant dispatch-table guards are removed. Inference previews
+defer nullable selectors and ambiguous empty collection literals to ordinary
+compilation, while explicit one-argument empty sets retain their Set type.
+
+Value-class lowering resolves the constant string marker through visible
+declarations, including import prefixes, rather than recognizing an annotation
+name. Generated field accesses use this, preserving fields named other and
+hash. The existing combined control checks unrelated metadata in its defining
+library, prefixed markers, equality and hash shadowing.
+
+Weak reachability now follows exported returns, callbacks, callable objects,
+opaque host closure arguments, records, collection views, asynchronous values,
+invocation payloads and bridge construction. Heap contents escape only after
+a guest value escapes; primitive bridge returns do not create guest
+provenance. Combined fresh and serialized controls preserve dead-target
+precision as well as live targets. Both original weak-reference fixtures pass
+in both execution modes. The review has no remaining blocking findings.
+Top-level constant weak tear-off aliases remain an optional followup outside
+the eligible SDK cases; the existing alias control covers local constants.
+
+Final gates pass: default 2336 tests with 86 existing skips; unrestricted SDK
+2737 eligible fixtures with three existing skips and zero compile/runtime
+failures; sibling control_flow_graph 109 tests. Analysis of all changed source
+and test files is clean. expect_fail is empty. Cleanup changes only compiler
+logic and focused controls; retained runtime code matches the completed AOT
+gate. Cycle 28 is complete, so no further correctness loop is needed. The
+compilation-speed pass was completed in cycle 27; its next scheduled cycle
+would be 30 if additional loops were needed.

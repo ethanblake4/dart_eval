@@ -133,11 +133,15 @@ TypeRef? previewArgumentType(
     final annotations = expression is ListLiteral
         ? expression.typeArguments
         : (expression as SetOrMapLiteral).typeArguments;
+    if (expression is SetOrMapLiteral &&
+        elements.isEmpty &&
+        annotations == null) {
+      return null; // The context decides whether an empty literal is a set.
+    }
     final isMap =
         expression is SetOrMapLiteral &&
         (annotations?.arguments.length == 2 ||
-            elements.any((e) => e is MapLiteralEntry) ||
-            elements.isEmpty);
+            elements.any((e) => e is MapLiteralEntry));
     final spec = expression is ListLiteral
         ? CoreTypes.list
         : isMap
@@ -192,6 +196,9 @@ TypeRef? previewArgumentType(
     return null;
   }
   if (expression is PropertyAccess && expression.target != null) {
+    // Null shortening also applies to later selectors in the same chain.
+    // Leave these paths to compilation instead of previewing a bare member.
+    if (expression.isNullAware) return null;
     final receiver = preview(expression.target!);
     if (receiver == null) return null;
     return fieldType(receiver, expression.propertyName.name);

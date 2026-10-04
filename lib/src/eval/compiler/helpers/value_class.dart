@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import '../../bridge/declaration.dart';
 // The analyzer's public AST does not expose member replacement.
 // ignore: implementation_imports
 import 'package:analyzer/src/dart/ast/ast.dart' as ast;
@@ -7,9 +8,12 @@ import 'package:analyzer/src/dart/ast/ast.dart' as ast;
 /// The value-class experiment expresses generated members as ordinary Dart.
 /// Keep explicit constructors and operators, and let normal compilation handle
 /// field initialization, argument checks, dispatch and serialization.
-void lowerValueClass(ClassDeclaration declaration) {
+void lowerValueClass(
+  ClassDeclaration declaration,
+  Map<String, DeclarationOrPrefix> visibleDeclarations,
+) {
   if (!declaration.metadata.any(
-    (annotation) => annotation.name.name == 'valueClass',
+    (annotation) => _isValueClassMarker(annotation, visibleDeclarations),
   )) {
     return;
   }
@@ -40,7 +44,7 @@ void lowerValueClass(ClassDeclaration declaration) {
     (method) => method.isOperator && method.name.lexeme == '==',
   )) {
     final equalFields = fields.map(
-      (field) => '${field.name.lexeme} == other.${field.name.lexeme}',
+      (field) => 'this.${field.name.lexeme} == other.${field.name.lexeme}',
     );
     generated.writeln(
       'bool operator ==(Object other) => identical(this, other) || '
@@ -53,7 +57,7 @@ void lowerValueClass(ClassDeclaration declaration) {
   )) {
     generated.writeln('int get hashCode { var hash = runtimeType.hashCode;');
     for (final field in fields) {
-      final fieldName = field.name.lexeme;
+      final fieldName = 'this.${field.name.lexeme}';
       generated.writeln(
         'hash = ((hash * 31) ^ ($fieldName == null ? 0 : $fieldName.hashCode)) '
         '& 0x1fffffff;',
@@ -76,4 +80,36 @@ void lowerValueClass(ClassDeclaration declaration) {
     ],
     rightBracket: body.rightBracket,
   );
+}
+
+bool _isValueClassMarker(
+  Annotation annotation,
+  Map<String, DeclarationOrPrefix> visibleDeclarations,
+) {
+  if (annotation.arguments != null || annotation.constructorName != null) {
+    return false;
+  }
+  final name = annotation.name;
+  final binding = switch (name) {
+    SimpleIdentifier() => visibleDeclarations[name.name]?.declaration,
+    PrefixedIdentifier() =>
+      visibleDeclarations[name.prefix.name]?.children?[name.identifier.name],
+  };
+  final variableName = name is PrefixedIdentifier
+      ? name.identifier.name
+      : name.name;
+  final variable = switch (binding?.declaration) {
+    VariableDeclaration node => node,
+    TopLevelVariableDeclaration node =>
+      node.variables.variables
+          .where((variable) => variable.name.lexeme == variableName)
+          .firstOrNull,
+    _ => null,
+  };
+  final declarations = variable?.parent;
+  final value = variable?.initializer;
+  return declarations is VariableDeclarationList &&
+      declarations.isConst &&
+      value is StringLiteral &&
+      value.stringValue == 'valueClass';
 }

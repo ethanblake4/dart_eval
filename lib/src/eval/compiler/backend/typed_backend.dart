@@ -278,7 +278,7 @@ class TypedBackend {
           .instanceDeclarationPositions[allocation.library]![allocation.name]!;
       for (final group in memberGroups.values) {
         for (final id in group.values) {
-          if (id < 0 || !seen.contains(id)) continue;
+          if (id < 0) continue;
           for (final param
               in context.functionParameters[id] ?? const <FormalParameter>[]) {
             final (_, thunk) = compileParameterDefault(
@@ -353,9 +353,7 @@ class TypedBackend {
       final declaringType =
           context.visibleTypes[allocation.library]?[allocation.name];
       for (final id in memberIds) {
-        if (id < 0 ||
-            !indices.containsKey(id) ||
-            boundReceiverIds.contains(indices[id])) {
+        if (id < 0 || boundReceiverIds.contains(indices[id])) {
           continue;
         }
         final parameters =
@@ -508,7 +506,7 @@ class TypedBackend {
       }
       for (final entry in methods.entries) {
         final id = entry.value;
-        if (id < 0 || !indices.containsKey(id)) continue;
+        if (id < 0) continue;
         final functionId = indices[id]!;
         final signatures = boundSignatures[functionId];
         if (signatures == null) continue;
@@ -857,8 +855,7 @@ class TypedBackend {
             .name]![kind]!;
     return {
       for (final entry in members.entries)
-        if (entry.value >= 0 && indices.containsKey(entry.value))
-          entry.key: indices[entry.value]!,
+        if (entry.value >= 0) entry.key: indices[entry.value]!,
     };
   }
 
