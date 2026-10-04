@@ -4449,3 +4449,7 @@ type. Legacy captured finals retain entry demotion while allowing a new cast
 proof inside the closure. All five new flow regressions and ten earlier flow
 originals pass fresh and serialized; eighteen focused tests pass. These
 corrections do not change the interpreter or add runtime adapters.
+
+The full survey also exposed two incidental successes: the original mixin
+subtype and wildcard extension-type fixtures. Both pass fresh and serialized;
+their stale expectations were removed, leaving 31 expected failures.
