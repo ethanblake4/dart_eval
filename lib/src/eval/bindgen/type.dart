@@ -171,6 +171,7 @@ String? wrapVar(
   bool forCollection = false,
   List<String>? unionTypeNames,
   String? runtimeTypeOwner,
+  bool captureMethodTypeArguments = true,
 }) {
   if (type is VoidType) {
     if (func) {
@@ -203,6 +204,12 @@ String? wrapVar(
     wrapped = 'runtime.wrapAlways($expr)';
   }
 
+  if (captureMethodTypeArguments && wrapped.contains('bridgeTypeArguments')) {
+    wrapped =
+        '(() { final bridgeTypeArguments = runtime.bridgeCallTypeArguments; '
+        'return $wrapped; })()';
+  }
+
   if (type.nullabilitySuffix == NullabilitySuffix.question) {
     if (forCollection) {
       return 'if ($expr == null) const \$null() else $wrapped';
@@ -222,8 +229,13 @@ String? wrapType(
   List<String>? unionTypeNames,
   String? runtimeTypeOwner,
 }) {
-  String? wrapNested(DartType nestedType, String nestedExpr) =>
-      wrapVar(ctx, nestedType, nestedExpr, runtimeTypeOwner: runtimeTypeOwner);
+  String? wrapNested(DartType nestedType, String nestedExpr) => wrapVar(
+    ctx,
+    nestedType,
+    nestedExpr,
+    runtimeTypeOwner: runtimeTypeOwner,
+    captureMethodTypeArguments: false,
+  );
   final union = metadata?.firstWhereOrNull(
     (e) => e.element?.displayName == 'UnionOf',
   );
@@ -423,6 +435,21 @@ String? wrapType(
     }
     if (boundName == 'Iterable' && type is ParameterizedType) {
       final arg = type.typeArguments.first;
+      final elementType = runtimeTypeIdFor(
+        ctx,
+        arg,
+        runtimeTypeOwner,
+        methodTypeArguments: 'bridgeTypeArguments',
+      );
+      if (elementType != null) {
+        ctx.imports.add('package:dart_eval/src/eval/runtime/runtime.dart');
+        return '$unionStr(() { '
+            'final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [$elementType]); '
+            'return \$Iterable.wrap(($expr).map((e) { '
+            'final value = ${wrapNested(arg, 'e')}; '
+            'runtime.assertTypedTypeArgument(value, iterableType, 0); return value; '
+            '}), runtime: runtime, runtimeTypeId: iterableType); })()';
+      }
       return '$unionStr\$Iterable.wrap('
           '($expr).map((e) => ${wrapNested(arg, 'e')}))';
     }
@@ -563,7 +590,12 @@ String _typeArgumentMetadata(
   DartType payload,
   String? owner,
 ) {
-  final typeId = runtimeTypeIdFor(ctx, payload, owner);
+  final typeId = runtimeTypeIdFor(
+    ctx,
+    payload,
+    owner,
+    methodTypeArguments: 'bridgeTypeArguments',
+  );
   if (typeId != null) {
     ctx.imports.add('package:dart_eval/src/eval/runtime/runtime.dart');
   }
@@ -586,16 +618,32 @@ String _wrapFuture(
   final value = wrapPayload
       ? payload is VoidType
             ? '($expr as Future<dynamic>).then((e) => runtime.wrapAlways(e, recursive: true))'
-            : '$expr.then((e) => ${wrapVar(ctx, payload, 'e', runtimeTypeOwner: owner)})'
+            : '$expr.then((e) => ${wrapVar(ctx, payload, 'e', runtimeTypeOwner: owner, captureMethodTypeArguments: false)})'
       : expr;
   return '\$Future.wrap($value$metadata)';
 }
 
 /// Reify known host result types without guessing erased generic arguments.
-String? runtimeTypeIdFor(BindgenContext ctx, DartType type, String? owner) {
+String? runtimeTypeIdFor(
+  BindgenContext ctx,
+  DartType type,
+  String? owner, {
+  String? methodTypeArguments,
+}) {
   if (type is TypeParameterType) {
     final host = type.element.enclosingElement;
-    if (owner == null || host is! InterfaceElement) return null;
+    if (owner == null) return null;
+    if (host is ExecutableElement) {
+      if (methodTypeArguments == null) return null;
+      final index = host.typeParameters.indexOf(type.element);
+      final typeId =
+          '($methodTypeArguments.length > $index '
+          '? $methodTypeArguments[$index] : runtime.lookupType(CoreTypes.dynamic))';
+      return type.nullabilitySuffix == NullabilitySuffix.question
+          ? 'runtime.nullableRuntimeType($typeId)'
+          : typeId;
+    }
+    if (host is! InterfaceElement) return null;
     final index = host.typeParameters.indexOf(type.element);
     final receiver = owner == 'this' ? '' : '$owner.';
     // The guest subclass can have different type parameters from its SDK
@@ -616,7 +664,12 @@ String? runtimeTypeIdFor(BindgenContext ctx, DartType type, String? owner) {
   final arguments = type is ParameterizedType
       ? [
           for (final argument in type.typeArguments)
-            runtimeTypeIdFor(ctx, argument, owner),
+            runtimeTypeIdFor(
+              ctx,
+              argument,
+              owner,
+              methodTypeArguments: methodTypeArguments,
+            ),
         ]
       : <String?>[];
   if (arguments.contains(null)) return null;
@@ -850,7 +903,7 @@ String wrapFunctionType(
   );
   buffer.write(accessors.join(', '));
   buffer.write(
-    '); return ${wrapVar(ctx, type.returnType, 'funcResult', func: true, runtimeTypeOwner: runtimeTypeOwner)}; })',
+    '); return ${wrapVar(ctx, type.returnType, 'funcResult', func: true, runtimeTypeOwner: runtimeTypeOwner, captureMethodTypeArguments: false)}; })',
   );
   return buffer.toString();
 }

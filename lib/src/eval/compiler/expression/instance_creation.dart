@@ -185,8 +185,20 @@ Variable compileInstanceOf(
     final argTypeParameters = <String, TypeParameterTypeRef>{
       for (var i = 0; i < genericNames.length; i++)
         if (i >= appliedArguments.length ||
-            appliedArguments[i] is UnknownTypeRef)
-          genericNames[i]: placeholders[genericNames[i]]!,
+            appliedArguments[i] is UnknownTypeRef ||
+            appliedArguments[i] == placeholders[genericNames[i]])
+          genericNames[i]: TypeParameterTypeRef(
+            ctx.typeParameterDefs.key(
+              TypeParameterOwner(
+                TypeParameterOwnerKind.callSite,
+                ctx.library,
+                '${staticType.name}.$name',
+                source.offset,
+              ),
+              i,
+              genericNames[i],
+            ),
+          ),
     };
     final argumentTypes = <String, TypeRef>{
       for (var i = 0; i < genericNames.length; i++)
@@ -195,11 +207,7 @@ Variable compileInstanceOf(
     };
     target = ConstructorCall(
       staticType: staticType,
-      instantiatedType:
-          genericNames.isNotEmpty &&
-              interfaceArgumentsOf(instantiatedType).isEmpty
-          ? null
-          : instantiatedType,
+      instantiatedType: argTypeParameters.isNotEmpty ? null : instantiatedType,
       name: name,
       isConst: isConst,
       externalIndex:

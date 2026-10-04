@@ -1143,26 +1143,59 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
       case 'cast':
         return $Function((runtime, target, r, s, c) {
           final result = super.cast();
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+            return (() {
+              final iterableType = runtime.internParameterizedType(
+                CoreTypes.iterable,
+                [
+                  (bridgeTypeArguments.length > 0
+                      ? bridgeTypeArguments[0]
+                      : runtime.lookupType(CoreTypes.dynamic)),
+                ],
+              );
+              return $Iterable.wrap(
+                (result).map((e) {
+                  final value = (e is List || e is Map || e is Set
+                      ? TypedInterop.boxExternal(e, runtime: runtime)!
+                      : runtime.wrapAlways(e));
+                  runtime.assertTypedTypeArgument(value, iterableType, 0);
+                  return value;
+                }),
+                runtime: runtime,
+                runtimeTypeId: iterableType,
+              );
+            })();
+          })();
         });
       case 'followedBy':
         return $Function((runtime, target, r, s, c) {
           final result = super.followedBy(
             TypedInterop.exportIterable((r as $Value?), runtime),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'map':
         return $Function((runtime, target, r, s, c) {
@@ -1186,13 +1219,30 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+            return (() {
+              final iterableType = runtime.internParameterizedType(
+                CoreTypes.iterable,
+                [
+                  (bridgeTypeArguments.length > 0
+                      ? bridgeTypeArguments[0]
+                      : runtime.lookupType(CoreTypes.dynamic)),
+                ],
+              );
+              return $Iterable.wrap(
+                (result).map((e) {
+                  final value = (e is List || e is Map || e is Set
+                      ? TypedInterop.boxExternal(e, runtime: runtime)!
+                      : runtime.wrapAlways(e));
+                  runtime.assertTypedTypeArgument(value, iterableType, 0);
+                  return value;
+                }),
+                runtime: runtime,
+                runtimeTypeId: iterableType,
+              );
+            })();
+          })();
         });
       case 'where':
         return $Function((runtime, target, r, s, c) {
@@ -1219,24 +1269,57 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'whereType':
         return $Function((runtime, target, r, s, c) {
           final result = super.whereType();
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+            return (() {
+              final iterableType = runtime.internParameterizedType(
+                CoreTypes.iterable,
+                [
+                  (bridgeTypeArguments.length > 0
+                      ? bridgeTypeArguments[0]
+                      : runtime.lookupType(CoreTypes.dynamic)),
+                ],
+              );
+              return $Iterable.wrap(
+                (result).map((e) {
+                  final value = (e is List || e is Map || e is Set
+                      ? TypedInterop.boxExternal(e, runtime: runtime)!
+                      : runtime.wrapAlways(e));
+                  runtime.assertTypedTypeArgument(value, iterableType, 0);
+                  return value;
+                }),
+                runtime: runtime,
+                runtimeTypeId: iterableType,
+              );
+            })();
+          })();
         });
       case 'expand':
         return $Function((runtime, target, r, s, c) {
@@ -1260,13 +1343,30 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+            return (() {
+              final iterableType = runtime.internParameterizedType(
+                CoreTypes.iterable,
+                [
+                  (bridgeTypeArguments.length > 0
+                      ? bridgeTypeArguments[0]
+                      : runtime.lookupType(CoreTypes.dynamic)),
+                ],
+              );
+              return $Iterable.wrap(
+                (result).map((e) {
+                  final value = (e is List || e is Map || e is Set
+                      ? TypedInterop.boxExternal(e, runtime: runtime)!
+                      : runtime.wrapAlways(e));
+                  runtime.assertTypedTypeArgument(value, iterableType, 0);
+                  return value;
+                }),
+                runtime: runtime,
+                runtimeTypeId: iterableType,
+              );
+            })();
+          })();
         });
       case 'contains':
         return $Function((runtime, target, r, s, c) {
@@ -1459,13 +1559,29 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
       case 'take':
         return $Function((runtime, target, r, s, c) {
           final result = super.take((r as $int).$value);
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'takeWhile':
         return $Function((runtime, target, r, s, c) {
@@ -1492,24 +1608,56 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'skip':
         return $Function((runtime, target, r, s, c) {
           final result = super.skip((r as $int).$value);
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'skipWhile':
         return $Function((runtime, target, r, s, c) {
@@ -1536,13 +1684,29 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'firstWhere':
         return $Function((runtime, target, r, s, c) {

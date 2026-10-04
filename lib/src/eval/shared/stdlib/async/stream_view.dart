@@ -1599,15 +1599,16 @@ class $StreamView<T> implements $Instance {
         (r as $Value?)! as EvalCallable,
         "S Function(T);export=false",
         (_callable) => (dynamic event) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(event, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(event, recursive: true),
+              null,
+              1,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1838,15 +1839,16 @@ class $StreamView<T> implements $Instance {
         (r as $Value?)! as EvalCallable,
         "T Function(T, T);export=false",
         (_callable) => (dynamic previous, dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(previous, recursive: true),
-                runtime.wrapAlways(element, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(previous, recursive: true),
+              runtime.wrapAlways(element, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1879,15 +1881,16 @@ class $StreamView<T> implements $Instance {
         (s as $Value?)! as EvalCallable,
         "S Function(S, T);export=false",
         (_callable) => (dynamic previous, dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(previous, recursive: true),
-                runtime.wrapAlways(element, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(previous, recursive: true),
+              runtime.wrapAlways(element, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -2057,13 +2060,22 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.cast();
-    return $Stream.wrap(
-      result.map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return $Stream.wrap(
+        result.map(
+          (e) => (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e)),
+        ),
+        runtime: runtime,
+        runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+          (bridgeTypeArguments.length > 0
+              ? bridgeTypeArguments[0]
+              : runtime.lookupType(CoreTypes.dynamic)),
+        ]),
+      );
+    })();
   }
 
   static const $Function __toList = $Function(_toList);
@@ -2145,13 +2157,22 @@ class $StreamView<T> implements $Instance {
       TypedInterop.exportExternal((r is $Value ? r : null), runtime: runtime)
           as dynamic,
     );
-    return $Future.wrap(
-      result.then(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return $Future.wrap(
+        result.then(
+          (e) => (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e)),
+        ),
+        runtime: runtime,
+        runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+          (bridgeTypeArguments.length > 0
+              ? bridgeTypeArguments[0]
+              : runtime.lookupType(CoreTypes.dynamic)),
+        ]),
+      );
+    })();
   }
 
   static const $Function __take = $Function(_take);
@@ -2356,7 +2377,10 @@ class $StreamView<T> implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "T Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );
@@ -2406,7 +2430,10 @@ class $StreamView<T> implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "T Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );
@@ -2456,7 +2483,10 @@ class $StreamView<T> implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "T Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );

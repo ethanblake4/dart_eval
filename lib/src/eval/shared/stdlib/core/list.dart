@@ -204,7 +204,18 @@ class $List<E> implements List<E>, $Instance {
             BridgeParameter(
               'generator',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.function, []),
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                    params: [
+                      BridgeParameter(
+                        'index',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
                 nullable: false,
               ),
               false,
@@ -1173,7 +1184,19 @@ class $List<E> implements List<E>, $Instance {
       case 'toString':
         return $Closure(__toString.func, this);
       case 'reversed':
-        return $Iterable.wrap($value.reversed);
+        final elementType = runtime.runtimeTypeArgumentAt(
+          $getRuntimeType(runtime),
+          0,
+        );
+        return $Iterable.wrap(
+          $value.reversed,
+          runtime: runtime,
+          runtimeTypeId: elementType == null
+              ? null
+              : runtime.internParameterizedType(CoreTypes.iterable, [
+                  elementType,
+                ]),
+        );
       case 'cast':
         return $Closure(__$cast.func, this);
       case '[]':

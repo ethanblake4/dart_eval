@@ -1176,7 +1176,10 @@ class $Zone implements $Instance {
         (r as $Value?)! as EvalCallable,
         "R Function();export=false",
         (_callable) => () {
-          return _callable.call(runtime, null, null, null, 0)?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(runtime, null, null, null, 0),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1199,15 +1202,16 @@ class $Zone implements $Instance {
         (r as $Value?)! as EvalCallable,
         "R Function(T);export=false",
         (_callable) => (dynamic argument) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(argument, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(argument, recursive: true),
+              null,
+              1,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
       TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
@@ -1231,15 +1235,16 @@ class $Zone implements $Instance {
         (r as $Value?)! as EvalCallable,
         "R Function(T1, T2);export=false",
         (_callable) => (dynamic argument1, dynamic argument2) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(argument1, recursive: true),
-                runtime.wrapAlways(argument2, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(argument1, recursive: true),
+              runtime.wrapAlways(argument2, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
       TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
@@ -1348,7 +1353,10 @@ class $Zone implements $Instance {
         (r as $Value?)! as EvalCallable,
         "R Function();export=false",
         (_callable) => () {
-          return _callable.call(runtime, null, null, null, 0)?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(runtime, null, null, null, 0),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1376,15 +1384,16 @@ class $Zone implements $Instance {
         (r as $Value?)! as EvalCallable,
         "R Function(T);export=false",
         (_callable) => (dynamic arg) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(arg, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(arg, recursive: true),
+              null,
+              1,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1415,15 +1424,16 @@ class $Zone implements $Instance {
         (r as $Value?)! as EvalCallable,
         "R Function(T1, T2);export=false",
         (_callable) => (dynamic arg1, dynamic arg2) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(arg1, recursive: true),
-                runtime.wrapAlways(arg2, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(arg1, recursive: true),
+              runtime.wrapAlways(arg2, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1454,7 +1464,10 @@ class $Zone implements $Instance {
         (r as $Value?)! as EvalCallable,
         "R Function();export=false",
         (_callable) => () {
-          return _callable.call(runtime, null, null, null, 0)?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(runtime, null, null, null, 0),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1480,15 +1493,16 @@ class $Zone implements $Instance {
         (r as $Value?)! as EvalCallable,
         "R Function(T);export=false",
         (_callable) => (dynamic argument) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(argument, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(argument, recursive: true),
+              null,
+              1,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1517,15 +1531,16 @@ class $Zone implements $Instance {
         (r as $Value?)! as EvalCallable,
         "R Function(T1, T2);export=false",
         (_callable) => (dynamic argument1, dynamic argument2) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(argument1, recursive: true),
-                runtime.wrapAlways(argument2, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(argument1, recursive: true),
+              runtime.wrapAlways(argument2, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );

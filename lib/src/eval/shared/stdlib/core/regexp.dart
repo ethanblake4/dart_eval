@@ -55,6 +55,8 @@ import 'package:dart_eval/stdlib/core.dart'
 
 import './pattern.dart';
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+
 /// dart_eval wrapper binding for [RegExp]
 class $RegExp implements $Instance {
   /// Configure this class for use in a [Runtime]
@@ -387,7 +389,20 @@ class $RegExp implements $Instance {
       (r as $String).$value,
       (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
     );
-    return $Iterable.wrap((result).map((e) => $RegExpMatch.wrap(e)));
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.regExpMatch),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $RegExpMatch.wrap(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __hasMatch = $Function(_hasMatch);
@@ -527,7 +542,21 @@ class $RegExpMatch implements $Instance {
     switch (identifier) {
       case 'groupNames':
         final _groupNames = $value.groupNames;
-        return $Iterable.wrap((_groupNames).map((e) => $String(e)));
+        return (() {
+          final iterableType = runtime.internParameterizedType(
+            CoreTypes.iterable,
+            [runtime.lookupType(CoreTypes.string)],
+          );
+          return $Iterable.wrap(
+            (_groupNames).map((e) {
+              final value = $String(e);
+              runtime.assertTypedTypeArgument(value, iterableType, 0);
+              return value;
+            }),
+            runtime: runtime,
+            runtimeTypeId: iterableType,
+          );
+        })();
       case 'pattern':
         final _pattern = $value.pattern;
         return $RegExp.wrap(_pattern);

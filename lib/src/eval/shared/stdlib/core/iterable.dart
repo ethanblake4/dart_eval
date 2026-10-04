@@ -983,8 +983,16 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   ) {
     final $this = target?.$value as Iterable;
     final toElement = TypedInterop.nonGenericCallable(r);
-    final $result = $this.map((e) => toElement.call(runtime, null, e, null, 1));
-    return $Iterable.wrap($result);
+    final typeArguments = runtime.bridgeCallTypeArguments;
+    final resultType = typeArguments.isEmpty
+        ? null
+        : runtime.internParameterizedType(CoreTypes.iterable, [typeArguments[0]]);
+    final $result = $this.map((e) {
+      final value = toElement.call(runtime, null, e, null, 1);
+      if (resultType != null) runtime.assertTypedTypeArgument(value, resultType, 0);
+      return value;
+    });
+    return $Iterable.wrap($result, runtime: runtime, runtimeTypeId: resultType);
   }
 
   @override

@@ -38,32 +38,26 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../core/iterator.dart';
 
-/// dart_eval wrapper binding for [LinkedHashSet]
-class $LinkedHashSet<E> implements $Instance {
+/// dart_eval wrapper binding for [SplayTreeSet]
+class $SplayTreeSet<E> implements $Instance {
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:collection',
-      'LinkedHashSet.',
-      $LinkedHashSet.$new,
+      'SplayTreeSet.',
+      $SplayTreeSet.$new,
     );
 
     runtime.registerBridgeFuncRegisters(
       'dart:collection',
-      'LinkedHashSet.identity',
-      $LinkedHashSet.$identity,
+      'SplayTreeSet.from',
+      $SplayTreeSet.$from,
     );
 
     runtime.registerBridgeFuncRegisters(
       'dart:collection',
-      'LinkedHashSet.from',
-      $LinkedHashSet.$from,
-    );
-
-    runtime.registerBridgeFuncRegisters(
-      'dart:collection',
-      'LinkedHashSet.of',
-      $LinkedHashSet.$of,
+      'SplayTreeSet.of',
+      $SplayTreeSet.$of,
     );
   }
 
@@ -72,25 +66,27 @@ class $LinkedHashSet<E> implements $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$LinkedHashSet]
-  static const $spec = BridgeTypeSpec('dart:collection', 'LinkedHashSet');
+  /// Compile-time type specification of [$SplayTreeSet]
+  static const $spec = BridgeTypeSpec('dart:collection', 'SplayTreeSet');
 
-  /// Compile-time type declaration of [$LinkedHashSet]
+  /// Compile-time type declaration of [$SplayTreeSet]
   static const $type = BridgeTypeRef($spec);
 
-  /// Compile-time class declaration of [$LinkedHashSet]
+  /// Compile-time class declaration of [$SplayTreeSet]
   static const $declaration = BridgeClassDef(
     BridgeClassType(
       $type,
-      isAbstract: true,
 
       generics: {'E': BridgeGenericParam()},
 
       $implements: [
-        BridgeTypeRef(CoreTypes.set, [
+        BridgeTypeRef(CoreTypes.iterable, [
           BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
         ]),
-        BridgeTypeRef(CoreTypes.iterable, [
+        BridgeTypeRef(CollectionTypes.setBase, [
+          BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+        ]),
+        BridgeTypeRef(CoreTypes.set, [
           BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
         ]),
         BridgeTypeRef(CoreTypes.object, [
@@ -102,38 +98,10 @@ class $LinkedHashSet<E> implements $Instance {
       '': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
-          namedParams: [
+          namedParams: [],
+          params: [
             BridgeParameter(
-              'equals',
-              BridgeTypeAnnotation(
-                BridgeTypeRef.genericFunction(
-                  BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.bool, []),
-                    ),
-                    params: [
-                      BridgeParameter(
-                        'null',
-                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-                        false,
-                      ),
-
-                      BridgeParameter(
-                        'null',
-                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-                        false,
-                      ),
-                    ],
-                    namedParams: [],
-                  ),
-                ),
-                nullable: true,
-              ),
-              true,
-            ),
-
-            BridgeParameter(
-              'hashCode',
+              'compare',
               BridgeTypeAnnotation(
                 BridgeTypeRef.genericFunction(
                   BridgeFunctionDef(
@@ -142,7 +110,13 @@ class $LinkedHashSet<E> implements $Instance {
                     ),
                     params: [
                       BridgeParameter(
-                        'null',
+                        'key1',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+
+                      BridgeParameter(
+                        'key2',
                         BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
                         false,
                       ),
@@ -165,7 +139,7 @@ class $LinkedHashSet<E> implements $Instance {
                     ),
                     params: [
                       BridgeParameter(
-                        'null',
+                        'potentialKey',
                         BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
                         false,
                       ),
@@ -178,18 +152,8 @@ class $LinkedHashSet<E> implements $Instance {
               true,
             ),
           ],
-          params: [],
         ),
-        isFactory: true,
-      ),
-
-      'identity': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation($type),
-          namedParams: [],
-          params: [],
-        ),
-        isFactory: true,
+        isFactory: false,
       ),
 
       'from': BridgeConstructorDef(
@@ -205,6 +169,58 @@ class $LinkedHashSet<E> implements $Instance {
                 ]),
               ),
               false,
+            ),
+
+            BridgeParameter(
+              'compare',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.int, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'key1',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+
+                      BridgeParameter(
+                        'key2',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'isValidKey',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'potentialKey',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
             ),
           ],
         ),
@@ -225,6 +241,58 @@ class $LinkedHashSet<E> implements $Instance {
               ),
               false,
             ),
+
+            BridgeParameter(
+              'compare',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.int, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'key1',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+
+                      BridgeParameter(
+                        'key2',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'isValidKey',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'potentialKey',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
           ],
         ),
         isFactory: true,
@@ -243,8 +311,304 @@ class $LinkedHashSet<E> implements $Instance {
           namedParams: [],
           params: [],
         ),
+      ),
 
-        isAbstract: true,
+      'contains': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'element',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'add': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'element',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'addAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'elements',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'remove': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'object',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'lookup': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'), nullable: true),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'object',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'removeAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'elements',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.object, []),
+                    nullable: true,
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'retainAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'elements',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.object, []),
+                    nullable: true,
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'removeWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'retainWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'containsAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.object, []),
+                    nullable: true,
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'intersection': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.set, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.object, []),
+                    nullable: true,
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'union': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.set, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'difference': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.set, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.object, []),
+                    nullable: true,
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'clear': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'toSet': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
       ),
 
       'followedBy': BridgeMethodDef(
@@ -266,6 +630,38 @@ class $LinkedHashSet<E> implements $Instance {
               false,
             ),
           ],
+        ),
+      ),
+
+      'whereType': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'T': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'toList': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+            ]),
+          ),
+          namedParams: [
+            BridgeParameter(
+              'growable',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
+              defaultValueSource: "true",
+            ),
+          ],
+          params: [],
         ),
       ),
 
@@ -336,19 +732,6 @@ class $LinkedHashSet<E> implements $Instance {
         ),
       ),
 
-      'whereType': BridgeMethodDef(
-        BridgeFunctionDef(
-          generics: {'T': BridgeGenericParam()},
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.iterable, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
-            ]),
-          ),
-          namedParams: [],
-          params: [],
-        ),
-      ),
-
       'expand': BridgeMethodDef(
         BridgeFunctionDef(
           generics: {'T': BridgeGenericParam()},
@@ -386,25 +769,6 @@ class $LinkedHashSet<E> implements $Instance {
         ),
       ),
 
-      'contains': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'value',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, []),
-                nullable: true,
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
       'forEach': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
@@ -433,8 +797,6 @@ class $LinkedHashSet<E> implements $Instance {
             ),
           ],
         ),
-
-        isAbstract: true,
       ),
 
       'reduce': BridgeMethodDef(
@@ -585,39 +947,6 @@ class $LinkedHashSet<E> implements $Instance {
             ),
           ],
         ),
-      ),
-
-      'toList': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.list, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-            ]),
-          ),
-          namedParams: [
-            BridgeParameter(
-              'growable',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
-              true,
-              defaultValueSource: "true",
-            ),
-          ],
-          params: [],
-        ),
-      ),
-
-      'toSet': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.set, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-            ]),
-          ),
-          namedParams: [],
-          params: [],
-        ),
-
-        isAbstract: true,
       ),
 
       'take': BridgeMethodDef(
@@ -872,301 +1201,6 @@ class $LinkedHashSet<E> implements $Instance {
           ],
         ),
       ),
-
-      'add': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'value',
-              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'addAll': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'elements',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'remove': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'value',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, []),
-                nullable: true,
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'lookup': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('E'), nullable: true),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'object',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, []),
-                nullable: true,
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'removeAll': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'elements',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.object, []),
-                    nullable: true,
-                  ),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'retainAll': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'elements',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.object, []),
-                    nullable: true,
-                  ),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'removeWhere': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'test',
-              BridgeTypeAnnotation(
-                BridgeTypeRef.genericFunction(
-                  BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.bool, []),
-                    ),
-                    params: [
-                      BridgeParameter(
-                        'element',
-                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-                        false,
-                      ),
-                    ],
-                    namedParams: [],
-                  ),
-                ),
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'retainWhere': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'test',
-              BridgeTypeAnnotation(
-                BridgeTypeRef.genericFunction(
-                  BridgeFunctionDef(
-                    returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.bool, []),
-                    ),
-                    params: [
-                      BridgeParameter(
-                        'element',
-                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-                        false,
-                      ),
-                    ],
-                    namedParams: [],
-                  ),
-                ),
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'containsAll': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'other',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.iterable, [
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.object, []),
-                    nullable: true,
-                  ),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'intersection': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.set, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-            ]),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'other',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.set, [
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.object, []),
-                    nullable: true,
-                  ),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'union': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.set, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-            ]),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'other',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.set, [
-                  BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'difference': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.set, [
-              BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
-            ]),
-          ),
-          namedParams: [],
-          params: [
-            BridgeParameter(
-              'other',
-              BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.set, [
-                  BridgeTypeAnnotation(
-                    BridgeTypeRef(CoreTypes.object, []),
-                    nullable: true,
-                  ),
-                ]),
-              ),
-              false,
-            ),
-          ],
-        ),
-
-        isAbstract: true,
-      ),
-
-      'clear': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          namedParams: [],
-          params: [],
-        ),
-
-        isAbstract: true,
-      ),
     },
     getters: {
       'iterator': BridgeMethodDef(
@@ -1179,8 +1213,6 @@ class $LinkedHashSet<E> implements $Instance {
           namedParams: [],
           params: [],
         ),
-
-        isAbstract: true,
       ),
 
       'length': BridgeMethodDef(
@@ -1189,8 +1221,6 @@ class $LinkedHashSet<E> implements $Instance {
           namedParams: [],
           params: [],
         ),
-
-        isAbstract: true,
       ),
 
       'isEmpty': BridgeMethodDef(
@@ -1239,61 +1269,38 @@ class $LinkedHashSet<E> implements $Instance {
     bridge: false,
   );
 
-  /// Wrapper for the [LinkedHashSet.new] constructor
+  /// Wrapper for the [SplayTreeSet.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $LinkedHashSet.wrap(
-      LinkedHashSet(
-        equals:
-            (r is $Value ? r : null) == null ||
-                (r is $Value ? r : null) is $null
+    return $SplayTreeSet.wrap(
+      SplayTreeSet(
+        (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
             ? null
             : runtime.cachedCallback(
                 (r is $Value ? r : null)! as EvalCallable,
-                "bool Function(E, E);export=false",
-                (_callable) => (dynamic arg0, dynamic arg1) {
+                "int Function(E, E);export=false",
+                (_callable) => (dynamic key1, dynamic key2) {
                   return _callable
                       .call(
                         runtime,
                         null,
-                        runtime.wrapAlways(arg0, recursive: true),
-                        runtime.wrapAlways(arg1, recursive: true),
+                        runtime.wrapAlways(key1, recursive: true),
+                        runtime.wrapAlways(key2, recursive: true),
                         2,
                       )
                       ?.$value;
                 },
               ),
-        hashCode:
-            (s is $Value ? s : null) == null ||
-                (s is $Value ? s : null) is $null
+        (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
             ? null
             : runtime.cachedCallback(
                 (s is $Value ? s : null)! as EvalCallable,
-                "int Function(E);export=false",
-                (_callable) => (dynamic arg0) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        runtime.wrapAlways(arg0, recursive: true),
-                        null,
-                        1,
-                      )
-                      ?.$value;
-                },
-              ),
-        isValidKey:
-            (c is $Value ? c : null) == null ||
-                (c is $Value ? c : null) is $null
-            ? null
-            : runtime.cachedCallback(
-                (c is $Value ? c : null)! as EvalCallable,
                 "bool Function(dynamic);export=false",
-                (_callable) => (dynamic arg0) {
+                (_callable) => (dynamic potentialKey) {
                   return _callable
                       .call(
                         runtime,
                         null,
-                        runtime.wrapAlways(arg0, recursive: true),
+                        runtime.wrapAlways(potentialKey, recursive: true),
                         null,
                         1,
                       )
@@ -1304,35 +1311,102 @@ class $LinkedHashSet<E> implements $Instance {
     );
   }
 
-  /// Wrapper for the [LinkedHashSet.identity] constructor
-  static $Value? $identity(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $LinkedHashSet.wrap(LinkedHashSet.identity());
-  }
-
-  /// Wrapper for the [LinkedHashSet.from] constructor
+  /// Wrapper for the [SplayTreeSet.from] constructor
   static $Value? $from(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $LinkedHashSet.wrap(
-      LinkedHashSet.from(TypedInterop.exportIterable((r as $Value?), runtime)),
+    return $SplayTreeSet.wrap(
+      SplayTreeSet.from(
+        TypedInterop.exportIterable((r as $Value?), runtime),
+        (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
+            ? null
+            : runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "int Function(E, E);export=false",
+                (_callable) => (dynamic key1, dynamic key2) {
+                  return _callable
+                      .call(
+                        runtime,
+                        null,
+                        runtime.wrapAlways(key1, recursive: true),
+                        runtime.wrapAlways(key2, recursive: true),
+                        2,
+                      )
+                      ?.$value;
+                },
+              ),
+        (c is $Value ? c : null) == null || (c is $Value ? c : null) is $null
+            ? null
+            : runtime.cachedCallback(
+                (c is $Value ? c : null)! as EvalCallable,
+                "bool Function(dynamic);export=false",
+                (_callable) => (dynamic potentialKey) {
+                  return _callable
+                      .call(
+                        runtime,
+                        null,
+                        runtime.wrapAlways(potentialKey, recursive: true),
+                        null,
+                        1,
+                      )
+                      ?.$value;
+                },
+              ),
+      ),
     );
   }
 
-  /// Wrapper for the [LinkedHashSet.of] constructor
+  /// Wrapper for the [SplayTreeSet.of] constructor
   static $Value? $of(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $LinkedHashSet.wrap(
-      LinkedHashSet.of(TypedInterop.exportIterable((r as $Value?), runtime)),
+    return $SplayTreeSet.wrap(
+      SplayTreeSet.of(
+        TypedInterop.exportIterable((r as $Value?), runtime),
+        (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
+            ? null
+            : runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "int Function(E, E);export=false",
+                (_callable) => (dynamic key1, dynamic key2) {
+                  return _callable
+                      .call(
+                        runtime,
+                        null,
+                        runtime.wrapAlways(key1, recursive: true),
+                        runtime.wrapAlways(key2, recursive: true),
+                        2,
+                      )
+                      ?.$value;
+                },
+              ),
+        (c is $Value ? c : null) == null || (c is $Value ? c : null) is $null
+            ? null
+            : runtime.cachedCallback(
+                (c is $Value ? c : null)! as EvalCallable,
+                "bool Function(dynamic);export=false",
+                (_callable) => (dynamic potentialKey) {
+                  return _callable
+                      .call(
+                        runtime,
+                        null,
+                        runtime.wrapAlways(potentialKey, recursive: true),
+                        null,
+                        1,
+                      )
+                      ?.$value;
+                },
+              ),
+      ),
     );
   }
 
   final $Instance _superclass;
 
   @override
-  final LinkedHashSet<E> $value;
+  final SplayTreeSet<E> $value;
 
   @override
-  LinkedHashSet<E> get $reified => $value;
+  SplayTreeSet<E> get $reified => $value;
 
-  /// Wrap a [LinkedHashSet] in a [$LinkedHashSet]
-  $LinkedHashSet.wrap(this.$value) : _superclass = $Object($value);
+  /// Wrap a [SplayTreeSet] in a [$SplayTreeSet]
+  $SplayTreeSet.wrap(this.$value) : _superclass = $Object($value);
 
   @override
   int $getRuntimeType(Runtime runtime) {
@@ -1357,6 +1431,11 @@ class $LinkedHashSet<E> implements $Instance {
       case 'isNotEmpty':
         final _isNotEmpty = $value.isNotEmpty;
         return $bool(_isNotEmpty);
+      case 'single':
+        final _single = $value.single;
+        return (_single is List || _single is Map || _single is Set
+            ? TypedInterop.boxExternal(_single, runtime: runtime)!
+            : runtime.wrapAlways(_single));
       case 'first':
         final _first = $value.first;
         return (_first is List || _first is Map || _first is Set
@@ -1367,79 +1446,11 @@ class $LinkedHashSet<E> implements $Instance {
         return (_last is List || _last is Map || _last is Set
             ? TypedInterop.boxExternal(_last, runtime: runtime)!
             : runtime.wrapAlways(_last));
-      case 'single':
-        final _single = $value.single;
-        return (_single is List || _single is Map || _single is Set
-            ? TypedInterop.boxExternal(_single, runtime: runtime)!
-            : runtime.wrapAlways(_single));
       case 'cast':
         return $Closure(__cast.func, this);
 
-      case 'followedBy':
-        return $Closure(__followedBy.func, this);
-
-      case 'map':
-        return $Closure(__map.func, this);
-
-      case 'where':
-        return $Closure(__where.func, this);
-
-      case 'whereType':
-        return $Closure(__whereType.func, this);
-
-      case 'expand':
-        return $Closure(__expand.func, this);
-
       case 'contains':
         return $Closure(__contains.func, this);
-
-      case 'forEach':
-        return $Closure(__forEach.func, this);
-
-      case 'reduce':
-        return $Closure(__reduce.func, this);
-
-      case 'fold':
-        return $Closure(__fold.func, this);
-
-      case 'every':
-        return $Closure(__every.func, this);
-
-      case 'join':
-        return $Closure(__join.func, this);
-
-      case 'any':
-        return $Closure(__any.func, this);
-
-      case 'toList':
-        return $Closure(__toList.func, this);
-
-      case 'toSet':
-        return $Closure(__toSet.func, this);
-
-      case 'take':
-        return $Closure(__take.func, this);
-
-      case 'takeWhile':
-        return $Closure(__takeWhile.func, this);
-
-      case 'skip':
-        return $Closure(__skip.func, this);
-
-      case 'skipWhile':
-        return $Closure(__skipWhile.func, this);
-
-      case 'firstWhere':
-        return $Closure(__firstWhere.func, this);
-
-      case 'lastWhere':
-        return $Closure(__lastWhere.func, this);
-
-      case 'singleWhere':
-        return $Closure(__singleWhere.func, this);
-
-      case 'elementAt':
-        return $Closure(__elementAt.func, this);
 
       case 'add':
         return $Closure(__add.func, this);
@@ -1479,6 +1490,69 @@ class $LinkedHashSet<E> implements $Instance {
 
       case 'clear':
         return $Closure(__clear.func, this);
+
+      case 'toSet':
+        return $Closure(__toSet.func, this);
+
+      case 'followedBy':
+        return $Closure(__followedBy.func, this);
+
+      case 'whereType':
+        return $Closure(__whereType.func, this);
+
+      case 'toList':
+        return $Closure(__toList.func, this);
+
+      case 'map':
+        return $Closure(__map.func, this);
+
+      case 'where':
+        return $Closure(__where.func, this);
+
+      case 'expand':
+        return $Closure(__expand.func, this);
+
+      case 'forEach':
+        return $Closure(__forEach.func, this);
+
+      case 'reduce':
+        return $Closure(__reduce.func, this);
+
+      case 'fold':
+        return $Closure(__fold.func, this);
+
+      case 'every':
+        return $Closure(__every.func, this);
+
+      case 'join':
+        return $Closure(__join.func, this);
+
+      case 'any':
+        return $Closure(__any.func, this);
+
+      case 'take':
+        return $Closure(__take.func, this);
+
+      case 'takeWhile':
+        return $Closure(__takeWhile.func, this);
+
+      case 'skip':
+        return $Closure(__skip.func, this);
+
+      case 'skipWhile':
+        return $Closure(__skipWhile.func, this);
+
+      case 'firstWhere':
+        return $Closure(__firstWhere.func, this);
+
+      case 'lastWhere':
+        return $Closure(__lastWhere.func, this);
+
+      case 'singleWhere':
+        return $Closure(__singleWhere.func, this);
+
+      case 'elementAt':
+        return $Closure(__elementAt.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -1491,8 +1565,287 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.cast();
+    return $Set.wrap(
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
+    );
+  }
+
+  static const $Function __contains = $Function(_contains);
+  static $Value? _contains(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.contains(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
+    return $bool(result);
+  }
+
+  static const $Function __add = $Function(_add);
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.add(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
+    return $bool(result);
+  }
+
+  static const $Function __addAll = $Function(_addAll);
+  static $Value? _addAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    self.$value.addAll(TypedInterop.exportIterable((r as $Value?), runtime));
+    return null;
+  }
+
+  static const $Function __remove = $Function(_remove);
+  static $Value? _remove(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.remove(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
+    return $bool(result);
+  }
+
+  static const $Function __lookup = $Function(_lookup);
+  static $Value? _lookup(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.lookup(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
+    return result == null
+        ? const $null()
+        : (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
+  }
+
+  static const $Function __removeAll = $Function(_removeAll);
+  static $Value? _removeAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    self.$value.removeAll(TypedInterop.exportIterable((r as $Value?), runtime));
+    return null;
+  }
+
+  static const $Function __retainAll = $Function(_retainAll);
+  static $Value? _retainAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    self.$value.retainAll(TypedInterop.exportIterable((r as $Value?), runtime));
+    return null;
+  }
+
+  static const $Function __removeWhere = $Function(_removeWhere);
+  static $Value? _removeWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    self.$value.removeWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
+    return null;
+  }
+
+  static const $Function __retainWhere = $Function(_retainWhere);
+  static $Value? _retainWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    self.$value.retainWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
+    return null;
+  }
+
+  static const $Function __containsAll = $Function(_containsAll);
+  static $Value? _containsAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.containsAll(
+      TypedInterop.exportIterable((r as $Value?), runtime),
+    );
+    return $bool(result);
+  }
+
+  static const $Function __intersection = $Function(_intersection);
+  static $Value? _intersection(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.intersection(
+      ((r as $Value?)!.$reified as Set).cast<Object?>(),
+    );
+    return $Set.wrap(
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
+    );
+  }
+
+  static const $Function __union = $Function(_union);
+  static $Value? _union(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.union(
+      ((r as $Value?)!.$reified as Set).cast<dynamic>(),
+    );
+    return $Set.wrap(
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
+    );
+  }
+
+  static const $Function __difference = $Function(_difference);
+  static $Value? _difference(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.difference(
+      ((r as $Value?)!.$reified as Set).cast<Object?>(),
+    );
+    return $Set.wrap(
+      (result)
+          .map(
+            (e) => (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e)),
+          )
+          .toSet(),
+    );
+  }
+
+  static const $Function __clear = $Function(_clear);
+  static $Value? _clear(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    self.$value.clear();
+    return null;
+  }
+
+  static const $Function __toSet = $Function(_toSet);
+  static $Value? _toSet(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.toSet();
     return $Set.wrap(
       (result)
           .map(
@@ -1512,7 +1865,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.followedBy(
       TypedInterop.exportIterable((r as $Value?), runtime),
     );
@@ -1535,6 +1888,67 @@ class $LinkedHashSet<E> implements $Instance {
     })();
   }
 
+  static const $Function __whereType = $Function(_whereType);
+  static $Value? _whereType(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.whereType();
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            (bridgeTypeArguments.length > 0
+                ? bridgeTypeArguments[0]
+                : runtime.lookupType(CoreTypes.dynamic)),
+          ],
+        );
+        return $Iterable.wrap(
+          (result).map((e) {
+            final value = (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e));
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })();
+    })();
+  }
+
+  static const $Function __toList = $Function(_toList);
+  static $Value? _toList(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $SplayTreeSet;
+    final result = self.$value.toList(
+      growable: (r is $Value ? r : null) == null ? true : (r as $bool).$value,
+    );
+    return $List.view(
+      result,
+      (e) => (e is List || e is Map || e is Set
+          ? TypedInterop.boxExternal(e, runtime: runtime)!
+          : runtime.wrapAlways(e)),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]),
+    );
+  }
+
   static const $Function __map = $Function(_map);
   static $Value? _map(
     Runtime runtime,
@@ -1543,7 +1957,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.map(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -1579,7 +1993,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.where(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -1616,42 +2030,6 @@ class $LinkedHashSet<E> implements $Instance {
     })();
   }
 
-  static const $Function __whereType = $Function(_whereType);
-  static $Value? _whereType(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.whereType();
-    return (() {
-      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
-      return (() {
-        final iterableType = runtime.internParameterizedType(
-          CoreTypes.iterable,
-          [
-            (bridgeTypeArguments.length > 0
-                ? bridgeTypeArguments[0]
-                : runtime.lookupType(CoreTypes.dynamic)),
-          ],
-        );
-        return $Iterable.wrap(
-          (result).map((e) {
-            final value = (e is List || e is Map || e is Set
-                ? TypedInterop.boxExternal(e, runtime: runtime)!
-                : runtime.wrapAlways(e));
-            runtime.assertTypedTypeArgument(value, iterableType, 0);
-            return value;
-          }),
-          runtime: runtime,
-          runtimeTypeId: iterableType,
-        );
-      })();
-    })();
-  }
-
   static const $Function __expand = $Function(_expand);
   static $Value? _expand(
     Runtime runtime,
@@ -1660,7 +2038,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.expand(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -1687,21 +2065,6 @@ class $LinkedHashSet<E> implements $Instance {
     );
   }
 
-  static const $Function __contains = $Function(_contains);
-  static $Value? _contains(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.contains(
-      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
-    );
-    return $bool(result);
-  }
-
   static const $Function __forEach = $Function(_forEach);
   static $Value? _forEach(
     Runtime runtime,
@@ -1710,7 +2073,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     self.$value.forEach(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -1737,7 +2100,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.reduce(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -1769,7 +2132,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.fold(
       TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
       runtime.cachedCallback(
@@ -1802,7 +2165,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.every(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -1831,7 +2194,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.join(
       (r is $Value ? r : null) == null ? "" : (r as $String).$value,
     );
@@ -1846,7 +2209,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.any(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -1867,52 +2230,6 @@ class $LinkedHashSet<E> implements $Instance {
     return $bool(result);
   }
 
-  static const $Function __toList = $Function(_toList);
-  static $Value? _toList(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.toList(
-      growable: (r is $Value ? r : null) == null ? true : (r as $bool).$value,
-    );
-    return $List.view(
-      result,
-      (e) => (e is List || e is Map || e is Set
-          ? TypedInterop.boxExternal(e, runtime: runtime)!
-          : runtime.wrapAlways(e)),
-      runtime: runtime,
-      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
-        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
-            runtime.lookupType(CoreTypes.dynamic),
-      ]),
-    );
-  }
-
-  static const $Function __toSet = $Function(_toSet);
-  static $Value? _toSet(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.toSet();
-    return $Set.wrap(
-      (result)
-          .map(
-            (e) => (e is List || e is Map || e is Set
-                ? TypedInterop.boxExternal(e, runtime: runtime)!
-                : runtime.wrapAlways(e)),
-          )
-          .toSet(),
-    );
-  }
-
   static const $Function __take = $Function(_take);
   static $Value? _take(
     Runtime runtime,
@@ -1921,7 +2238,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.take((r as $int).$value);
     return (() {
       final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
@@ -1950,7 +2267,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.takeWhile(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -1995,7 +2312,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.skip((r as $int).$value);
     return (() {
       final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
@@ -2024,7 +2341,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.skipWhile(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -2069,7 +2386,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.firstWhere(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -2113,7 +2430,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.lastWhere(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -2157,7 +2474,7 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.singleWhere(
       runtime.cachedCallback(
         (r as $Value?)! as EvalCallable,
@@ -2201,254 +2518,11 @@ class $LinkedHashSet<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $LinkedHashSet;
+    final self = target! as $SplayTreeSet;
     final result = self.$value.elementAt((r as $int).$value);
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));
-  }
-
-  static const $Function __add = $Function(_add);
-  static $Value? _add(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.add(
-      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
-    );
-    return $bool(result);
-  }
-
-  static const $Function __addAll = $Function(_addAll);
-  static $Value? _addAll(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    self.$value.addAll(TypedInterop.exportIterable((r as $Value?), runtime));
-    return null;
-  }
-
-  static const $Function __remove = $Function(_remove);
-  static $Value? _remove(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.remove(
-      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
-    );
-    return $bool(result);
-  }
-
-  static const $Function __lookup = $Function(_lookup);
-  static $Value? _lookup(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.lookup(
-      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
-    );
-    return result == null
-        ? const $null()
-        : (result is List || result is Map || result is Set
-              ? TypedInterop.boxExternal(result, runtime: runtime)!
-              : runtime.wrapAlways(result));
-  }
-
-  static const $Function __removeAll = $Function(_removeAll);
-  static $Value? _removeAll(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    self.$value.removeAll(TypedInterop.exportIterable((r as $Value?), runtime));
-    return null;
-  }
-
-  static const $Function __retainAll = $Function(_retainAll);
-  static $Value? _retainAll(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    self.$value.retainAll(TypedInterop.exportIterable((r as $Value?), runtime));
-    return null;
-  }
-
-  static const $Function __removeWhere = $Function(_removeWhere);
-  static $Value? _removeWhere(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    self.$value.removeWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
-    );
-    return null;
-  }
-
-  static const $Function __retainWhere = $Function(_retainWhere);
-  static $Value? _retainWhere(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    self.$value.retainWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
-    );
-    return null;
-  }
-
-  static const $Function __containsAll = $Function(_containsAll);
-  static $Value? _containsAll(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.containsAll(
-      TypedInterop.exportIterable((r as $Value?), runtime),
-    );
-    return $bool(result);
-  }
-
-  static const $Function __intersection = $Function(_intersection);
-  static $Value? _intersection(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.intersection(
-      ((r as $Value?)!.$reified as Set).cast<Object?>(),
-    );
-    return $Set.wrap(
-      (result)
-          .map(
-            (e) => (e is List || e is Map || e is Set
-                ? TypedInterop.boxExternal(e, runtime: runtime)!
-                : runtime.wrapAlways(e)),
-          )
-          .toSet(),
-    );
-  }
-
-  static const $Function __union = $Function(_union);
-  static $Value? _union(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.union(
-      ((r as $Value?)!.$reified as Set).cast<dynamic>(),
-    );
-    return $Set.wrap(
-      (result)
-          .map(
-            (e) => (e is List || e is Map || e is Set
-                ? TypedInterop.boxExternal(e, runtime: runtime)!
-                : runtime.wrapAlways(e)),
-          )
-          .toSet(),
-    );
-  }
-
-  static const $Function __difference = $Function(_difference);
-  static $Value? _difference(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    final result = self.$value.difference(
-      ((r as $Value?)!.$reified as Set).cast<Object?>(),
-    );
-    return $Set.wrap(
-      (result)
-          .map(
-            (e) => (e is List || e is Map || e is Set
-                ? TypedInterop.boxExternal(e, runtime: runtime)!
-                : runtime.wrapAlways(e)),
-          )
-          .toSet(),
-    );
-  }
-
-  static const $Function __clear = $Function(_clear);
-  static $Value? _clear(
-    Runtime runtime,
-    $Value? target,
-    Object? r,
-    Object? s,
-    Object? c,
-  ) {
-    final self = target! as $LinkedHashSet;
-    self.$value.clear();
-    return null;
   }
 
   @override

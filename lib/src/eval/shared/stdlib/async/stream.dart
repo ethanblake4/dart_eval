@@ -103,6 +103,14 @@ class $Stream implements $Instance {
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object)),
               false,
             ),
+            BridgeParameter(
+              'stackTrace',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.stackTrace),
+                nullable: true,
+              ),
+              true,
+            ),
           ],
         ),
       ),
@@ -882,8 +890,16 @@ class $Stream implements $Instance {
     return $Stream.wrap(Stream.empty());
   }
 
-  static $Value? $error(Runtime runtime, Object? r, Object? s, Object? c) =>
-      $Stream.wrap(Stream<Object?>.error(r!));
+  static $Value? $error(Runtime runtime, Object? r, Object? s, Object? c) {
+    final stackTrace = s is $StackTrace
+        ? s.$value
+        : s is TypedInstance
+        ? _GuestStreamStackTrace(s, runtime)
+        : s is StackTrace
+        ? s
+        : null;
+    return $Stream.wrap(Stream<Object?>.error(r!, stackTrace));
+  }
 
   static $Value? $fromFuture(
     Runtime runtime,
@@ -1779,6 +1795,16 @@ class $Stream implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {}
+}
+
+final class _GuestStreamStackTrace implements StackTrace {
+  const _GuestStreamStackTrace(this.guest, this.runtime);
+
+  final TypedInstance guest;
+  final Runtime runtime;
+
+  @override
+  String toString() => runtime.valueToString(guest);
 }
 
 /// Native superclass for guest Stream implementations. SDK operators use the

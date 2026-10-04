@@ -226,14 +226,20 @@ abstract final class TypedDispatch {
             'Named arguments require an evaluated method or closure',
           );
         }
-        return TypedInterop.invoke(
-          runtime,
-          receiver,
-          site.name,
-          site.positionalCount,
-          first,
-          rest,
-        );
+        final previous = runtime?.bridgeCallTypeArguments;
+        if (runtime != null) runtime.bridgeCallTypeArguments = typeArguments;
+        try {
+          return TypedInterop.invoke(
+            runtime,
+            receiver,
+            site.name,
+            site.positionalCount,
+            first,
+            rest,
+          );
+        } finally {
+          if (runtime != null) runtime.bridgeCallTypeArguments = previous!;
+        }
     }
   }
 

@@ -439,13 +439,22 @@ class $StreamSubscription<T> implements $Instance {
       TypedInterop.exportExternal((r is $Value ? r : null), runtime: runtime)
           as dynamic,
     );
-    return $Future.wrap(
-      result.then(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return $Future.wrap(
+        result.then(
+          (e) => (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e)),
+        ),
+        runtime: runtime,
+        runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+          (bridgeTypeArguments.length > 0
+              ? bridgeTypeArguments[0]
+              : runtime.lookupType(CoreTypes.dynamic)),
+        ]),
+      );
+    })();
   }
 
   @override

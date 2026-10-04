@@ -17,6 +17,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:async';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Completer,
@@ -164,7 +165,10 @@ class $runZonedFn {
         (r as $Value?)! as EvalCallable,
         "R Function();export=false",
         (_callable) => () {
-          return _callable.call(runtime, null, null, null, 0)?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(runtime, null, null, null, 0),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
       zoneValues: ((s is $Value ? s : null)?.$reified as Map?)
@@ -303,7 +307,10 @@ class $runZonedGuardedFn {
         (r as $Value?)! as EvalCallable,
         "R Function();export=false",
         (_callable) => () {
-          return _callable.call(runtime, null, null, null, 0)?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(runtime, null, null, null, 0),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
       runtime.cachedCallback(

@@ -3,13 +3,13 @@ import 'package:dart_eval/src/eval/compiler/expression/expression.dart';
 import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'default_value.dart';
-import 'fpl.dart' show getFormalParameterType;
 
 import '../../../../dart_eval_bridge.dart';
 import '../builtins.dart';
 import '../context.dart';
 import '../errors.dart';
-import '../member/call_signature.dart' show ParameterSpec, SourceDefault;
+import '../member/call_signature.dart'
+    show CallSignature, ParameterSpec, SourceDefault;
 import '../type.dart';
 
 import '../variable.dart';
@@ -197,13 +197,17 @@ TypeRef resolveSuperFormalType(
       ),
     )!;
     final superclass = ctx.typeSystem.superclassOf(owner.thisType)!;
-    return getFormalParameterType(
-          ctx,
-          target,
-          superCstr.sourceLib,
-          superCstr.declaration as ConstructorDeclaration,
-        ).$1?.substituteTypeParameters(Substitution.forInterface(superclass)) ??
-        CoreTypes.dynamic.ref(ctx);
+    // Resolve annotations in the declaring superclass's generic scope before
+    // substituting the subclass's actual superclass arguments.
+    final signature = CallSignature.forDeclaration(
+      ctx,
+      superCstr.sourceLib,
+      superCstr.declaration as ConstructorDeclaration,
+    ).substitute(Substitution.forInterface(superclass));
+    return [
+      ...signature.positional,
+      ...signature.named,
+    ].firstWhere((parameter) => identical(parameter.node, target)).type;
   } else if (target != null) {
     throw CompileError('Unknown parameter type ${target.runtimeType}', param);
   }

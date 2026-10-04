@@ -17,31 +17,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:convert';
 
-import 'package:dart_eval/stdlib/core.dart'
-    hide
-        $Converter,
-        $Codec,
-        $Encoding,
-        $JsonEncoder,
-        $JsonDecoder,
-        $JsonCodec,
-        $AsciiCodec,
-        $AsciiEncoder,
-        $AsciiDecoder,
-        $Utf8Decoder,
-        $Utf8Codec,
-        $Utf8Encoder,
-        $Base64Encoder,
-        $Base64Decoder,
-        $Base64Codec,
-        $ByteConversionSink,
-        $ChunkedConversionSink,
-        $HtmlEscapeMode,
-        $HtmlEscape,
-        $StringConversionSink,
-        $ClosableStringSink,
-        $LineSplitter;
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -66,18 +41,55 @@ import 'package:dart_eval/stdlib/async.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import '../core/sink.dart';
 
-/// dart_eval wrapper binding for [Converter]
-class $Converter<S, T> implements $Instance {
+import 'package:dart_eval/stdlib/core.dart'
+    hide
+        $Converter,
+        $Codec,
+        $Encoding,
+        $JsonEncoder,
+        $JsonDecoder,
+        $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
+        $Utf8Decoder,
+        $Utf8Codec,
+        $Utf8Encoder,
+        $Base64Encoder,
+        $Base64Decoder,
+        $Base64Codec,
+        $ByteConversionSink,
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
+
+/// dart_eval bridge binding for [Converter]
+class $Converter$bridge<S, T> extends Converter<S, T>
+    with $Bridge<Converter<S, T>> {
+  /// Forwarded constructor for [Converter.new]
+  $Converter$bridge();
+
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:convert',
+      'Converter.',
+      $Converter$bridge.$new,
+      isBridge: true,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:convert',
       'Converter.castFrom',
-      $Converter.$castFrom,
+      $Converter$bridge.$castFrom,
     );
   }
 
@@ -86,10 +98,10 @@ class $Converter<S, T> implements $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$Converter]
+  /// Compile-time type specification of [$Converter$bridge]
   static const $spec = BridgeTypeSpec('dart:convert', 'Converter');
 
-  /// Compile-time type declaration of [$Converter]
+  /// Compile-time type declaration of [$Converter$bridge]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$Converter]
@@ -258,15 +270,110 @@ class $Converter<S, T> implements $Instance {
     getters: {},
     setters: {},
     fields: {},
-    wrap: true,
-    bridge: false,
+    wrap: false,
+    bridge: true,
   );
+
+  /// Proxy for the [Converter.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Converter$bridge();
+  }
 
   /// Wrapper for the [Converter.castFrom] method
   static $Value? $castFrom(Runtime runtime, Object? r, Object? s, Object? c) {
     final value = Converter.castFrom((r as $Value?)!.$value);
     return $Converter.wrap(value);
   }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    final runtime = $runtime;
+    switch (identifier) {
+      case 'bind':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.bind((r as $Value?)!.$value);
+          return $Stream.wrap(
+            result.map(
+              (e) => (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e)),
+            ),
+            runtime: runtime,
+            runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+              runtime.runtimeTypeArgumentAt(
+                    Runtime.bridgeData[this]!.$runtimeType,
+                    1,
+                  ) ??
+                  runtime.lookupType(CoreTypes.dynamic),
+            ]),
+          );
+        });
+      case 'cast':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.cast();
+          return $Converter.wrap(result);
+        });
+      case 'fuse':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.fuse((r as $Value?)!.$value);
+          return $Converter.wrap(result);
+        });
+      case 'startChunkedConversion':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.startChunkedConversion((r as $Value?)!.$value);
+          return $Sink.wrap(result);
+        });
+    }
+    return null;
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {}
+
+  @override
+  Stream<T> bind(Stream<S> stream) {
+    final runtime = $runtime;
+    return $_invoke('bind', [
+      $Stream.wrap(stream.map((e) => runtime.wrapAlways(e, recursive: true))),
+    ]);
+  }
+
+  @override
+  Converter<RS, RT> cast<RS, RT>() {
+    final runtime = $runtime;
+    return $_invoke('cast', []);
+  }
+
+  @override
+  T convert(S input) {
+    final runtime = $runtime;
+    return $_invoke('convert', [
+      (input is List || input is Map || input is Set
+          ? TypedInterop.boxExternal(input, runtime: runtime)!
+          : runtime.wrapAlways(input)),
+    ]);
+  }
+
+  @override
+  Converter<S, TT> fuse<TT>(Converter<T, TT> other) {
+    final runtime = $runtime;
+    return $_invoke('fuse', [$Converter.wrap(other)]);
+  }
+
+  @override
+  Sink<S> startChunkedConversion(Sink<T> sink) {
+    final runtime = $runtime;
+    return $_invoke('startChunkedConversion', [$Sink.wrap(sink)]);
+  }
+}
+
+/// dart_eval lightweight wrapper binding for [Converter]
+class $Converter<S, T> implements $Instance {
+  /// Compile-time type specification of [$Converter]
+  static const $spec = BridgeTypeSpec('dart:convert', 'Converter');
+
+  /// Compile-time type declaration of [$Converter]
+  static const $type = BridgeTypeRef($spec);
 
   final $Instance _superclass;
 

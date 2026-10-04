@@ -41,6 +41,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -65,7 +66,6 @@ import 'package:dart_eval/stdlib/async.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../async/stream_transformer.dart';
 import './string_conversion_sink.dart';
@@ -255,7 +255,20 @@ class $LineSplitter implements $Instance {
       (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
       (c is $Value ? c : null)?.$value,
     );
-    return $Iterable.wrap((value).map((e) => $String(e)));
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.string),
+      ]);
+      return $Iterable.wrap(
+        (value).map((e) {
+          final value = $String(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   final $Instance _superclass;

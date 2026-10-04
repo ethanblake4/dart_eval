@@ -12,3 +12,4 @@ export '../src/eval/shared/stdlib/collection/map_base.dart';
 export '../src/eval/shared/stdlib/collection/list_base.dart';
 export '../src/eval/shared/stdlib/collection/set_base.dart';
 export '../src/eval/shared/stdlib/collection/splay_tree_map.dart';
+export '../src/eval/shared/stdlib/collection/splay_tree_set.dart';

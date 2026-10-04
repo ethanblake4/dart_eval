@@ -26,6 +26,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Queue,
         $HashMap,
         $SplayTreeMap,
+        $SplayTreeSet,
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
@@ -1157,15 +1158,16 @@ class $SplayTreeMap<K, V> implements $Instance {
                 (s is $Value ? s : null)! as EvalCallable,
                 "K Function(dynamic);export=false",
                 (_callable) => (dynamic element) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        runtime.wrapAlways(element, recursive: true),
-                        null,
-                        1,
-                      )
-                      ?.$value;
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(element, recursive: true),
+                      null,
+                      1,
+                    ),
+                    runtime: runtime,
+                  ) as dynamic;
                 },
               ),
         value: _arg2OrNull == null || _arg2OrNull is $null
@@ -1174,15 +1176,16 @@ class $SplayTreeMap<K, V> implements $Instance {
                 _arg2OrNull! as EvalCallable,
                 "V Function(dynamic);export=false",
                 (_callable) => (dynamic element) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        runtime.wrapAlways(element, recursive: true),
-                        null,
-                        1,
-                      )
-                      ?.$value;
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(element, recursive: true),
+                      null,
+                      1,
+                    ),
+                    runtime: runtime,
+                  ) as dynamic;
                 },
               ),
         compare: _arg3OrNull == null || _arg3OrNull is $null
@@ -1299,25 +1302,72 @@ class $SplayTreeMap<K, V> implements $Instance {
     switch (identifier) {
       case 'entries':
         final _entries = $value.entries;
-        return $Iterable.wrap((_entries).map((e) => $MapEntry.wrap(e)));
+        return (() {
+          final iterableType = runtime.internParameterizedType(
+            CoreTypes.iterable,
+            [
+              runtime.internParameterizedType(CoreTypes.mapEntry, [
+                runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+                runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 1) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ]),
+            ],
+          );
+          return $Iterable.wrap(
+            (_entries).map((e) {
+              final value = $MapEntry.wrap(e);
+              runtime.assertTypedTypeArgument(value, iterableType, 0);
+              return value;
+            }),
+            runtime: runtime,
+            runtimeTypeId: iterableType,
+          );
+        })();
       case 'keys':
         final _keys = $value.keys;
-        return $Iterable.wrap(
-          (_keys).map(
-            (e) => (e is List || e is Map || e is Set
-                ? TypedInterop.boxExternal(e, runtime: runtime)!
-                : runtime.wrapAlways(e)),
-          ),
-        );
+        return (() {
+          final iterableType = runtime.internParameterizedType(
+            CoreTypes.iterable,
+            [
+              runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 0) ??
+                  runtime.lookupType(CoreTypes.dynamic),
+            ],
+          );
+          return $Iterable.wrap(
+            (_keys).map((e) {
+              final value = (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e));
+              runtime.assertTypedTypeArgument(value, iterableType, 0);
+              return value;
+            }),
+            runtime: runtime,
+            runtimeTypeId: iterableType,
+          );
+        })();
       case 'values':
         final _values = $value.values;
-        return $Iterable.wrap(
-          (_values).map(
-            (e) => (e is List || e is Map || e is Set
-                ? TypedInterop.boxExternal(e, runtime: runtime)!
-                : runtime.wrapAlways(e)),
-          ),
-        );
+        return (() {
+          final iterableType = runtime.internParameterizedType(
+            CoreTypes.iterable,
+            [
+              runtime.runtimeTypeArgumentAt($getRuntimeType(runtime), 1) ??
+                  runtime.lookupType(CoreTypes.dynamic),
+            ],
+          );
+          return $Iterable.wrap(
+            (_values).map((e) {
+              final value = (e is List || e is Map || e is Set
+                  ? TypedInterop.boxExternal(e, runtime: runtime)!
+                  : runtime.wrapAlways(e));
+              runtime.assertTypedTypeArgument(value, iterableType, 0);
+              return value;
+            }),
+            runtime: runtime,
+            runtimeTypeId: iterableType,
+          );
+        })();
       case 'length':
         final _length = $value.length;
         return $int(_length);
@@ -1547,15 +1597,16 @@ class $SplayTreeMap<K, V> implements $Instance {
         (s as $Value?)! as EvalCallable,
         "V Function(V);export=false",
         (_callable) => (dynamic value) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(value, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(value, recursive: true),
+              null,
+              1,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
       ifAbsent:
@@ -1575,7 +1626,10 @@ class $SplayTreeMap<K, V> implements $Instance {
                   as EvalCallable,
               "V Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );
@@ -1598,15 +1652,16 @@ class $SplayTreeMap<K, V> implements $Instance {
         (r as $Value?)! as EvalCallable,
         "V Function(K, V);export=false",
         (_callable) => (dynamic key, dynamic value) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(key, recursive: true),
-                runtime.wrapAlways(value, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(key, recursive: true),
+              runtime.wrapAlways(value, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1657,7 +1712,10 @@ class $SplayTreeMap<K, V> implements $Instance {
         (s as $Value?)! as EvalCallable,
         "V Function();export=false",
         (_callable) => () {
-          return _callable.call(runtime, null, null, null, 0)?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(runtime, null, null, null, 0),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );

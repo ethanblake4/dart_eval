@@ -17,6 +17,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:convert';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Converter,
@@ -68,9 +69,6 @@ import 'package:dart_eval/stdlib/async.dart'
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import './converter.dart';
-
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
-
 import './chunked_conversion.dart';
 import './string_conversion_sink.dart';
 import './codec.dart';
@@ -344,15 +342,16 @@ class $JsonEncoder implements $Instance {
                 (r is $Value ? r : null)! as EvalCallable,
                 "Object? Function(dynamic);export=false",
                 (_callable) => (dynamic object) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        runtime.wrapAlways(object, recursive: true),
-                        null,
-                        1,
-                      )
-                      ?.$value;
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(object, recursive: true),
+                      null,
+                      1,
+                    ),
+                    runtime: runtime,
+                  ) as Object?;
                 },
               ),
       ),
@@ -370,15 +369,16 @@ class $JsonEncoder implements $Instance {
                 (s is $Value ? s : null)! as EvalCallable,
                 "Object? Function(dynamic);export=false",
                 (_callable) => (dynamic object) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        runtime.wrapAlways(object, recursive: true),
-                        null,
-                        1,
-                      )
-                      ?.$value;
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(object, recursive: true),
+                      null,
+                      1,
+                    ),
+                    runtime: runtime,
+                  ) as Object?;
                 },
               ),
       ),
@@ -724,15 +724,16 @@ class $JsonDecoder implements $Instance {
                 (r is $Value ? r : null)! as EvalCallable,
                 "Object? Function(Object?, Object?);export=false",
                 (_callable) => (Object? key, Object? value) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        (key == null ? const $null() : $Object(key)),
-                        (value == null ? const $null() : $Object(value)),
-                        2,
-                      )
-                      ?.$value;
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      (key == null ? const $null() : $Object(key)),
+                      (value == null ? const $null() : $Object(value)),
+                      2,
+                    ),
+                    runtime: runtime,
+                  ) as Object?;
                 },
               ),
       ),
@@ -1185,15 +1186,16 @@ class $JsonCodec implements $Instance {
                 (r is $Value ? r : null)! as EvalCallable,
                 "Object? Function(Object?, Object?);export=false",
                 (_callable) => (Object? key, Object? value) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        (key == null ? const $null() : $Object(key)),
-                        (value == null ? const $null() : $Object(value)),
-                        2,
-                      )
-                      ?.$value;
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      (key == null ? const $null() : $Object(key)),
+                      (value == null ? const $null() : $Object(value)),
+                      2,
+                    ),
+                    runtime: runtime,
+                  ) as Object?;
                 },
               ),
         toEncodable:
@@ -1204,15 +1206,16 @@ class $JsonCodec implements $Instance {
                 (s is $Value ? s : null)! as EvalCallable,
                 "Object? Function(dynamic);export=false",
                 (_callable) => (dynamic arg0) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        runtime.wrapAlways(arg0, recursive: true),
-                        null,
-                        1,
-                      )
-                      ?.$value;
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(arg0, recursive: true),
+                      null,
+                      1,
+                    ),
+                    runtime: runtime,
+                  ) as Object?;
                 },
               ),
       ),
@@ -1232,15 +1235,16 @@ class $JsonCodec implements $Instance {
           (r as $Value?)! as EvalCallable,
           "dynamic Function(Object?, Object?);export=false",
           (_callable) => (Object? key, Object? value) {
-            return _callable
-                .call(
-                  runtime,
-                  null,
-                  (key == null ? const $null() : $Object(key)),
-                  (value == null ? const $null() : $Object(value)),
-                  2,
-                )
-                ?.$value;
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                (key == null ? const $null() : $Object(key)),
+                (value == null ? const $null() : $Object(value)),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
           },
         ),
       ),
@@ -1303,15 +1307,16 @@ class $JsonCodec implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "Object? Function(dynamic);export=false",
               (_callable) => (dynamic object) {
-                return _callable
-                    .call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(object, recursive: true),
-                      null,
-                      1,
-                    )
-                    ?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    runtime.wrapAlways(object, recursive: true),
+                    null,
+                    1,
+                  ),
+                  runtime: runtime,
+                ) as Object?;
               },
             ),
     );
@@ -1336,15 +1341,16 @@ class $JsonCodec implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "Object? Function(Object?, Object?);export=false",
               (_callable) => (Object? key, Object? value) {
-                return _callable
-                    .call(
-                      runtime,
-                      null,
-                      (key == null ? const $null() : $Object(key)),
-                      (value == null ? const $null() : $Object(value)),
-                      2,
-                    )
-                    ?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (key == null ? const $null() : $Object(key)),
+                    (value == null ? const $null() : $Object(value)),
+                    2,
+                  ),
+                  runtime: runtime,
+                ) as Object?;
               },
             ),
     );

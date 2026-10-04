@@ -26,6 +26,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Queue,
         $HashMap,
         $SplayTreeMap,
+        $SplayTreeSet,
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
@@ -1443,13 +1444,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     final result = self.$value.followedBy(
       TypedInterop.exportIterable((r as $Value?), runtime),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __map = $Function(_map);
@@ -1466,15 +1477,16 @@ class $DoubleLinkedQueue<E> implements $Instance {
         (r as $Value?)! as EvalCallable,
         "T Function(E);export=false",
         (_callable) => (dynamic e) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(e, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(e, recursive: true),
+              null,
+              1,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1513,13 +1525,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __whereType = $Function(_whereType);
@@ -1532,13 +1554,30 @@ class $DoubleLinkedQueue<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.whereType();
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            (bridgeTypeArguments.length > 0
+                ? bridgeTypeArguments[0]
+                : runtime.lookupType(CoreTypes.dynamic)),
+          ],
+        );
+        return $Iterable.wrap(
+          (result).map((e) {
+            final value = (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e));
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })();
+    })();
   }
 
   static const $Function __expand = $Function(_expand);
@@ -1632,15 +1671,16 @@ class $DoubleLinkedQueue<E> implements $Instance {
         (r as $Value?)! as EvalCallable,
         "E Function(E, E);export=false",
         (_callable) => (dynamic value, dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(value, recursive: true),
-                runtime.wrapAlways(element, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(value, recursive: true),
+              runtime.wrapAlways(element, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1664,15 +1704,16 @@ class $DoubleLinkedQueue<E> implements $Instance {
         (s as $Value?)! as EvalCallable,
         "T Function(T, E);export=false",
         (_callable) => (dynamic previousValue, dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(previousValue, recursive: true),
-                runtime.wrapAlways(element, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(previousValue, recursive: true),
+              runtime.wrapAlways(element, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1810,13 +1851,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.take((r as $int).$value);
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __takeWhile = $Function(_takeWhile);
@@ -1845,13 +1896,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __skip = $Function(_skip);
@@ -1864,13 +1925,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.skip((r as $int).$value);
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __skipWhile = $Function(_skipWhile);
@@ -1899,13 +1970,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __firstWhere = $Function(_firstWhere);
@@ -1940,7 +2021,10 @@ class $DoubleLinkedQueue<E> implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "E Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );
@@ -1981,7 +2065,10 @@ class $DoubleLinkedQueue<E> implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "E Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );
@@ -2022,7 +2109,10 @@ class $DoubleLinkedQueue<E> implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "E Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );

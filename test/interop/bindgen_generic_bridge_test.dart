@@ -25,6 +25,16 @@ class ObjectStore {
   dynamic echo(dynamic value) => value;
   int onlyInt(int value) => value;
 }
+class Mapper<E> {
+  final Iterable<E> items;
+  Mapper(this.items);
+  Iterable<R> map<R>(R Function(E) callback) => items.map(callback);
+  Iterable<R> eager<R>(R Function(E) callback) => [callback(items.first)];
+  Iterable<List<R>> groups<R>(R Function(E) callback) =>
+      items.map((e) => [callback(e)]);
+  Iterable<E> values() => items;
+  Iterable<R> unchecked<R>(Object? value) => <dynamic>[value] as dynamic;
+}
 ''');
     final config = BindgenConfig.parse('''
 version: 1
@@ -36,6 +46,20 @@ libraries:
         mode: bridge
       ObjectStore:
         include: true
+      Mapper:
+        include: true
+  - uri: dart:core
+    classes:
+      Iterable:
+        handMaintained: true
+      List:
+        handMaintained: true
+      Object:
+        handMaintained: true
+      bool:
+        handMaintained: true
+      int:
+        handMaintained: true
 ''')..resolveDefaults();
     final generated = (await Bindgen().parse(
       source,
@@ -43,7 +67,7 @@ libraries:
       'package:bindgen/native.dart',
       false,
       config: config,
-      libraryConfig: config.libraries.single,
+      libraryConfig: config.libraries.first,
     ))!;
     File(p.join(directory.path, 'native.eval.dart')).writeAsStringSync('''
 import 'native.dart';
@@ -66,7 +90,8 @@ void main() {
   final compiler = Compiler()
     ..entrypoints.add('package:main/main.dart')
     ..defineBridgeClass($Reader$bridge.$declaration)
-    ..defineBridgeClass($ObjectStore.$declaration);
+    ..defineBridgeClass($ObjectStore.$declaration)
+    ..defineBridgeClass($Mapper.$declaration);
   final program = compiler.compile({'main': {'main.dart': '''
     import 'package:bindgen/native.dart';
     class Guest extends Reader {
@@ -75,6 +100,42 @@ void main() {
       T transform<T>(T Function(T) callback, T value) => callback(value);
     }
     class Token {}
+    List<T> mapped<T>(Mapper<T> mapper) => mapper.map<T>((e) => e).toList();
+    bool mapResults() {
+      final token = Token();
+      final mapper = Mapper<Token>([token]);
+      final tokens = mapped<Token>(mapper);
+      if (tokens is! List<Token> || !identical(tokens.single, token)) return false;
+      final groups = mapper.groups<Token>((e) => e);
+      // Iterate after another method has supplied a different type context.
+      final ints = Mapper<int>([1]);
+      final widened = ints.map<num>((e) => e).toList();
+      widened.add(2.5);
+      if (widened[1] != 2.5) return false;
+      final grouped = groups.single;
+      if (grouped is! List<Token> || !identical(grouped.single, token)) return false;
+      dynamic checked = grouped;
+      try { checked.add('wrong'); return false; } on TypeError {}
+      Mapper<num> widerReceiver = ints;
+      dynamic receiverOwned = widerReceiver.values().toList();
+      if (receiverOwned is! List<int>) return false;
+      try { receiverOwned.add(2.5); return false; } on TypeError {}
+      int calls = 0;
+      dynamic wrong = 'wrong';
+      final lazy = ints.map<int>((e) { calls++; return wrong; });
+      if (calls != 0) return false;
+      try { lazy.toList(); return false; } on TypeError {}
+      if (calls != 1) return false;
+      final raw = ints.unchecked<int>('wrong');
+      try { raw.toList(); return false; } on TypeError {}
+      final nested = mapper.eager<Token>((e) {
+        if (ints.map<String>((n) => 'inner').single != 'inner') {
+          throw StateError('nested map');
+        }
+        return e;
+      }).toList();
+      return nested is List<Token> && identical(nested.single, token);
+    }
     Object makeToken() => Token();
     bool lookup() {
       final token = Token();
@@ -95,11 +156,14 @@ void main() {
   for (final runtime in [Runtime.ofProgram(program), Runtime(program.write().buffer)]) {
     $Reader$bridge.configureForRuntime(runtime);
     $ObjectStore.configureForRuntime(runtime);
+    $Mapper.configureForRuntime(runtime);
     final reader = runtime.executeLib('package:main/main.dart', 'make') as Reader;
     check(reader.readList([5]) == 5);
     final token = runtime.executeLib('package:main/main.dart', 'makeToken');
     check(identical(reader.transform<Object>((value) => value, token), token));
     check(runtime.executeLib('package:main/main.dart', 'lookup') == true);
+    check(runtime.executeLib('package:main/main.dart', 'mapResults') == true);
+    check(runtime.bridgeCallTypeArguments.isEmpty);
   }
 }
 """);

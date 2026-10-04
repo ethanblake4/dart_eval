@@ -2751,7 +2751,7 @@ Variable invokeExtensionMethod(
             result.typeArguments,
           ) ??
           runtimeTypeArguments(ctx, call),
-      returnType: result.declaredReturn ?? CoreTypes.dynamic.ref(ctx),
+      returnType: result.declaredReturn ?? target.signature!.returnType,
       vectorOverride: result.vector(),
     ),
   );

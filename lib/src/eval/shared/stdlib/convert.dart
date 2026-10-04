@@ -32,7 +32,7 @@ class DartConvertPlugin implements EvalPlugin {
     $AsciiCodec.configureForCompile(registry);
     $AsciiEncoder.configureForCompile(registry);
     $AsciiDecoder.configureForCompile(registry);
-    $Converter.configureForCompile(registry);
+    $Converter$bridge.configureForCompile(registry);
     $Codec.configureForCompile(registry);
     $Encoding.configureForCompile(registry);
     $Utf8Decoder.configureForCompile(registry);
@@ -60,7 +60,7 @@ class DartConvertPlugin implements EvalPlugin {
     $AsciiCodec.configureForRuntime(runtime);
     $AsciiEncoder.configureForRuntime(runtime);
     $AsciiDecoder.configureForRuntime(runtime);
-    $Converter.configureForRuntime(runtime);
+    $Converter$bridge.configureForRuntime(runtime);
     $Codec.configureForRuntime(runtime);
     $Encoding.configureForRuntime(runtime);
     $Utf8Decoder.configureForRuntime(runtime);

@@ -269,6 +269,8 @@ libraries:
         file: hash_map.dart
       SplayTreeMap:
         file: splay_tree_map.dart
+      SplayTreeSet:
+        file: splay_tree_set.dart
       HashSet:
         file: hash_set.dart
       LinkedHashSet:
@@ -302,6 +304,7 @@ libraries:
       # Generated wrappers.
       Converter:
         file: converter.dart
+        mode: both
       Codec:
         file: codec.dart
       Encoding:

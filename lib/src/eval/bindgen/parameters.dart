@@ -166,7 +166,10 @@ String argumentAccessor(
         paramBuffer.write(invocation);
       } else {
         paramBuffer.write(
-          exportValues
+          exportValues ||
+                  type.returnType is TypeParameterType ||
+                  type.returnType.isDartCoreObject ||
+                  type.returnType is DynamicType
               ? _exportValue(ctx, type.returnType, invocation)
               : '$invocation?.\$value',
         );

@@ -769,7 +769,8 @@ class $num<T extends num> implements $Instance {
     Object? c,
   ) {
     final evalResult = (target!.$value as num).abs();
-    return $num(evalResult);
+    if (evalResult is double) return $double(evalResult);
+    return $int(evalResult as int);
   }
 
   static const $Function __ceil = $Function(_ceil);
@@ -1570,9 +1571,7 @@ class $int extends $num<int> {
     throw UnimplementedError();
   }
 
-  static const $Function __unsignedShiftRight = $Function(
-    _unsignedShiftRight,
-  );
+  static const $Function __unsignedShiftRight = $Function(_unsignedShiftRight);
 
   static $Value? _unsignedShiftRight(
     Runtime runtime,
@@ -1766,6 +1765,12 @@ class $double extends $num<double> {
           namedParams: [],
         ),
         isStatic: true,
+      ),
+      'abs': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.double)),
+          params: [],
+        ),
       ),
       '+': BridgeMethodDef(
         BridgeFunctionDef(

@@ -342,9 +342,21 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
     }
     final runtime = $runtime;
     $_invoke('writeAll', [
-      $Iterable.wrap(
-        (objects).map((e) => runtime.wrapAlways(e, recursive: true)),
-      ),
+      (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [runtime.lookupType(CoreTypes.dynamic)],
+        );
+        return $Iterable.wrap(
+          (objects).map((e) {
+            final value = runtime.wrapAlways(e, recursive: true);
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })(),
       $String(separator),
     ]);
   }

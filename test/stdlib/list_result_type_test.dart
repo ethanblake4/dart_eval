@@ -1,5 +1,6 @@
 import 'package:dart_eval/dart_eval.dart';
-import 'package:dart_eval/src/eval/runtime/runtime.dart' show TypedRuntimeInterop;
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import 'package:dart_eval/stdlib/core.dart';
@@ -59,6 +60,24 @@ int main() {
 }
 ''',
       1,
+    ),
+    (
+      'reversed views and their lists retain guest element type',
+      r'''
+class Token { final int value; Token(this.value); }
+int main() {
+  final values = <Token>[Token(3), Token(2), Token(1)];
+  dynamic reversed = values.reversed;
+  if (reversed is! Iterable<Token> || reversed is Iterable<String>) return -1;
+  dynamic copy = reversed.toList();
+  if (copy is! List<Token> || copy is List<String>) return -2;
+  copy.add(Token(0));
+  try { copy.add('wrong'); return -3; } on TypeError {}
+  return copy[0].value * 1000 + copy[1].value * 100 +
+      copy[2].value * 10 + copy[3].value;
+}
+''',
+      1230,
     ),
     (
       'bulk writes retain storage typing and range error order',

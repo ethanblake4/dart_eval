@@ -2293,9 +2293,10 @@ class $Socket implements $Instance {
         (r as $Value?)! as EvalCallable,
         "S Function(Uint8List);export=false",
         (_callable) => (Uint8List event) {
-          return _callable
-              .call(runtime, null, $Uint8List.wrap(event), null, 1)
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(runtime, null, $Uint8List.wrap(event), null, 1),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -2539,15 +2540,16 @@ class $Socket implements $Instance {
         (s as $Value?)! as EvalCallable,
         "S Function(S, Uint8List);export=false",
         (_callable) => (dynamic previous, Uint8List element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(previous, recursive: true),
-                $Uint8List.wrap(element),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(previous, recursive: true),
+              $Uint8List.wrap(element),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -2699,13 +2701,22 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     final result = self.$value.cast();
-    return $Stream.wrap(
-      result.map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return $Stream.wrap(
+        result.map(
+          (e) => (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e)),
+        ),
+        runtime: runtime,
+        runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+          (bridgeTypeArguments.length > 0
+              ? bridgeTypeArguments[0]
+              : runtime.lookupType(CoreTypes.dynamic)),
+        ]),
+      );
+    })();
   }
 
   static const $Function __toList = $Function(_toList);
@@ -2772,13 +2783,22 @@ class $Socket implements $Instance {
       TypedInterop.exportExternal((r is $Value ? r : null), runtime: runtime)
           as dynamic,
     );
-    return $Future.wrap(
-      result.then(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return $Future.wrap(
+        result.then(
+          (e) => (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e)),
+        ),
+        runtime: runtime,
+        runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
+          (bridgeTypeArguments.length > 0
+              ? bridgeTypeArguments[0]
+              : runtime.lookupType(CoreTypes.dynamic)),
+        ]),
+      );
+    })();
   }
 
   static const $Function __take = $Function(_take);

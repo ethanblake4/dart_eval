@@ -292,6 +292,9 @@ class CollectionTypes {
   /// Bridge spec for [SplayTreeMap].
   static const splayTreeMap = BridgeTypeSpec('dart:collection', 'SplayTreeMap');
 
+  /// Bridge spec for [SplayTreeSet].
+  static const splayTreeSet = BridgeTypeSpec('dart:collection', 'SplayTreeSet');
+
   /// Bridge spec for [UnmodifiableListView].
   static const unmodifiableListView = BridgeTypeSpec(
     'dart:collection',

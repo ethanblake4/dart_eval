@@ -116,17 +116,18 @@ class $jsonEncodeFn {
               (s is $Value ? s : null)! as EvalCallable,
               "Object? Function(Object?);export=false",
               (_callable) => (Object? nonEncodable) {
-                return _callable
-                    .call(
-                      runtime,
-                      null,
-                      (nonEncodable == null
-                          ? const $null()
-                          : $Object(nonEncodable)),
-                      null,
-                      1,
-                    )
-                    ?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (nonEncodable == null
+                        ? const $null()
+                        : $Object(nonEncodable)),
+                    null,
+                    1,
+                  ),
+                  runtime: runtime,
+                ) as Object?;
               },
             ),
     );
@@ -213,15 +214,16 @@ class $jsonDecodeFn {
               (s is $Value ? s : null)! as EvalCallable,
               "Object? Function(Object?, Object?);export=false",
               (_callable) => (Object? key, Object? value) {
-                return _callable
-                    .call(
-                      runtime,
-                      null,
-                      (key == null ? const $null() : $Object(key)),
-                      (value == null ? const $null() : $Object(value)),
-                      2,
-                    )
-                    ?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(
+                    runtime,
+                    null,
+                    (key == null ? const $null() : $Object(key)),
+                    (value == null ? const $null() : $Object(value)),
+                    2,
+                  ),
+                  runtime: runtime,
+                ) as Object?;
               },
             ),
     );

@@ -52,8 +52,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $RegExpMatch,
         $StringSink,
         $Enum;
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Runes]
 class $Runes implements $Instance {
@@ -941,13 +941,30 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.cast();
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            (bridgeTypeArguments.length > 0
+                ? bridgeTypeArguments[0]
+                : runtime.lookupType(CoreTypes.dynamic)),
+          ],
+        );
+        return $Iterable.wrap(
+          (result).map((e) {
+            final value = (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e));
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })();
+    })();
   }
 
   static const $Function __followedBy = $Function(_followedBy);
@@ -962,7 +979,20 @@ class $Runes implements $Instance {
     final result = self.$value.followedBy(
       TypedInterop.exportIterable((r as $Value?), runtime),
     );
-    return $Iterable.wrap((result).map((e) => $int(e)));
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __map = $Function(_map);
@@ -979,7 +1009,10 @@ class $Runes implements $Instance {
         (r as $Value?)! as EvalCallable,
         "T Function(int);export=false",
         (_callable) => (int e) {
-          return _callable.call(runtime, null, $int(e), null, 1)?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(runtime, null, $int(e), null, 1),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1010,7 +1043,20 @@ class $Runes implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap((result).map((e) => $int(e)));
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __whereType = $Function(_whereType);
@@ -1023,13 +1069,30 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.whereType();
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            (bridgeTypeArguments.length > 0
+                ? bridgeTypeArguments[0]
+                : runtime.lookupType(CoreTypes.dynamic)),
+          ],
+        );
+        return $Iterable.wrap(
+          (result).map((e) {
+            final value = (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e));
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })();
+    })();
   }
 
   static const $Function __expand = $Function(_expand);
@@ -1133,15 +1196,16 @@ class $Runes implements $Instance {
         (s as $Value?)! as EvalCallable,
         "T Function(T, int);export=false",
         (_callable) => (dynamic previousValue, int element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(previousValue, recursive: true),
-                $int(element),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(previousValue, recursive: true),
+              $int(element),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -1252,7 +1316,20 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.take((r as $int).$value);
-    return $Iterable.wrap((result).map((e) => $int(e)));
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __takeWhile = $Function(_takeWhile);
@@ -1273,7 +1350,20 @@ class $Runes implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap((result).map((e) => $int(e)));
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __skip = $Function(_skip);
@@ -1286,7 +1376,20 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.skip((r as $int).$value);
-    return $Iterable.wrap((result).map((e) => $int(e)));
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __skipWhile = $Function(_skipWhile);
@@ -1307,7 +1410,20 @@ class $Runes implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap((result).map((e) => $int(e)));
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __firstWhere = $Function(_firstWhere);

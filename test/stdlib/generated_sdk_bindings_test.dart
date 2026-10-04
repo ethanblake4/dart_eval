@@ -142,6 +142,19 @@ void main() {
     }
   });
 
+  test('double.abs keeps its double result type and runtime wrapper', () {
+    for (final (mode, result) in runDynamicFixture(r'''
+      bool main() {
+        final positive = (-1.5).abs();
+        dynamic dynamicPositive = (-2.25).abs();
+        return positive is double && dynamicPositive is double &&
+            positive == 1.5 && dynamicPositive == 2.25;
+      }
+    ''')) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
   test('IterableExtensions.firstOrNull is available through core imports', () {
     for (final (mode, result) in runDynamicFixture(r'''
       String main() {
@@ -168,6 +181,37 @@ void main() {
       int? main() => Values([8, 9]).firstOrNull;
     ''')) {
       expect(result, const DynamicFixtureResult.value(8), reason: mode);
+    }
+  });
+
+  test('SplayTreeSet is available with its SDK comparator behavior', () {
+    for (final (mode, result) in runDynamicFixture(r'''
+      import 'dart:collection';
+
+      String main() {
+        final values = SplayTreeSet<int>((left, right) => right.compareTo(left));
+        values.addAll([1, 3, 2]);
+        return values.join(',');
+      }
+    ''')) {
+      expect(result, const DynamicFixtureResult.value('3,2,1'), reason: mode);
+    }
+  });
+
+  test('guest Converter subclasses cross the generated SDK bridge', () {
+    for (final (mode, result) in runDynamicFixture(r'''
+      import 'dart:convert';
+
+      class Increment extends Converter<int, int> {
+        int convert(int input) => input + 1;
+        Sink<int> startChunkedConversion(Sink<int> sink) => sink;
+      }
+
+      int apply(Converter<int, int> converter) => converter.convert(4);
+
+      int main() => apply(Increment());
+    ''')) {
+      expect(result, const DynamicFixtureResult.value(5), reason: mode);
     }
   });
 }

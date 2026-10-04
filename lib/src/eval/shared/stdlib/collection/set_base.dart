@@ -25,6 +25,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Queue,
         $HashMap,
         $SplayTreeMap,
+        $SplayTreeSet,
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
@@ -1170,13 +1171,29 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
           final result = super.followedBy(
             TypedInterop.exportIterable((r as $Value?), runtime),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'map':
         return $Function((runtime, target, r, s, c) {
@@ -1200,13 +1217,30 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+            return (() {
+              final iterableType = runtime.internParameterizedType(
+                CoreTypes.iterable,
+                [
+                  (bridgeTypeArguments.length > 0
+                      ? bridgeTypeArguments[0]
+                      : runtime.lookupType(CoreTypes.dynamic)),
+                ],
+              );
+              return $Iterable.wrap(
+                (result).map((e) {
+                  final value = (e is List || e is Map || e is Set
+                      ? TypedInterop.boxExternal(e, runtime: runtime)!
+                      : runtime.wrapAlways(e));
+                  runtime.assertTypedTypeArgument(value, iterableType, 0);
+                  return value;
+                }),
+                runtime: runtime,
+                runtimeTypeId: iterableType,
+              );
+            })();
+          })();
         });
       case 'where':
         return $Function((runtime, target, r, s, c) {
@@ -1233,24 +1267,57 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'whereType':
         return $Function((runtime, target, r, s, c) {
           final result = super.whereType();
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+            return (() {
+              final iterableType = runtime.internParameterizedType(
+                CoreTypes.iterable,
+                [
+                  (bridgeTypeArguments.length > 0
+                      ? bridgeTypeArguments[0]
+                      : runtime.lookupType(CoreTypes.dynamic)),
+                ],
+              );
+              return $Iterable.wrap(
+                (result).map((e) {
+                  final value = (e is List || e is Map || e is Set
+                      ? TypedInterop.boxExternal(e, runtime: runtime)!
+                      : runtime.wrapAlways(e));
+                  runtime.assertTypedTypeArgument(value, iterableType, 0);
+                  return value;
+                }),
+                runtime: runtime,
+                runtimeTypeId: iterableType,
+              );
+            })();
+          })();
         });
       case 'expand':
         return $Function((runtime, target, r, s, c) {
@@ -1274,13 +1341,30 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+            return (() {
+              final iterableType = runtime.internParameterizedType(
+                CoreTypes.iterable,
+                [
+                  (bridgeTypeArguments.length > 0
+                      ? bridgeTypeArguments[0]
+                      : runtime.lookupType(CoreTypes.dynamic)),
+                ],
+              );
+              return $Iterable.wrap(
+                (result).map((e) {
+                  final value = (e is List || e is Map || e is Set
+                      ? TypedInterop.boxExternal(e, runtime: runtime)!
+                      : runtime.wrapAlways(e));
+                  runtime.assertTypedTypeArgument(value, iterableType, 0);
+                  return value;
+                }),
+                runtime: runtime,
+                runtimeTypeId: iterableType,
+              );
+            })();
+          })();
         });
       case 'forEach':
         return $Function((runtime, target, r, s, c) {
@@ -1452,13 +1536,29 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
       case 'take':
         return $Function((runtime, target, r, s, c) {
           final result = super.take((r as $int).$value);
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'takeWhile':
         return $Function((runtime, target, r, s, c) {
@@ -1485,24 +1585,56 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'skip':
         return $Function((runtime, target, r, s, c) {
           final result = super.skip((r as $int).$value);
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'skipWhile':
         return $Function((runtime, target, r, s, c) {
@@ -1529,13 +1661,29 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
               },
             ),
           );
-          return $Iterable.wrap(
-            (result).map(
-              (e) => (e is List || e is Map || e is Set
-                  ? TypedInterop.boxExternal(e, runtime: runtime)!
-                  : runtime.wrapAlways(e)),
-            ),
-          );
+          return (() {
+            final iterableType = runtime.internParameterizedType(
+              CoreTypes.iterable,
+              [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ],
+            );
+            return $Iterable.wrap(
+              (result).map((e) {
+                final value = (e is List || e is Map || e is Set
+                    ? TypedInterop.boxExternal(e, runtime: runtime)!
+                    : runtime.wrapAlways(e));
+                runtime.assertTypedTypeArgument(value, iterableType, 0);
+                return value;
+              }),
+              runtime: runtime,
+              runtimeTypeId: iterableType,
+            );
+          })();
         });
       case 'firstWhere':
         return $Function((runtime, target, r, s, c) {
@@ -2158,9 +2306,27 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
   void removeAll(Iterable<Object?> elements) {
     final runtime = $runtime;
     $_invoke('removeAll', [
-      $Iterable.wrap(
-        (elements).map((e) => e == null ? const $null() : $Object(e)),
-      ),
+      (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            runtime.internParameterizedType(
+              CoreTypes.object,
+              [],
+              nullable: true,
+            ),
+          ],
+        );
+        return $Iterable.wrap(
+          (elements).map((e) {
+            final value = e == null ? const $null() : $Object(e);
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })(),
     ]);
   }
 
@@ -2168,9 +2334,27 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
   void retainAll(Iterable<Object?> elements) {
     final runtime = $runtime;
     $_invoke('retainAll', [
-      $Iterable.wrap(
-        (elements).map((e) => e == null ? const $null() : $Object(e)),
-      ),
+      (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            runtime.internParameterizedType(
+              CoreTypes.object,
+              [],
+              nullable: true,
+            ),
+          ],
+        );
+        return $Iterable.wrap(
+          (elements).map((e) {
+            final value = e == null ? const $null() : $Object(e);
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })(),
     ]);
   }
 
@@ -2206,9 +2390,27 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
   bool containsAll(Iterable<Object?> other) {
     final runtime = $runtime;
     return $_invoke('containsAll', [
-      $Iterable.wrap(
-        (other).map((e) => e == null ? const $null() : $Object(e)),
-      ),
+      (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            runtime.internParameterizedType(
+              CoreTypes.object,
+              [],
+              nullable: true,
+            ),
+          ],
+        );
+        return $Iterable.wrap(
+          (other).map((e) {
+            final value = e == null ? const $null() : $Object(e);
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })(),
     ]);
   }
 
@@ -2466,13 +2668,23 @@ class $SetBase<E> implements $Instance {
     final result = self.$value.followedBy(
       TypedInterop.exportIterable((r as $Value?), runtime),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __map = $Function(_map);
@@ -2489,25 +2701,43 @@ class $SetBase<E> implements $Instance {
         (r as $Value?)! as EvalCallable,
         "T Function(E);export=false",
         (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(element, recursive: true),
+              null,
+              1,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            (bridgeTypeArguments.length > 0
+                ? bridgeTypeArguments[0]
+                : runtime.lookupType(CoreTypes.dynamic)),
+          ],
+        );
+        return $Iterable.wrap(
+          (result).map((e) {
+            final value = (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e));
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })();
+    })();
   }
 
   static const $Function __where = $Function(_where);
@@ -2536,13 +2766,23 @@ class $SetBase<E> implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __whereType = $Function(_whereType);
@@ -2555,13 +2795,30 @@ class $SetBase<E> implements $Instance {
   ) {
     final self = target! as $SetBase;
     final result = self.$value.whereType();
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            (bridgeTypeArguments.length > 0
+                ? bridgeTypeArguments[0]
+                : runtime.lookupType(CoreTypes.dynamic)),
+          ],
+        );
+        return $Iterable.wrap(
+          (result).map((e) {
+            final value = (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e));
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })();
+    })();
   }
 
   static const $Function __expand = $Function(_expand);
@@ -2590,13 +2847,30 @@ class $SetBase<E> implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            (bridgeTypeArguments.length > 0
+                ? bridgeTypeArguments[0]
+                : runtime.lookupType(CoreTypes.dynamic)),
+          ],
+        );
+        return $Iterable.wrap(
+          (result).map((e) {
+            final value = (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e));
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })();
+    })();
   }
 
   static const $Function __contains = $Function(_contains);
@@ -2655,15 +2929,16 @@ class $SetBase<E> implements $Instance {
         (r as $Value?)! as EvalCallable,
         "E Function(E, E);export=false",
         (_callable) => (dynamic value, dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(value, recursive: true),
-                runtime.wrapAlways(element, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(value, recursive: true),
+              runtime.wrapAlways(element, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -2687,15 +2962,16 @@ class $SetBase<E> implements $Instance {
         (s as $Value?)! as EvalCallable,
         "T Function(T, E);export=false",
         (_callable) => (dynamic previousValue, dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(previousValue, recursive: true),
-                runtime.wrapAlways(element, recursive: true),
-                2,
-              )
-              ?.$value;
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(previousValue, recursive: true),
+              runtime.wrapAlways(element, recursive: true),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
         },
       ),
     );
@@ -2833,13 +3109,23 @@ class $SetBase<E> implements $Instance {
   ) {
     final self = target! as $SetBase;
     final result = self.$value.take((r as $int).$value);
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __takeWhile = $Function(_takeWhile);
@@ -2868,13 +3154,23 @@ class $SetBase<E> implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __skip = $Function(_skip);
@@ -2887,13 +3183,23 @@ class $SetBase<E> implements $Instance {
   ) {
     final self = target! as $SetBase;
     final result = self.$value.skip((r as $int).$value);
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __skipWhile = $Function(_skipWhile);
@@ -2922,13 +3228,23 @@ class $SetBase<E> implements $Instance {
         },
       ),
     );
-    return $Iterable.wrap(
-      (result).map(
-        (e) => (e is List || e is Map || e is Set
-            ? TypedInterop.boxExternal(e, runtime: runtime)!
-            : runtime.wrapAlways(e)),
-      ),
-    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = (e is List || e is Map || e is Set
+              ? TypedInterop.boxExternal(e, runtime: runtime)!
+              : runtime.wrapAlways(e));
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __firstWhere = $Function(_firstWhere);
@@ -2963,7 +3279,10 @@ class $SetBase<E> implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "E Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );
@@ -3004,7 +3323,10 @@ class $SetBase<E> implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "E Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );
@@ -3045,7 +3367,10 @@ class $SetBase<E> implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "E Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return TypedInterop.exportExternal(
+                  _callable.call(runtime, null, null, null, 0),
+                  runtime: runtime,
+                ) as dynamic;
               },
             ),
     );

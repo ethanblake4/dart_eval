@@ -89,6 +89,10 @@ class Runtime {
   /// Bridges capture it synchronously before starting asynchronous work.
   int? bridgeCallReturnTypeId;
 
+  /// Resolved method type arguments during a native instance invocation.
+  /// Lazy bridge results capture these before the invocation returns.
+  List<int> bridgeCallTypeArguments = const [];
+
   /// The current runtime version code
   static const int versionCode = 107;
 

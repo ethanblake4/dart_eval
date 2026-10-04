@@ -184,7 +184,20 @@ class $Pattern implements $Instance {
       (r as $String).$value,
       (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
     );
-    return $Iterable.wrap((result).map((e) => $Match.wrap(e)));
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.match),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $Match.wrap(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
   }
 
   static const $Function __matchAsPrefix = $Function(_matchAsPrefix);
