@@ -66,7 +66,16 @@ CollectionElementResult compileNullAwareCollectionValue(
     null,
     condition: (ctx) => compileNonNullCondition(ctx, value),
     thenBranch: (ctx, _) {
-      contribution = present(value.copyWith(type: nonNullType));
+      // Boxing a bound copy would recover the local's nullable type.
+      contribution = present(
+        Variable.of(
+          ctx,
+          value.ssa,
+          nonNullType,
+          rep: value.rep,
+          facts: value.facts,
+        ),
+      );
       return StatementInfo();
     },
   );

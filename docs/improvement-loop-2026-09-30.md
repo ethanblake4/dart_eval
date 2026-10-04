@@ -4580,3 +4580,16 @@ null-safety fixture and mixin syntax fixture; their expect_fail entries are
 removed. The bridge and bindgen bundle passes twelve focused tests. A combined
 mixin control passes both execution modes, and scoped analysis is clean. These
 changes leave the interpreter loop unchanged.
+
+### Cycle 28 correctness pass 3
+
+Object patterns carry stable private-field paths through nested matches and
+join only successful alternatives. Existing proofs narrow pattern-bound
+variables; receiver writes invalidate the proofs. Null-aware map contributions
+use an independent non-null type view, so boxing cannot restore the nullable
+local type. These fixes add no runtime checks or instructions. The two original
+field-promotion and map-inference fixtures pass fresh and serialized execution;
+their expect_fail entries are removed. Ten focused neighboring tests pass,
+including one combined stability, invalidation and alternative-join control.
+Scoped analysis is clean. Never-returning pattern getter handling is included;
+its dead-jump integration is checkpointed with the following flow pass.

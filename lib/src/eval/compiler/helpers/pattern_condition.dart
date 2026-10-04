@@ -51,6 +51,7 @@ void compileIrrefutablePattern(
     value,
     patternContext: patternContext,
     continuation: matching,
+    sourceSlot: slot,
   );
   for (final (pattern, value) in matching.assignments) {
     IdentifierReference(
@@ -137,6 +138,7 @@ void compileIrrefutablePattern(
     subject,
     patternContext: PatternBindContext.matching,
     continuation: matching,
+    sourceSlot: slot,
   );
   final matchedType = matchedPatternType(ctx, pattern.pattern, subject.type);
   if (patternAlwaysThrows(ctx, pattern.pattern, subject.type)) {
@@ -163,16 +165,17 @@ void compileIrrefutablePattern(
     matching.canMatch &= result.$2;
     ctx.builder = result.$1.block(0);
     applyConditionPromotions(ctx, guard.expression, true);
-    for (final frame in ctx.locals.take(ctx.locals.length - 1)) {
-      for (final binding in frame.values) {
-        final value = binding.current;
-        value.inferType(ctx, value.type);
-        for (final member
-            in value.facts.promotedMembers?.entries ??
-                const <MapEntry<String, TypeRef>>[]) {
-          value.inferType(ctx, member.value, member.key);
-        }
-      }
+  }
+  final promotedBindings = guard == null
+      ? [if (slot?.local.binding case final binding?) binding]
+      : ctx.locals.take(ctx.locals.length - 1).expand((frame) => frame.values);
+  for (final binding in promotedBindings) {
+    final value = binding.current;
+    value.inferType(ctx, value.type);
+    for (final member
+        in value.facts.promotedMembers?.entries ??
+            const <MapEntry<String, TypeRef>>[]) {
+      value.inferType(ctx, member.value, member.key);
     }
   }
   ctx.resolveBranchStateDiscontinuity(initialState);
@@ -270,6 +273,10 @@ final class _PatternCondition implements PatternMatchContinuation {
 
   @override
   void requireMatch(Variable condition) {
+    if (condition.type.isSpec(CoreTypes.never) && !condition.type.nullable) {
+      canMatch = false;
+      return;
+    }
     if (condition.facts.constBool == true) return;
     final value = convertForAssignment(
       ctx,
@@ -278,7 +285,7 @@ final class _PatternCondition implements PatternMatchContinuation {
       representation: MachineRepresentation.boolean,
     );
     ctx.resolveBranchStateDiscontinuity(initialState);
-    failedStates.add(ctx.saveState());
+    if (canMatch) failedStates.add(ctx.saveState());
     canFail |= canMatch;
     canMatch &= condition.facts.constBool != false;
     final next = BasicBlock<Operation>([], label: ctx.label('pattern_next'));
@@ -294,6 +301,7 @@ final class _PatternCondition implements PatternMatchContinuation {
     LogicalOrPattern pattern,
     Variable subject,
     PatternBindContext patternContext,
+    PromotionSlot? sourceSlot,
   ) {
     final before = ctx.saveState();
     final rightBlock = BasicBlock<Operation>(
@@ -313,6 +321,7 @@ final class _PatternCondition implements PatternMatchContinuation {
       subject,
       patternContext: patternContext,
       continuation: left,
+      sourceSlot: sourceSlot,
     );
     final leftState = ctx.saveState();
     final leftTail = ctx.flushBlock();
@@ -332,6 +341,7 @@ final class _PatternCondition implements PatternMatchContinuation {
       subject,
       patternContext: patternContext,
       continuation: right,
+      sourceSlot: sourceSlot,
     );
     final rightState = ctx.saveState();
     final rightTail = ctx.flushBlock();
@@ -378,7 +388,7 @@ final class _PatternCondition implements PatternMatchContinuation {
     ctx.mergeBranchState([
       if (left.canMatch) leftState,
       if (left.canFail && right.canMatch) rightState,
-    ]);
+    ], includeCurrent: false);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [join], parent);
     for (final entry in outputs.entries) {
       final original = leftState.locals.last[entry.key]!.binding;

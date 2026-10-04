@@ -21,6 +21,7 @@ import '../macros/branch.dart'
 import '../statement/statement.dart';
 import 'conversion.dart';
 import 'type_check.dart';
+import 'promotion.dart';
 
 enum PatternBindContext {
   none,
@@ -49,6 +50,7 @@ abstract interface class PatternMatchContinuation {
     LogicalOrPattern pattern,
     Variable subject,
     PatternBindContext patternContext,
+    PromotionSlot? sourceSlot,
   );
   bool get deferCaptures;
   void assignVariable(AssignedVariablePattern pattern, Variable value);
@@ -279,6 +281,7 @@ Variable patternMatchAndBind(
   Variable V, {
   PatternBindContext patternContext = PatternBindContext.none,
   PatternMatchContinuation? continuation,
+  PromotionSlot? sourceSlot,
 }) {
   final result = _matchPattern(
     ctx,
@@ -286,9 +289,25 @@ Variable patternMatchAndBind(
     V,
     patternContext: patternContext,
     continuation: continuation,
+    sourceSlot: sourceSlot,
   );
   if (continuation == null) return result;
   continuation.requireMatch(result);
+  if (sourceSlot != null &&
+      sourceSlot.member != null &&
+      pattern is DartPattern) {
+    final binding = sourceSlot.local.binding;
+    if (binding != null &&
+        identical(ctx.lookupBinding(binding.name), binding) &&
+        binding.current.writeEpoch == sourceSlot.local.writeEpoch) {
+      promoteMember(
+        ctx,
+        binding.current,
+        sourceSlot.viaSuper ? 'super:${sourceSlot.member}' : sourceSlot.member!,
+        matchedPatternType(ctx, pattern, V.type),
+      );
+    }
+  }
   return BuiltinValue(boolval: true).push(ctx);
 }
 
@@ -298,6 +317,7 @@ Variable _matchPattern(
   Variable V, {
   required PatternBindContext patternContext,
   PatternMatchContinuation? continuation,
+  PromotionSlot? sourceSlot,
 }) {
   final requireMatch = continuation?.requireMatch;
   switch (pattern) {
@@ -440,7 +460,7 @@ Variable _matchPattern(
       return BuiltinValue(boolval: true).push(ctx);
     case LogicalOrPattern pat:
       if (continuation != null) {
-        return continuation.matchOr(pat, V, patternContext);
+        return continuation.matchOr(pat, V, patternContext, sourceSlot);
       }
       final alternativeContext = patternContext == PatternBindContext.matching
           ? PatternBindContext.none
@@ -465,6 +485,7 @@ Variable _matchPattern(
         V,
         patternContext: patternContext,
         continuation: continuation,
+        sourceSlot: sourceSlot,
       );
       final right = patternMatchAndBind(
         ctx,
@@ -474,6 +495,7 @@ Variable _matchPattern(
             : V.withType(matchedPatternType(ctx, pat.leftOperand, V.type)),
         patternContext: patternContext,
         continuation: continuation,
+        sourceSlot: sourceSlot,
       );
       if (requireMatch != null) return right;
       return CallResolver(ctx).invokeOperator(left, '&&', [right]).result;
@@ -497,13 +519,40 @@ Variable _matchPattern(
         if (propName == null) {
           throw CompileError('Object pattern field requires a name', field);
         }
-        final fieldValue = GetTarget.read(ctx, matchedValue, propName);
+        final fieldSlot =
+            sourceSlot != null &&
+                isPromotableMember(ctx, matchedType, propName, field)
+            ? (
+                local: sourceSlot.local,
+                member: sourceSlot.member == null
+                    ? propName
+                    : '${sourceSlot.member}.$propName',
+                viaSuper: sourceSlot.viaSuper,
+              )
+            : null;
+        var fieldValue = GetTarget.read(ctx, matchedValue, propName);
+        if (fieldValue.type.isSpec(CoreTypes.never) &&
+            !fieldValue.type.nullable) {
+          requireMatch?.call(fieldValue);
+        }
+        final fieldBinding = fieldSlot?.local.binding;
+        if (fieldSlot != null &&
+            fieldBinding != null &&
+            identical(ctx.lookupBinding(fieldBinding.name), fieldBinding) &&
+            fieldBinding.current.writeEpoch == fieldSlot.local.writeEpoch) {
+          final key = fieldSlot.viaSuper
+              ? 'super:${fieldSlot.member}'
+              : fieldSlot.member;
+          final promoted = fieldBinding.current.facts.promotedMembers?[key];
+          if (promoted != null) fieldValue = fieldValue.withType(promoted);
+        }
         final fieldResult = patternMatchAndBind(
           ctx,
           field.pattern,
           fieldValue,
           patternContext: patternContext,
           continuation: continuation,
+          sourceSlot: fieldSlot,
         );
         result = requireMatch != null
             ? fieldResult
@@ -523,6 +572,7 @@ Variable _matchPattern(
         boxed.copyWith(type: slot),
         patternContext: patternContext,
         continuation: continuation,
+        sourceSlot: sourceSlot,
       );
     case RelationalPattern pat:
       final operand = compileExpression(pat.operand, ctx, V.type);
@@ -545,6 +595,7 @@ Variable _matchPattern(
         V,
         patternContext: patternContext,
         continuation: continuation,
+        sourceSlot: sourceSlot,
       );
     case NullCheckPattern pat:
       final nonNull = _nullPatternTest(ctx, V, pat, negated: true);
@@ -555,6 +606,7 @@ Variable _matchPattern(
         V.copyWith(type: V.type.withNullable(false)),
         patternContext: patternContext,
         continuation: continuation,
+        sourceSlot: sourceSlot,
       );
       if (requireMatch != null) return matched;
       return CallResolver(ctx).invokeOperator(nonNull, '&&', [matched]).result;
@@ -574,6 +626,7 @@ Variable _matchPattern(
         V.withType(V.type.withNullable(false)),
         patternContext: patternContext,
         continuation: continuation,
+        sourceSlot: sourceSlot,
       );
     default:
       throw CompileError('Unsupported pattern type: ${pattern.runtimeType}');
