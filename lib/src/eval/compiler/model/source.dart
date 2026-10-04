@@ -27,67 +27,8 @@ class DartSource {
 
   /// Load the source code from the filesystem or a String and parse it
   /// (internally using [parseString] from the Dart analyzer) into an AST
-  DartCompilationUnit load(DiagnosticMode diagnosticMode) {
-    LibraryDirective? libraryDirective;
-    PartOfDirective? partOfDirective;
-
-    final imports = <ImportDirective>[];
-    final exports = <ExportDirective>[];
-    final parts = <PartDirective>[];
-
-    final unit = _parse(toString(), diagnosticMode);
-    for (final directive in unit.directives) {
-      if (directive is ImportDirective) {
-        imports.add(directive);
-      } else if (directive is ExportDirective) {
-        exports.add(directive);
-      } else if (directive is PartDirective) {
-        parts.add(directive);
-      } else if (directive is PartOfDirective) {
-        if (partOfDirective != null) {
-          throw CompileError(
-            'Library $uri must not contain multiple "part of" directives',
-          );
-        }
-        partOfDirective = directive;
-      } else if (directive is LibraryDirective) {
-        if (libraryDirective != null) {
-          throw CompileError(
-            'Library $uri must not contain multiple "library" directives',
-          );
-        }
-        libraryDirective = directive;
-      }
-    }
-
-    if (partOfDirective != null && imports.isNotEmpty) {
-      throw CompileError(
-        "Library $uri is a part, so it can't have 'import' directives",
-      );
-    }
-
-    if (partOfDirective != null && exports.isNotEmpty) {
-      throw CompileError(
-        "Library $uri is a part, so it can't have 'export' directives",
-      );
-    }
-
-    if (partOfDirective != null && parts.isNotEmpty) {
-      throw CompileError(
-        "Library $uri is a part, so it can't have 'part' directives",
-      );
-    }
-
-    return DartCompilationUnit(
-      uri,
-      imports: imports,
-      exports: exports,
-      parts: parts,
-      declarations: unit.declarations,
-      library: libraryDirective,
-      partOf: partOfDirective,
-    );
-  }
+  DartCompilationUnit load(DiagnosticMode diagnosticMode) =>
+      parseDartSource(uri, toString(), diagnosticMode);
 
   @override
   bool operator ==(Object other) {
@@ -112,6 +53,73 @@ class DartSource {
     }
     return source;
   }
+}
+
+/// Parses source text already loaded by the compiler.
+DartCompilationUnit parseDartSource(
+  Uri uri,
+  String contents,
+  DiagnosticMode diagnosticMode,
+) {
+  LibraryDirective? libraryDirective;
+  PartOfDirective? partOfDirective;
+
+  final imports = <ImportDirective>[];
+  final exports = <ExportDirective>[];
+  final parts = <PartDirective>[];
+
+  final unit = _parse(contents, diagnosticMode);
+  for (final directive in unit.directives) {
+    if (directive is ImportDirective) {
+      imports.add(directive);
+    } else if (directive is ExportDirective) {
+      exports.add(directive);
+    } else if (directive is PartDirective) {
+      parts.add(directive);
+    } else if (directive is PartOfDirective) {
+      if (partOfDirective != null) {
+        throw CompileError(
+          'Library $uri must not contain multiple "part of" directives',
+        );
+      }
+      partOfDirective = directive;
+    } else if (directive is LibraryDirective) {
+      if (libraryDirective != null) {
+        throw CompileError(
+          'Library $uri must not contain multiple "library" directives',
+        );
+      }
+      libraryDirective = directive;
+    }
+  }
+
+  if (partOfDirective != null && imports.isNotEmpty) {
+    throw CompileError(
+      "Library $uri is a part, so it can't have 'import' directives",
+    );
+  }
+
+  if (partOfDirective != null && exports.isNotEmpty) {
+    throw CompileError(
+      "Library $uri is a part, so it can't have 'export' directives",
+    );
+  }
+
+  if (partOfDirective != null && parts.isNotEmpty) {
+    throw CompileError(
+      "Library $uri is a part, so it can't have 'part' directives",
+    );
+  }
+
+  return DartCompilationUnit(
+    uri,
+    imports: imports,
+    exports: exports,
+    parts: parts,
+    declarations: unit.declarations,
+    library: libraryDirective,
+    partOf: partOfDirective,
+  );
 }
 
 CompilationUnit _parse(String source, DiagnosticMode diagnosticMode) {

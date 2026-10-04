@@ -1,5 +1,7 @@
 # Native HTTP compiler profile
 
+These measurements precede the inactive-source parsing change described below.
+
 This profile uses the source workload from `test/packages/http_native_test.dart`.
 The test and profiler share `benchmark/support/http_native.dart`, including
 the same eleven dependency packages and guest `http.get` entrypoint. The
@@ -112,7 +114,7 @@ is small. No single SSA pass accounts for most of SSA construction.
 
 `package:web` supplies 190 files and 2706733 bytes, about 77% of dependency
 source bytes. The HTTP client selects `io_client.dart` through its conditional
-import for this native workload, while compilation still parses all supplied
+import for this native workload, while baseline compilation parsed all supplied
 sources before discovering reachable libraries.
 
 A temporary experiment omitted only the web sources. A 21-sample fresh run
@@ -135,7 +137,7 @@ full-workload baseline.
 
 ## Optimization targets
 
-1. Avoid parsing inactive dependency libraries for explicitly selected
+1. Implemented below: avoid parsing inactive dependency libraries for explicitly selected
    entrypoints. Index supplied source URIs, then load selected imports, exports,
    and parts on demand. Preserve conditional-import rules, bridge merging,
    runtime-override discovery, and the existing entrypoint contract. The web
@@ -185,3 +187,33 @@ stdlib changes remain from the temporary instrumentation.
 The rebuilt AOT tool also verified valid first-compile reports, bounded sample
 counts, and unchanged serialized hashes for small, mixed, pipeline, full HTTP
 fresh/cached, and preloaded HTTP workloads.
+
+
+## Inactive-source parsing implementation
+
+The compiler now indexes supplied source URIs and parses roots and their selected
+imports, exports, and parts on demand. Roots include entrypoint suffixes, explicit
+extra entrypoints, bridge libraries, core/async/io, and runtime overrides. Parsed
+units retain original input order, including duplicate URIs. The existing source
+identity cache remains in use; after a parsing failure, unparsed cache entries are
+evicted so repairing a file works on retry.
+
+A source-selection check on the complete HTTP input selected 100 of 349 sources
+on both fresh and reused loader calls, with no web sources selected. The HTTP
+fixture still supplies all eleven dependency packages. This change avoids
+constructing inactive ASTs; the loader still reads ordinary source text to find
+possible runtime overrides. A text hint can also cause a candidate containing
+`RuntimeOverride` in a comment or string to be parsed. Named part roots without a
+selected owner conservatively retain eager discovery. Custom `DartSource` loaders
+keep their existing load method and eager loading contract.
+
+No benchmarks were rerun for this implementation, as requested. The measurements
+above remain baseline results. Library numbering can change when inactive sources
+are omitted; serialized hashes need not match the eager compiler.
+
+Five focused regressions cover inactive syntax becoming active, compiler reuse,
+file repair after parsing failure, custom loaders, override part ownership, and
+duplicate URI ordering. Both program and serialized runtime execution are checked
+where applicable. Changed-source analysis passed. The default suite passed 2319
+tests with 86 skips; the full SDK suite passed 2737 tests with 557 registered
+skips and three unsupported eligible fixtures skipped by the runner.

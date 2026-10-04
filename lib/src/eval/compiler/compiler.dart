@@ -26,6 +26,7 @@ import 'package:dart_eval/src/eval/compiler/model/compilation_unit.dart';
 import 'package:dart_eval/src/eval/compiler/util/custom_crawler.dart';
 import 'package:dart_eval/src/eval/compiler/util/graph.dart';
 import 'package:dart_eval/src/eval/compiler/util/library_graph.dart';
+import 'package:dart_eval/src/eval/compiler/util/source_loader.dart';
 import 'package:dart_eval/src/eval/compiler/util/tree_shake.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/collection.dart';
@@ -99,7 +100,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
   /// List of additional [DartSource] files to be compiled when [compile] is run
   final additionalSources = <DartSource>[];
-  final _cachedParsedSources = <DartSource, DartCompilationUnit>{};
+  final _sourceLoader = SourceLoader();
 
   /// [EvalPlugin]s that will be applied to the compiler
   final _plugins = <EvalPlugin>[
@@ -280,27 +281,18 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     }
 
-    final cleanupList = _cachedParsedSources.keys.toSet();
-
-    // Generate the parsed AST for all sources. [units] will be a List of
-    // [DartCompilationUnit]s. Avoids re-parsing a source if it has already been
-    // parsed and is stored in [cachedParsedSources].
-    final units = sources.followedBy(additionalSources).map((source) {
-      cleanupList.remove(source);
-      final cached = _cachedParsedSources[source];
-      if (cached != null) {
-        return cached;
-      }
-
-      // Load the source code from the filesystem or a String and parse it
-      // (internally using the Dart analyzer) into an AST
-      final parsed = _cachedParsedSources[source] = source.load(diagnosticMode);
-      return parsed;
-    }).toList();
-
-    for (final source in cleanupList) {
-      _cachedParsedSources.remove(source);
-    }
+    final units = _sourceLoader.load(
+      sources.followedBy(additionalSources),
+      roots: {
+        for (final uri in _bridgeDeclarations.keys) Uri.parse(uri),
+        for (final uri in extraEntrypoints) Uri.parse(uri),
+        Uri.parse('dart:core'),
+        Uri.parse('dart:async'),
+        Uri.parse('dart:io'),
+      },
+      entrypoints: entrypoints,
+      diagnosticMode: diagnosticMode,
+    );
     _finishPhase('frontend plugins and parsing');
 
     // Map unit sources into a Set of [Library]s using [_buildLibraries].
@@ -392,14 +384,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             continue;
           }
           final d = declaration.declaration!;
-          if (d is FunctionDeclaration) {
-            final overrideAnno = d.metadata.firstWhereOrNull(
-              (element) => element.name.name == 'RuntimeOverride',
-            );
-            if (overrideAnno != null) {
-              computedEntrypoints.add(library.uri);
-            }
-          }
+          if (hasRuntimeOverride(d)) computedEntrypoints.add(library.uri);
         }
       }
     }
