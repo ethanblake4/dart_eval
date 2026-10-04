@@ -472,6 +472,76 @@ final class ArgumentBinder {
     );
   }
 
+  bool _isNoArgumentConstructor(ArgSource source) {
+    if (source is! ExpressionArg) return false;
+    var expression = source.expression;
+    while (expression is ParenthesizedExpression) {
+      expression = expression.expression;
+    }
+    if (expression is InstanceCreationExpression) {
+      return expression.argumentList.arguments.isEmpty &&
+          expression.constructorName.type.typeArguments == null;
+    }
+    if (expression is! MethodInvocation ||
+        expression.argumentList.arguments.isNotEmpty ||
+        expression.typeArguments != null ||
+        expression.isCascaded) {
+      return false;
+    }
+    final target = expression.target;
+    if (target == null) {
+      return IdentifierReference(
+            null,
+            expression.methodName.name,
+          ).denotation(ctx)
+          is TypeLiteralDenotation;
+    }
+    final receiver = _constructorNamespace(target);
+    if (receiver is PrefixDenotation) {
+      return receiver.resolveMember(
+            ctx,
+            expression.methodName.name,
+            forSet: false,
+          )
+          is TypeLiteralDenotation;
+    }
+    if (receiver is TypeLiteralDenotation) {
+      final member = ctx.memberLookup.staticMember(
+        receiver.type,
+        expression.methodName.name,
+        MemberKind.method,
+      );
+      return switch (member) {
+        SourceMember(node: ConstructorDeclaration()) => true,
+        BridgeMember(def: BridgeConstructorDef()) => true,
+        _ => false,
+      };
+    }
+    return false;
+  }
+
+  Denotation? _constructorNamespace(Expression target) {
+    if (target is SimpleIdentifier) {
+      return IdentifierReference(null, target.name).denotation(ctx);
+    }
+    final (prefix, name) = switch (target) {
+      PrefixedIdentifier(:final prefix, :final identifier) => (
+        prefix.name,
+        identifier.name,
+      ),
+      PropertyAccess(target: SimpleIdentifier prefix, :final propertyName) => (
+        prefix.name,
+        propertyName.name,
+      ),
+      _ => (null, null),
+    };
+    if (prefix == null) return null;
+    final receiver = IdentifierReference(null, prefix).denotation(ctx);
+    return receiver is PrefixDenotation
+        ? receiver.resolveMember(ctx, name!, forSet: false)
+        : null;
+  }
+
   /// Binds an argument list against a [CallSignature]: the signature owns
   /// the callee's shape and resolved types. A null [argumentList] is an
   /// implicit super call with only forwarded locals and omitted defaults.
@@ -596,18 +666,7 @@ final class ArgumentBinder {
           parameterDefs.isNotEmpty &&
           argBound is InterfaceTypeRef &&
           argBound.decl.typeParameters.any((p) => p.hasExplicitVariance) &&
-          switch (argument) {
-            ExpressionArg(expression: InstanceCreationExpression e) =>
-              e.argumentList.arguments.isEmpty &&
-                  e.constructorName.type.typeArguments == null,
-            ExpressionArg(expression: MethodInvocation e) =>
-              e.target == null &&
-                  e.argumentList.arguments.isEmpty &&
-                  e.typeArguments == null &&
-                  IdentifierReference(null, e.methodName.name).denotation(ctx)
-                      is TypeLiteralDenotation,
-            _ => false,
-          };
+          _isNoArgumentConstructor(argument);
       if (noUpwardArguments) {
         argBound = ctx.typeSystem.unconstrainedInferenceContext(
           argBound,

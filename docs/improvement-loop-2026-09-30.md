@@ -4527,3 +4527,28 @@ microseconds for the mixed source; the 64- and 256-stage sources add 51 and 8
 microseconds. Whole-compile timing varies more than those phase differences.
 The change removes quadratic compiler work while leaving ordinary compilation
 close to the previous cost; it does not add a runtime path or change bytecode.
+
+### Cycle 27 cleanup and final gates
+
+Astra medium reviewed the cycle's compiler changes and sibling DCE worklist
+during cleanup. Constructor inference now normalizes parentheses and resolves
+prefixed and named constructors while respecting local shadowing and static
+factory methods. Prefix namespace lookup is shared with actual member access
+but emits no deferred-loading check during inference. Explicit and inferred
+deferred constructor probes each retain one loading check and execute fresh
+and serialized. Nine original variance fixtures pass in both modes, nine
+focused tests pass, and scoped analysis is clean. The reviewed dependent-bound
+example is invalid native Dart, so it did not justify changing bound closure.
+
+The list bounds test now checks the RangeError cause, the stage before the
+first failing read, and the single remaining indexed-read instruction. All five
+list tests pass; test analysis is clean. Astra's follow-up found no further
+actionable issues in the cleanup changes.
+
+Final default verification passes 2301 tests with 86 skips. The unrestricted
+SDK gate reports 2706 passed, 20 compile errors, 11 runtime failures and three
+skipped outcomes. Its 31 failing paths exactly match expect_fail: no stale
+entries and no unlisted regressions. CFG verification remains 109 passing
+tests. Performance, compiler-speed and cleanup checkpoints are pushed directly
+to xv2 and control_flow_graph/main. Cycle 28 continues with the remaining
+failure groups; the next scheduled extra compiler-speed pass is cycle 30.

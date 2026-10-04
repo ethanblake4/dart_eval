@@ -1046,6 +1046,16 @@ final class PrefixDenotation extends Denotation {
       if (stub != null) return _SyntheticDenotation(stub);
     }
     checkDeferredImport(ctx, prefix);
+    return resolveMember(ctx, name, forSet: forSet, source: source);
+  }
+
+  /// Resolves the namespace without evaluating a deferred-loading check.
+  Denotation resolveMember(
+    CompilerContext ctx,
+    String name, {
+    required bool forSet,
+    AstNode? source,
+  }) {
     final child =
         children[forSet
             ? MemberName.setter(name).key

@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart' show RuntimeException;
 import 'package:test/test.dart';
 
 class _ObservedList extends ListBase<int> {
@@ -133,12 +134,23 @@ int main(bool write) {
 
   test('out of bounds reads keep their original throwing position', () {
     final program = _compile(r'''
+int stage = 0;
+int observedStage() => stage;
 int main(int value) {
   final values = List<int>.filled(0, value);
   final index = 0;
-  return value > values[index] ? value : values[index];
+  stage = 1;
+  final result = value > values[index] ? value : values[index];
+  stage = 2;
+  return result;
 }
 ''');
+    expect(
+      program.typedProgram.instructions.where(
+        (entry) => entry.$2.name == 'rListIndexCA',
+      ),
+      hasLength(1),
+    );
     for (final runtime in _runtimes(program)) {
       expect(
         () => runtime.executeLib(
@@ -146,7 +158,20 @@ int main(int value) {
           'main',
           arguments: {'value': 17},
         ),
-        throwsA(anything),
+        throwsA(
+          isA<RuntimeException>().having(
+            (error) => error.caughtException,
+            'cause',
+            isA<RangeError>(),
+          ),
+        ),
+      );
+      expect(
+        runtime.executeLib(
+          'package:list_read_reuse/main.dart',
+          'observedStage',
+        ),
+        1,
       );
     }
   });
