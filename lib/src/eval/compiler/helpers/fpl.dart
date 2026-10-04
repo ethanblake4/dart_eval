@@ -206,7 +206,8 @@ TypeRef? _inheritedParameterType(
   if (list is! FormalParameterList ||
       method is! MethodDeclaration ||
       method.isStatic ||
-      parameterHost == null) {
+      parameterHost == null ||
+      parameterHost is ExtensionTypeDeclaration) {
     return null;
   }
   final kind = method.isGetter

@@ -197,11 +197,70 @@ void main() {}
       );
     }
   });
+
+  test(
+    'generic extension interfaces bind owners through direct member paths',
+    () {
+      final program = Compiler().compile({
+        'generic_extension_members': {
+          'main.dart': r'''
+extension type Storage<T>(List<T> values) {
+  T get first => values[0];
+  set first(T value) { values[0] = value; }
+  R echo<R>(R value) => value;
+  T shadow<T>(T value) => value;
+  Storage<T> operator +(T value) => Storage<T>([...values, value]);
+}
+
+extension type View<U>(List<U> values) implements Storage<U> {}
+
+T readFirst<T>(Storage<T> storage) => storage.first;
+
+bool verify() {
+  final raw = <int>[1, 2];
+  final view = View<int>(raw);
+  if (view.first != 1 || readFirst(view) != 1) return false;
+
+  view.first = 3;
+  if (raw[0] != 3 || readFirst(view) != 3) return false;
+
+  final String Function(String) stringEcho = view.echo;
+  final int Function(int) integerEcho = view.echo;
+  final String Function(String) shadowed = view.shadow;
+  if (stringEcho('a') != 'a' || integerEcho(4) != 4 ||
+      shadowed('shadow') != 'shadow' ||
+      view.echo<bool>(true) != true || view.shadow<String>('direct') != 'direct') {
+    return false;
+  }
+
+  final appended = view + 9;
+  return appended.first == 3 && appended.values.length == 3 &&
+      appended.values[2] == 9 && raw.length == 2;
+}
+
+void main() {}
+''',
+        },
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        expect(
+          runtime.executeLib(
+            'package:generic_extension_members/main.dart',
+            'verify',
+          ),
+          true,
+        );
+      }
+    },
+  );
+
   for (final source in [
     "extension type E(int value) { E.wrong(this.other); }",
     "extension type E(int value) { E.twice(this.value) : value = 2; }",
     "extension type E(int value) { E.body(this.value) {} }",
-    "extension type E(int value) { int get doubled => value * 2; }",
     "extension type E(int value) { E.wrong(int n) : other = n; }",
     "extension type E<T extends num>(T value) { E.named(this.value); } "
         "void check() { E<String>.named('wrong'); }",

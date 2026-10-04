@@ -29,6 +29,11 @@ int? compileDeclaration(
     _validateExtensionType(ctx, d);
     final previousClass = ctx.currentClass;
     ctx.currentClass = d;
+    ctx.instanceDeclarationPositions[ctx.library]![declarationName(d)] = {
+      MemberKind.getter: {},
+      MemberKind.setter: {},
+      MemberKind.method: {},
+    };
     try {
       for (final member in d.body.members) {
         if (member is MethodDeclaration) {
@@ -99,7 +104,7 @@ void _validateExtensionType(
   decl.validateExtensionInterfaces();
   for (final member in declaration.body.members) {
     final supported = switch (member) {
-      MethodDeclaration() => member.isStatic,
+      MethodDeclaration() => true,
       FieldDeclaration() => member.isStatic,
       ConstructorDeclaration() => _isRepresentationConstructor(
         member,
@@ -109,7 +114,7 @@ void _validateExtensionType(
     };
     if (!supported) {
       throw CompileError(
-        'Only static extension type members and representation constructors '
+        'Only extension type methods, static fields and representation constructors '
         'are supported',
         member,
       );

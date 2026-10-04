@@ -63,8 +63,15 @@ bool changedExpression() {
     _ => false,
   };
 }
+bool assignedSource() {
+  Object? input = <Object?>[1];
+  ([input] as List<Object?>) = input;
+  input.check<Exactly<Object?>>();
+  return input == 1;
+}
 bool main() => inferred(Child<int>(1)) && explicit(Child<int>(2)) &&
-    later(Child<int>(3)) && changedStatement() && changedExpression();
+    later(Child<int>(3)) && changedStatement() && changedExpression() &&
+    assignedSource();
 ''';
 
 void main() {

@@ -12,6 +12,39 @@ import 'package:dart_eval/src/eval/compiler/variable.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
 import 'assigned_locals.dart';
 import 'captures.dart';
+import 'extension_type.dart';
+
+final _flowExperiments = Expando<Set<String>>();
+
+bool _flowExperimentEnabled(AstNode source, String experiment) {
+  final unit = source.thisOrAncestorOfType<CompilationUnit>();
+  if (unit == null) return false;
+  var enabled = _flowExperiments[unit];
+  if (enabled == null) {
+    enabled = <String>{};
+    for (
+      Token? comment = unit.beginToken.precedingComments;
+      comment != null;
+      comment = comment.next
+    ) {
+      if (!RegExp(r'^//\s*SharedOptions=').hasMatch(comment.lexeme)) continue;
+      for (final match in RegExp(
+        r'--enable-experiment=([^\s]+)',
+      ).allMatches(comment.lexeme)) {
+        enabled.addAll(match.group(1)!.split(','));
+      }
+    }
+    _flowExperiments[unit] = enabled;
+  }
+  return enabled.contains(experiment);
+}
+
+bool inferenceUpdate4Enabled(AstNode source) =>
+    _flowExperimentEnabled(source, 'inference-update-4');
+
+bool thisPromotionEnabled(CompilerContext ctx, AstNode source) =>
+    ctx.anonymousThisReceiver != null ||
+    _flowExperimentEnabled(source, 'this-promotion');
 
 /// Suspension lets enclosing invocations write captured variables. Local
 /// variables and unwritten captures retain their promotions.
@@ -150,7 +183,10 @@ conditionPromotions(CompilerContext ctx, Expression expression) {
         // register (`arg_0`), which `_applyRecorded` cannot resolve. The
         // epoch lets a later `x = ...` invalidate `b`'s record of `x`.
         final name = local.binding?.name ?? local.name;
-        if (name.startsWith('#')) return;
+        if (name.startsWith('#') &&
+            (name != '#this' || !thisPromotionEnabled(ctx, expression))) {
+          return;
+        }
         map[member == null ? name : '$name.$member'] = (
           type,
           local.binding == null ? -1 : local.writeEpoch,
@@ -176,6 +212,46 @@ void _visitPromotions(
       promote,
       excluded: excluded,
     );
+    return;
+  }
+  if (expression is ConditionalExpression) {
+    final paths = <Map<(String, String?), (Variable, TypeRef)>>[];
+    for (final (outcome, arm) in [
+      (true, expression.thenExpression),
+      (false, expression.elseExpression),
+    ]) {
+      if (arm is BooleanLiteral && arm.value != value) continue;
+      final proofs = <(String, String?), (Variable, TypeRef)>{};
+      void collect(Variable local, TypeRef type, String? member) {
+        final key = (local.binding?.name ?? local.name, member);
+        final old = proofs[key];
+        if (old == null || canPromoteTo(ctx, type, old.$2, expression)) {
+          proofs[key] = (local, type);
+        }
+      }
+
+      _visitPromotions(
+        ctx,
+        expression.condition,
+        outcome,
+        collect,
+        excluded: {
+          ...excluded,
+          ...assignedLocalNames([arm]),
+        },
+      );
+      _visitPromotions(ctx, arm, value, collect, excluded: excluded);
+      paths.add(proofs);
+    }
+    if (paths.isNotEmpty) {
+      for (final entry in paths.first.entries) {
+        if (paths
+            .skip(1)
+            .every((path) => path[entry.key]?.$2 == entry.value.$2)) {
+          promote(entry.value.$1, entry.value.$2, entry.key.$2);
+        }
+      }
+    }
     return;
   }
   if (expression is AnonymousMethodInvocation &&
@@ -298,6 +374,17 @@ void _visitPromotions(
       // A failed `is` check still registers the tested type as a type of
       // interest — `if (x is! S) { x = sValue }` promotes `x` to `S`.
       _promoteSlot(ctx, expression.expression, tested, (_, _, _) {}, excluded);
+      final slot = promotableMemberSlot(
+        ctx,
+        expression.expression,
+        excluded: excluded,
+      );
+      if (slot?.member == null &&
+          slot?.local.binding?.name == '#this' &&
+          slot!.local.type.nullable &&
+          tested == slot.local.type.withNullable(false)) {
+        promote(slot.local, CoreTypes.never.ref(ctx).withNullable(true), null);
+      }
       return;
     }
     _promoteSlot(ctx, expression.expression, tested, promote, excluded);
@@ -427,6 +514,29 @@ PromotionSlot? promotableMemberSlot(
 }) {
   while (target is ParenthesizedExpression) {
     target = target.expression;
+  }
+  if (target is ThisExpression) {
+    if (!thisPromotionEnabled(ctx, target)) return null;
+    final binding = ctx.lookupBinding('#this');
+    return binding == null ||
+            binding.writeCaptured ||
+            excluded.contains('#this')
+        ? null
+        : (local: binding.current, member: null, viaSuper: false);
+  }
+  if ((target is AssignmentExpression || target is PrefixExpression) &&
+      inferenceUpdate4Enabled(target)) {
+    final operand = switch (target) {
+      AssignmentExpression(:final leftHandSide) => leftHandSide,
+      PrefixExpression(:final operand, :final operator)
+          when operator.lexeme == '++' || operator.lexeme == '--' =>
+        operand,
+      _ => null,
+    };
+    if (operand is SimpleIdentifier &&
+        ctx.lookupBinding(operand.name) != null) {
+      return promotableMemberSlot(ctx, operand, excluded: excluded);
+    }
   }
   if (target is AnonymousMethodInvocation &&
       target.parameters == null &&
@@ -628,6 +738,7 @@ bool isPromotableMember(
 ) {
   if (!name.startsWith('_')) return false;
   if (!ctx.languageVersionAtLeast(source, 3, 2)) return false;
+  if (extensionRepresentationField(ctx, type, name) != null) return true;
   // Field promotion is library-wide: any non-final field, concrete getter,
   // or method named `name` in the library disables it everywhere.
   if (ctx.promotionBlockers(ctx.library).contains(name)) return false;
@@ -669,9 +780,12 @@ TypeRef promotedMemberReadType(
   final owner = dot < 0
       ? local.type
       : promotedMemberReadType(ctx, local, member.substring(0, dot), viaSuper);
+  final name = dot < 0 ? member : member.substring(dot + 1);
+  final representation = extensionRepresentationField(ctx, owner, name);
+  if (representation != null) return representation;
   final resolved = ctx.memberLookup.tryInterfaceMember(
     owner,
-    MemberName(dot < 0 ? member : member.substring(dot + 1), MemberKind.getter),
+    MemberName(name, MemberKind.getter),
   );
   return resolved?.fieldType ?? CoreTypes.dynamic.ref(ctx);
 }

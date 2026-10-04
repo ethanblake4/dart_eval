@@ -1274,33 +1274,21 @@ Denotation resolveIdentifier(
         if (member is! MethodDeclaration || member.name.lexeme != name) {
           continue;
         }
-        // The first same-named member decides.
-        if (member.isStatic) {
-          if (forSet) {
-            if (member.isSetter) {
-              return ExtensionMemberDenotation(ext, member);
-            }
-            break;
-          }
-          if (member.isGetter) {
-            return ExtensionMemberDenotation(ext, member);
-          }
-          if (member.isSetter) break;
-          return ExtensionMemberDenotation(ext, member);
-        }
-        if (forSet) {
-          if (member.isSetter) {
-            return ExtensionMemberDenotation(ext, member, receiver: $this);
-          }
-          // A same-named non-setter member shadows the `on` type's members.
-          break;
-        }
-        if ($this == null) break;
-        if (member.isGetter) {
-          return ExtensionMemberDenotation(ext, member, receiver: $this);
-        }
-        if (member.isSetter) break;
-        return ExtensionMemberDenotation(ext, member, receiver: $this);
+        // Getter/setter pairs share a lexical name. Select the requested
+        // accessor before falling back to the other declaration of that name.
+        final accessor =
+            ext.members.whereType<MethodDeclaration>().firstWhereOrNull(
+              (candidate) =>
+                  candidate.name.lexeme == name &&
+                  (forSet ? candidate.isSetter : !candidate.isSetter),
+            ) ??
+            member;
+        if (!accessor.isStatic && $this == null) break;
+        return ExtensionMemberDenotation(
+          ext,
+          accessor,
+          receiver: accessor.isStatic ? null : $this,
+        );
       }
     }
   }
@@ -1319,10 +1307,15 @@ Denotation resolveIdentifier(
   // enum values of an enclosing enum, then statics of the class and its
   // transitive mixins.
   if (anonymousReceiver == null && ctx.currentClass != null) {
-    final selfDecl = ctx.types.find(
-      ctx.enclosingLibrary ?? ctx.library,
-      ctx.currentClassName!,
-    );
+    final mixinReceiver = ctx.memberDeclaringClass is MixinDeclaration
+        ? $this?.type
+        : null;
+    final selfDecl = mixinReceiver == null
+        ? ctx.types.find(
+            ctx.enclosingLibrary ?? ctx.library,
+            ctx.currentClassName!,
+          )
+        : nominalDeclOf(mixinReceiver);
     final selfMember = selfDecl == null
         ? null
         : ctx.memberLookup.declaredAccessor(selfDecl, name);
@@ -1330,7 +1323,10 @@ Denotation resolveIdentifier(
       return InstanceMemberDenotation(
         null,
         name,
-        declared: ResolvedMember(selfMember, selfDecl.thisType),
+        declared: ResolvedMember(
+          selfMember,
+          mixinReceiver ?? selfDecl.thisType,
+        ),
       );
     }
 

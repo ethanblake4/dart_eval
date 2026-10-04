@@ -16,6 +16,7 @@ Variable compilePatternAssignment(CompilerContext ctx, PatternAssignment e) {
     e.pattern,
     result,
     patternContext: PatternBindContext.none,
+    source: e.expression,
   );
 
   // `(b) = cond` records the condition's promotions on `b`, like `b = cond`.

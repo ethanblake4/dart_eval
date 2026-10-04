@@ -4401,3 +4401,24 @@ type arguments only where declaration identity is known. All eight original
 SDK variance fixtures pass fresh and serialized execution; their stale
 expectations were removed. Ninety-two focused tests, two noSuchMethod originals
 in both modes and scoped analysis pass.
+
+### Cycle 27 correctness pass 5: representation calls and flow/mixin resolution
+
+Extension representation calls, getters, setters and tear-offs now carry the
+generic owner prefix through the existing boxed call ABI. Representation
+promotion handles read-only paths and static identity, so unrelated declarations
+do not block representation promotion; missing interface annotations are not inherited.
+Lexical extension getter/setter selection and folded mixin `on` constraints
+retain their declaring context. Generic calls use the existing ABI; this pass
+adds no runtime opcodes or loop changes. Corrected mixin static views do add
+ordinary dispatch/check bytecode (+46, +34 and +3 bytes in the measured cases),
+including concurrent accessor corrections, so these deltas are not isolated.
+
+Assignment-expression and prefix promotion respect feature gates and preserve
+legacy captures. Local boolean conditions retain source provenance, legacy
+null equality under disabled sound flow analysis adds no promotion metadata,
+and irrefutable-pattern source promotion uses binding epochs so writes block
+stale promotion. Ten flow originals and twelve representation/mixin originals
+pass fresh and serialized execution (22 originals, 44 outcomes); 55 focused
+tests and scoped analysis pass. The confirmed stale expectations were removed;
+other SDK expectations and remaining actual failures are unchanged.

@@ -305,14 +305,18 @@ Variable materializeTearOff(
   // An extension member's callable environment leads with the extension's
   // own bindings (`[ext bindings..., method args...]`), which the runtime
   // adapter must forward alongside the method's instantiated arguments.
-  final envTypeArguments = memberExt == null
-      ? const <TypeRef>[]
-      : [
-          for (final parameter
-              in memberExt.declaration.typeParameters?.typeParameters ??
-                  const <TypeParameter>[])
-            memberParams[parameter.name.lexeme] ?? CoreTypes.dynamic.ref(ctx),
-        ];
+  final receiverParameters = memberExt != null
+      ? memberExt.declaration.typeParameters
+      : declaration is MethodDeclaration &&
+            !declaration.isStatic &&
+            memberHost is ExtensionTypeDeclaration
+      ? memberHost.namePart.typeParameters
+      : null;
+  final envTypeArguments = [
+    for (final parameter
+        in receiverParameters?.typeParameters ?? const <TypeParameter>[])
+      memberParams[parameter.name.lexeme] ?? CoreTypes.dynamic.ref(ctx),
+  ];
   return instantiateRuntimeCallable(
     ctx,
     callable,

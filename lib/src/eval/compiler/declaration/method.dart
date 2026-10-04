@@ -51,6 +51,8 @@ int compileMethodDeclaration(
   final extensionTypeParameters = switch (parent) {
     ExtensionDeclaration(:final typeParameters) when !d.isStatic =>
       typeParameters?.typeParameters ?? const <TypeParameter>[],
+    ExtensionTypeDeclaration(:final namePart) when !d.isStatic =>
+      namePart.typeParameters?.typeParameters ?? const <TypeParameter>[],
     _ => const <TypeParameter>[],
   };
   final methodTypeParameters =
@@ -76,7 +78,10 @@ int compileMethodDeclaration(
       // The `on` clause likewise resolves in the extension parameter
       // scope so `#this` and the body's `T` references use the same
       // parameter.
+      final declaringHost = d.parent?.parent;
       final receiverType = switch (parent) {
+        ExtensionTypeDeclaration() =>
+          ctx.types.find(ctx.library, parentName)!.instantiate(extensionRefs),
         ExtensionDeclaration(:final onClause) =>
           onClause == null
               ? null
@@ -91,11 +96,18 @@ int compileMethodDeclaration(
                     return null;
                   }
                 }(),
+        // Folding changes the physical owner, not the body's lexical receiver.
+        _ when !d.isStatic && declaringHost is MixinDeclaration =>
+          ctx.types.find(ctx.library, declaringHost.name.lexeme)!.instantiate([
+            for (final parameter
+                in declaringHost.typeParameters?.typeParameters ??
+                    const <TypeParameter>[])
+              ctx.typeScopes[ctx.library]![parameter.name.lexeme]!,
+          ]),
         _ => null,
       };
       // Folded mixin members are compiled under their applied class scope.
       // Preserve that scope before a method parameter can shadow its names.
-      final declaringHost = d.parent?.parent;
       final memberTypeParameters = {
         if (!d.isStatic && declaringHost is Declaration)
           for (final parameter
@@ -146,7 +158,9 @@ int compileMethodDeclaration(
             final thisType =
                 receiverType ?? (isExtensionMember ? null : TypeRef.$this(ctx));
             final concrete =
-                thisType != null &&
+                // A mixin view describes constraints, not the concrete link.
+                declaringHost is! MixinDeclaration &&
+                    thisType != null &&
                     !ctx.hasSubclasses(thisType.file, thisType.name)
                 ? thisType
                 : null;
@@ -448,7 +462,10 @@ void _compileInterfaceNoSuchMethodRequirements(
           implementing == null) {
         continue;
       }
-      final view = ctx.typeSystem.asInstanceOf(implementing.thisType, interface);
+      final view = ctx.typeSystem.asInstanceOf(
+        implementing.thisType,
+        interface,
+      );
       if (view == null) continue;
       final arguments = interfaceArgumentsOf(view);
       if (arguments.length != interface.typeParameters.length ||

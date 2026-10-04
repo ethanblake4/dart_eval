@@ -41,7 +41,9 @@ Variable compileThisExpression(ThisExpression e, CompilerContext ctx) {
   // In an extension or anonymous-method body, `this` is the receiver value
   // itself; LoadThis only exists to resolve the dispatch root of a class
   // instance.
-  final operation = ctx.currentExtension == null
+  final operation =
+      ctx.currentExtension == null &&
+          ctx.currentClass is! ExtensionTypeDeclaration
       ? LoadThis(ctx.svar('this'), receiver.ssa)
       : Assign(ctx.svar('this'), receiver.ssa);
   return Variable.ssa(ctx, operation, receiver.type, rep: receiver.rep)

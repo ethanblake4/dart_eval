@@ -161,7 +161,10 @@ Variable compileBinaryExpression(
       return BuiltinValue(boolval: method == '==').push(ctx);
     }
     if (!value.type.hasNullableRepresentation) {
-      return BuiltinValue(boolval: method == '!=').push(ctx);
+      final folded = BuiltinValue(boolval: method == '!=').push(ctx);
+      return ctx.soundFlowAnalysis(e)
+          ? folded
+          : folded.withFacts(folded.facts.copyWith(clearConstBool: true));
     }
     final test = compileNullCondition(ctx, value);
     return method == '=='

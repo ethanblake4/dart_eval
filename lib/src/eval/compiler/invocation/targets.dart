@@ -76,6 +76,7 @@ final class StaticCall extends CallTarget {
     this.receiver,
     this.ownerLink,
     this.typeEnvironmentReceiver,
+    this.typeArgumentPrefix = const [],
     CallSignature? signature,
     this.declaringLink,
     this.externalIndex,
@@ -111,6 +112,9 @@ final class StaticCall extends CallTarget {
 
   /// A boxed receiver carried for runtime generic checks.
   final Variable? typeEnvironmentReceiver;
+
+  /// Callable owner bindings that precede a method's own type arguments.
+  final List<int> typeArgumentPrefix;
 
   final CallSignature? _signature;
 
@@ -163,7 +167,9 @@ final class StaticCall extends CallTarget {
           ...call.vector(),
         ],
         result: s,
-        typeArguments: call.runtimeTypeArguments,
+        typeArguments: typeArgumentPrefix.isEmpty
+            ? call.runtimeTypeArguments
+            : [...typeArgumentPrefix, ...call.runtimeTypeArguments],
         typeEnvironmentReceiver: ownerNeedsTypeEnvironment
             ? typeEnvironmentReceiver?.boxIfNeeded(ctx).ssa
             : null,

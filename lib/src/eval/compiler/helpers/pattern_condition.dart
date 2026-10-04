@@ -25,7 +25,11 @@ void compileIrrefutablePattern(
   DartPattern pattern,
   Variable subject, {
   required PatternBindContext patternContext,
+  Expression? source,
 }) {
+  final slot = source == null ? null : promotableMemberSlot(ctx, source);
+  final sourceBinding = slot?.local.binding;
+  final sourceEpoch = sourceBinding?.current.writeEpoch;
   final parent = ctx.builder;
   final state = ctx.saveState();
   final failure = BasicBlock<Operation>([], label: ctx.label('pattern_failed'));
@@ -53,6 +57,27 @@ void compileIrrefutablePattern(
       null,
       pattern.name.lexeme,
     ).setValue(ctx, value, pattern);
+  }
+  if (slot != null &&
+      sourceBinding != null &&
+      identical(ctx.lookupBinding(sourceBinding.name), sourceBinding) &&
+      sourceBinding.current.writeEpoch == sourceEpoch) {
+    final matchedType = matchedPatternType(ctx, pattern, subject.type);
+    final currentType = slot.member == null
+        ? sourceBinding.current.type
+        : promotedMemberReadType(
+            ctx,
+            sourceBinding.current,
+            slot.member!,
+            slot.viaSuper,
+          );
+    if (canPromoteTo(ctx, matchedType, currentType, source)) {
+      _promotePatternSlot((
+        local: sourceBinding.current,
+        member: slot.member,
+        viaSuper: slot.viaSuper,
+      ), matchedType);
+    }
   }
   if (!matching.canFail) return;
   final success = ctx.saveState();

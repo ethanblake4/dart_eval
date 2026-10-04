@@ -47,7 +47,8 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
     operand = operand.expression;
   }
   final promotesLocal =
-      operand is SimpleIdentifier || operand is ThisExpression;
+      operand is SimpleIdentifier ||
+      operand is ThisExpression && thisPromotionEnabled(ctx, e);
   final localBinding = switch (operand) {
     SimpleIdentifier(:final name) => ctx.lookupBinding(name),
     ThisExpression() => ctx.lookupBinding('#this'),

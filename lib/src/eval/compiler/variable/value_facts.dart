@@ -23,6 +23,7 @@ final class ValueFacts {
     this.memberPromotionHistory,
     this.truePromotions,
     this.falsePromotions,
+    this.conditionPromotionOrigin,
   });
 
   static const none = ValueFacts();
@@ -88,6 +89,10 @@ final class ValueFacts {
   /// See [truePromotions].
   final Map<String, (TypeRef, int)>? falsePromotions;
 
+  /// Distinguishes separately evaluated conditions with equivalent proofs.
+  /// Copies retain this identity; control-flow joins cannot invent one.
+  final Object? conditionPromotionOrigin;
+
   /// Copies scalar markers and possible classes. Nullable denotation facts
   /// stay unchanged; replace the whole object when a value is overwritten.
   ValueFacts copyWith({
@@ -95,6 +100,7 @@ final class ValueFacts {
     bool? isConst,
     bool? isConstInt,
     bool? constBool,
+    bool clearConstBool = false,
     Map<String, TypeRef>? promotedMembers,
     List<TypeRef>? promotionHistory,
     Map<String, List<TypeRef>>? memberPromotionHistory,
@@ -112,7 +118,7 @@ final class ValueFacts {
     nullShortedPromotions: nullShortedPromotions ?? this.nullShortedPromotions,
     isConst: isConst ?? this.isConst,
     isConstInt: isConstInt ?? this.isConstInt,
-    constBool: constBool ?? this.constBool,
+    constBool: clearConstBool ? null : constBool ?? this.constBool,
     promotedMembers: promotedMembers ?? this.promotedMembers,
     promotionHistory: replacePromotionHistory
         ? promotionHistory
@@ -122,6 +128,9 @@ final class ValueFacts {
         : memberPromotionHistory ?? this.memberPromotionHistory,
     truePromotions: truePromotions ?? this.truePromotions,
     falsePromotions: falsePromotions ?? this.falsePromotions,
+    conditionPromotionOrigin: truePromotions != null || falsePromotions != null
+        ? Object()
+        : conditionPromotionOrigin,
   );
 
   /// Facts for a merged value: [exact] survives only when both inputs
@@ -130,6 +139,10 @@ final class ValueFacts {
   /// retain shared proofs from their promotion histories; recorded conditions
   /// survive only when both edges agree on the same entry.
   ValueFacts join(ValueFacts other) {
+    final sameCondition = identical(
+      conditionPromotionOrigin,
+      other.conditionPromotionOrigin,
+    );
     final memberHistories = joinMemberHistories(other);
     var members = _joinMaps(promotedMembers, other.promotedMembers);
     for (final entry
@@ -159,8 +172,13 @@ final class ValueFacts {
           ? null
           : intersectHistories(promotionHistory, other.promotionHistory),
       memberPromotionHistory: memberHistories,
-      truePromotions: _joinMaps(truePromotions, other.truePromotions),
-      falsePromotions: _joinMaps(falsePromotions, other.falsePromotions),
+      truePromotions: sameCondition
+          ? _joinMaps(truePromotions, other.truePromotions)
+          : null,
+      falsePromotions: sameCondition
+          ? _joinMaps(falsePromotions, other.falsePromotions)
+          : null,
+      conditionPromotionOrigin: sameCondition ? conditionPromotionOrigin : null,
     );
   }
 

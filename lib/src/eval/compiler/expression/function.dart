@@ -1,4 +1,5 @@
 import '../helpers/captures.dart';
+import '../helpers/promotion.dart' show inferenceUpdate4Enabled;
 import '../member/call_signature.dart';
 import '../member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/variable/binding.dart';
@@ -175,6 +176,12 @@ Variable compileFunctionExpression(
         );
         var captureIndex = 0;
         for (final capture in captures.entries) {
+          final legacyAssignedFinal =
+              capture.value.isFinal &&
+              !inferenceUpdate4Enabled(e) &&
+              analysis.assignedDeclarations.contains(
+                capture.value.captureDeclaration,
+              );
           final loaded = ctx.svar('capture');
           ctx.pushOp(LoadCapture(loaded, captureIndex++));
           final lb = ctx.setLocal(
@@ -182,17 +189,22 @@ Variable compileFunctionExpression(
             Variable.of(
               ctx,
               loaded,
-              capture.value.current.type,
+              legacyAssignedFinal
+                  ? capture.value.declaredType
+                  : capture.value.current.type,
               rep: captureValues[capture.key]!.rep,
               // A captured slot carries the same value as the outer one —
               // facts like `isConst` and class narrowing still apply.
-              facts: capture.value.current.facts,
+              facts: legacyAssignedFinal
+                  ? capture.value.current.facts.cleared()
+                  : capture.value.current.facts,
             ),
             declaredType: capture.value.declaredType,
             isFinal: capture.value.isFinal,
             initialized: capture.value.initialized,
           );
           lb.captureDeclaration = capture.value.captureDeclaration;
+          lb.writeCaptured = capture.value.writeCaptured || legacyAssignedFinal;
           if (capture.value.isLateLocal) {
             lb.storage = LateLocalStorage(loaded);
           } else if (capture.value.captureCell != null) {

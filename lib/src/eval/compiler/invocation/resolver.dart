@@ -184,9 +184,8 @@ final class CallResolver {
           throw CompileError('Enum.toString takes no arguments', source);
         }
         final library = ctx.enclosingLibrary ?? ctx.library;
-        final offset = ctx.enumBaseToStringOffsets[
-          (library, host.namePart.typeName.lexeme)
-        ]!;
+        final offset = ctx
+            .enumBaseToStringOffsets[(library, host.namePart.typeName.lexeme)]!;
         return StaticCall(
           DeferredOrOffset(offset: offset),
           receiver: ctx.lookupLocal('#this')!,
@@ -542,6 +541,13 @@ final class CallResolver {
       // value — a property read followed by an implicit `.call`, matching
       // the field/getter path below.
       final receiverType = L.type;
+      if (extensionRepresentationField(ctx, receiverType, e.methodName.name) !=
+          null) {
+        return invokeValue(
+          callSite(),
+          callee: IdentifierReference(L, e.methodName.name).getValue(ctx, e),
+        );
+      }
       if (receiverType is RecordTypeRef &&
           receiverType.named.containsKey(e.methodName.name)) {
         final target = MemberValueCall(
@@ -2295,7 +2301,9 @@ final class CallResolver {
           source: e,
         );
       });
-      return BuiltinValue().push(ctx).copyWith(type: CoreTypes.voidType.ref(ctx));
+      return BuiltinValue()
+          .push(ctx)
+          .copyWith(type: CoreTypes.voidType.ref(ctx));
     }
 
     // Resolve the call kind and its declaration shape before any argument

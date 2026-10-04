@@ -436,6 +436,10 @@ final class SourceTypeDecl extends TypeDecl {
     }
 
     return DeclaredSupertypes(superclass, [
+      if (node case MixinDeclaration(:final onClause))
+        for (final constraint
+            in onClause?.superclassConstraints ?? const <NamedType>[])
+          resolveClauseType(constraint),
       for (final implementsName in implementsClause)
         // `implements Function` has no effect on the subtype relation —
         // a callable class is not a subtype of `Function`.

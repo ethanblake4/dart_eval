@@ -300,7 +300,10 @@ final class SourceMember extends Member {
       return signature;
     }
     final owner = this.owner;
-    if (owner is! TypeDeclMemberOwner) return signature;
+    if (owner is! TypeDeclMemberOwner ||
+        owner.decl.kind == TypeDeclKind.extensionType) {
+      return signature;
+    }
     final inherited = inheritedMemberSignature(
       _ctx,
       owner.decl,
@@ -407,8 +410,9 @@ final class SourceMember extends Member {
         inferStaticExpressionType(ctx, library, defaultValue),
       );
       ctx.inferredFieldTypes
-          .putIfAbsent(library, () => {})
-          .putIfAbsent(_ownerName, () => {})[name.name] = type;
+              .putIfAbsent(library, () => {})
+              .putIfAbsent(_ownerName, () => {})[name.name] =
+          type;
       return type;
     }
     return TypeRef.fromAnnotation(

@@ -366,10 +366,12 @@ sealed class GetTarget {
           source,
         );
       }
-      return ExtensionMethodTearOff(
+      return DirectMethodTearOff(
         receiver,
-        bound.ext,
-        member,
+        DeferredOrOffset(
+          file: bound.ext.library,
+          name: bound.ext.memberKey(member),
+        ),
         boundContext: boundContext,
         typeArguments: typeArguments,
       );
@@ -425,10 +427,12 @@ sealed class GetTarget {
       // An extension method read produces a bound tear-off.
       final foundMethod = resolveExtensionMember(ctx, receiver.type, name);
       if (foundMethod != null) {
-        return ExtensionMethodTearOff(
+        return DirectMethodTearOff(
           receiver,
-          foundMethod.$1,
-          foundMethod.$2,
+          DeferredOrOffset(
+            file: foundMethod.$1.library,
+            name: foundMethod.$1.memberKey(foundMethod.$2),
+          ),
           boundContext: boundContext,
           typeArguments: typeArguments,
         );
@@ -438,11 +442,46 @@ sealed class GetTarget {
         source,
       );
     }
-    final memberNode = member?.member;
+    final memberNode =
+        member?.member ??
+        (resolvedNode?.declaringDecl?.kind == TypeDeclKind.extensionType
+            ? resolvedNode
+            : null);
     final method = memberNode is SourceMember
         ? memberNode.sourceDeclaration
         : null;
     final bridge = memberNode is BridgeMember ? memberNode.def : null;
+    final erasedOwner = memberNode?.declaringDecl;
+    if (erasedOwner?.kind == TypeDeclKind.extensionType &&
+        method is MethodDeclaration) {
+      if (method.isGetter) {
+        return DirectGetterCall(
+          receiver,
+          hops: const [],
+          file: erasedOwner!.library,
+          className: erasedOwner.name,
+          nameKey: method.name.lexeme,
+          fieldType: resolvedField ?? CoreTypes.dynamic.ref(ctx),
+          typeArguments: [
+            for (final argument in interfaceArgumentsOf(resolved!.viewedAs))
+              ctx.runtimeTypes.idOf(argument),
+          ],
+        );
+      }
+      return DirectMethodTearOff(
+        receiver,
+        DeferredOrOffset(
+          file: erasedOwner!.library,
+          className: erasedOwner.name,
+          name: ctx.instanceMethodKey(
+            method.name.lexeme,
+            positionalArityOf(method),
+          ),
+        ),
+        boundContext: boundContext,
+        typeArguments: typeArguments,
+      );
+    }
     final isDeclaredMethod =
         method is MethodDeclaration && !method.isGetter && !method.isSetter;
     final isBridgeMethod = bridge is BridgeMethodDef;
@@ -808,6 +847,7 @@ final class DirectGetterCall extends GetTarget {
     required this.className,
     required this.nameKey,
     required this.fieldType,
+    this.typeArguments = const [],
   });
 
   /// The receiver the hop chain starts from; boxed during emission and
@@ -821,6 +861,7 @@ final class DirectGetterCall extends GetTarget {
   final String className;
   final String nameKey;
   final TypeRef fieldType;
+  final List<int> typeArguments;
 
   @override
   Variable emit(CompilerContext ctx) {
@@ -837,6 +878,7 @@ final class DirectGetterCall extends GetTarget {
         ),
         [linkSsa],
         result: ctx.svar(nameKey),
+        typeArguments: typeArguments,
         typeEnvironmentReceiver: boxed.ssa,
       ),
       fieldType,
@@ -1002,18 +1044,16 @@ final class ExtensionGetterCall extends GetTarget {
 }
 
 /// Materializes an extension method as a closure capturing its receiver.
-final class ExtensionMethodTearOff extends GetTarget {
-  const ExtensionMethodTearOff(
+final class DirectMethodTearOff extends GetTarget {
+  const DirectMethodTearOff(
     this.receiver,
-    this.ext,
-    this.member, {
+    this.offset, {
     this.boundContext,
     this.typeArguments,
   });
 
   final Variable receiver;
-  final EvalExtension ext;
-  final MethodDeclaration member;
+  final DeferredOrOffset offset;
   final TypeRef? boundContext;
   final List<TypeRef>? typeArguments;
 
@@ -1021,7 +1061,7 @@ final class ExtensionMethodTearOff extends GetTarget {
   Variable emit(CompilerContext ctx) {
     return materializeTearOff(
       ctx,
-      DeferredOrOffset(file: ext.library, name: ext.memberKey(member)),
+      offset,
       implicitReceiver: receiver,
       boundContext: boundContext,
       typeArguments: typeArguments,
@@ -1223,6 +1263,26 @@ sealed class SetTarget {
           source: source,
         );
     final fieldType = declaredFieldType ?? CoreTypes.dynamic.ref(ctx);
+    final setter = ctx.memberLookup.tryInterfaceMember(
+      object.type,
+      ctx.memberNameOf(name, MemberKind.setter),
+    );
+    final owner = setter?.member.declaringDecl;
+    if (owner?.kind == TypeDeclKind.extensionType) {
+      return DirectSetterCall(
+        object,
+        hops: const [],
+        file: owner!.library,
+        className: owner.name,
+        nameKey: name,
+        fieldType: fieldType,
+        name: name,
+        typeArguments: [
+          for (final argument in interfaceArgumentsOf(setter!.viewedAs))
+            ctx.runtimeTypes.idOf(argument),
+        ],
+      );
+    }
     final exact = object.exactType ?? declaredLeafClass(ctx, object.type);
     if (exact != null) {
       // Storage for an inherited field lives on its declaring class's
@@ -1435,6 +1495,7 @@ final class DirectSetterCall extends SetTarget {
     required this.nameKey,
     required this.fieldType,
     required this.name,
+    this.typeArguments = const [],
   });
 
   /// The receiver the hop chain starts from; boxed during emission and
@@ -1446,6 +1507,7 @@ final class DirectSetterCall extends SetTarget {
   final String nameKey;
   final TypeRef fieldType;
   final String name;
+  final List<int> typeArguments;
 
   @override
   Variable emit(CompilerContext ctx, Variable value) {
@@ -1462,6 +1524,7 @@ final class DirectSetterCall extends SetTarget {
         ),
         [linkSsa, val.ssa],
         result: ctx.svar(name),
+        typeArguments: typeArguments,
         typeEnvironmentReceiver: boxed.ssa,
       ),
     );

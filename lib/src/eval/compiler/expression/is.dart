@@ -16,7 +16,12 @@ Variable compileIsExpression(IsExpression e, CompilerContext ctx) {
   final runtimeSlot = slot.erasedExtensionType;
 
   // `x is S` narrows only when `S` is a subtype of the operand's type.
-  if (canPromoteTo(ctx, slot, V.type, e)) {
+  Expression target = e.expression;
+  while (target is ParenthesizedExpression) {
+    target = target.expression;
+  }
+  if ((target is! ThisExpression || thisPromotionEnabled(ctx, e)) &&
+      canPromoteTo(ctx, slot, V.type, e)) {
     V.inferType(ctx, slot);
   }
 

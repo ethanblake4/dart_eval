@@ -27,6 +27,7 @@ void compilePatternVariableDeclaration(
     ctx,
     dec.pattern,
     result,
+    source: dec.expression,
     patternContext: dec.keyword.keyword == Keyword.FINAL
         ? PatternBindContext.declareFinal
         : PatternBindContext.declare,

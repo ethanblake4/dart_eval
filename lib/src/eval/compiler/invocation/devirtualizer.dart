@@ -38,6 +38,29 @@ final class Devirtualizer {
 
   CallTarget _refine(VirtualCall target, {required bool lexicalSuper}) {
     final L = target.receiver;
+    final declared = target.member?.declaringDecl;
+    if (!L.type.nullable && declared?.kind == TypeDeclKind.extensionType) {
+      final view = ctx.typeSystem.asInstanceOf(L.type, declared)!;
+      return StaticCall(
+        DeferredOrOffset(
+          file: declared!.library,
+          className: declared.name,
+          methodType: MemberKind.method,
+          name: ctx.instanceMethodKey(
+            target.name,
+            target.signature?.positional.length ?? 0,
+          ),
+        ),
+        receiver: L,
+        declaringLink: view,
+        member: target.member,
+        signature: target.signature,
+        typeArgumentPrefix: [
+          for (final argument in interfaceArgumentsOf(view))
+            ctx.runtimeTypes.idOf(argument),
+        ],
+      );
+    }
     final exact = L.exactType ?? declaredLeafClass(ctx, L.type);
     if (!lexicalSuper && hasBridgeSuperclass(ctx, exact ?? L.type)) {
       return target;
