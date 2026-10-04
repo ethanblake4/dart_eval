@@ -4501,3 +4501,29 @@ savings are 4614 and 6955 microseconds, about 2.6% and 4.0% of the corresponding
 reference medians. These measurements support the bytecode reduction without
 claiming the larger gains seen in some separate-executable runs. Artifacts are
 under .dart_tool/improvement_loop/cycle27.
+
+Larger 31-sample rechecks of the sweep's call, native-Future, inherited-dispatch
+and HTTP-header slowdown signals do not reproduce a greater-than-5% slowdown
+in both orders. Their execution checksums match. The desktop timings still vary
+substantially, so these results do not establish broad runtime throughput gains.
+
+### Cycle 27 compiler speed: dead-definition worklist
+
+The sibling CFG compiler pass replaces repeated scans with a worklist of unused
+definitions. Removing a definition queues a producer only when its last consumer
+disappears. It preserves effect and throwing policies, keeps leafless cycles,
+invalidates SSA edges once, and compacts each affected block once in stable
+order. Four focused tests cover a 4096-definition chain, cross-block propagation,
+cycles and caller-supplied purity policies; all 109 CFG tests pass.
+
+The AOT chain diagnostic reduces policy calls from 8394753 to 4096 and median
+cleanup from roughly 324-330 milliseconds to 2.2 milliseconds in both orders,
+about 150 times faster. This is a worst-case cleanup result, not a whole-program
+compilation claim. The mixed Dart benchmark and generated pipelines retain
+identical complete serialized bytes, hashes and guest checksums under both
+algorithms. A temporary same-AOT compiler experiment alternates the algorithms
+for 31 sample pairs after 20 warmup pairs. DCE's median paired savings are 29
+microseconds for the mixed source; the 64- and 256-stage sources add 51 and 8
+microseconds. Whole-compile timing varies more than those phase differences.
+The change removes quadratic compiler work while leaving ordinary compilation
+close to the previous cost; it does not add a runtime path or change bytecode.
