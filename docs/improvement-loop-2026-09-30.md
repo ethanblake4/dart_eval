@@ -4706,3 +4706,25 @@ harness explicitly exports its extra check function, and missing-entrypoint
 expectations follow the launch classification. The duplicate commented-main
 control is removed. All 51 affected focused tests pass; the final default gate
 will run after the performance and cleanup steps.
+
+### Cycle 28 performance experiments
+
+The retained improvements are direct List result-type metadata reuse and lazy
+cast diagnostics, measured above against the intermediate correctness version.
+Two additional compiler-only experiments were rejected after AOT controls.
+
+String field-read reuse reduced score from eight loads to five and from 141
+bytes to 133, but introduced a second object spill. The full 23-case sweeps
+matched checksums, with target timing at -5.79% and +4.16%. A larger 31-sample
+ABBA control was effectively flat at -0.06% and -1.11%. The candidate is removed.
+
+Scalar store-to-load forwarding removed new loads in isolated integer, double,
+and boolean controls. The existing integer-field benchmark emitted unchanged
+bytecode, so it could not establish a benefit. The new stream_averages benchmark
+models per-device reporting windows that return a mean after each reading and
+reset periodically. Its accept method fell from four loads to three and 43
+bytes to 40, with unchanged spills. Standalone 31-sample ABBA results were
+-2.94% and -0.79%; a same-runtime interleaved control measured only a 0.81%
+median paired improvement. Both programs matched native checksum 505853876.
+That candidate is also removed. The realistic benchmark remains for future
+performance sweeps; neither rejected optimization adds compiler machinery.
