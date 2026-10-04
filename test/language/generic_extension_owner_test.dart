@@ -3,6 +3,31 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('static members do not seed empty generic extension owners', () {
+    const source = '''
+      extension type Scalar<T>(T value) {
+        static int get marker => 3;
+        Type get ownerType => T;
+        T echo(T other) => other;
+        S shadow<S>(S other) => other;
+      }
+      extension Sequence<T> on List<T> {
+        static bool get marker => true;
+        Type get ownerType => T;
+        T get firstValue => first;
+      }
+      bool main() => Scalar.marker == 3 && Sequence.marker &&
+          Scalar<num>(7).ownerType == num &&
+          Scalar<num>(7).echo(2.5) == 2.5 &&
+          Scalar<num>(7).shadow<String>('ok') == 'ok' &&
+          <String>['x'].ownerType == String &&
+          <String>['x'].firstValue == 'x';
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
   test('extension receiver inference enforces substituted bounds', () {
     const source = '''
       extension Fallback on Object {

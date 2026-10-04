@@ -66,15 +66,17 @@ int compileMethodDeclaration(
       // opens — a method parameter may shadow an extension parameter's
       // name, and the callable env must carry the extension's defs in
       // their declared positions.
-      final extensionRefs = declaredTypeParameterRefs(
-        ctx,
-        TypeParameterOwner(
-          TypeParameterOwnerKind.extension,
-          ctx.library,
-          parentName,
-        ),
-        extensionTypeParameters,
-      );
+      final extensionRefs = extensionTypeParameters.isEmpty
+          ? const <TypeParameterTypeRef>[]
+          : declaredTypeParameterRefs(
+              ctx,
+              TypeParameterOwner(
+                TypeParameterOwnerKind.extension,
+                ctx.library,
+                parentName,
+              ),
+              extensionTypeParameters,
+            );
       // The `on` clause likewise resolves in the extension parameter
       // scope so `#this` and the body's `T` references use the same
       // parameter.

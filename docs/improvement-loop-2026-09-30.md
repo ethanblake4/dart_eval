@@ -4552,3 +4552,14 @@ entries and no unlisted regressions. CFG verification remains 109 passing
 tests. Performance, compiler-speed and cleanup checkpoints are pushed directly
 to xv2 and control_flow_graph/main. Cycle 28 continues with the remaining
 failure groups; the next scheduled extra compiler-speed pass is cycle 30.
+
+### Cycle 28 correctness pass 1
+
+Static extension methods no longer intern an empty owner type-parameter list.
+That cached list prevented later generic instance methods from resolving their
+extension parameters. The original shorthand type-alias fixture now passes
+fresh and serialized execution, and its expect_fail entry is removed. A single
+combined extension-owner regression covers static-first declarations, instance
+substitution and method parameter shadowing. Fourteen focused tests pass and
+the changed compiler and test files have clean analysis. No extra bytecode or
+runtime path is introduced.
