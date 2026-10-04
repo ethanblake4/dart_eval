@@ -128,6 +128,8 @@ String argumentAccessor(
       : enclosing is ExecutableElement && !enclosing.isStatic
       ? exportValues
             ? 'bridge'
+            : enclosing is SetterElement
+            ? 'this'
             : 'self'
       : 'static';
   final defaultExpr = useDefaultValue

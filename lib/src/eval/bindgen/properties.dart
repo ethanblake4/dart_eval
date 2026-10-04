@@ -187,9 +187,13 @@ String propertySetters(
     return '';
   }
   if (isBridge) {
-    return 'switch (identifier) {\n${setters.map((e) => '''
+    final needsRuntime = setters.any((setter) {
+      final type = setter.formalParameters.single.type;
+      return type is FunctionType || type.isDartCoreFunction;
+    });
+    return '${needsRuntime ? 'final runtime = \$runtime;\n' : ''}switch (identifier) {\n${setters.map((e) => '''
         case '${ctx.memberConfig(e.name!, 'setter')?.rename ?? e.displayName}':
-          super.${e.displayName} = value.\$reified;
+          super.${e.displayName} = ${_setterValue(ctx, e, isBridge: true)};
           return;
         ''').join('\n')}\n}';
   }
@@ -210,7 +214,7 @@ String propertySetters(
     }
     return '''
         case '${member?.rename ?? e.displayName}':
-          \$value.${e.displayName} = value.\$reified;
+          \$value.${e.displayName} = ${_setterValue(ctx, e)};
           return;''';
   }).join('\n')}${syntheticSetters.map((s) {
     if (s.hook != null) {
@@ -224,4 +228,24 @@ String propertySetters(
           ${s.expr ?? ''};
           return;''';
   }).join('\n')}\n}';
+}
+
+String _setterValue(
+  BindgenContext ctx,
+  PropertyAccessorElement setter, {
+  bool isBridge = false,
+}) {
+  final parameter = setter.formalParameters.single;
+  if (parameter.type is! FunctionType && !parameter.type.isDartCoreFunction) {
+    return 'value.\$reified';
+  }
+  return argumentAccessor(
+    ctx,
+    0,
+    parameter,
+    argumentSource: 'value',
+    exportValues: isBridge,
+    includeNamedLabel: false,
+    useDefaultValue: false,
+  );
 }

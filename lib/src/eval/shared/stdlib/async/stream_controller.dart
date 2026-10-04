@@ -678,7 +678,23 @@ class $StreamController<T> implements $Instance {
   ) {
     final self = target! as $StreamController;
     final result = self.$value.addStream(
-      (r as $Value?)!.$value,
+      (() {
+        final streamPayloadType =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return TypedInterop.stream((r as $Value?), runtime, exportErrors: true)
+            .map(
+              (value) => TypedInterop.exportStreamPayload<dynamic>(
+                value,
+                runtime,
+                streamPayloadType,
+                (payload) =>
+                    TypedInterop.exportExternal(payload, runtime: runtime)
+                        as dynamic,
+              ),
+            )
+            .cast<dynamic>();
+      })(),
       cancelOnError: (s is $Value ? s : null)?.$value,
     );
     return $Future.wrap(
@@ -740,16 +756,49 @@ class $StreamController<T> implements $Instance {
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     switch (identifier) {
       case 'onListen':
-        $value.onListen = value.$reified;
+        $value.onListen = value == null || value is $null
+            ? null
+            : runtime.cachedCallback(
+                value! as EvalCallable,
+                "void Function();export=false",
+                (_callable) => () {
+                  _callable.call(runtime, null, null, null, 0);
+                },
+              );
         return;
       case 'onPause':
-        $value.onPause = value.$reified;
+        $value.onPause = value == null || value is $null
+            ? null
+            : runtime.cachedCallback(
+                value! as EvalCallable,
+                "void Function();export=false",
+                (_callable) => () {
+                  _callable.call(runtime, null, null, null, 0);
+                },
+              );
         return;
       case 'onResume':
-        $value.onResume = value.$reified;
+        $value.onResume = value == null || value is $null
+            ? null
+            : runtime.cachedCallback(
+                value! as EvalCallable,
+                "void Function();export=false",
+                (_callable) => () {
+                  _callable.call(runtime, null, null, null, 0);
+                },
+              );
         return;
       case 'onCancel':
-        $value.onCancel = value.$reified;
+        $value.onCancel = value == null || value is $null
+            ? null
+            : runtime.cachedCallback(
+                value! as EvalCallable,
+                "FutureOr<void> Function();export=false",
+                (_callable) => () {
+                  return _callable.call(runtime, null, null, null, 0)?.$value
+                      as FutureOr<void>;
+                },
+              );
         return;
     }
     return _superclass.$setProperty(runtime, identifier, value);
