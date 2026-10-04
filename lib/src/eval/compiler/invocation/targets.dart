@@ -340,7 +340,15 @@ final class ConstructorCall extends CallTarget {
   @override
   Variable emit(CompilerContext ctx, BoundCall call) {
     var instantiatedType = this.instantiatedType;
-    if (constructor != null ||
+    // Explicit variance permits argument inference to refine a contextual
+    // application. Legacy applications already carry their enclosing bindings.
+    final refineArguments =
+        constructor != null &&
+        (nominalDeclOf(instantiatedType ?? staticType)?.typeParameters.any(
+              (parameter) => parameter.hasExplicitVariance,
+            ) ??
+            false);
+    if (refineArguments ||
         instantiatedType == null ||
         instantiatedType.hasSchemaHoles) {
       instantiatedType = call.returnType;
