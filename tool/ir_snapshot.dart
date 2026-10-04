@@ -15,7 +15,7 @@ import 'package:dart_eval/src/eval/compiler/model/source.dart';
 
 import '../test/sdk_language/sdk_language.dart';
 
-const _defaultOut = 'tool/ir_snapshot.json';
+const _defaultOut = '.dart_tool/ir_snapshot.json';
 
 Future<Map<String, String>> _snapshot() async {
   final out = <String, String>{};
@@ -97,7 +97,7 @@ Future<void> main(List<String> args) async {
     }
   }
 
-  // --compare tool/ir_snapshot.json uses the same path as the default output.
+  // Comparing the default output path must not overwrite the baseline.
   // Keep the baseline intact; a separate --out path can retain the new data.
   final baseline = comparePath == null
       ? null

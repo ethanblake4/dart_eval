@@ -1,9 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
-// Characterization tests for the argument-binding bugs documented in
-// docs/compiler-model-refactor.md ("Confirmed bugs"), asserting the
-// Dart-correct outcomes after the phase-7 semantic changes.
+// Regression tests for argument binding and evaluation order.
 
 const _library = 'package:binding/main.dart';
 
