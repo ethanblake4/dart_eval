@@ -7,6 +7,7 @@ import 'package:collection/collection.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/errors.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 
 String namedParameters(
@@ -108,6 +109,19 @@ String argumentAccessor(
     );
   }
   final type = param.type;
+  if (paramConfig?.preserveUint8List ?? false) {
+    if (!type.isDartCoreList ||
+        type.nullabilitySuffix != NullabilitySuffix.none ||
+        type is! InterfaceType ||
+        type.typeArguments.length != 1 ||
+        !type.typeArguments.single.isDartCoreInt ||
+        type.typeArguments.single.nullabilitySuffix != NullabilitySuffix.none) {
+      throw BindingGenerationError(
+        'preserveUint8List requires a non-nullable List<int> parameter: '
+        '${param.name} has type ${type.getDisplayString()}',
+      );
+    }
+  }
   final enclosing = param.enclosingElement;
   final owner = enclosing is ConstructorElement
       ? 'constructor'
@@ -310,6 +324,17 @@ String argumentAccessor(
           owner: owner,
           nativeTypeParameters: owner == 'bridge',
         ),
+      );
+      return paramBuffer.toString();
+    }
+    if (paramConfig?.preserveUint8List ?? false) {
+      ctx.imports.add('dart:typed_data');
+      ctx.imports.add(
+        'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+      );
+      paramBuffer.write(
+        '(() { final value = TypedInterop.exportExternal($source, runtime: runtime); '
+        'return value is Uint8List ? value : (value as List).cast<int>(); })()',
       );
       return paramBuffer.toString();
     }

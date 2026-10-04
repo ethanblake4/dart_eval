@@ -19,6 +19,7 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/stdlib/core.dart'
     hide
+        $BytesBuilder,
         $ByteBuffer,
         $TypedData,
         $ByteData,
@@ -40,6 +41,289 @@ import '../core/iterator.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
+
+/// dart_eval wrapper binding for [BytesBuilder]
+class $BytesBuilder implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:typed_data',
+      'BytesBuilder.',
+      $BytesBuilder.$new,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$BytesBuilder]
+  static const $spec = BridgeTypeSpec('dart:typed_data', 'BytesBuilder');
+
+  /// Compile-time type declaration of [$BytesBuilder]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$BytesBuilder]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType($type, isAbstract: true),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [
+            BridgeParameter(
+              'copy',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
+              defaultValueSource: "true",
+            ),
+          ],
+          params: [],
+        ),
+        isFactory: true,
+      ),
+    },
+
+    methods: {
+      'add': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'bytes',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'addByte': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'byte',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'takeBytes': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(TypedDataTypes.uint8List, []),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'toBytes': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(TypedDataTypes.uint8List, []),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'clear': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+    },
+    getters: {
+      'length': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'isEmpty': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'isNotEmpty': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+    },
+    setters: {},
+    fields: {},
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [BytesBuilder.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $BytesBuilder.wrap(
+      BytesBuilder(
+        copy: (r is $Value ? r : null) == null ? true : (r as $bool).$value,
+      ),
+    );
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final BytesBuilder $value;
+
+  @override
+  BytesBuilder get $reified => $value;
+
+  /// Wrap a [BytesBuilder] in a [$BytesBuilder]
+  $BytesBuilder.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'length':
+        final _length = $value.length;
+        return $int(_length);
+      case 'isEmpty':
+        final _isEmpty = $value.isEmpty;
+        return $bool(_isEmpty);
+      case 'isNotEmpty':
+        final _isNotEmpty = $value.isNotEmpty;
+        return $bool(_isNotEmpty);
+      case 'add':
+        return $Closure(__add.func, this);
+
+      case 'addByte':
+        return $Closure(__addByte.func, this);
+
+      case 'takeBytes':
+        return $Closure(__takeBytes.func, this);
+
+      case 'toBytes':
+        return $Closure(__toBytes.func, this);
+
+      case 'clear':
+        return $Closure(__clear.func, this);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __add = $Function(_add);
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $BytesBuilder;
+    self.$value.add(
+      (() {
+        final value = TypedInterop.exportExternal(
+          (r as $Value?),
+          runtime: runtime,
+        );
+        return value is Uint8List ? value : (value as List).cast<int>();
+      })(),
+    );
+    return null;
+  }
+
+  static const $Function __addByte = $Function(_addByte);
+  static $Value? _addByte(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $BytesBuilder;
+    self.$value.addByte((r as $int).$value);
+    return null;
+  }
+
+  static const $Function __takeBytes = $Function(_takeBytes);
+  static $Value? _takeBytes(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $BytesBuilder;
+    final result = self.$value.takeBytes();
+    return $Uint8List.wrap(result);
+  }
+
+  static const $Function __toBytes = $Function(_toBytes);
+  static $Value? _toBytes(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $BytesBuilder;
+    final result = self.$value.toBytes();
+    return $Uint8List.wrap(result);
+  }
+
+  static const $Function __clear = $Function(_clear);
+  static $Value? _clear(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $BytesBuilder;
+    self.$value.clear();
+    return null;
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
 
 /// dart_eval wrapper binding for [ByteBuffer]
 class $ByteBuffer implements $Instance {

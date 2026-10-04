@@ -141,6 +141,7 @@ class DartCorePlugin implements EvalPlugin {
     $List.configureForRuntime(runtime);
     $MapEntry.configureForRuntime(runtime);
     $Iterable$bridge.configureForRuntime(runtime);
+    $Iterator$bridge.configureForRuntime(runtime);
     $Iterable.configureForRuntime(runtime);
     $Stopwatch.configureForRuntime(runtime);
     $Duration.configureForRuntime(runtime);

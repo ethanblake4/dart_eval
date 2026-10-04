@@ -671,10 +671,14 @@ class Bindgen implements BridgeDeclarationRegistry {
     ));
 
     if (isBridge) {
+      final bridgeType = '${element.name}${_typeArgs(element)}';
+      final bridgeClassClause = element.isInterface
+          ? 'with \$Bridge<$bridgeType> implements $bridgeType'
+          : 'extends $bridgeType with \$Bridge<$bridgeType>';
       String code =
           '''
 /// dart_eval bridge binding for [${element.name}]
-class $wrapperName\$bridge${_typeParams(ctx, element)} extends ${element.name}${_typeArgs(element)} with \$Bridge<${element.name}${_typeArgs(element)}> {
+class $wrapperName\$bridge${_typeParams(ctx, element)} $bridgeClassClause {
 ${bindForwardedConstructors(ctx, element)}
 ${bindConfigureForRuntime(ctx, element, isBridge: true)}
 /// Compile-time type specification of [$wrapperName\$bridge]
@@ -702,6 +706,8 @@ ${bindDecoratorMethods(ctx, element)}
             '''
 /// dart_eval lightweight wrapper binding for [${element.name}]
 class $wrapperName${_typeParams(ctx, element)} implements \$Instance {
+/// Compile-time declaration shared with the bridge binding.
+static const \$declaration = $wrapperName\$bridge.\$declaration;
 /// Compile-time type specification of [$wrapperName]
 ${bindTypeSpec(ctx, element)}
 /// Compile-time type declaration of [$wrapperName]

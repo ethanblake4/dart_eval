@@ -8,6 +8,7 @@ class DartTypedDataPlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
+    $BytesBuilder.configureForCompile(registry);
     $ByteBuffer.configureForCompile(registry);
     $TypedData.configureForCompile(registry);
     $ByteData.configureForCompile(registry);
@@ -27,6 +28,7 @@ class DartTypedDataPlugin implements EvalPlugin {
 
   @override
   void configureForRuntime(Runtime runtime) {
+    $BytesBuilder.configureForRuntime(runtime);
     $ByteBuffer.configureForRuntime(runtime);
     $TypedData.configureForRuntime(runtime);
     $ByteData.configureForRuntime(runtime);

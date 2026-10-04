@@ -163,6 +163,19 @@ class $Set<E> implements Set<E>, $Instance {
         ),
         isStatic: false,
       ),
+      'removeWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              false,
+            ),
+          ],
+        ),
+        isStatic: false,
+      ),
       'lookup': BridgeMethodDef(
         BridgeFunctionDef(
           params: [
@@ -331,6 +344,8 @@ class $Set<E> implements Set<E>, $Instance {
         return $Closure(__remove.func, this);
       case 'clear':
         return $Closure(__clear.func, this);
+      case 'removeWhere':
+        return $Closure(__$removeWhere.func, this);
       case 'lookup':
         return $Closure(__lookup.func, this);
       case 'intersection':
@@ -427,6 +442,23 @@ class $Set<E> implements Set<E>, $Instance {
     Object? c,
   ) {
     (target!.$value as Set).clear();
+    return null;
+  }
+
+  static const $Function __$removeWhere = $Function(_removeWhere);
+
+  static $Value? _removeWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final set = (target as $Set).$value;
+    final test = (r as $Value?) as EvalCallable;
+    set.removeWhere(
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
+    );
     return null;
   }
 

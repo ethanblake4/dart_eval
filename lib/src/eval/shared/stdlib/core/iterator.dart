@@ -56,20 +56,29 @@ import 'package:dart_eval/stdlib/core.dart'
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
-/// dart_eval wrapper binding for [Iterator]
-class $Iterator<E> implements $Instance {
+/// dart_eval bridge binding for [Iterator]
+class $Iterator$bridge<E> with $Bridge<Iterator<E>> implements Iterator<E> {
+  $Iterator$bridge.new() {}
+
   /// Configure this class for use in a [Runtime]
-  static void configureForRuntime(Runtime runtime) {}
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Iterator.',
+      $Iterator$bridge.$new,
+      isBridge: true,
+    );
+  }
 
   /// Configure this class for use during compilation
   static void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$Iterator]
+  /// Compile-time type specification of [$Iterator$bridge]
   static const $spec = BridgeTypeSpec('dart:core', 'Iterator');
 
-  /// Compile-time type declaration of [$Iterator]
+  /// Compile-time type declaration of [$Iterator$bridge]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$Iterator]
@@ -115,9 +124,50 @@ class $Iterator<E> implements $Instance {
     },
     setters: {},
     fields: {},
-    wrap: true,
-    bridge: false,
+    wrap: false,
+    bridge: true,
   );
+
+  /// Proxy for the [Iterator.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Iterator$bridge();
+  }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    final runtime = $runtime;
+
+    return $bridgeGetObject(
+      identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {}
+
+  @override
+  E get current => $_get('current');
+
+  @override
+  bool moveNext() {
+    final runtime = $runtime;
+    return $_invoke('moveNext', []);
+  }
+}
+
+/// dart_eval lightweight wrapper binding for [Iterator]
+class $Iterator<E> implements $Instance {
+  /// Compile-time declaration shared with the bridge binding.
+  static const $declaration = $Iterator$bridge.$declaration;
+
+  /// Compile-time type specification of [$Iterator]
+  static const $spec = BridgeTypeSpec('dart:core', 'Iterator');
+
+  /// Compile-time type declaration of [$Iterator]
+  static const $type = BridgeTypeRef($spec);
 
   final $Instance _superclass;
 

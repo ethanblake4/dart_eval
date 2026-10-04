@@ -35,6 +35,8 @@ libraries:
         file: date_time.dart
       Iterator:
         file: iterator.dart
+        mode: both
+        implementsSdk: true
       Comparable:
         file: comparable.dart
       Sink:
@@ -628,6 +630,13 @@ libraries:
       file: lib/src/eval/shared/types.dart
       class: TypedDataTypes
     classes:
+      BytesBuilder:
+        file: typed_data.dart
+        methods:
+          add:
+            params:
+              bytes:
+                preserveUint8List: true
       ByteBuffer:
         file: typed_data.dart
       TypedData:

@@ -19,8 +19,28 @@ String bindForwardedConstructors(
             !cstr.isFactory &&
             ctx.memberIncluded(cstr.name ?? '', 'constructor'),
       )
-      .map((e) => _$forwardedConstructor(ctx, element, e, isBridge: isBridge))
+      .map(
+        (e) => element.isInterface
+            ? _interfaceConstructor(ctx, element, e)
+            : _$forwardedConstructor(ctx, element, e, isBridge: isBridge),
+      )
       .join('\n');
+}
+
+String _interfaceConstructor(
+  BindgenContext ctx,
+  ClassElement element,
+  ConstructorElement constructor,
+) {
+  final namedConstructor = constructor.name == null
+      ? ''
+      : '.' + constructor.name!;
+  final bridgeName = ctx.wrapperName(element) + r'$bridge' + namedConstructor;
+  return '  ' +
+      bridgeName +
+      '(' +
+      parameterHeader(constructor.formalParameters, preserveTypes: true) +
+      ') {}';
 }
 
 String _$forwardedConstructor(

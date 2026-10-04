@@ -571,6 +571,9 @@ class TypedDataTypes {
   /// Bridge spec for [ByteData].
   static const byteData = BridgeTypeSpec('dart:typed_data', 'ByteData');
 
+  /// Bridge spec for [BytesBuilder].
+  static const bytesBuilder = BridgeTypeSpec('dart:typed_data', 'BytesBuilder');
+
   /// Bridge spec for [Endian].
   static const endian = BridgeTypeSpec('dart:typed_data', 'Endian');
 

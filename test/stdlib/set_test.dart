@@ -1,6 +1,8 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:test/test.dart';
 
+import '../support/dynamic_fixtures.dart';
+
 void main() {
   group('Set tests', () {
     late Compiler compiler;
@@ -130,5 +132,39 @@ void main() {
 
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 'true');
     });
+
+    test(
+      'removeWhere calls guest predicates with scalar and object elements',
+      () {
+        for (final (mode, result) in runDynamicFixture(r'''
+        class Counter {
+          Counter(this.value);
+          int value;
+        }
+
+        bool main() {
+          final values = <int>{1, 2, 3, 4};
+          var visits = 0;
+          values.removeWhere((value) {
+            visits++;
+            return value.isEven;
+          });
+
+          final counters = <Counter>{Counter(0), Counter(1)};
+          counters.removeWhere((counter) {
+            counter.value++;
+            return counter.value == 1;
+          });
+
+          return visits == 4 &&
+              values.join(',') == '1,3' &&
+              counters.length == 1 &&
+              counters.single.value == 2;
+        }
+      ''')) {
+          expect(result, const DynamicFixtureResult.value(true), reason: mode);
+        }
+      },
+    );
   });
 }

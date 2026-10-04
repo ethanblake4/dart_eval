@@ -759,16 +759,26 @@ class BindgenPermissionConfig {
 
 /// Parameter override within a member config.
 class BindgenParamConfig {
-  const BindgenParamConfig({this.type, this.optional, this.defaultValue});
+  const BindgenParamConfig({
+    this.type,
+    this.optional,
+    this.defaultValue,
+    this.preserveUint8List = false,
+  });
 
   final String? type;
   final bool? optional;
   final String? defaultValue;
 
+  /// Retain native `Uint8List` inputs for a non-nullable `List<int>` parameter.
+  /// Other lists still use the generated `cast<int>()` view.
+  final bool preserveUint8List;
+
   factory BindgenParamConfig.fromYaml(YamlMap yaml) => BindgenParamConfig(
     type: _str(yaml['type']),
     optional: _bool(yaml['optional']),
     defaultValue: _str(yaml['default']),
+    preserveUint8List: _bool(yaml['preserveUint8List']) ?? false,
   );
 }
 
