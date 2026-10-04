@@ -5,6 +5,7 @@ import '../errors.dart';
 import '../expression/expression.dart';
 import '../type.dart';
 import '../variable.dart';
+import '../builtins.dart';
 import 'conversion.dart';
 import '../invocation/binder.dart';
 import 'default_value.dart';
@@ -184,10 +185,18 @@ final class _ExtensionConstruction {
     PrimaryConstructorDeclaration primary,
     ArgumentList arguments,
   ) {
-    if (arguments.arguments.length != 1 ||
-        arguments.arguments.single is NamedArgument) {
+    final parameter = declaration.extensionRepresentationParameter!;
+    final supplied = arguments.arguments;
+    final argument = supplied.firstOrNull;
+    if (supplied.length > 1 ||
+        parameter.isRequired && argument == null ||
+        argument != null &&
+            (parameter.isNamed
+                ? argument is! NamedArgument ||
+                      argument.name.lexeme != parameter.name!.lexeme
+                : argument is NamedArgument)) {
       throw CompileError(
-        'Expected one positional representation argument',
+        'Invalid extension type representation arguments',
         source,
       );
     }
@@ -198,11 +207,17 @@ final class _ExtensionConstruction {
     final representation = inferArguments
         ? null
         : declaration.extensionRepresentationFor(instantiatedType)!;
-    final value = compileExpression(
-      arguments.arguments.single.argumentExpression,
-      ctx,
-      representation,
-    );
+    final defaultValue = parameter.defaultClause?.value;
+    final value = argument != null
+        ? compileExpression(argument.argumentExpression, ctx, representation)
+        : defaultValue != null
+        ? withDefaultExpressionScope(
+            ctx,
+            declaration.library,
+            defaultValue,
+            () => compileExpression(defaultValue, ctx, representation),
+          )
+        : BuiltinValue().push(ctx);
     return _finish(value);
   }
 

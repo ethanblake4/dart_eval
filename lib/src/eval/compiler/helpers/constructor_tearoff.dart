@@ -37,16 +37,20 @@ CallSignature constructorTearOffSignature(
       );
     }
     final parameter = owner.extensionRepresentationParameter!;
+    final defaultValue = parameter.defaultClause?.value;
+    final spec = ParameterSpec(
+      parameter.name!.lexeme,
+      owner.extensionRepresentation!,
+      isRequired: parameter.isRequired,
+      node: parameter,
+      defaultValue: defaultValue != null
+          ? SourceDefault(defaultValue, owner.library)
+          : null,
+    );
     return CallSignature(
-      positional: [
-        ParameterSpec(
-          parameter.name!.lexeme,
-          owner.extensionRepresentation!,
-          isRequired: true,
-          node: parameter,
-        ),
-      ],
-      requiredPositional: 1,
+      positional: parameter.isPositional ? [spec] : const [],
+      named: parameter.isNamed ? [spec] : const [],
+      requiredPositional: parameter.isRequiredPositional ? 1 : 0,
       returnType: type,
     );
   }

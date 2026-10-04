@@ -4422,3 +4422,15 @@ stale promotion. Ten flow originals and twelve representation/mixin originals
 pass fresh and serialized execution (22 originals, 44 outcomes); 55 focused
 tests and scoped analysis pass. The confirmed stale expectations were removed;
 other SDK expectations and remaining actual failures are unchanged.
+
+### Cycle 27 correctness pass 6: primary representation parameter forms
+
+Extension-type primary constructors accept named and optional representation
+parameters, compile omitted defaults in their declaring library, and default an
+omitted representation annotation to Object?. Constructor tear-off signatures
+retain the parameter shape and defaults. Supplied arguments keep the existing
+identity projection and conversion; no wrapper, adapter or interpreter change
+was added. The untouched header original passes fresh and serialized execution,
+and its stale expectation is removed. All 32 representation tests pass, including
+a unique imported-default, optional-double tear-off and contextual generic-record
+probe verified with native Dart 3.13.4. Scoped analysis is clean.

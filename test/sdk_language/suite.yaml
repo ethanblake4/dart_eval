@@ -86,7 +86,6 @@ expect_fail:
   - path: 'patterns/flow_analysis/list_pattern_error_test.dart'
   - path: 'patterns/issue52409_test.dart'
   - path: 'primary_constructors/const/potentially_constant_test.dart'
-  - path: 'primary_constructors/header/extension_type_test.dart'
   - path: 'primary_constructors/header/in_body_initializer_test.dart'
   - path: 'primary_constructors/wildcard_declaring_parameters_test.dart'
   - path: 'regress/regress31436_test.dart'

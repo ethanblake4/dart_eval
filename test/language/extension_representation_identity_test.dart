@@ -257,6 +257,49 @@ void main() {}
     },
   );
 
+  test('primary representation parameters bind defaults and tear-offs', () {
+    final program = Compiler().compile({
+      'primary_representation_parameters': {
+        'support.dart': '''
+const importedDefault = 23;
+extension type Count.named({int value = importedDefault}) {}
+''',
+        'main.dart': r'''
+import 'support.dart' as support;
+
+const importedDefault = 99;
+extension type Ratio([double value = 1.25]) {}
+extension type Pair<T>.pair({required (T, String) value}) {}
+
+bool verify() {
+  final defaulted = support.Count.named();
+  final Ratio Function([double]) constructRatio = Ratio.new;
+  final omitted = constructRatio();
+  Pair<int> contextual = Pair.pair(value: (7, 'seven'));
+  final explicit = Pair<String>.pair(value: ('x', 'text'));
+  return defaulted.value == 23 && omitted.value == 1.25 &&
+      contextual.value.$1 == 7 && contextual.value.$2 == 'seven' &&
+      explicit.value.$1 == 'x' && explicit.value.$2 == 'text';
+}
+
+void main() {}
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(
+        runtime.executeLib(
+          'package:primary_representation_parameters/main.dart',
+          'verify',
+        ),
+        true,
+      );
+    }
+  });
+
   for (final source in [
     "extension type E(int value) { E.wrong(this.other); }",
     "extension type E(int value) { E.twice(this.value) : value = 2; }",

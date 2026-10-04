@@ -280,9 +280,10 @@ final class SourceTypeDecl extends TypeDecl {
     final parameter = extensionRepresentationParameter;
     if (parameter == null) return null;
     final annotation = parameter.type;
-    if (annotation == null || parameter.functionTypedSuffix != null) {
+    if (parameter.functionTypedSuffix != null) {
       throw CompileError('Unsupported extension type representation');
     }
+    if (annotation == null) return CoreTypes.object.ref(ctx).withNullable(true);
     final previousScope = ctx.typeScopes.remove(library);
     try {
       return TypeRef.fromAnnotation(

@@ -92,9 +92,7 @@ void _validateExtensionType(
   final decl =
       ctx.types.find(ctx.library, primary.typeName.lexeme) as SourceTypeDecl;
   final parameter = decl.extensionRepresentationParameter!;
-  if (parameter is! RegularFormalParameter ||
-      parameter.name == null ||
-      !parameter.isRequiredPositional) {
+  if (parameter is! RegularFormalParameter || parameter.name == null) {
     throw CompileError('Unsupported extension type representation parameter');
   }
   final representation = decl.extensionRepresentation!.erasedExtensionType;
