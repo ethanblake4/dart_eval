@@ -46,6 +46,63 @@ const _expected =
     'num?\nnum?\nnum?\nnum?\npair:num/dynamic';
 
 void main() {
+  test(
+    'horizontal callback inference preserves evaluation and checked boundaries',
+    () {
+      final program = Compiler().compile({
+        'horizontal': {
+          'main.dart': r'''
+typedef Exactly<T> = T Function(T);
+extension StaticType<T> on T {
+  T check<R extends Exactly<T>>() => this;
+}
+String events = '';
+int value() { events += 'v'; return 1; }
+int marker() { events += 'm'; return 0; }
+dynamic wrong() { events += 'u'; return 'wrong'; }
+String inferred<T>(T first, T second) => '$T';
+C Function(B) chain<A, B, C>(A Function(B) first, B Function(A) second,
+    C Function(B) last) => last;
+T apply<T>(T Function(T) callback, T value, {int marker = 0}) {
+  events += 'f';
+  return callback(value);
+}
+bool main() {
+  final later = chain(
+    (x) => [x]..check<Exactly<List<Object?>>>(),
+    (y) => {y}..check<Exactly<Set<Object?>>>(),
+    (z) { z.check<Exactly<Set<Object?>>>(); return z.length; },
+  );
+  later.check<Exactly<int Function(Set<Object?>)>>();
+  if (later({1, 2}) != 2) return false;
+  final result = apply((x) {
+    x.check<Exactly<int>>();
+    events += 'c';
+    return x + 1;
+  }, value(), marker: marker())..check<Exactly<int>>();
+  if (result != 2 || events != 'vmfc' || inferred(1, null) != 'int?') return false;
+  events = '';
+  try {
+    apply<int>((x) { events += 'x'; return x; }, wrong());
+    return false;
+  } on TypeError {
+    return events == 'u';
+  }
+}
+''',
+        },
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        expect(
+          runtime.executeLib('package:horizontal/main.dart', 'main'),
+          true,
+        );
+      }
+    },
+  );
   test('known downward arguments survive upward invocation inference', () {
     final program = Compiler().compile({
       'downward': {'main.dart': _source},

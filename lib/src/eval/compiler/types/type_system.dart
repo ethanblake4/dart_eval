@@ -582,6 +582,23 @@ final class TypeSystem {
     };
   }
 
+  /// Greatest closure of a declared bound while inferring [parameters].
+  /// Lexically enclosing parameters remain meaningful; only the call's own
+  /// unknowns use the upper/lower extrema at their variance positions.
+  TypeRef greatestInferenceBound(
+    TypeRef bound,
+    Set<TypeParameterDef> parameters,
+  ) => _closeBound(
+    bound,
+    Substitution.of({
+      for (final parameter in parameters)
+        parameter: CoreTypes.object.ref(_ctx).withNullable(true),
+    }),
+    Substitution.of({
+      for (final parameter in parameters) parameter: CoreTypes.never.ref(_ctx),
+    }),
+  );
+
   /// Whether [type] mentions any parameter in [parameters].
   bool _mentionsAnyParameter(TypeRef type, Set<TypeParameterDef> parameters) {
     var found = false;
@@ -945,9 +962,12 @@ final class TypeSystem {
   TypeRef leastUpperBound(Set<TypeRef> types) {
     assert(types.isNotEmpty);
     // Nullability joins upward too — `int` and `int?` meet at `int?`.
-    final makeNullable =
-        types.remove(CoreTypes.nullType.ref(_ctx)) ||
-        types.any((type) => type.nullable);
+    final nullType = CoreTypes.nullType.ref(_ctx);
+    final containsNull = types.contains(nullType);
+    final makeNullable = containsNull || types.any((type) => type.nullable);
+    // Inference reuses its constraint sets across provisional and final solves.
+    // Removing Null from the caller's set would lose that lower evidence.
+    if (containsNull) types = {...types}..remove(nullType);
     if (types.isEmpty) {
       return CoreTypes.nullType.ref(_ctx);
     }

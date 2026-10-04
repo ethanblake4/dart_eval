@@ -4647,3 +4647,24 @@ serialized, fifteen focused tests pass, and scoped analysis is clean. The
 combined guard test also checks that a hard non-null assertion still carries
 its field proof into the next cascade section. No bytecode is added by this
 compiler-state correction.
+
+### Cycle 28 correctness pass 6
+
+Generic calls infer independent arguments before typing dependent untyped
+closures, using a structural preview that emits no operations. Cyclic closures
+freeze their parameter contexts, while downstream closures use the cycle's
+return evidence. Actual arguments compile once in source order; unsupported
+previews defer to ordinary compilation. Bounds inference follows the language
+version and declaration order and substitutes already-fixed owner arguments.
+Least-upper-bound solving preserves its input constraints, including Null.
+
+Bridge callable objects contribute their call signature. Null assertions on
+Null emit their existing assertion before terminating flow and yield Never.
+Closures retain inferred return types while preserving contextual checks, and
+their cold string display includes their existing runtime function type.
+
+All six assigned originals, five newly exposed inference regressions and ten
+variance originals pass fresh and serialized execution. Nineteen focused tests
+pass and scoped analysis is clean. The six original expect_fail entries are
+removed. The six correctness passes are checkpointed; runtime and weak-reference
+supplements still await the full AOT gate before their checkpoint.

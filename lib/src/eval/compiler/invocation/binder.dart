@@ -7,6 +7,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/conversion.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/context_type.dart';
 import '../helpers/constructor_type.dart';
+import '../helpers/argument_preview.dart';
 import '../reference.dart';
 import 'package:dart_eval/src/eval/compiler/backend/representation.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
@@ -278,6 +279,7 @@ final class ArgumentBinder {
           argument.type,
           ownParameters,
           inferredArguments,
+          source: site.source,
         );
         // Constraints this argument solves feed the context of later
         // arguments — `fold(base, (next, mw) => ...)` types the lambda's
@@ -309,6 +311,7 @@ final class ArgumentBinder {
             argument.type,
             ownParameters,
             inferredArguments,
+            source: site.source,
           );
           substitutions = Substitution.of(_solveArguments(inferredArguments));
         }
@@ -596,6 +599,11 @@ final class ArgumentBinder {
           entry.key: entry.value,
     });
     final candidates = <TypeParameterDef, _InferenceConstraints>{};
+    final fixedBoundArguments = {
+      for (final entry in resolveGenerics.entries)
+        if (!parameterDefs.contains(entry.key)) entry.key: entry.value,
+    };
+    final previewParameters = <ArgSource, FunctionSignature>{};
 
     // The parameter in the dispatch implementation's own signature —
     // omitted defaults come from the callee that will actually run, while
@@ -662,6 +670,18 @@ final class ArgumentBinder {
       var argBound =
           unifyPattern?.substituteTypeParameters(argumentSubstitution) ??
           coercionType;
+      final parameters = previewParameters[argument];
+      if (argBound is FunctionTypeRef && parameters != null) {
+        argBound = argBound.copyWith(
+          signature: FunctionSignature(
+            typeParameters: argBound.signature.typeParameters,
+            positional: parameters.positional,
+            requiredPositional: parameters.requiredPositional,
+            named: parameters.named,
+            returnType: argBound.signature.returnType,
+          ),
+        );
+      }
       final noUpwardArguments =
           parameterDefs.isNotEmpty &&
           argBound is InterfaceTypeRef &&
@@ -678,7 +698,14 @@ final class ArgumentBinder {
         // Inference reads the argument's own type — coercion below may
         // erase still-unbound parameters to `dynamic`, which would record
         // `T -> dynamic` instead of the actual constraint.
-        _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
+        _inferArgument(
+          unifyPattern,
+          arg0.type,
+          parameterDefs,
+          candidates,
+          source: source ?? argumentList ?? parameterHost,
+          fixedArguments: fixedBoundArguments,
+        );
         if (candidates.isNotEmpty) {
           // Upper constraints from function parameters need all arguments
           // before they can be intersected. Until then, Never is a safe
@@ -733,7 +760,14 @@ final class ArgumentBinder {
           originalType is! FunctionTypeRef &&
           convertedType is FunctionTypeRef &&
           convertedType.signature.typeParameters.isEmpty) {
-        _inferArgument(unifyPattern, arg0.type, parameterDefs, candidates);
+        _inferArgument(
+          unifyPattern,
+          arg0.type,
+          parameterDefs,
+          candidates,
+          source: source ?? argumentList ?? parameterHost,
+          fixedArguments: fixedBoundArguments,
+        );
         argumentSubstitution = Substitution.of({
           ...resolveGenerics,
           ..._solveArguments(candidates, includeUpper: false),
@@ -777,6 +811,159 @@ final class ArgumentBinder {
           !superParams.named.contains(spec.name)) {
         throw CompileError('Missing required argument ${spec.name}', spec.node);
       }
+    }
+
+    FunctionExpression? closureOf(ArgSource source) {
+      if (source is! ExpressionArg) return null;
+      var expression = source.expression;
+      while (expression is ParenthesizedExpression) {
+        expression = expression.expression;
+      }
+      return expression is FunctionExpression ? expression : null;
+    }
+
+    ParameterSpec specOf(_MatchedArgument argument) =>
+        argument.positional == null
+        ? named[argument.named]!
+        : positional[argument.positional!];
+    // Infer independent arguments before typing closures that depend on them.
+    // This preview emits no SSA: actual argument evaluation stays in source
+    // order below, and each closure retains its parameter inference context.
+    if (inferGenerics &&
+        parameterDefs.isNotEmpty &&
+        matched.any((argument) {
+          final closure = closureOf(argument.source);
+          return closure != null &&
+              (closure.parameters?.parameters.any(
+                    (parameter) =>
+                        parameter.type == null &&
+                        parameter.functionTypedSuffix == null,
+                  ) ??
+                  false) &&
+              _usesParameter(specOf(argument).type, parameterDefs);
+        })) {
+      final pending = [...matched];
+      var grounded = false;
+      final cyclicContexts = <ArgSource, TypeRef>{};
+      Substitution previewSubstitution({bool ground = false}) {
+        final solved = {...resolveGenerics, ..._solveArguments(candidates)};
+        return Substitution.of({
+          ...solved,
+          for (final parameter in parameterDefs)
+            parameter:
+                solved[parameter] is TypeParameterTypeRef &&
+                    (solved[parameter] as TypeParameterTypeRef).parameter ==
+                        parameter
+                ? ground
+                      ? ctx.typeSystem.greatestInferenceBound(
+                          parameter.bound ??
+                              CoreTypes.object.ref(ctx).withNullable(true),
+                          parameterDefs,
+                        )
+                      : UnknownTypeRef.instance
+                : solved[parameter] ?? UnknownTypeRef.instance,
+        });
+      }
+
+      while (pending.isNotEmpty) {
+        var progress = false;
+        for (final argument in [...pending]) {
+          final source = argument.source;
+          if (source is! ExpressionArg) {
+            pending.remove(argument);
+            continue;
+          }
+          final spec = specOf(argument);
+          final context =
+              cyclicContexts[source] ??
+              spec.type.substituteTypeParameters(previewSubstitution());
+          final preview = previewArgumentType(
+            ctx,
+            source.expression,
+            context: context,
+          );
+          if (preview == null) continue;
+          if (closureOf(source) != null && preview is FunctionTypeRef) {
+            previewParameters[source] = preview.signature;
+          }
+          _inferArgument(
+            spec.type,
+            preview,
+            parameterDefs,
+            candidates,
+            source: argumentList ?? parameterHost,
+            fixedArguments: fixedBoundArguments,
+          );
+          pending.remove(argument);
+          progress = true;
+        }
+        if (!progress) {
+          if (grounded ||
+              pending.any((argument) => closureOf(argument.source) == null)) {
+            break;
+          }
+          // Cyclic closure dependencies start with greatest-closure parameter
+          // contexts; their return constraints can still refine the call.
+          final dependencies = <_MatchedArgument, Set<_MatchedArgument>>{};
+          for (final argument in pending) {
+            final closure = closureOf(argument.source)!;
+            final type = specOf(argument).type;
+            if (type is! FunctionTypeRef) continue;
+            final inputs = <TypeRef>[];
+            var position = 0;
+            for (final parameter
+                in closure.parameters?.parameters ?? <FormalParameter>[]) {
+              final input = parameter.isNamed
+                  ? type.signature.named[parameter.name?.lexeme]?.type
+                  : position < type.signature.positional.length
+                  ? type.signature.positional[position++]
+                  : null;
+              if (input != null &&
+                  parameter.type == null &&
+                  parameter.functionTypedSuffix == null) {
+                inputs.add(input);
+              }
+            }
+            dependencies[argument] = {
+              for (final producer in pending)
+                if (specOf(producer).type case FunctionTypeRef(:final signature)
+                    when parameterDefs.any(
+                      (parameter) =>
+                          inputs.any(
+                            (input) => _usesParameter(input, {parameter}),
+                          ) &&
+                          _usesParameter(signature.returnType, {parameter}),
+                    ))
+                  producer,
+            };
+          }
+          bool reaches(
+            _MatchedArgument current,
+            _MatchedArgument target,
+            Set<_MatchedArgument> seen,
+          ) {
+            if (!seen.add(current)) return false;
+            return (dependencies[current] ?? const <_MatchedArgument>{}).any(
+              (next) => next == target || reaches(next, target, seen),
+            );
+          }
+
+          final greatestContext = previewSubstitution(ground: true);
+          for (final argument in pending) {
+            if (reaches(argument, argument, {})) {
+              cyclicContexts[argument.source] = specOf(
+                argument,
+              ).type.substituteTypeParameters(greatestContext);
+            }
+          }
+          if (cyclicContexts.isEmpty) break;
+          grounded = true;
+        }
+      }
+      argumentSubstitution = Substitution.of({
+        ...resolveGenerics,
+        ..._solveArguments(candidates),
+      });
     }
 
     // Closures in the argument list are analyzed like their bodies run
@@ -912,13 +1099,37 @@ final class ArgumentBinder {
       final context = position != null && position < positionalContexts.length
           ? positionalContexts[position] ?? paramType
           : paramType;
-      var arg0 = _compileArg(ctx, argument, context).boxIfNeeded(ctx);
+      final callbackContext = context is FunctionTypeRef
+          ? context.substituteTypeParameters(
+              Substitution.of({
+                for (final parameter in bridgePlaceholders)
+                  parameter: UnknownTypeRef.instance,
+              }),
+            )
+          : context;
+      var arg0 = _compileArg(ctx, argument, callbackContext).boxIfNeeded(ctx);
+      // Callable objects contribute their `.call` signature to inference,
+      // just as an explicitly supplied tear-off does.
+      if (context is FunctionTypeRef &&
+          arg0.type is! FunctionTypeRef &&
+          !arg0.type.isSpec(CoreTypes.dynamic) &&
+          !arg0.type.isSpec(CoreTypes.nullType)) {
+        arg0 = convertForAssignment(
+          ctx,
+          arg0,
+          context,
+          representation: MachineRepresentation.object,
+          boundContext: callbackContext,
+          source: argumentList,
+        );
+      }
       if (bridgePlaceholders.isNotEmpty) {
         _inferArgument(
           param.type,
           arg0.type,
           bridgePlaceholders,
           bridgeCandidates,
+          source: argumentList,
         );
         final solved = _solveArguments(bridgeCandidates);
         if (solved.isNotEmpty) {
@@ -1064,14 +1275,71 @@ final class ArgumentBinder {
     TypeRef formal,
     TypeRef actual,
     Set<TypeParameterDef> parameters,
-    Map<TypeParameterDef, _InferenceConstraints> candidates,
-  ) {
+    Map<TypeParameterDef, _InferenceConstraints> candidates, {
+    AstNode? source,
+    Map<TypeParameterDef, TypeRef> fixedArguments = const {},
+  }) {
+    final expandingBounds = <(TypeParameterDef, TypeRef)>{};
+    final useBounds =
+        source == null || ctx.languageVersionAtLeast(source, 3, 7);
+    int? afterBoundIndex;
     void collect(TypeRef pattern, TypeRef evidence, bool covariant) {
       if (pattern is UnknownTypeRef || evidence is UnknownTypeRef) return;
       if (pattern is TypeParameterTypeRef) {
         final parameter = pattern.parameter;
         if (!parameters.contains(parameter)) return;
-        final value = ctx.typeSystem.typeParameterEvidence(pattern, evidence);
+        // Bounds infer dependencies left to right; earlier parameters have
+        // already made their inference choice.
+        if (afterBoundIndex != null && parameter.index <= afterBoundIndex!) {
+          return;
+        }
+        var value = ctx.typeSystem.typeParameterEvidence(pattern, evidence);
+        if (pattern.nullable && value.nullable) {
+          value = value.withNullable(false);
+        }
+        final bound = parameter.bound?.substituteTypeParameters(
+          Substitution.of(fixedArguments),
+        );
+        if (useBounds && covariant && bound != null) {
+          final greatestBound = ctx.typeSystem.greatestInferenceBound(
+            bound,
+            parameters,
+          );
+          if (!value.isAssignableTo(
+            ctx,
+            greatestBound,
+            forceAllowDynamic: false,
+          )) {
+            // A nullable formal may accept an input without constraining T.
+            // Retain its bound as the choice when no non-null branch supplies
+            // lower evidence, rather than inferring Null outside that bound.
+            candidates
+                .putIfAbsent(parameter, _InferenceConstraints.new)
+                .upper
+                .add(greatestBound);
+            if (value is TypeParameterTypeRef &&
+                expandingBounds.add((parameter, value))) {
+              final effectiveBound = value.effectiveBound;
+              if (effectiveBound != null) {
+                collect(pattern, effectiveBound, covariant);
+              }
+              expandingBounds.remove((parameter, value));
+            } else if (value is InterfaceTypeRef &&
+                value.isSpec(AsyncTypes.futureOr)) {
+              final arguments = interfaceArgumentsOf(value);
+              if (arguments.isNotEmpty) {
+                final member = arguments.first;
+                collect(
+                  pattern,
+                  ctx.types.bySpec(CoreTypes.future).instantiate([member]),
+                  covariant,
+                );
+                collect(pattern, member, covariant);
+              }
+            }
+            return;
+          }
+        }
         // T against T adds no evidence and must leave downward inference open.
         if (value is TypeParameterTypeRef && value.parameter == parameter) {
           return;
@@ -1081,6 +1349,18 @@ final class ArgumentBinder {
           _InferenceConstraints.new,
         );
         (covariant ? constraint.lower : constraint.upper).add(value);
+        if (useBounds &&
+            covariant &&
+            bound != null &&
+            expandingBounds.add((parameter, value))) {
+          // The accepted candidate also constrains parameters mentioned by
+          // its bound: B<U> matched against T extends B<S> supplies S := U.
+          final previousBoundIndex = afterBoundIndex;
+          afterBoundIndex = parameter.index;
+          collect(bound, value, covariant);
+          afterBoundIndex = previousBoundIndex;
+          expandingBounds.remove((parameter, value));
+        }
         return;
       }
       if (pattern is FunctionTypeRef && evidence is FunctionTypeRef) {

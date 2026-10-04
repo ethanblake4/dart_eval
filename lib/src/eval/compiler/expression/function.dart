@@ -232,7 +232,10 @@ Variable compileFunctionExpression(
           ),
           _ => null,
         };
-        final contextualReturn = bodyBound is FunctionTypeRef
+        final contextualReturn =
+            bodyBound is FunctionTypeRef &&
+                (typeParameters.isEmpty ||
+                    bodyBound.signature.typeParameters.isNotEmpty)
             ? bodyBound.signature.returnType
             : null;
         final boundReturnType = contextualReturn?.isTypeParameter == true
@@ -327,6 +330,10 @@ Variable compileFunctionExpression(
               ctx,
               V.type.isSpec(CoreTypes.voidType)
                   ? CoreTypes.voidType.ref(ctx)
+                  : boundReturnType != null &&
+                        !boundReturnType.hasInferenceVariables &&
+                        !boundReturnType.hasSchemaHoles
+                  ? boundReturnType
                   : CoreTypes.dynamic.ref(ctx),
               V,
               isAsync: b.isAsynchronous,
@@ -513,6 +520,12 @@ Variable compileFunctionExpression(
     final signature = closureType.signature;
     final declaredReturn = signature.returnType;
     final shouldInfer =
+        (!inferredClosureReturnType!.isSpec(CoreTypes.dynamic) &&
+            inferredClosureReturnType!.isAssignableTo(
+              ctx,
+              declaredReturn,
+              forceAllowDynamic: false,
+            )) ||
         declaredReturn.isSpec(CoreTypes.dynamic) ||
         declaredReturn.isTypeParameter ||
         declaredReturn.hasSchemaHoles ||

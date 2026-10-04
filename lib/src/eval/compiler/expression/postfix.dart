@@ -26,7 +26,11 @@ Variable compilePostfixExpression(
         AssertType(boxed.ssa, ctx.runtimeTypes.idOf(CoreTypes.object.ref(ctx))),
       );
     }
-    return v.copyWith(type: v.type.withNullable(false));
+    return v.copyWith(
+      type: v.type.isSpec(CoreTypes.nullType)
+          ? CoreTypes.never.ref(ctx)
+          : v.type.withNullable(false),
+    );
   }
 
   if (e.operator.type == TokenType.BANG) {
@@ -94,10 +98,10 @@ Variable compilePostfixExpression(
     }
     // `x!` on a statically-`Null` operand always throws; on a `Never`
     // operand it never runs — either way nothing follows.
+    final result = assertNonNull(L);
     if (L.type.isSpec(CoreTypes.nullType) || L.type.isSpec(CoreTypes.never)) {
       markNeverTerminates(ctx);
     }
-    final result = assertNonNull(L);
     promoteNonNull(ctx, operand);
     return result;
   }
