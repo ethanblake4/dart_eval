@@ -97,6 +97,10 @@ class Runtime {
     _loadProgram(program);
   }
 
+  /// Decode the program and register bridges without executing guest code.
+  /// Subsequent calls reuse the initialized runtime.
+  void initialize() => _setup();
+
   void _loadProgram(Program program) {
     _typedProgram = program.typedProgram;
     typedGlobals = TypedGlobalState(_typedProgram, this);

@@ -141,7 +141,9 @@ final class _Bytes extends cfg.Instruction {
 /// Lowers an entrypoint to fixed typed registers and byte instructions.
 /// Unsupported operations are rejected before a program can execute.
 class TypedBackend {
-  TypedBackend(this.context);
+  TypedBackend(this.context, {this.onPhase});
+
+  final void Function(String)? onPhase;
   final CompilerContext context;
   final integers = <int>[];
   final _integerIndices = <int, int>{};
@@ -329,9 +331,11 @@ class TypedBackend {
           methods: _classMembers(allocation, MemberKind.method, indices),
         ),
     ];
+    onPhase?.call('bytecode reachability and class metadata');
     final compiled = [
       for (final functionId in reachable) _compileFunction(functionId, indices),
     ];
+    onPhase?.call('bytecode lowering');
     // Function indices that already own a bound-receiver descriptor — a
     // member whose entry here would duplicate it is skipped once per set
     // rather than scanning `_closures` per member.

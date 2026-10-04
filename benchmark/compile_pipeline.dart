@@ -1,7 +1,7 @@
 import 'package:dart_eval/dart_eval.dart';
 
 // A registry of typed processing stages, as used by middleware and ETL code.
-String _pipeline(int stages) {
+String pipelineSource(int stages) {
   final source = StringBuffer('''
 typedef Stage = List<int> Function(List<int>);
 ''');
@@ -34,7 +34,7 @@ void main(List<String> args) {
     throw ArgumentError('At least seven samples and one stage required');
   }
   final sources = {
-    'pipeline': {'main.dart': _pipeline(count)},
+    'pipeline': {'main.dart': pipelineSource(count)},
   };
   const library = 'package:pipeline/main.dart';
   final warmup = Compiler().compile(sources);

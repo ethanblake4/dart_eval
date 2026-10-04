@@ -50,6 +50,23 @@ import 'member/member_name.dart';
 ///
 /// Additional sources can be added with [addSource].
 class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
+  Compiler({this.onPhase});
+
+  /// Optional compilation timings in microseconds. Phases are sequential and
+  /// exclude time spent in this callback. No clock runs when this is unset.
+  final void Function(String phase, int microseconds)? onPhase;
+
+  Stopwatch? _phaseWatch;
+
+  void _finishPhase(String phase) {
+    final watch = _phaseWatch;
+    if (watch == null) return;
+    watch.stop();
+    onPhase!(phase, watch.elapsedMicroseconds);
+    watch.reset();
+    watch.start();
+  }
+
   Set<String> _entrypointLibraries = {};
   var _bridgeStaticFunctionIdx = 0;
   final _bridgeDeclarations = <String, List<BridgeDeclaration>>{};
@@ -230,7 +247,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       ),
     ),
     false,
-    () => TypedBackend(_ctx).compile(entrypoint, function),
+    () {
+      final typed = TypedBackend(
+        _ctx,
+        onPhase: onPhase == null ? null : _finishPhase,
+      ).compile(entrypoint, function);
+      _finishPhase('bytecode assembly');
+      return typed;
+    },
     extraEntrypoints: {entrypoint},
   );
 
@@ -240,6 +264,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     T Function() emit, {
     Set<String> extraEntrypoints = const {},
   }) {
+    _phaseWatch = onPhase == null ? null : (Stopwatch()..start());
     _topLevelDeclarationsMap = <int, Map<String, DeclarationOrBridge>>{};
     _topLevelGlobalIndices = <int, Map<String, int>>{};
     _instanceDeclarationsMap = <int, Map<String, Map<String, Declaration>>>{};
@@ -933,12 +958,14 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     _ctx.finishMethod();
 
+    _finishPhase('frontend');
     for (final entry in _ctx.functionGraphs.entries) {
       final graph = entry.value;
       graph.removeUnreachableBlocks();
       validateFrontendGraph(graph);
     }
     if (enableLeafInlining) inlineLeafCalls(_ctx);
+    _finishPhase('graph cleanup and inlining');
     for (final entry in _ctx.functionGraphs.entries) {
       final graph = entry.value;
       specializeIndexedLoops(graph);
@@ -960,7 +987,11 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     }
 
-    return emit();
+    _finishPhase('SSA construction');
+    final result = emit();
+    _finishPhase('program metadata');
+    _phaseWatch = null;
+    return result;
   }
 
   Program _emitProgram() {
@@ -970,7 +1001,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       final type = t.key;
       typeIds.putIfAbsent(type.library, () => {})[type.name] = t.value;
     }
-    final backend = TypedBackend(_ctx);
+    final backend = TypedBackend(
+      _ctx,
+      onPhase: onPhase == null ? null : _finishPhase,
+    );
     final typed = backend.compileEntrypoints([
       for (final library in _entrypointLibraries)
         for (final name
@@ -988,6 +1022,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                   false))
             (library, name),
     ]);
+    _finishPhase('bytecode assembly');
     // Backend metadata can introduce instantiated parameter and collection
     // types. Build both tables in an index loop: resolving one descriptor can
     // discover its type arguments or supertypes and append more descriptors.

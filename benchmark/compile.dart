@@ -3,7 +3,7 @@ import 'package:dart_eval/dart_eval.dart';
 // Measures compiler throughput on a representative mixed feature set.
 // Run with: dart compile exe benchmark/compile.dart -o compile.exe
 // Then: compile.exe [samples]
-const _source = '''
+const compileSource = '''
 class Shape {
   const Shape(this.name, this.sides);
   final String name;
@@ -113,7 +113,7 @@ void main(List<String> args) {
   if (samples < 1) throw ArgumentError('Positive sample count required');
   for (var i = 0; i < warmup; i++) {
     Compiler().compileTyped({
-      'compile_bench': {'main.dart': _source},
+      'compile_bench': {'main.dart': compileSource},
     }, entrypoint: 'package:compile_bench/main.dart');
   }
   final times = <int>[];
@@ -121,7 +121,7 @@ void main(List<String> args) {
   for (var i = 0; i < samples; i++) {
     final watch = Stopwatch()..start();
     final program = Compiler().compileTyped({
-      'compile_bench': {'main.dart': _source},
+      'compile_bench': {'main.dart': compileSource},
     }, entrypoint: 'package:compile_bench/main.dart');
     watch.stop();
     checksum += program.code.length;
