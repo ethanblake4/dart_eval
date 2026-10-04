@@ -357,7 +357,12 @@ extension TypedRuntimeInterop on Runtime {
     }
     var payloadType = function[3];
     final returned = _typeDescriptors[payloadType];
-    if (returned[0] == lookupType(CoreTypes.future) && returned.length > 2) {
+    // Future constructors and then adopt the Future branch of FutureOr<R>.
+    if (returned.length == 4 &&
+        returned[2] == RuntimeTypeDescriptorTag.futureOr) {
+      payloadType = returned[3];
+    } else if (returned[0] == lookupType(CoreTypes.future) &&
+        returned.length > 2) {
       payloadType = returned[2];
     }
     // Intern rather than scan — `Future<R>` may have no existing descriptor

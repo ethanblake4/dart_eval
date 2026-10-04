@@ -169,7 +169,50 @@ class $Set<E> implements Set<E>, $Instance {
           params: [
             BridgeParameter(
               'test',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+        isStatic: false,
+      ),
+      'retainWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               false,
             ),
           ],
@@ -346,6 +389,8 @@ class $Set<E> implements Set<E>, $Instance {
         return $Closure(__clear.func, this);
       case 'removeWhere':
         return $Closure(__$removeWhere.func, this);
+      case 'retainWhere':
+        return $Closure(__$retainWhere.func, this);
       case 'lookup':
         return $Closure(__lookup.func, this);
       case 'intersection':
@@ -457,6 +502,23 @@ class $Set<E> implements Set<E>, $Instance {
     final set = (target as $Set).$value;
     final test = (r as $Value?) as EvalCallable;
     set.removeWhere(
+      (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
+    );
+    return null;
+  }
+
+  static const $Function __$retainWhere = $Function(_retainWhere);
+
+  static $Value? _retainWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final set = (target as $Set).$value;
+    final test = (r as $Value?) as EvalCallable;
+    set.retainWhere(
       (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
     );
     return null;

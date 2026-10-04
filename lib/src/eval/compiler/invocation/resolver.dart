@@ -853,6 +853,25 @@ final class CallResolver {
               ownerType,
               resolvedMember.ownerDecl!.library,
             );
+      if (isStatic && br is BridgeConstructorDef) {
+        // Omitted class arguments are inferred at this call, rather than
+        // constrained by the declaring class's type-parameter bounds.
+        var index = 0;
+        for (final name in receiverTypeParameters.keys) {
+          bridgeTypeParameters[name] = TypeParameterTypeRef(
+            ctx.typeParameterDefs.key(
+              TypeParameterOwner(
+                TypeParameterOwnerKind.callSite,
+                ctx.library,
+                '${staticType!.name}.$methodName',
+                e.offset,
+              ),
+              index++,
+              name,
+            ),
+          );
+        }
+      }
       if (isStatic && br is BridgeConstructorDef && bound != null) {
         final declaration = nominalDeclOf(staticType!);
         final context = inferContextType(
@@ -2549,6 +2568,13 @@ void _inferBridgeTypeParameters(
     if (spec?.library == AsyncTypes.futureOr.library &&
         spec?.name == AsyncTypes.futureOr.name &&
         formal.typeArgs.isNotEmpty) {
+      if (actual is InterfaceTypeRef && actual.isSpec(AsyncTypes.futureOr)) {
+        final arguments = interfaceArgumentsOf(actual);
+        if (arguments.isNotEmpty) {
+          infer(formal.typeArgs.first.type, arguments.first);
+        }
+        return;
+      }
       final future = ctx.typeSystem.asInstanceOf(
         actual,
         ctx.types.bySpec(CoreTypes.future),

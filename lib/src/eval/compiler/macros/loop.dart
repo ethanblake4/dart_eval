@@ -129,7 +129,12 @@ StatementInfo macroLoop(
   ContextSaveState? conditionExitState;
   if (alwaysLoopOnce && header.id != null) {
     ctx.restoreState(initialState);
-    ctx.mergeBranchState([?bodyExitState, ...continueStates]);
+    // A do condition is reached only from the body or a continue. The
+    // pre-loop state supplies storage, but is not an incoming flow edge.
+    ctx.mergeBranchState([
+      ?bodyExitState,
+      ...continueStates,
+    ], includeCurrent: false);
     ctx.builder = BasicBlockBuilder(ctx.activeGraph, [header], parent);
     if (conditionExpression != null) {
       ctx.enterTypeInferenceContext();

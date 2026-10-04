@@ -166,5 +166,36 @@ void main() {
         }
       },
     );
+
+    test('retainWhere calls typed guest predicates with scalar and object elements', () {
+      for (final (mode, result) in runDynamicFixture(r'''
+        class Counter {
+          Counter(this.value);
+          int value;
+        }
+
+        bool main() {
+          final values = <int>{1, 2, 3, 4};
+          var visits = 0;
+          values.retainWhere((int value) {
+            visits++;
+            return value.isEven;
+          });
+
+          final counters = <Counter>{Counter(0), Counter(1)};
+          counters.retainWhere((Counter counter) {
+            counter.value++;
+            return counter.value == 2;
+          });
+
+          return visits == 4 &&
+              values.join(',') == '2,4' &&
+              counters.length == 1 &&
+              counters.single.value == 2;
+        }
+      ''')) {
+        expect(result, const DynamicFixtureResult.value(true), reason: mode);
+      }
+    });
   });
 }

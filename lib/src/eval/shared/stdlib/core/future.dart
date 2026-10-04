@@ -140,11 +140,25 @@ class $Future<T> implements Future<T>, $Instance {
       ),
       'sync': BridgeConstructorDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.future)),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
           params: [
             BridgeParameter(
               'computation',
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.function)),
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(AsyncTypes.futureOr, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
               false,
             ),
           ],
@@ -584,7 +598,7 @@ class $Future<T> implements Future<T>, $Instance {
         return $then.call(
           runtime,
           target,
-          unwrapped is $Value ? unwrapped : runtime.wrap(unwrapped),
+          TypedInterop.boxExternal(unwrapped, runtime: runtime),
           null,
           1,
         );

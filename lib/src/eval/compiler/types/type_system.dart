@@ -165,6 +165,13 @@ final class TypeSystem {
       final s = interfaceArgumentsOf(pattern).isEmpty
           ? CoreTypes.dynamic.ref(_ctx)
           : interfaceArgumentsOf(pattern).first;
+      if (concrete is InterfaceTypeRef &&
+          concrete.decl.isSpec(AsyncTypes.futureOr)) {
+        // Matching unions constrain their value arguments directly.
+        final arguments = interfaceArgumentsOf(concrete);
+        if (arguments.isNotEmpty) unify(s, arguments.first, substitutions);
+        return;
+      }
       final instantiation = asInstanceOf(
         concrete,
         _ctx.types.bySpec(CoreTypes.future),
