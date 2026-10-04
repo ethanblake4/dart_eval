@@ -54,23 +54,29 @@ void optimizePrimitives(
 
   final nativeLists = inferNativeListValues(operations());
   var next = 0;
-  for (final id in graph.graph.vertices) {
-    final code = graph[id]!.code;
-    final rewritten = <cfg.Operation>[];
-    for (final op in code) {
-      if (op is objects.LoadPropertyDynamic &&
-          op.name == 'length' &&
-          nativeLists.contains(op.object)) {
-        final length = cfg.SSA('optimized:listLength${next++}', version: 0);
-        rewritten.add(collection.ListLength(length, op.object));
-        rewritten.add(primitives.BoxInt(op.target, length));
-      } else {
-        rewritten.add(op);
+  if (nativeLists.isNotEmpty) {
+    for (final id in graph.graph.vertices) {
+      final code = graph[id]!.code;
+      List<cfg.Operation>? rewritten;
+      for (var i = 0; i < code.length; i++) {
+        final op = code[i];
+        if (op is objects.LoadPropertyDynamic &&
+            op.name == 'length' &&
+            nativeLists.contains(op.object)) {
+          rewritten ??= code.sublist(0, i);
+          final length = cfg.SSA('optimized:listLength${next++}', version: 0);
+          rewritten.add(collection.ListLength(length, op.object));
+          rewritten.add(primitives.BoxInt(op.target, length));
+        } else {
+          rewritten?.add(op);
+        }
+      }
+      if (rewritten != null) {
+        code
+          ..clear()
+          ..addAll(rewritten);
       }
     }
-    code
-      ..clear()
-      ..addAll(rewritten);
   }
   final definitions = cfg.SSADefinitions(graph);
   cfg.Operation? definition(cfg.SSA value) => definitions.throughCopies(value);
@@ -144,6 +150,8 @@ void optimizePrimitives(
           (primitives.Unbox, resolve(source), representation),
         _ => null,
       },
+      // Dead-code removal immediately rebuilds SSA metadata after this pass.
+      refresh: false,
     );
   }
   // Keep escaped wrappers, arbitrary unboxing, and potentially effectful reads.

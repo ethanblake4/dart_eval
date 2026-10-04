@@ -301,6 +301,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     for (final source in cleanupList) {
       _cachedParsedSources.remove(source);
     }
+    _finishPhase('frontend plugins and parsing');
 
     // Map unit sources into a Set of [Library]s using [_buildLibraries].
     final unitLibraries = {..._buildLibraries(units)};
@@ -345,14 +346,10 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         // a new [Library] with the bridge declarations
         libraries.add(
           Library(
-            Uri.parse(bridgeLibrary),
+            uri,
             imports: [],
             exports: [],
-            declarations: [
-              for (final bridgeDeclaration
-                  in _bridgeDeclarations[bridgeLibrary]!)
-                DeclarationOrBridge(-1, bridge: bridgeDeclaration),
-            ],
+            declarations: bridgeLibDeclarations,
           ),
         );
       }
@@ -529,6 +526,20 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       }
     }
 
+    // Every visible namespace shares its declaration wrapper. Resolve bridge
+    // wrappers once, after all nominal types have been registered.
+    for (final entry in declarationTypes.entries) {
+      final bridge = entry.key.bridge;
+      if (bridge is BridgeClassDef || bridge is BridgeEnumDef) {
+        final resolved = BridgeTypeRef.type(
+          _ctx.runtimeTypes.indexMap[nominalDeclOf(entry.value)!],
+        );
+        entry.key.bridge = bridge is BridgeClassDef
+            ? bridge.copyWith(type: bridge.type.copyWith(type: resolved))
+            : (bridge as BridgeEnumDef).copyWith(type: resolved);
+      }
+    }
+
     final visibleTypesByIndex = <int, Map<String, TypeRef>>{};
     for (final library in reachableLibraries) {
       final libraryIndex = libraryIndexMap[library]!;
@@ -555,21 +566,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
             final cached = declarationTypes[child];
             if (cached == null) continue;
             res['$name.$childName'] = cached;
-            if (child.isBridge) {
-              final bridge = child.bridge!;
-              final type0 = BridgeTypeRef.type(
-                _ctx.runtimeTypes.indexMap[nominalDeclOf(cached)!],
-              );
-              if (bridge is BridgeClassDef) {
-                child.bridge = bridge.copyWith(
-                  type: bridge.type.copyWith(type: type0),
-                );
-              } else if (bridge is BridgeEnumDef) {
-                child.bridge = bridge.copyWith(type: type0);
-              } else {
-                assert(false);
-              }
-            }
           }
           visibleTypesByIndex[libraryIndex] ??= {};
           visibleTypesByIndex[libraryIndex]!.addAll(res);
@@ -587,21 +583,6 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         }
         final type = declarationTypes[declarationOrBridge];
         if (type == null) continue;
-        if (declarationOrBridge.isBridge) {
-          final bridge = declarationOrBridge.bridge!;
-          final type0 = BridgeTypeRef.type(
-            _ctx.runtimeTypes.indexMap[nominalDeclOf(type)!],
-          );
-          if (bridge is BridgeClassDef) {
-            declarationOrBridge.bridge = bridge.copyWith(
-              type: bridge.type.copyWith(type: type0),
-            );
-          } else if (bridge is BridgeEnumDef) {
-            declarationOrBridge.bridge = bridge.copyWith(type: type0);
-          } else {
-            assert(false);
-          }
-        }
         visibleTypesByIndex[libraryIndex]![name] = type;
       }
     }
@@ -848,6 +829,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       pending = remaining;
     }
 
+    _finishPhase('frontend library and type resolution');
     try {
       /// Compile statics first so we can infer their type
       _topLevelDeclarationsMap.forEach((key, value) {
@@ -958,7 +940,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
 
     _ctx.finishMethod();
 
-    _finishPhase('frontend');
+    _finishPhase('frontend declaration compilation');
     for (final entry in _ctx.functionGraphs.entries) {
       final graph = entry.value;
       graph.removeUnreachableBlocks();
@@ -1558,14 +1540,21 @@ _resolveImportsAndExports(
 
   final worklist = <Library>[];
   final importMap = <Library, List<_Import>>{};
-  final importedDeclarationsMap =
-      <Library, Map<Library, Iterable<(String, DeclarationOrBridge)>>>{};
+  // Expansion creates wrappers for static members and top-level variables.
+  // Reuse them while declarations are unchanged during import resolution.
+  final expandedDeclarationsByLib =
+      <Library, List<(String, DeclarationOrBridge)>>{};
+  List<(String, DeclarationOrBridge)> expandedDeclarationsOf(Library lib) =>
+      expandedDeclarationsByLib.putIfAbsent(
+        lib,
+        () => DeclarationOrBridge.expand(lib.declarations).toList(),
+      );
 
   // Traversing libraries
   for (final l in libraries) {
     // All visible declarations under this Library
     final visibleDeclarationsLib = <String, DeclarationOrPrefix>{
-      for (final d in DeclarationOrBridge.expand(l.declarations))
+      for (final d in expandedDeclarationsOf(l))
         // Key: the expanded name of the declaration (see [_expandDeclarations])
         // Value: DeclarationOrPrefix (declaration content, and store the ID
         // of the containing library)
@@ -1596,9 +1585,6 @@ _resolveImportsAndExports(
     ];
 
     importMap[l] = imports;
-    importedDeclarationsMap[l] = {
-      l: DeclarationOrBridge.expand(l.declarations),
-    };
     for (final ext in extensionsOf(l)) {
       final list = visibleExtensions[l] ??= [];
       if (!list.contains(ext)) list.add(ext);
@@ -1647,16 +1633,12 @@ _resolveImportsAndExports(
 
       for (final lib in importedLibs) {
         final libId = libraryIds[lib]!;
-        final expandedDeclarations = DeclarationOrBridge.expand(
-          lib.declarations,
-        );
-        final importedDeclarations = expandedDeclarations
+        final importedDeclarations = expandedDeclarationsOf(lib)
             .where(
               (element) =>
                   _combinatorListAccepts(import.combinators, element.$1, true),
             )
             .toList();
-        importedDeclarationsMap[l]![lib] = importedDeclarations;
 
         final result = <(String, DeclarationOrBridge)>{};
 
@@ -1819,15 +1801,14 @@ _resolveImportsAndExports(
     if (entrypoints.contains(l.uri)) {
       continue;
     }
+    final usedDeclarations = usedDeclarationsForLibrary[libraryIds[l]];
     l.declarations = l.declarations
         .where(
           (declaration) =>
               declaration.isBridge ||
-              DeclarationOrBridge.nameOf(declaration).any(
-                (name) => {
-                  ...?usedDeclarationsForLibrary[libraryIds[l]],
-                }.contains(name),
-              ),
+              DeclarationOrBridge.nameOf(
+                declaration,
+              ).any((name) => usedDeclarations?.contains(name) ?? false),
         )
         .toList();
     /*result[l]!.removeWhere((key, d) {

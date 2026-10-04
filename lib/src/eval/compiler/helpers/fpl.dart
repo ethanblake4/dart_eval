@@ -65,12 +65,22 @@ List<FormalParameter> resolveFPLDefaults(
     named.sort((a, b) => (a.name!.lexeme).compareTo(b.name!.lexeme));
   }
 
-  ctx.functionParameters[ctx.currentFunctionId!] = [...positional, ...named];
+  final orderedParameters = [...positional, ...named];
+  ctx.functionParameters[ctx.currentFunctionId!] = orderedParameters;
   // Non-scalar defaults need hidden thunk functions, which must be emitted
   // while this function is still being compiled — closures, call sites, and
   // exports all share the cached indices afterwards.
-  for (final param in [...positional, ...named]) {
+  for (final param in orderedParameters) {
     if (ignoreDefaults) continue;
+    final host = param.parent?.parent;
+    // Super formals and redirecting constructors can inherit a default.
+    // Other parameters without a default need no contextual type here.
+    if (param.defaultClause == null &&
+        param is! SuperFormalParameter &&
+        !(host is ConstructorDeclaration &&
+            host.redirectedConstructor != null)) {
+      continue;
+    }
     // The declared parameter type is the default value's context type.
     var bound = !hasFormalParameterAnnotation(param)
         ? null
@@ -92,7 +102,7 @@ List<FormalParameter> resolveFPLDefaults(
   }
   final declaredTypes = <TypeRef>[];
 
-  for (final param in [...positional, ...named]) {
+  for (final param in orderedParameters) {
     final argument = SSA('arg_$paramIndex');
     final hasAnnotation = hasFormalParameterAnnotation(param);
     var declaredType = !hasAnnotation

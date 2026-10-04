@@ -39,14 +39,17 @@ void main(List<String> args) {
   }
 
   var plainCompiler = Compiler();
-  var profiledCompiler = Compiler(onPhase: record);
+  final phases = <String, int>{};
+  void recordPhase(String phase, int time) =>
+      phases.update(phase, (total) => total + time, ifAbsent: () => time);
+  var profiledCompiler = Compiler(onPhase: recordPhase);
   var bytes = 0;
   var emittedFunctions = 0;
   var programHash = '';
   for (var i = -3; i < samples; i++) {
     if (mode == 'fresh') {
       plainCompiler = Compiler();
-      profiledCompiler = Compiler(onPhase: record);
+      profiledCompiler = Compiler(onPhase: recordPhase);
     }
     // Alternate ordering to reduce systematic warm-cache bias.
     late Program plain;
@@ -66,6 +69,10 @@ void main(List<String> args) {
       compileProfiled();
       compilePlain();
     }
+    for (final entry in phases.entries) {
+      record(entry.key, entry.value);
+    }
+    phases.clear();
     final encoded = measure('serialization', profiled.write);
     bytes = encoded.length;
     emittedFunctions = profiled.typedProgram.functions.length;

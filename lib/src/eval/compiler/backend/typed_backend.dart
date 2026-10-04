@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:collection/collection.dart';
 import '../helpers/formal_parameter.dart';
 
@@ -174,6 +176,36 @@ class TypedBackend {
     [4],
     [6, 7, 8],
   ];
+  // Opcode families have fixed register constraints. The allocator queries
+  // them repeatedly; share immutable variants across operations and functions.
+  static final _variantFamilies = HashMap<List<int>, Set<cfg.Variant>>(
+    equals: const ListEquality<int>().equals,
+    hashCode: const ListEquality<int>().hash,
+  );
+
+  static Set<cfg.Variant> _variantsFor(TypedOperation op) {
+    if (op.fixedVariant case final variant?) return {variant};
+    final cached = _variantFamilies[op.codes];
+    if (cached != null) return cached;
+    final variants = Set<cfg.Variant>.unmodifiable({
+      for (final code in op.codes) ...[
+        cfg.Variant(
+          result: TypedOp.instructions[code].outputs.firstOrNull,
+          arguments: TypedOp.instructions[code].inputs,
+        ),
+        if (TypedOp.instructions[code].commutative)
+          cfg.Variant(
+            result: TypedOp.instructions[code].outputs.firstOrNull,
+            arguments: List<int>.unmodifiable(
+              TypedOp.instructions[code].inputs.reversed,
+            ),
+          ),
+      ],
+    });
+    _variantFamilies[List<int>.unmodifiable(op.codes)] = variants;
+    return variants;
+  }
+
   List<int> _named(Iterable<String> names) => [
     for (final name in names) _codes[name]!,
   ];
@@ -2540,22 +2572,7 @@ class _LoweringSession {
     graph.opCreators[TypedOperation] = cfg.Creator<TypedOperation, void>(
       variants: {},
       selectClobbers: (op) => op.clobbers,
-      selectVariants: (op) => op.fixedVariant == null
-          ? {
-              for (final code in op.codes) ...[
-                cfg.Variant(
-                  result: TypedOp.instructions[code].outputs.firstOrNull,
-                  arguments: TypedOp.instructions[code].inputs,
-                ),
-                if (TypedOp.instructions[code].commutative)
-                  cfg.Variant(
-                    result: TypedOp.instructions[code].outputs.firstOrNull,
-                    arguments: TypedOp.instructions[code].inputs.reversed
-                        .toList(),
-                  ),
-              ],
-            }
-          : {op.fixedVariant!},
+      selectVariants: TypedBackend._variantsFor,
       create: (op, _) {
         if (op.fixedVariant != null) {
           return _Bytes(op.codes.single, op.immediate);

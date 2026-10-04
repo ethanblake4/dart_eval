@@ -217,3 +217,65 @@ Final gates:
   cases passed in the four-isolate complete run. No timeout limits or test
   configuration were changed. Suite-wide speedup is not inferred from these
   runs with differing contention and concurrency.
+
+## Frontend and lowering followup
+
+The next investigation split frontend work into parsing/plugin setup,
+library/type resolution, and declaration compilation. Temporary lowering
+timers first separated graph analysis and instruction selection from
+allocation/emission, then separated graph construction, primitive
+optimization, and allocation. Primitive optimization and register allocation
+were the largest lowering costs. Declaration compilation was the largest
+frontend cost. The detailed timers have been removed; the permanent profiler
+retains the broad frontend phases and aggregates repeated callbacks per compile.
+
+Implemented changes:
+
+- Cache expanded declarations within import resolution, remove its write-only
+  map, and use the existing set of used declarations during tree shaking.
+- Reuse bridge declaration lists and resolve each bridge type wrapper once
+  after nominal registration, instead of copying it for each visible namespace.
+- Reuse ordered formal parameters and skip contextual default-type resolution
+  for parameters that cannot have explicit or inherited defaults.
+- Cache immutable opcode-family register constraints across functions and
+  compiler invocations. Operation-specific fixed variants retain their own path.
+- Leave native-list rewrite blocks untouched unless a rewrite is needed.
+- Let common-expression elimination defer SSA metadata refresh to the
+  immediately following dead-code pass. The CFG API defaults to refreshing,
+  preserving existing callers; a composition regression covers the deferred path.
+
+The final AOT comparison used three rounds of 51 unprofiled samples per
+workload/mode, three discarded warmups, reversed executable order in the
+middle round, and both executables pinned to the same logical CPU. No other
+tests or agent compilations ran during timing. These medians pool 153 samples
+per executable and compare against the prior lazy-SSA implementation:
+
+| Workload | Mode | Before ms | After ms | Reduction |
+| --- | --- | ---: | ---: | ---: |
+| Small | Fresh | 3.251 | 2.916 | 10.3% |
+| Small | Cached | 3.026 | 2.771 | 8.4% |
+| Mixed | Fresh | 15.859 | 15.084 | 4.9% |
+| Mixed | Cached | 14.414 | 13.745 | 4.6% |
+| Pipeline | Fresh | 28.450 | 25.041 | 12.0% |
+| Pipeline | Cached | 26.856 | 25.243 | 6.0% |
+
+CPU affinity reduced scheduling variation but did not control CPU frequency.
+Individual rounds remained noisy, including one small candidate process
+roughly twice as slow across compilation and loading. The pooled results
+show further compiler improvements, not a measured test-suite speedup.
+All 36 comparisons preserved the complete serialized program's SHA-256 and
+length. Runtime dispatch, opcodes, stdlib, and allocation algorithms are unchanged.
+
+Focused compiler/default/profiling verification passed 372 tests. CFG's
+complete suite passed 110 tests. Changed-source analysis was clean. The final
+code review found no correctness blockers and suggested making reversed
+cached argument lists explicitly unmodifiable.
+
+Final complete gates passed 2314 default tests with 86 existing skips and
+2737 SDK tests with 557 registered skips. The SDK eligible-fixture summary
+reports three existing unsupported skips. External wall times were 183.276
+seconds for the default suite at concurrency four and 202.292 seconds for
+the full SDK suite. These are verification runs, not paired suite benchmarks.
+After the cache immutability cleanup, all 363 compiler tests and analysis
+passed again. A rebuilt AOT executable completed a final 31-sample sweep of
+all six workload/mode combinations with unchanged serialized hashes and lengths.
