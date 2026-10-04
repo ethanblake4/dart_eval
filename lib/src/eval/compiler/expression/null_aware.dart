@@ -148,54 +148,63 @@ Variable emitNullGuard(
       }
     }
   }
-  macroBranch(
-    ctx,
-    null,
-    // `x?.y` with a statically non-nullable `x` never takes the null path;
-    // that edge still compiles but contributes nothing to the flow join.
-    elseEdgeUnreachable: () =>
-        ctx.soundFlowAnalysis(source) && !target.type.hasNullableRepresentation,
-    condition: (ctx) => compileNonNullCondition(ctx, target),
-    thenBranch: (ctx, rt) {
-      if (receiverExpression != null) {
-        _promoteGuardReceivers(ctx, receiverExpression, narrow: narrow);
-      }
-      // The receiver is provably non-null here: promote it so member and
-      // extension resolution (`c1n?.ext` on `extension on C1`) see the
-      // non-nullable view. Detach it from the binding so boxing cannot
-      // replace this view with the binding's nullable type.
-      final selectorType = narrow
-          ? target.type.withNullable(false)
-          : target.facts.nullShortedType;
-      final V = body(
-        selectorType != null
-            ? Variable.of(
-                ctx,
-                target.ssa,
-                selectorType,
-                rep: target.rep,
-                facts: target.facts,
-              )
-            : target,
-      ).boxIfNeeded(ctx);
-      // `x?.m` can yield null only when `x` itself can be null — on a
-      // statically non-nullable receiver the result is `m`'s own type, which
-      // also lets a chained `?.` see its null edge is statically dead.
-      final canBeNull = target.type.hasNullableRepresentation;
-      out = out.copyWith(
-        type: canBeNull ? V.type.withNullable(true) : V.type,
-        facts: out.facts.copyWith(
-          nullShortedType: V.type,
-          possibleClasses: {
-            ...V.concreteTypes,
-            if (canBeNull) CoreTypes.nullType.ref(ctx),
-          }.toList(),
-        ),
-      );
-      ctx.pushOp(Assign(out.ssa, V.ssa));
-      return StatementInfo();
-    },
-    source: source,
-  );
+  // Cascade temporaries are detached from local bindings, so branch-state
+  // joins cannot discard a proof recorded on the temporary itself.
+  final cascadeTarget = ctx.cascadeTarget;
+  ctx.cascadeTarget = cascadeTarget?.copyWith();
+  try {
+    macroBranch(
+      ctx,
+      null,
+      // `x?.y` with a statically non-nullable `x` never takes the null path;
+      // that edge still compiles but contributes nothing to the flow join.
+      elseEdgeUnreachable: () =>
+          ctx.soundFlowAnalysis(source) &&
+          !target.type.hasNullableRepresentation,
+      condition: (ctx) => compileNonNullCondition(ctx, target),
+      thenBranch: (ctx, rt) {
+        if (receiverExpression != null) {
+          _promoteGuardReceivers(ctx, receiverExpression, narrow: narrow);
+        }
+        // The receiver is provably non-null here: promote it so member and
+        // extension resolution (`c1n?.ext` on `extension on C1`) see the
+        // non-nullable view. Detach it from the binding so boxing cannot
+        // replace this view with the binding's nullable type.
+        final selectorType = narrow
+            ? target.type.withNullable(false)
+            : target.facts.nullShortedType;
+        final V = body(
+          selectorType != null
+              ? Variable.of(
+                  ctx,
+                  target.ssa,
+                  selectorType,
+                  rep: target.rep,
+                  facts: target.facts,
+                )
+              : target,
+        ).boxIfNeeded(ctx);
+        // `x?.m` can yield null only when `x` itself can be null — on a
+        // statically non-nullable receiver the result is `m`'s own type, which
+        // also lets a chained `?.` see its null edge is statically dead.
+        final canBeNull = target.type.hasNullableRepresentation;
+        out = out.copyWith(
+          type: canBeNull ? V.type.withNullable(true) : V.type,
+          facts: out.facts.copyWith(
+            nullShortedType: V.type,
+            possibleClasses: {
+              ...V.concreteTypes,
+              if (canBeNull) CoreTypes.nullType.ref(ctx),
+            }.toList(),
+          ),
+        );
+        ctx.pushOp(Assign(out.ssa, V.ssa));
+        return StatementInfo();
+      },
+      source: source,
+    );
+  } finally {
+    ctx.cascadeTarget = cascadeTarget;
+  }
   return out;
 }

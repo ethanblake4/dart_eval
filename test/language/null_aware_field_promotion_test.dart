@@ -56,6 +56,7 @@ extension Q on List<int> {
   void operator []=(int index, int value) { this[0] = value + 60; }
 }
 class C { C follow(Object? ignored) => this; }
+class Holder { final C? _child; Holder(this._child); }
 extension Named on C { C touch(Object? ignored) => this; }
 int main() {
   final values = <int>[2];
@@ -67,6 +68,9 @@ int main() {
     source..check<Exactly<C?>>(),
   );
   final skipped = P(null)?[throw 'index evaluated'];
+  final holder = Holder(C());
+  holder.._child?.follow(null).._child.check<Exactly<C?>>();
+  holder.._child!.._child.check<Exactly<C>>();
   return read! + values[0] + (chain != null ? 100 : 0) +
       (source == null ? 1000 : 0) + (skipped == null ? 10000 : 0);
 }

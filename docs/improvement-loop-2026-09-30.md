@@ -4631,3 +4631,19 @@ All four extension/primary failures pass fresh and serialized. Twenty-eight
 focused constructor/extension tests pass and analysis is clean. A combined
 factory, tear-off, assertion and return control yields 11231 in native Dart with
 asserts enabled and in both guest modes. Five expect_fail entries are removed.
+
+### Cycle 28 regression survey
+
+The first unrestricted SDK run on the combined working changes passes 2728
+outcomes with eight compile errors, one failed outcome and three skips. All
+31 previous failing paths pass; the nine failures are newly exposed regressions.
+Dependent generic inference, folded abstract getters and unallocated-class
+field-slot metadata are being corrected before the remaining checkpoints.
+
+Null-shortening in a cascade leaked a field proof onto its detached temporary,
+which ordinary local-state joins cannot restore. Null guards now copy and
+restore that compiler temporary. The original cascade fixture passes fresh and
+serialized, fifteen focused tests pass, and scoped analysis is clean. The
+combined guard test also checks that a hard non-null assertion still carries
+its field proof into the next cascade section. No bytecode is added by this
+compiler-state correction.
