@@ -75,7 +75,12 @@ String _$constructor(
               defaultValue != null &&
               _usesPrivateIdentifier(defaultValue);
         });
-    final invocation = needsNativeDefaults
+    final factory = member?.nativeFactory;
+    final prefix = factory == null ? null : ctx.hooksPrefix();
+    final invocation = factory != null
+        ? '${prefix != null ? '$prefix.' : ''}$factory(runtime, '
+              '${argumentAccessors(ctx, parameters, registers: true, exportValues: bridgeFactory, member: member).join(', ')})'
+        : needsNativeDefaults
         ? _nativeConstructorInvocation(
             ctx,
             element,

@@ -607,6 +607,7 @@ class BindgenMemberConfig {
     this.params = const {},
     this.hook,
     this.permissions = const [],
+    this.nativeFactory,
     this.expr,
     this.isStatic,
     this.type,
@@ -626,6 +627,9 @@ class BindgenMemberConfig {
   /// Name of a top-level hook function in the class's `hooks:` file that the
   /// generated member delegates to.
   final String? hook;
+
+  /// Constructor factory receiving runtime and already adapted native arguments.
+  final String? nativeFactory;
 
   /// Permission assertions emitted at the top of the generated body.
   final List<BindgenPermissionConfig> permissions;
@@ -647,6 +651,7 @@ class BindgenMemberConfig {
         : null,
     params: _paramMap(yaml['params']),
     hook: _str(yaml['hook']),
+    nativeFactory: _str(yaml['nativeFactory']),
     permissions: [
       if (yaml['permissions'] is YamlList)
         for (final entry in yaml['permissions'] as YamlList)

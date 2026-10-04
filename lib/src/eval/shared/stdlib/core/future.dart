@@ -18,6 +18,7 @@ class $Future<T> implements Future<T>, $Instance {
   /// Configure [$Future] for runtime in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:core', 'Future.', _futureNew);
+    runtime.registerBridgeFuncRegisters('dart:core', 'Future.any', _futureAny);
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Future.wait',
@@ -167,6 +168,33 @@ class $Future<T> implements Future<T>, $Instance {
       ),
     },
     methods: {
+      'any': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'futures',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.future, [
+                      BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                    ]),
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          namedParams: [],
+          generics: {'T': BridgeGenericParam()},
+        ),
+        isStatic: true,
+      ),
       'wait': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -985,5 +1013,26 @@ $Value? _futureWait(Runtime runtime, Object? r, Object? s, Object? c) {
     runtimeTypeId:
         resultType ??
         runtime.internParameterizedType(CoreTypes.future, [listType]),
+  );
+}
+
+$Value? _futureAny(Runtime runtime, Object? r, Object? s, Object? c) {
+  final futures = TypedInterop.exportExternal(r, runtime: runtime) as Iterable;
+  final iterableType = r is $Value ? r.$getRuntimeType(runtime) : null;
+  final futureType = iterableType == null
+      ? null
+      : runtime.runtimeTypeArgumentAt(iterableType, 0);
+  final elementType = futureType == null
+      ? runtime.lookupType(CoreTypes.dynamic)
+      : runtime.runtimeTypeArgumentAt(futureType, 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+  final resultType =
+      runtime.bridgeCallReturnTypeId ??
+      runtime.internParameterizedType(CoreTypes.future, [elementType]);
+
+  return $Future.wrap(
+    Future.any<Object?>(futures.map((future) => future as Future<Object?>)),
+    runtime: runtime,
+    runtimeTypeId: resultType,
   );
 }

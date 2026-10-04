@@ -26,6 +26,7 @@ import 'typed/typed_frame.dart';
 import 'typed/typed_type_environment.dart';
 import 'typed/typed_interop.dart';
 import 'typed/typed_global_state.dart';
+import 'typed/typed_native_list.dart';
 
 part 'typed_interop_runtime.dart';
 
@@ -336,6 +337,8 @@ class Runtime {
     if (value is $Value) {
       return value;
     }
+    final native = wrapNativeTypedList(value);
+    if (native != null) return native;
     if (value is List) {
       return recursive
           ? $List.wrap(

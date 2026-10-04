@@ -37,7 +37,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import '../core/iterator.dart';
-import '../core/collection.dart' as hooks;
+import 'hash_collection_hooks.dart' as hooks;
 
 /// dart_eval wrapper binding for [LinkedHashSet]
 class $LinkedHashSet<E> implements $Instance {
@@ -1243,7 +1243,8 @@ class $LinkedHashSet<E> implements $Instance {
   /// Wrapper for the [LinkedHashSet.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $LinkedHashSet.wrap(
-      LinkedHashSet(
+      hooks.nativeLinkedHashSet(
+        runtime,
         equals:
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null

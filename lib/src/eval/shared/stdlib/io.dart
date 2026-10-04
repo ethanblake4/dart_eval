@@ -68,6 +68,11 @@ class DartIoPlugin implements EvalPlugin {
     runtime.registerBridgeFuncRegisters('dart:io', 'File.', $File.$new);
     runtime.registerBridgeFuncRegisters(
       'dart:io',
+      'File.fromUri',
+      $File.$fromUri,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:io',
       'Directory.',
       $Directory.$new,
     );

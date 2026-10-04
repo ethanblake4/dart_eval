@@ -22,6 +22,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Completer,
         $Timer,
         $TimeoutException,
+        $AsyncError,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -34,6 +35,7 @@ import 'package:dart_eval/stdlib/core.dart'
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
+import './exceptions.dart';
 import './timer.dart';
 
 /// dart_eval wrapper binding for [Zone]
@@ -803,7 +805,7 @@ class $Zone implements $Instance {
       'errorCallback': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.object, []),
+            BridgeTypeRef(AsyncTypes.asyncError, []),
             nullable: true,
           ),
           namedParams: [],
@@ -1800,7 +1802,7 @@ class $Zone implements $Instance {
       TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object,
       (s as $Value?)!.$value,
     );
-    return result == null ? const $null() : $Object(result);
+    return result == null ? const $null() : $AsyncError.wrap(result);
   }
 
   static const $Function __scheduleMicrotask = $Function(_scheduleMicrotask);

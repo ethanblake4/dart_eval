@@ -1173,17 +1173,20 @@ class $List<E> implements List<E>, $Instance {
   ///
   /// The typed VM can index this view directly because every read produces a
   /// [$Value]. Writes cross the boundary through [$Value.$reified].
-  static $List<$Value?> view<T>(
+  /// Typed-data lists retain their concrete SDK wrapper and native dispatch.
+  static $Instance view<T>(
     List<T> value,
     $Value Function(T value) mapper, {
     int? runtimeTypeId,
     Runtime? runtime,
-  }) => $MappedListView<T>(
-    value,
-    mapper,
-    runtimeTypeId: runtimeTypeId,
-    runtime: runtime,
-  );
+  }) =>
+      wrapNativeTypedList(value) ??
+      $MappedListView<T>(
+        value,
+        mapper,
+        runtimeTypeId: runtimeTypeId,
+        runtime: runtime,
+      );
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -1289,16 +1292,18 @@ class $List<E> implements List<E>, $Instance {
   List<E> _checkedElements(Runtime runtime, Iterable values) {
     final checked = <E>[];
     for (final value in values) {
-      _checkElement(runtime, value);
-      checked.add(value as E);
+      final boxed = TypedInterop.boxExternal(value, runtime: runtime);
+      _checkElement(runtime, boxed);
+      checked.add(boxed as E);
     }
     return checked;
   }
 
   Iterable<E> _checkedIterable(Runtime runtime, Iterable values) sync* {
     for (final value in values) {
-      _checkElement(runtime, value);
-      yield value as E;
+      final boxed = TypedInterop.boxExternal(value, runtime: runtime);
+      _checkElement(runtime, boxed);
+      yield boxed as E;
     }
   }
 
@@ -2053,12 +2058,13 @@ class $List<E> implements List<E>, $Instance {
     Runtime runtime,
     Iterable elements,
     int? runtimeTypeId,
-  ) => runtimeTypeId == null
-      ? elements
-      : elements.map((value) {
-          runtime.assertTypedTypeArgument(value, runtimeTypeId, 0);
-          return value;
-        });
+  ) => elements.map((value) {
+    final boxed = TypedInterop.boxExternal(value, runtime: runtime);
+    if (runtimeTypeId != null) {
+      runtime.assertTypedTypeArgument(boxed, runtimeTypeId, 0);
+    }
+    return boxed;
+  });
 
   @override
   bool any(bool Function(E element) test) => $value.any(test);

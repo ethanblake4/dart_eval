@@ -49,4 +49,42 @@ void main() {
       expect(result, const DynamicFixtureResult.value(true), reason: mode);
     }
   });
+
+  test('AsyncError exposes its error and stack trace', () {
+    for (final (mode, result) in runDynamicFixture(r'''
+      import 'dart:async';
+
+      bool main() {
+        final error = StateError('batch6');
+        final stackTrace = StackTrace.current;
+        final captured = AsyncError(error, stackTrace);
+        final defaulted = AsyncError(error, null);
+        return captured.error.toString() == error.toString() &&
+            captured.stackTrace.toString() == stackTrace.toString() &&
+            defaulted.stackTrace != null;
+      }
+    ''')) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
+
+  test('File.fromUri converts paths and rejects non-file URIs', () {
+    for (final (mode, result) in runDynamicFixture(r'''
+      import 'dart:io';
+
+      bool main() {
+        final uri = Uri.parse('file:///batch6-no-io.txt');
+        final file = File.fromUri(uri);
+        if (file.path != uri.toFilePath()) return false;
+        try {
+          File.fromUri(Uri.parse('https://example.com/no-io'));
+        } on UnsupportedError {
+          return true;
+        }
+        return false;
+      }
+    ''')) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+  });
 }

@@ -43,6 +43,20 @@ class $File implements $Instance {
           namedParams: [],
         ),
       ),
+      'fromUri': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter(
+              'uri',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.uri)),
+              false,
+            ),
+          ],
+          namedParams: [],
+        ),
+        isFactory: true,
+      ),
     },
     methods: {
       'create': BridgeMethodDef(
@@ -443,6 +457,10 @@ class $File implements $Instance {
 
   static $File $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $File.wrap(File((r as $Value).$value));
+  }
+
+  static $File $fromUri(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $File.wrap(File.fromUri((r as $Value).$value as Uri));
   }
 
   @override

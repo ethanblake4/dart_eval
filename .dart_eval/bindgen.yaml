@@ -234,6 +234,8 @@ libraries:
       TimeoutException:
         file: exceptions.dart
         implementsSdk: true
+      AsyncError:
+        file: exceptions.dart
       Zone:
         file: zone.dart
       StreamSubscription:
@@ -275,6 +277,10 @@ libraries:
       # Generated wrappers.
       LinkedHashMap:
         file: linked_hash_map.dart
+        hooks: hash_collection_hooks.dart
+        constructors:
+          new:
+            nativeFactory: nativeLinkedHashMap
       UnmodifiableMapView:
         include: false # Guest maps need a source-level delegating view.
       UnmodifiableListView:
@@ -297,6 +303,10 @@ libraries:
             hook: iterableWhereType
       HashMap:
         file: hash_map.dart
+        hooks: hash_collection_hooks.dart
+        constructors:
+          new:
+            nativeFactory: nativeHashMap
       SplayTreeMap:
         file: splay_tree_map.dart
       SplayTreeSet:
@@ -307,13 +317,19 @@ libraries:
             hook: iterableWhereType
       HashSet:
         file: hash_set.dart
-        hooks: ../core/collection.dart
+        hooks: hash_collection_hooks.dart
+        constructors:
+          new:
+            nativeFactory: nativeHashSet
         methods:
           whereType:
             hook: iterableWhereType
       LinkedHashSet:
         file: linked_hash_set.dart
-        hooks: ../core/collection.dart
+        hooks: hash_collection_hooks.dart
+        constructors:
+          new:
+            nativeFactory: nativeLinkedHashSet
         methods:
           whereType:
             hook: iterableWhereType

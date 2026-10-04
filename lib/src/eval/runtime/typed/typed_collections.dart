@@ -8,6 +8,60 @@ import 'typed_interop.dart';
 
 /// Creates collection backing stores with Dart guest equality semantics.
 abstract final class TypedCollections {
+  static final _nativeWrappers = Expando<Expando<$Value>>();
+
+  static bool _canRemember(Object? value) =>
+      value != null &&
+      value is! num &&
+      value is! bool &&
+      value is! String &&
+      value is! Record;
+
+  /// Preserve the original type witness when a native collection receives an
+  /// exported wrapper. Both runtimes and native values are weak identity keys.
+  static Object? exportNativeValue(Runtime? runtime, $Value wrapper) {
+    final value = wrapper.$value;
+    if (runtime != null && _canRemember(value)) {
+      (_nativeWrappers[runtime] ??= Expando<$Value>())[value!] = wrapper;
+    }
+    return value;
+  }
+
+  /// Host collection callbacks receive unboxed keys. Restore guest receivers
+  /// before invoking their operators, including native bridge subclasses.
+  static $Value? boxNativeKey(Runtime runtime, Object? value) {
+    if (value == null || value is $null) return null;
+    if (value is $Bridge) {
+      final guest = TypedInterop.bridgeGuest(value);
+      if (guest != null) return guest.dispatchRoot;
+    }
+    if (_canRemember(value)) {
+      final wrapper = _nativeWrappers[runtime]?[value];
+      if (wrapper != null) return wrapper;
+    }
+    if (value is List || value is Map || value is Set || value is Function) {
+      return TypedInterop.boxExternal(value, runtime: runtime);
+    }
+    // Opaque native Object keys need their ordinary host operators even when
+    // no type autowrapper has been registered for them.
+    return runtime.wrapAlways(value);
+  }
+
+  static bool nativeKeyEquals(Runtime runtime, Object? left, Object? right) =>
+      TypedInterop.equals(
+        runtime,
+        boxNativeKey(runtime, left),
+        boxNativeKey(runtime, right),
+      );
+
+  static int nativeKeyHash(Runtime runtime, Object? value) {
+    final key = boxNativeKey(runtime, value);
+    if (key == null) return null.hashCode;
+    return TypedInterop.toInt(
+      TypedInterop.getProperty(runtime, key, 'hashCode'),
+    );
+  }
+
   static Map<Object?, Object?> newMap(Runtime? runtime) =>
       LinkedHashMap<Object?, Object?>(
         equals: (left, right) => _equals(runtime, left, right),

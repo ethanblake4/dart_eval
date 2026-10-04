@@ -37,7 +37,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import '../core/iterator.dart';
-import '../core/collection.dart' as hooks;
+import 'hash_collection_hooks.dart' as hooks;
 
 /// dart_eval wrapper binding for [HashSet]
 class $HashSet<E> implements $Instance {
@@ -1241,7 +1241,8 @@ class $HashSet<E> implements $Instance {
   /// Wrapper for the [HashSet.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $HashSet.wrap(
-      HashSet(
+      hooks.nativeHashSet(
+        runtime,
         equals:
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null

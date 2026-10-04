@@ -87,6 +87,7 @@ class DartAsyncPlugin implements EvalPlugin {
     registry.addSource(_sdkAsyncSource);
     $Timer.configureForCompile(registry);
     $TimeoutException.configureForCompile(registry);
+    $AsyncError.configureForCompile(registry);
     $StreamTransformer.configureForCompile(registry);
   }
 
@@ -110,6 +111,7 @@ class DartAsyncPlugin implements EvalPlugin {
     $StreamTransformerBase$bridge.configureForRuntime(runtime);
     $Timer.configureForRuntime(runtime);
     $TimeoutException.configureForRuntime(runtime);
+    $AsyncError.configureForRuntime(runtime);
     $StreamTransformer.configureForRuntime(runtime);
   }
 }

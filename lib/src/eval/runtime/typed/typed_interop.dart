@@ -9,6 +9,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/error_hooks.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol_literal.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 import 'typed_instance.dart';
+import 'typed_collections.dart';
 import 'typed_host_collections.dart';
 import 'typed_program.dart';
 import 'typed_frame.dart';
@@ -568,7 +569,7 @@ abstract final class TypedInterop {
         $List() => TypedHostCollections.export(value.$value, value, runtime),
         $Map() => TypedHostCollections.export(value.$value, value, runtime),
         $Set() => TypedHostCollections.export(value.$value, value, runtime),
-        $Value() => value.$value,
+        $Value() => TypedCollections.exportNativeValue(runtime, value),
         _ => value,
       };
 

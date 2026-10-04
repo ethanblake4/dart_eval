@@ -19,6 +19,8 @@ abstract final class TypedHostCollections {
   static final _contexts = Expando<_CollectionContext>();
 
   static $Value box(Object collection, Runtime? runtime, {int? runtimeTypeId}) {
+    final native = wrapNativeTypedList(collection);
+    if (native != null) return native;
     final cache = _cacheFor(runtime);
     final existing = cache.boxed[collection];
     if (existing != null &&

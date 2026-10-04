@@ -45,12 +45,12 @@ void main() {
       Runtime(program.write().buffer),
     ]) {
       runtime.executeLib('package:native_list/main.dart', 'main');
-      Object? read($List values, $Value index) => runtime.executeLib(
+      Object? read($Instance values, $Value index) => runtime.executeLib(
         'package:native_list/main.dart',
         'read',
         arguments: {'values': values, 'index': index},
       );
-      Object? readInt($List values, int index) => runtime.executeLib(
+      Object? readInt($Instance values, int index) => runtime.executeLib(
         'package:native_list/main.dart',
         'readInt',
         arguments: {'values': values, 'index': index},

@@ -40,6 +40,8 @@ import '../core/map_entry.dart';
 
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
+import 'hash_collection_hooks.dart' as hooks;
+
 /// dart_eval wrapper binding for [HashMap]
 class $HashMap<K, V> implements $Instance {
   /// Configure this class for use in a [Runtime]
@@ -860,7 +862,8 @@ class $HashMap<K, V> implements $Instance {
   /// Wrapper for the [HashMap.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $HashMap.wrap(
-      HashMap(
+      hooks.nativeHashMap(
+        runtime,
         equals:
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null

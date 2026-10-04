@@ -193,6 +193,9 @@ class CoreTypes {
 
 /// Bridge type specs for `dart:async`.
 class AsyncTypes {
+  /// Bridge spec for [AsyncError].
+  static const asyncError = BridgeTypeSpec('dart:async', 'AsyncError');
+
   /// Bridge spec for [Completer].
   static const completer = BridgeTypeSpec('dart:async', 'Completer');
 

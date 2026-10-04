@@ -22,6 +22,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Completer,
         $Timer,
         $TimeoutException,
+        $AsyncError,
         $Zone,
         $StreamSubscription,
         $StreamSink,

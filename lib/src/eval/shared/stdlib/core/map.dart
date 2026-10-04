@@ -3,12 +3,23 @@ part of 'collection.dart';
 /// dart_eval bimodal wrapper for [Map]
 class $Map<K, V> implements Map<K, V>, $Instance {
   /// Wrap a [Map] in a [$Map]
-  $Map.wrap(this.$value, {int? runtimeTypeId, Runtime? runtime})
-    : _runtimeTypeId = runtimeTypeId,
-      _runtime = runtime;
+  $Map.wrap(
+    this.$value, {
+    int? runtimeTypeId,
+    Runtime? runtime,
+    bool identityKeys = false,
+    bool unmodifiable = false,
+  }) : _runtimeTypeId = runtimeTypeId,
+       _runtime = runtime,
+       _identityKeys = identityKeys,
+       _unmodifiable = unmodifiable,
+       _identityScalarKeys = identityKeys ? Map.identity() : null;
 
   final int? _runtimeTypeId;
   final Runtime? _runtime;
+  final bool _identityKeys;
+  final bool _unmodifiable;
+  final Map<Object?, $Value>? _identityScalarKeys;
 
   // The translated owner descriptor id is stable per (wrapper, runtime) pair;
   // keep the last translation instead of importing on every entry write.
@@ -17,12 +28,27 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:core', 'Map.', _$Map$new);
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Map.identity',
+      _$Map$identity,
+    );
     runtime.registerBridgeFuncRegisters('dart:core', 'Map.from', _$Map$from);
     runtime.registerBridgeFuncRegisters('dart:core', 'Map.of', _$Map$of);
     runtime.registerBridgeFuncRegisters(
       'dart:core',
+      'Map.fromIterables',
+      _$Map$fromIterables,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
       'Map.fromEntries',
       _$Map$fromEntries,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Map.unmodifiable',
+      _$Map$unmodifiable,
     );
   }
 
@@ -56,6 +82,14 @@ class $Map<K, V> implements Map<K, V>, $Instance {
         ),
         isFactory: true,
       ),
+      'identity': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [],
+          generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+        ),
+        isFactory: true,
+      ),
       'from': BridgeConstructorDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation($type),
@@ -63,6 +97,33 @@ class $Map<K, V> implements Map<K, V>, $Instance {
             BridgeParameter(
               'other',
               BridgeTypeAnnotation($type, nullable: false),
+              false,
+            ),
+          ],
+          generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+        ),
+        isFactory: true,
+      ),
+      'fromIterables': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter(
+              'keys',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('K')),
+                ]),
+              ),
+              false,
+            ),
+            BridgeParameter(
+              'values',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('V')),
+                ]),
+              ),
               false,
             ),
           ],
@@ -90,6 +151,24 @@ class $Map<K, V> implements Map<K, V>, $Instance {
             ),
           ],
           generics: {'K': BridgeGenericParam(), 'V': BridgeGenericParam()},
+        ),
+        isFactory: true,
+      ),
+      'unmodifiable': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.map, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                ]),
+              ),
+              false,
+            ),
+          ],
         ),
         isFactory: true,
       ),
@@ -494,6 +573,21 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       {},
       runtimeTypeId: runtime.bridgeConstructorTypeId,
       runtime: runtime,
+      unmodifiable: true,
+    );
+  }
+
+  static $Value? _$Map$identity(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $Map.wrap(
+      Map.identity(),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+      identityKeys: true,
     );
   }
 
@@ -517,6 +611,21 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     );
   }
 
+  static $Value? _$Map$fromIterables(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final keys = (r as $Value?)!.$value as Iterable;
+    final values = (s as $Value?)!.$value as Iterable;
+    return $Map.wrap(
+      Map.fromIterables(keys, values),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+    );
+  }
+
   static $Value? _$Map$fromEntries(
     Runtime runtime,
     Object? r,
@@ -532,6 +641,21 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       ),
       runtimeTypeId: runtime.bridgeConstructorTypeId,
       runtime: runtime,
+    );
+  }
+
+  static $Value? _$Map$unmodifiable(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final other = (r as $Value?)!.$value as Map;
+    return $Map.wrap(
+      Map.unmodifiable(other),
+      runtimeTypeId: runtime.bridgeConstructorTypeId,
+      runtime: runtime,
+      unmodifiable: true,
     );
   }
 
@@ -677,8 +801,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     Object? c,
   ) {
     final idx = (r as $Value?) ?? const $null();
-    final map = target!.$value as Map;
-    return map[idx];
+    final wrapper = target! as $Map;
+    return wrapper.$value[wrapper._identityKey(idx)];
   }
 
   static const $Function __indexSet = $Function(_indexSet);
@@ -693,8 +817,11 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     final wrapper = target as $Map;
     final key = (r as $Value?);
     final value = (s as $Value?);
+    if (wrapper._unmodifiable) {
+      return wrapper.$value[wrapper._identityKey(key)] = value;
+    }
     wrapper._checkEntry(runtime, key, value);
-    return wrapper.$value[key] = value;
+    return wrapper.$value[wrapper._identityKey(key, writing: true)] = value;
   }
 
   static const $Function __addAll = $Function(_addAll);
@@ -708,12 +835,17 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   ) {
     final wrapper = target as $Map;
     final other = (r as $Value?)!.$value as Map;
+    if (wrapper._unmodifiable) {
+      wrapper.$value.addAll(other);
+      return null;
+    }
     final entries = other.entries.toList(growable: false);
     for (final entry in entries) {
       wrapper._checkEntry(runtime, entry.key, entry.value);
     }
     for (final entry in entries) {
-      wrapper.$value[entry.key] = entry.value;
+      wrapper.$value[wrapper._identityKey(entry.key, writing: true)] =
+          entry.value;
     }
     return null;
   }
@@ -729,6 +861,10 @@ class $Map<K, V> implements Map<K, V>, $Instance {
   ) {
     final wrapper = target as $Map;
     final newEntries = (r as $Value?)!.$value as Iterable;
+    if (wrapper._unmodifiable) {
+      wrapper.$value.addEntries(newEntries.cast<MapEntry>());
+      return null;
+    }
     final entries = [
       for (final e in newEntries) (e is $Value ? e.$value : e) as MapEntry,
     ];
@@ -736,7 +872,8 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       wrapper._checkEntry(runtime, entry.key, entry.value);
     }
     for (final entry in entries) {
-      wrapper.$value[entry.key] = entry.value;
+      wrapper.$value[wrapper._identityKey(entry.key, writing: true)] =
+          entry.value;
     }
     return null;
   }
@@ -757,7 +894,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     // named `ifAbsent` arrives as its first element when supplied.
     final ifAbsent = c is List && c.isNotEmpty ? c[0] as EvalFunction? : null;
     final result = wrapper.$value.update(
-      key,
+      wrapper._identityKey(key, writing: true),
       (value) => update.call(runtime, null, value as $Value?, null, 1),
       ifAbsent: ifAbsent == null
           ? null
@@ -794,11 +931,13 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     Object? c,
   ) {
     final test = (r as $Value?) as EvalFunction;
-    (target!.$value as Map).removeWhere(
+    final wrapper = target! as $Map;
+    wrapper.$value.removeWhere(
       (key, value) =>
           test.call(runtime, null, key as $Value?, value as $Value?, 2)!.$value
               as bool,
     );
+    wrapper._pruneIdentityScalarKeys();
     return null;
   }
 
@@ -823,7 +962,10 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     Object? s,
     Object? c,
   ) {
-    return $bool((target!.$value as Map).containsKey((r as $Value?)));
+    final wrapper = target! as $Map;
+    return $bool(
+      wrapper.$value.containsKey(wrapper._identityKey(r as $Value?)),
+    );
   }
 
   static const $Function __toString = $Function(_toString);
@@ -847,7 +989,9 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     Object? s,
     Object? c,
   ) {
-    (target!.$value as Map).clear();
+    final wrapper = target! as $Map;
+    wrapper.$value.clear();
+    wrapper._identityScalarKeys?.clear();
     return null;
   }
 
@@ -876,7 +1020,7 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     final key = (r as $Value?);
     final ifAbsent = (s as $Value?) as EvalFunction;
     final result = wrapper.$value.putIfAbsent(
-      key,
+      wrapper._identityKey(key, writing: true),
       () => ifAbsent.call(runtime, null, null, null, 0),
     );
     wrapper._checkEntry(runtime, key, result);
@@ -909,14 +1053,33 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     Object? s,
     Object? c,
   ) {
-    return (target!.$value as Map).remove((r as $Value?));
+    final wrapper = target! as $Map;
+    final key = wrapper._identityKey(r as $Value?);
+    final result = wrapper.$value.remove(key);
+    wrapper._forgetIdentityScalarKey(key);
+    return result;
   }
 
   @override
-  Map get $reified => $value.map(
-    (k, v) =>
-        MapEntry(k is $Value ? k.$reified : k, v is $Value ? v.$reified : v),
-  );
+  Map get $reified {
+    if (!_identityKeys) {
+      return $value.map(
+        (k, v) => MapEntry(
+          k is $Value ? k.$reified : k,
+          v is $Value ? v.$reified : v,
+        ),
+      );
+    }
+    final result = Map.identity();
+    for (final entry in $value.entries) {
+      final key = entry.key;
+      final value = entry.value;
+      result[key is $Value ? key.$reified : key] = value is $Value
+          ? value.$reified
+          : value;
+    }
+    return result;
+  }
 
   @override
   int $getRuntimeType(Runtime runtime) {
@@ -937,35 +1100,78 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     runtime.assertTypedTypeArgument(value, _checkOwnerType, 1);
   }
 
+  Object? _identityKey(Object? key, {bool writing = false}) {
+    if (!_identityKeys ||
+        (key is! $num && key is! $bool && key is! $String && key is! $null)) {
+      return key;
+    }
+    final scalarKey = key as $Value;
+    final value = scalarKey.$value;
+    final scalarKeys = _identityScalarKeys!;
+    final existing = scalarKeys[value];
+    if (existing != null) return existing;
+    if (writing) scalarKeys[value] = scalarKey;
+    return scalarKey;
+  }
+
+  void _forgetIdentityScalarKey(Object? key) {
+    if (!_identityKeys ||
+        (key is! $num && key is! $bool && key is! $String && key is! $null)) {
+      return;
+    }
+    final value = (key as $Value).$value;
+    _identityScalarKeys!.remove(value);
+  }
+
+  void _pruneIdentityScalarKeys() {
+    final scalarKeys = _identityScalarKeys;
+    if (scalarKeys == null) return;
+    scalarKeys.removeWhere((_, key) => !$value.containsKey(key));
+  }
+
   @override
   V? operator [](Object? key) {
-    return $value[key];
+    return $value[_identityKey(key)];
   }
 
   @override
   void operator []=(K key, V value) {
-    $value[key] = value;
+    $value[_identityKey(key, writing: true) as K] = value;
   }
 
   @override
-  void addAll(Map<K, V> other) => $value.addAll(other);
+  void addAll(Map<K, V> other) {
+    if (!_identityKeys) {
+      $value.addAll(other);
+      return;
+    }
+    for (final entry in other.entries) {
+      $value[_identityKey(entry.key, writing: true) as K] = entry.value;
+    }
+  }
 
   @override
-  void addEntries(Iterable<MapEntry<K, V>> newEntries) =>
+  void addEntries(Iterable<MapEntry<K, V>> newEntries) {
+    if (!_identityKeys) {
       $value.addEntries(newEntries);
+      return;
+    }
+    for (final entry in newEntries) {
+      $value[_identityKey(entry.key, writing: true) as K] = entry.value;
+    }
+  }
 
   @override
   Map<RK, RV> cast<RK, RV>() => $value.cast<RK, RV>();
 
   @override
   void clear() {
-    return $value.clear();
+    $value.clear();
+    _identityScalarKeys?.clear();
   }
 
   @override
-  bool containsKey(Object? key) {
-    return $value.containsKey(key);
-  }
+  bool containsKey(Object? key) => $value.containsKey(_identityKey(key));
 
   @override
   bool containsValue(Object? value) {
@@ -999,19 +1205,30 @@ class $Map<K, V> implements Map<K, V>, $Instance {
 
   @override
   V putIfAbsent(K key, V Function() ifAbsent) {
-    return $value.putIfAbsent(key, ifAbsent);
+    return $value.putIfAbsent(_identityKey(key, writing: true) as K, ifAbsent);
   }
 
   @override
-  V? remove(Object? key) => $value.remove(key);
+  V? remove(Object? key) {
+    final identityKey = _identityKey(key);
+    final result = $value.remove(identityKey);
+    _forgetIdentityScalarKey(identityKey);
+    return result;
+  }
 
   @override
-  void removeWhere(bool Function(K key, V value) test) =>
-      $value.removeWhere(test);
+  void removeWhere(bool Function(K key, V value) test) {
+    $value.removeWhere(test);
+    _pruneIdentityScalarKeys();
+  }
 
   @override
   V update(K key, V Function(V value) update, {V Function()? ifAbsent}) =>
-      $value.update(key, update, ifAbsent: ifAbsent);
+      $value.update(
+        _identityKey(key, writing: true) as K,
+        update,
+        ifAbsent: ifAbsent,
+      );
 
   @override
   void updateAll(V Function(K key, V value) update) => $value.updateAll(update);
