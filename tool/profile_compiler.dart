@@ -4,12 +4,15 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart';
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart' show DartSource;
 
 import '../benchmark/compile.dart' show compileSource;
 import '../benchmark/compile_pipeline.dart' show pipelineSource;
+import '../benchmark/support/http_native.dart';
 
 // AOT: dart compile exe tool/profile_compiler.dart -o profile_compiler.exe
-// Usage: profile_compiler.exe [small|mixed|pipeline|source.dart] [samples] [fresh|cached]
+// Usage: profile_compiler.exe WORKLOAD [samples] [fresh|cached] [timings.json]
+// Workloads: small, mixed, pipeline, http-native, http-native-memory, or source.dart.
 // An optional fourth argument writes raw timings and medians as JSON.
 void main(List<String> args) {
   final workload = args.isEmpty ? 'mixed' : args[0];
@@ -18,15 +21,22 @@ void main(List<String> args) {
   if (samples < 1 || !{'fresh', 'cached'}.contains(mode)) {
     throw ArgumentError('Positive samples and fresh or cached mode required');
   }
-  final source = switch (workload) {
-    'small' => 'int main() => 42;',
-    'mixed' => compileSource,
-    'pipeline' => pipelineSource(64),
-    _ => File(workload).readAsStringSync(),
-  };
-  final sources = {
-    'profile': {'main.dart': source},
-  };
+  final sources = {'http-native', 'http-native-memory'}.contains(workload)
+      ? httpNativeSources('http://127.0.0.1:8080/hello')
+      : [
+          DartSource('package:profile/main.dart', switch (workload) {
+            'small' => 'int main() => 42;',
+            'mixed' => compileSource,
+            'pipeline' => pipelineSource(64),
+            _ => File(workload).readAsStringSync(),
+          }),
+        ];
+  if (workload == 'http-native-memory') {
+    for (var i = 0; i < sources.length; i++) {
+      final source = sources[i];
+      sources[i] = DartSource(source.uri.toString(), source.toString());
+    }
+  }
   final timings = <String, List<int>>{};
   void record(String phase, int time) =>
       timings.putIfAbsent(phase, () => []).add(time);
@@ -46,6 +56,7 @@ void main(List<String> args) {
   var bytes = 0;
   var emittedFunctions = 0;
   var programHash = '';
+  var firstCompilation = <String, int>{};
   for (var i = -3; i < samples; i++) {
     if (mode == 'fresh') {
       plainCompiler = Compiler();
@@ -56,11 +67,11 @@ void main(List<String> args) {
     late Program profiled;
     void compilePlain() => plain = measure(
       'compile without profiling',
-      () => plainCompiler.compile(sources),
+      () => plainCompiler.compileSources(sources),
     );
     void compileProfiled() => profiled = measure(
       'compile with profiling',
-      () => profiledCompiler.compile(sources),
+      () => profiledCompiler.compileSources(sources),
     );
     if (i.isEven) {
       compilePlain();
@@ -68,6 +79,12 @@ void main(List<String> args) {
     } else {
       compileProfiled();
       compilePlain();
+    }
+    if (i == -3) {
+      firstCompilation = {
+        'total': timings['compile with profiling']!.last,
+        ...phases,
+      };
     }
     for (final entry in phases.entries) {
       record(entry.key, entry.value);
@@ -99,10 +116,13 @@ void main(List<String> args) {
       entry.key: (List<int>.of(entry.value)..sort())[entry.value.length ~/ 2],
   };
   print('$workload $mode samples=$samples program_bytes=$bytes');
+  print('input_sources=${sources.length}');
+  print('first_profiled_compile: ${firstCompilation['total']} us');
   print('program_sha256=$programHash');
   final preparedFunctions = profiledCompiler.ssaFunctionGraphs.length;
+  final frontendFunctions = profiledCompiler.functionGraphs.length;
   print(
-    'prepared_functions=$preparedFunctions emitted_functions=$emittedFunctions',
+    'frontend_functions=$frontendFunctions prepared_functions=$preparedFunctions emitted_functions=$emittedFunctions',
   );
   for (final entry in medians.entries) {
     print('${entry.key}: ${entry.value} us');
@@ -113,9 +133,12 @@ void main(List<String> args) {
         'workload': workload,
         'mode': mode,
         'samples': samples,
+        'input_sources': sources.length,
         'program_bytes': bytes,
         'program_sha256': programHash,
         'prepared_functions': preparedFunctions,
+        'frontend_functions': frontendFunctions,
+        'first_compilation_us': firstCompilation,
         'emitted_functions': emittedFunctions,
         'median_us': medians,
         'raw_us': timings,

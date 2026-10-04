@@ -1,5 +1,9 @@
 # Compilation and iteration time
 
+The [native HTTP profile](compiler-profile-http-native-2026-10-04.md) covers
+the larger, multi-package workload from `http_native_test` and the resulting
+compiler optimization targets.
+
 ## Measurement
 
 Start with broad phases, then subdivide the expensive phases. The first AOT
