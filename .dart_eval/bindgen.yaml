@@ -369,6 +369,7 @@ libraries:
         include: false
   - uri: dart:convert
     outDir: lib/src/eval/shared/stdlib/convert
+    typedefs: [ByteConversionSinkBase]
     registry:
       file: lib/src/eval/shared/types.dart
       class: ConvertTypes

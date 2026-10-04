@@ -133,6 +133,41 @@ void main() {
       expect(runtime.executeLib('package:eval_test/main.dart', 'main'), 'true');
     });
 
+    test('containsAll handles guest equality, empty input, and early misses', () {
+      for (final (mode, result) in runDynamicFixture(r'''
+        class Key {
+          Key(this.value);
+          final int value;
+
+          @override
+          bool operator ==(Object other) =>
+              other is Key && other.value == value;
+
+          @override
+          int get hashCode => value;
+        }
+
+        bool main() {
+          final values = <Object?>{1, Key(7)};
+          var visits = 0;
+          final candidates = <int>[2, 1].where((value) {
+            visits++;
+            return true;
+          });
+
+          return values.containsAll([1]) &&
+              values.containsAll(<Object?>[]) &&
+              values.containsAll([Key(7)]) &&
+              !values.containsAll([2]) &&
+              !values.containsAll([Key(8)]) &&
+              !values.containsAll(candidates) &&
+              visits == 1;
+        }
+      ''')) {
+        expect(result, const DynamicFixtureResult.value(true), reason: mode);
+      }
+    });
+
     test(
       'removeWhere calls guest predicates with scalar and object elements',
       () {

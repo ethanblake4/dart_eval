@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert/line_splitter.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/json.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/string_conversion_sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/utf.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert/typedefs.dart';
 
 const convertSource = '''
 final ascii = AsciiCodec();
@@ -21,6 +22,11 @@ final json = JsonCodec();
 final Base64Codec base64Url = Base64Codec.urlSafe();
 final base64 = Base64Codec();
 ''';
+
+final _sdkConvertSource = DartSource(
+  'dart:convert',
+  '${sdkTypedefsSource.stringSource!}\n$convertSource',
+);
 
 /// [EvalPlugin] for the `dart:convert` library
 class DartConvertPlugin implements EvalPlugin {
@@ -50,7 +56,7 @@ class DartConvertPlugin implements EvalPlugin {
     $StringConversionSink$bridge.configureForCompile(registry);
     $ClosableStringSink.configureForCompile(registry);
     $LineSplitter.configureForCompile(registry);
-    registry.addSource(DartSource('dart:convert', convertSource));
+    registry.addSource(_sdkConvertSource);
     registry.defineBridgeTopLevelFunction($base64EncodeFn.$declaration);
     registry.defineBridgeTopLevelFunction($base64DecodeFn.$declaration);
     registry.defineBridgeTopLevelFunction($jsonEncodeFn.$declaration);

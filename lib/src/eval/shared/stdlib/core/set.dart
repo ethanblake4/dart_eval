@@ -141,6 +141,26 @@ class $Set<E> implements Set<E>, $Instance {
         ),
         isStatic: false,
       ),
+      'containsAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.object),
+                    nullable: true,
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+        ),
+        isStatic: false,
+      ),
       'remove': BridgeMethodDef(
         BridgeFunctionDef(
           params: [
@@ -383,6 +403,8 @@ class $Set<E> implements Set<E>, $Instance {
         return $Closure(__addAll.func, this);
       case 'contains':
         return $Closure(__contains.func, this);
+      case 'containsAll':
+        return $Closure(__containsAll.func, this);
       case 'remove':
         return $Closure(__remove.func, this);
       case 'clear':
@@ -464,6 +486,20 @@ class $Set<E> implements Set<E>, $Instance {
     Object? c,
   ) {
     return $bool((target!.$value as Set).contains((r as $Value?)));
+  }
+
+  static const $Function __containsAll = $Function(_containsAll);
+
+  static $Value? _containsAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final wrapper = target as $Set;
+    final other = (r as $Value?)!.$value as Iterable<Object?>;
+    return $bool(wrapper.$value.containsAll(other));
   }
 
   static const $Function __remove = $Function(_remove);

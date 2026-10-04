@@ -147,6 +147,7 @@ class DartCorePlugin implements EvalPlugin {
     $Duration.configureForRuntime(runtime);
     $Future.configureForRuntime(runtime);
     $DateTime.configureForRuntime(runtime);
+    $Comparable.configureForRuntime(runtime);
     $Uri.configureForRuntime(runtime);
     $Map.configureForRuntime(runtime);
     $Set.configureForRuntime(runtime);

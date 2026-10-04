@@ -1063,11 +1063,14 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     final $this = _boxedValues(runtime, target!);
     final toElement = TypedInterop.nonGenericCallable(r);
     final typeArguments = runtime.bridgeCallTypeArguments;
-    final resultType = typeArguments.isEmpty
+    // Inferred calls can omit bridge type arguments. The callback still
+    // carries its return type, including captured generic substitutions.
+    final elementType = typeArguments.isEmpty
+        ? runtime.typedCallbackReturnType(toElement)
+        : typeArguments[0];
+    final resultType = elementType == null
         ? null
-        : runtime.internParameterizedType(CoreTypes.iterable, [
-            typeArguments[0],
-          ]);
+        : runtime.internParameterizedType(CoreTypes.iterable, [elementType]);
     final $result = $this.map((e) {
       final value = toElement.call(runtime, null, e, null, 1);
       if (resultType != null)
