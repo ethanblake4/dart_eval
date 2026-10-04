@@ -4434,3 +4434,18 @@ was added. The untouched header original passes fresh and serialized execution,
 and its stale expectation is removed. All 32 representation tests pass, including
 a unique imported-default, optional-double tear-off and contextual generic-record
 probe verified with native Dart 3.13.4. Scoped analysis is clean.
+
+### Cycle 27 survey regression corrections
+
+The unrestricted SDK survey reported 2692 passing fixtures, 26 compile errors,
+19 runtime failures and three skips before corrections. Constructor refinement
+is now restricted to explicit-variance owners, preserving legacy enclosing
+bindings; six generic originals pass fresh and serialized, and the native HTTP
+package test passes again. Lexical instance extension setters use the existing
+applied-setter conversion and generic arguments; both implicit-this if-null
+originals and the lexical-this original pass in both modes, with nine focused
+tests passing. Ordinary pattern declarations retain their initializer's flow
+type. Legacy captured finals retain entry demotion while allowing a new cast
+proof inside the closure. All five new flow regressions and ten earlier flow
+originals pass fresh and serialized; eighteen focused tests pass. These
+corrections do not change the interpreter or add runtime adapters.

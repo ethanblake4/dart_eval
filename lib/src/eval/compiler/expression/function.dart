@@ -204,7 +204,7 @@ Variable compileFunctionExpression(
             initialized: capture.value.initialized,
           );
           lb.captureDeclaration = capture.value.captureDeclaration;
-          lb.writeCaptured = capture.value.writeCaptured || legacyAssignedFinal;
+          lb.writeCaptured = capture.value.writeCaptured;
           if (capture.value.isLateLocal) {
             lb.storage = LateLocalStorage(loaded);
           } else if (capture.value.captureCell != null) {

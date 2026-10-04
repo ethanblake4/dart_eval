@@ -23,11 +23,17 @@ void compilePatternVariableDeclaration(
 ) {
   final bound = patternTypeBound(ctx, dec.pattern, source: dec);
   final result = compileExpression(dec.expression, ctx, bound);
+  Expression initializer = dec.expression;
+  while (initializer is ParenthesizedExpression) {
+    initializer = initializer.expression;
+  }
   compileIrrefutablePattern(
     ctx,
     dec.pattern,
     result,
-    source: dec.expression,
+    // Ordinary declarations do not promote their initializer; receiver
+    // declarations participate in the experimental `this` promotion flow.
+    source: initializer is ThisExpression ? dec.expression : null,
     patternContext: dec.keyword.keyword == Keyword.FINAL
         ? PatternBindContext.declareFinal
         : PatternBindContext.declare,

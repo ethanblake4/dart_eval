@@ -1288,6 +1288,10 @@ Denotation resolveIdentifier(
           ext,
           accessor,
           receiver: accessor.isStatic ? null : $this,
+          applied: !accessor.isStatic,
+          onBindings: accessor.isStatic
+              ? const []
+              : matchExtensionOn(ctx, $this!.type, ext) ?? const [],
         );
       }
     }
