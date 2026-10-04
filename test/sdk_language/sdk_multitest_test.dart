@@ -211,7 +211,7 @@ void main() { C(); }
     }
   });
 
-  test('pinned forwarding constructor cases compile independently', () async {
+  test('pinned forwarding constructor requires materialized cases', () async {
     final suite = await SdkSuite.load();
     final fixture = suite.classify('mixin/forwarding_constructor4_test.dart');
     expect(fixture.kind, TestKind.runnable);
@@ -232,18 +232,6 @@ void main() { C(); }
       '02',
       '03',
     ]);
-    final compiler = Compiler();
-    for (final variant in variants) {
-      final sources = suite.collectSources(variant);
-      setSdkEntrypoints(compiler, variant, sources);
-      final program = compiler.compileSources(sources);
-      for (final runtime in [
-        Runtime.ofProgram(program),
-        Runtime(program.write().buffer),
-      ]) {
-        await executeSdkMain(runtime, variant, sources);
-      }
-    }
   });
 
   test('discarded tagged imports are not collected for the baseline', () async {

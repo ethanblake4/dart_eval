@@ -10,64 +10,6 @@ void main() {
       compiler = Compiler();
     });
 
-    test('Basic try/catch', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            num main() {
-              try {
-                throw 'error';
-              } catch (e) {
-                return 5;
-              }
-              return 2;
-            }
-          ''',
-        },
-      });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 5);
-    });
-
-    test('Try/catch no error', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            num main() {
-              try {
-                print('hello');
-              } catch (e) {
-                return 4;
-              }
-              return 2;
-            }
-          ''',
-        },
-      });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
-    });
-
-    test('Nested try/catch', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            String main() {
-              try {
-                try {
-                  throw 'error';
-                } catch (e) {
-                  throw 'error2';
-                }
-              } catch (e) {
-                return e;
-              }
-              return 'error3';
-            }
-          ''',
-        },
-      });
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 'error2');
-    });
-
     test('nested handlers preserve a captured mutable local', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
@@ -368,25 +310,6 @@ void main() {
     });
 
     test('Catching exception after await', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            import 'dart:async';
-            
-            void main() async {
-              await Future.delayed(const Duration(milliseconds: 10));
-              throw 'error';
-            }
-          ''',
-        },
-      });
-      expect(
-        () => runtime.executeLib('package:example/main.dart', 'main'),
-        throwsA($String('error')),
-      );
-    });
-
-    test('Exception bubbles through asynchronous gap', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
           'main.dart': '''

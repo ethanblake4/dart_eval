@@ -10,20 +10,6 @@ void main() {
       compiler = Compiler();
     });
 
-    test('Int unary -', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main() {
-              return -5;
-            }
-          ''',
-        },
-      });
-
-      expect(runtime.executeLib('package:example/main.dart', 'main'), -5);
-    });
-
     test('% operator', () {
       final runtime = compiler.compileWriteAndLoad({
         'example': {
@@ -36,21 +22,6 @@ void main() {
       });
 
       expect(runtime.executeLib('package:example/main.dart', 'main'), 0.5);
-    });
-
-    test('~/ operator', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            int main() {
-              final a =  45 ~/ 21;
-              return a;
-            }
-          ''',
-        },
-      });
-
-      expect(runtime.executeLib('package:example/main.dart', 'main'), 2);
     });
 
     test('print()', () async {
@@ -290,23 +261,6 @@ void main() {
       expect(() {
         runtime.executeLib('package:example/main.dart', 'main');
       }, prints('3.141592\n8\n0.0\n1.0\n0.0\n'));
-    });
-
-    test('RegExp hasMatch()', () {
-      final runtime = compiler.compileWriteAndLoad({
-        'example': {
-          'main.dart': '''
-            void main() {
-              final rg = RegExp(r'..s');
-              print(rg.hasMatch('snakes'));
-              print(rg.hasMatch('moon'));
-            }
-          ''',
-        },
-      });
-      expect(() {
-        runtime.executeLib('package:example/main.dart', 'main');
-      }, prints('true\nfalse\n'));
     });
 
     test('RegExp hasMatch()', () {

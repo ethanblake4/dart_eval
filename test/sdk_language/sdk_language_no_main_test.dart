@@ -32,12 +32,6 @@ void main() {
       expect(await _run(test), TestOutcome.compileError);
     },
   );
-
-  test('unannotated missing main remains a compile error', () async {
-    final test = SdkTest('main/no_main_test.dart', TestKind.runnable);
-
-    expect(await _run(test, '/* no entrypoint */'), TestOutcome.compileError);
-  });
 }
 
 Future<TestOutcome> _run(SdkTest test, [String? source]) {

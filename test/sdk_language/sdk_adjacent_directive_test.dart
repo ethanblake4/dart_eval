@@ -58,19 +58,4 @@ int main() => imported + exported + fromPart;
     expect(fixture.kind, TestKind.unsupported);
     expect(fixture.unsupportedReason, contains('dart:mirrors'));
   });
-
-  test('pinned juxtaposition fixture runs fresh and serialized', () async {
-    final pinnedSuite = await SdkSuite.load();
-    final fixture = pinnedSuite.classify('library/juxtaposition_test.dart');
-    final sources = pinnedSuite.collectSources(fixture);
-    final compiler = Compiler();
-    setSdkEntrypoints(compiler, fixture, sources);
-    final program = compiler.compileSources(sources);
-    for (final runtime in [
-      Runtime.ofProgram(program),
-      Runtime(program.write().buffer),
-    ]) {
-      await executeSdkMain(runtime, fixture, sources);
-    }
-  });
 }

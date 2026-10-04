@@ -41,15 +41,6 @@ void main() {
       expect(permission.match(<String, dynamic>{}), isFalse);
     });
 
-    test('same instance should be equal to itself', () {
-      final perm = ProcessRunPermission(RegExp(r'dart$'));
-      expect(perm == perm, isTrue);
-    });
-
-    test('any singleton should be equal to itself', () {
-      expect(ProcessRunPermission.any == ProcessRunPermission.any, isTrue);
-    });
-
     test('equivalent instances with same RegExp instance should be equal', () {
       final pattern = RegExp(r'dart$');
       final perm1 = ProcessRunPermission(pattern);

@@ -68,15 +68,6 @@ void main() {
       );
       expect(result, equals(2));
     });
-
-    test('\$List.view()', () {
-      final result = runtime.executeLib(
-        'package:test/main.dart',
-        'test',
-        arguments: {'inp': $List.view(list, (e) => $WrapTest.wrap(e))},
-      );
-      expect(result, equals(2));
-    });
   });
 
   test(

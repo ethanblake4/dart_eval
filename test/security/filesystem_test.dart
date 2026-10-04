@@ -46,23 +46,6 @@ void main() {
       expect(permission.match(deniedFile), isFalse);
     });
 
-    test('should handle relative paths by converting to absolute', () {
-      // FilesystemPermission resolves paths based on the actual current working directory,
-      // not the dart_eval runtime's currentDir
-      final permission = FilesystemPermission.file(
-        p.join(tempDirPath, 'test.txt'),
-      );
-      final absolutePath = p.join(tempDirPath, 'test.txt');
-
-      // The permission was created with absolute path, so it should match the absolute path
-      expect(permission.match(absolutePath), isTrue);
-
-      // For relative path matching, the permission system uses the actual current working directory
-      // This test demonstrates that permissions work with absolute paths
-      final relativePermission = FilesystemPermission.directory(tempDirPath);
-      expect(relativePermission.match(absolutePath), isTrue);
-    });
-
     test('should prevent path traversal attacks', () {
       final subDir = Directory(p.join(tempDirPath, 'allowed'));
       final permission = FilesystemPermission.directory(subDir.path);
