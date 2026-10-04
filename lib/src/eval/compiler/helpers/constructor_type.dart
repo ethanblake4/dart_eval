@@ -62,6 +62,14 @@ TypeRef inferredConstructorType(
           knownTypes: argumentsByParameter,
         )
       : argumentsByParameter;
+  // Legacy contextual applications stay fixed. Their constructor can belong
+  // to a superclass whose parameters already occur inside these arguments.
+  if (type.arguments.isNotEmpty &&
+      !parameters.any((parameter) => parameter.hasExplicitVariance)) {
+    return type.substituteTypeParameters(
+      Substitution.of({...defaults, ...argumentsByParameter}),
+    );
+  }
   return type.copyWith(
     arguments: [
       for (final parameter in parameters)
