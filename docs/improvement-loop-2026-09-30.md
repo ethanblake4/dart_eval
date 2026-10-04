@@ -4610,3 +4610,24 @@ compatibility originals covering enhanced joins and finally layering. Their
 five expect_fail entries are removed. Twenty-one focused tests pass, including
 a native-verified combined guard, pinned-index and receiver-write control.
 Scoped analysis is clean. No runtime or opcode changes are introduced.
+
+### Cycle 28 correctness pass 5
+
+Extension representation constructors execute primary assertions in declaration
+scope. Statement bodies compile once as separate functions so a bare return
+stays inside the constructor. Constructors without statement bodies keep their
+identity path. Factory bodies reuse ordinary constructor compilation; redirects
+forward already-evaluated values, preserve const representation and detect
+redirect cycles. Constructor tear-offs use the same construction path, including
+named primaries, generic arguments and bodies.
+
+The historical value-class annotation lowers missing constructors, equality
+and hashCode members to ordinary Dart while preserving explicit declarations.
+The installed VM does not implement that annotation; the generated ordinary
+Dart control passes natively. Both original value-class fixtures pass fresh
+and serialized, as do two focused controls.
+
+All four extension/primary failures pass fresh and serialized. Twenty-eight
+focused constructor/extension tests pass and analysis is clean. A combined
+factory, tear-off, assertion and return control yields 11231 in native Dart with
+asserts enabled and in both guest modes. Five expect_fail entries are removed.

@@ -1690,6 +1690,17 @@ final class _TypeMemberDenotation extends Denotation {
   final String fqName;
   final String name;
 
+  bool get _isConstructor {
+    if (name == 'new') return true;
+    final owner = nominalDeclOf(type);
+    if (owner is! SourceTypeDecl || owner.node is! ExtensionTypeDeclaration) {
+      return false;
+    }
+    final primary = (owner.node as ExtensionTypeDeclaration).namePart
+        as PrimaryConstructorDeclaration;
+    return primary.constructorName?.name.lexeme == name;
+  }
+
   @override
   TypeRef readType(CompilerContext ctx, {AstNode? source}) {
     final accessor = ctx
@@ -1701,7 +1712,7 @@ final class _TypeMemberDenotation extends Denotation {
           : CoreTypes.dynamic.ref(ctx);
     }
     final member = ctx.topLevelDeclarationsMap[type.file]?[fqName]?.declaration;
-    if (member is ConstructorDeclaration || member == null && name == 'new') {
+    if (member is ConstructorDeclaration || member == null && _isConstructor) {
       return constructorTearOffSignature(
         ctx,
         type,
@@ -1746,7 +1757,7 @@ final class _TypeMemberDenotation extends Denotation {
         getterMember ?? ctx.topLevelDeclarationsMap[type.file]![fqName];
     final memberDecl = member?.declaration;
     if (memberDecl is ConstructorDeclaration ||
-        member == null && name == 'new') {
+        member == null && _isConstructor) {
       return materializeConstructorTearOff(
         ctx,
         type,

@@ -19,6 +19,44 @@ void main() {
     });
   }
 
+  check(
+    'extension bodies return locally and factories preserve representation',
+    r'''
+final events = <int>[];
+extension type Scalar<T>(T value) {
+  this {
+    events.add(1);
+    if (value is int) return;
+    events.add(2);
+  }
+  factory Scalar.wrap(T value) => Scalar<T>(value);
+  factory Scalar.block(T value) {
+    try { return Scalar<T>(value); }
+    finally { events.add(3); }
+  }
+  factory Scalar.redirect(T value) = Scalar<T>;
+}
+extension type const Checked.named(int value) {
+  this : assert(value > 0);
+  const factory Checked.redirect(int value) = Checked.named;
+}
+int main() {
+  final first = Scalar<int>.wrap(4);
+  final second = Scalar<String>.block('ok');
+  final make = Scalar<int>.redirect;
+  final third = make(5);
+  const checked = Checked.redirect(4);
+  final checkedMake = Checked.named;
+  var caught = false;
+  try { Checked.named(-1); } on AssertionError { caught = true; }
+  if (first.value != 4 || second.value != 'ok' || third.value != 5 ||
+      !identical(checked, 4) || checkedMake(5).value != 5 || !caught) return -1;
+  return events.fold(0, (result, event) => result * 10 + event);
+}
+''',
+    11231,
+  );
+
   check('header fields reuse constructor checks and mutable field storage', '''
 class Point(var int x, final int y);
 int main() {

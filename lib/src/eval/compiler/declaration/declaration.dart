@@ -16,6 +16,7 @@ import 'package:dart_eval/src/eval/compiler/member/member_name.dart';
 import 'package:dart_eval/src/eval/compiler/type.dart';
 import '../helpers/bridge_mixin.dart';
 import '../helpers/field_storage.dart';
+import 'extension_type.dart';
 
 int? compileDeclaration(
   Declaration d,
@@ -28,6 +29,11 @@ int? compileDeclaration(
   if (d is ExtensionTypeDeclaration) {
     _validateExtensionType(ctx, d);
     final previousClass = ctx.currentClass;
+    final previousTypeScope = ctx.typeScopes[ctx.library];
+    final decl =
+        ctx.types.find(ctx.library, declarationName(d)) as SourceTypeDecl;
+    ctx.typeScopes[ctx.library] = TypeScope(previousTypeScope)
+      ..entries.addAll(decl.ownTypeParams);
     ctx.currentClass = d;
     ctx.instanceDeclarationPositions[ctx.library]![declarationName(d)] = {
       MemberKind.getter: {},
@@ -40,10 +46,22 @@ int? compileDeclaration(
           compileMethodDeclaration(member, ctx, d);
         } else if (member is FieldDeclaration) {
           compileFieldDeclaration(0, member, ctx, d);
+        } else if (member is ConstructorDeclaration &&
+            member.factoryKeyword != null &&
+            member.redirectedConstructor == null) {
+          compileConstructorDeclaration(ctx, member, d, const []);
+        } else if (member is PrimaryConstructorBody &&
+            member.body is BlockFunctionBody) {
+          compileExtensionPrimaryBody(ctx, d, member);
         }
       }
     } finally {
       ctx.currentClass = previousClass;
+      if (previousTypeScope == null) {
+        ctx.typeScopes.remove(ctx.library);
+      } else {
+        ctx.typeScopes[ctx.library] = previousTypeScope;
+      }
     }
   } else if (d is ClassDeclaration) {
     compileClassDeclaration(ctx, d);
@@ -108,7 +126,9 @@ void _validateExtensionType(
         member,
         parameter.name!.lexeme,
       ),
-      _ => false,
+      PrimaryConstructorBody() => member.initializers.every(
+        (initializer) => initializer is AssertInitializer,
+      ),
     };
     if (!supported) {
       throw CompileError(
@@ -124,8 +144,12 @@ bool _isRepresentationConstructor(
   ConstructorDeclaration constructor,
   String representationName,
 ) {
-  if (constructor.factoryKeyword != null ||
-      constructor.body is! EmptyFunctionBody ||
+  if (constructor.factoryKeyword != null) {
+    return constructor.initializers.isEmpty &&
+        !constructor.body.isAsynchronous &&
+        !constructor.body.isGenerator;
+  }
+  if (constructor.body is! EmptyFunctionBody ||
       constructor.parameters.parameters.any((p) => p is SuperFormalParameter)) {
     return false;
   }

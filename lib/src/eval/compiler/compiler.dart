@@ -15,6 +15,7 @@ import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/extension.dart';
 import 'helpers/conditional_import.dart';
 import 'helpers/primary_constructor.dart';
+import 'helpers/value_class.dart';
 import 'package:dart_eval/src/eval/compiler/model/diagnostic_mode.dart';
 import 'package:dart_eval/src/eval/compiler/model/override_spec.dart';
 import 'package:dart_eval/src/eval/compiler/model/library.dart';
@@ -969,8 +970,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
                     ?.keys ??
                 const <String>[])
           if (!(_ctx.extensionMemberFunctions[_ctx.libraryMap[library]]
-                  ?.contains(name) ??
-              false))
+                      ?.contains(name) ??
+                  false))
             (library, name),
     ]);
     // Backend metadata can introduce instantiated parameter and collection
@@ -1021,7 +1022,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
       typeVariances: {
         for (final entry in _ctx.runtimeTypes.indexMap.entries)
           if (entry.key.typeParameters.any(
-            (parameter) => parameter.variance != TypeParameterVariance.covariant,
+            (parameter) =>
+                parameter.variance != TypeParameterVariance.covariant,
           ))
             entry.value: [
               for (final parameter in entry.key.typeParameters)
@@ -1110,6 +1112,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     final declaration = declarationOrBridge.declaration!;
     if (declaration is ClassDeclaration || declaration is EnumDeclaration) {
       lowerPrimaryConstructor(declaration);
+    }
+    if (declaration is ClassDeclaration) {
+      lowerValueClass(declaration);
     }
 
     // Extensions declare no top-level name binding themselves; their
@@ -1219,6 +1224,9 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
         final mName = ctorNameOf(member.name?.lexeme);
         _topLevelDeclarationsMap[libraryIndex]!['$name.$mName'] =
             DeclarationOrBridge(libraryIndex, declaration: member);
+      } else if (member is PrimaryConstructorBody &&
+          declaration is ExtensionTypeDeclaration) {
+        // The representation constructor compiles this body separately.
       } else {
         throw CompileError(
           'Not a NamedCompilationUnitMember',

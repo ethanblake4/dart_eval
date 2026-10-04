@@ -67,22 +67,17 @@ exclude:
 # suite; a test that starts passing fails loudly so the entry gets removed.
 # Same path/glob syntax as `exclude`.
 expect_fail:
-  - path: 'extension_type/regress_53607_test.dart'
   - path: 'inference/issue_33298_test.dart'
   - path: 'inference_using_bounds/restricting_choices_using_bounds_test.dart'
   - path: 'interceptor/interceptor_test.dart'
   - path: 'list/list_test.dart'
   - path: 'main/no_main_test.dart'
   - path: 'nnbd/resolution/null_assertion_null_type_test.dart'
-  - path: 'primary_constructors/const/potentially_constant_test.dart'
-  - path: 'primary_constructors/header/in_body_initializer_test.dart'
-  - path: 'primary_constructors/wildcard_declaring_parameters_test.dart'
   - path: 'regress/regress31436_test.dart'
   - path: 'regress/regress34034_test.dart'
   - path: 'static_weak_reference_function_apply_test.dart'
   - path: 'static_weak_reference_test.dart'
   - path: 'unsorted/checked_method_error_order_test.dart'
   - path: 'unsorted/disassemble_test.dart'
-  - path: 'value_class/creates_equals_test.dart'
   - path: 'inference_update_1/horizontal_inference_extension_method_test.dart'
     reason: 'horizontal inference (inference_update_1) not implemented'

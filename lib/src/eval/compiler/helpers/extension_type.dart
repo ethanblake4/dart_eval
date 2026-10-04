@@ -10,6 +10,13 @@ import 'conversion.dart';
 import '../invocation/binder.dart';
 import 'default_value.dart';
 import '../member/call_signature.dart';
+import '../declaration/extension_type.dart';
+import '../invocation/call.dart';
+import '../invocation/bound_call.dart';
+import '../invocation/deferred.dart';
+import '../invocation/targets.dart';
+import '../../ir/flow.dart';
+import 'assert.dart';
 
 /// An extension type's representation field is an identity projection.
 TypeRef? extensionRepresentationField(
@@ -48,9 +55,10 @@ Variable constructExtensionType(
   SourceTypeDecl declaration,
   TypeRef instantiatedType,
   String name,
-  ArgumentList arguments, {
+  ArgumentList? arguments, {
   required bool isConst,
   required AstNode source,
+  CallShape? suppliedShape,
 }) {
   // Check the initial selector in the caller's scope. Redirects below enter
   // the declaring scope and may name its private constructors.
@@ -63,7 +71,7 @@ Variable constructExtensionType(
     instantiatedType,
     isConst,
     source,
-  ).emit(name, arguments);
+  ).emit(name, arguments, suppliedShape: suppliedShape);
 }
 
 /// Secondary constructors compile in their declaring scope, with each supplied
@@ -74,22 +82,27 @@ final class _ExtensionConstruction {
     this.declaration,
     this.instantiatedType,
     this.isConst,
-    this.source,
-  );
+    this.source, {
+    Set<ConstructorDeclaration>? active,
+  }) : _active = active ?? <ConstructorDeclaration>{};
 
   final CompilerContext ctx;
   final SourceTypeDecl declaration;
   TypeRef instantiatedType;
   final bool isConst;
   final AstNode source;
-  final _active = <ConstructorDeclaration>{};
+  final Set<ConstructorDeclaration> _active;
 
-  Variable emit(String name, ArgumentList arguments) {
+  Variable emit(
+    String name,
+    ArgumentList? arguments, {
+    CallShape? suppliedShape,
+  }) {
     final node = declaration.node as ExtensionTypeDeclaration;
     final primary = node.namePart as PrimaryConstructorDeclaration;
     final primaryName = primary.constructorName?.name.lexeme ?? '';
     if (name == primaryName || name == 'new' && primaryName.isEmpty) {
-      return _primary(primary, arguments);
+      return _primary(primary, arguments, suppliedShape: suppliedShape);
     }
     final constructor = node.body.members
         .whereType<ConstructorDeclaration>()
@@ -123,6 +136,7 @@ final class _ExtensionConstruction {
       constructor,
       resolveGenerics: inferred,
       source: source,
+      suppliedShape: suppliedShape,
     );
     if (inferArguments) _applyInferredArguments(inferred);
     try {
@@ -141,6 +155,84 @@ final class _ExtensionConstruction {
           }
           for (final (name, value) in bound.named) {
             ctx.setLocal(name, value);
+          }
+          if (constructor.factoryKeyword != null) {
+            final redirect = constructor.redirectedConstructor;
+            if (redirect != null) {
+              final (typeName, constructorName) = splitConstructorTypeName(
+                ctx,
+                declaration.library,
+                redirect.type,
+                redirect.name?.name,
+              );
+              var target =
+                  ctx.visibleTypes[declaration.library]?[typeName] ??
+                  (throw CompileError(
+                    'Unknown factory target $typeName',
+                    redirect,
+                  ));
+              final typeArguments = redirect.type.typeArguments;
+              if (typeArguments != null) {
+                target = nominalDeclOf(target)!.instantiate([
+                  for (final argument in typeArguments.arguments)
+                    TypeRef.fromAnnotation(ctx, declaration.library, argument),
+                ]);
+              }
+              final targetDecl = nominalDeclOf(target);
+              if (targetDecl is! SourceTypeDecl ||
+                  targetDecl.node is! ExtensionTypeDeclaration) {
+                throw CompileError(
+                  'Expected extension type factory target',
+                  redirect,
+                );
+              }
+              final result =
+                  _ExtensionConstruction(
+                    ctx,
+                    targetDecl,
+                    target,
+                    isConst,
+                    source,
+                    active: _active,
+                  ).emit(
+                    constructorName,
+                    arguments,
+                    suppliedShape: CallShape.values(
+                      bound.positional,
+                      bound.namedValues,
+                    ),
+                  );
+              return _finish(
+                result.copyWith(
+                  type: targetDecl.extensionRepresentationFor(target)!,
+                ),
+              );
+            }
+            final result =
+                StaticCall(
+                  DeferredOrOffset.lookupStatic(
+                    ctx,
+                    declaration.library,
+                    declaration.name,
+                    name,
+                  ),
+                  sourceDeclaration: constructor,
+                  signature: signature,
+                ).emit(
+                  ctx,
+                  BoundCall(
+                    positional: bound.positional,
+                    named: bound.named,
+                    returnType: instantiatedType,
+                    runtimeTypeArguments: [
+                      for (final argument in interfaceArgumentsOf(
+                        instantiatedType,
+                      ))
+                        ctx.runtimeTypes.idOf(argument),
+                    ],
+                  ),
+                );
+            return result.copyWith(type: instantiatedType)..binding = null;
           }
           final initializer = constructor.initializers.firstOrNull;
           if (initializer is RedirectingConstructorInvocation) {
@@ -183,18 +275,20 @@ final class _ExtensionConstruction {
 
   Variable _primary(
     PrimaryConstructorDeclaration primary,
-    ArgumentList arguments,
-  ) {
+    ArgumentList? arguments, {
+    CallShape? suppliedShape,
+  }) {
     final parameter = declaration.extensionRepresentationParameter!;
-    final supplied = arguments.arguments;
-    final argument = supplied.firstOrNull;
-    if (supplied.length > 1 ||
+    final shape = suppliedShape ?? CallShape.fromArgumentList(arguments!);
+    final ArgSource? argument = parameter.isNamed
+        ? shape.named.firstOrNull?.$2
+        : shape.positional.firstOrNull;
+    if (shape.positional.length + shape.named.length > 1 ||
         parameter.isRequired && argument == null ||
-        argument != null &&
-            (parameter.isNamed
-                ? argument is! NamedArgument ||
-                      argument.name.lexeme != parameter.name!.lexeme
-                : argument is NamedArgument)) {
+        (parameter.isNamed
+            ? shape.positional.isNotEmpty ||
+                  shape.named.any((entry) => entry.$1 != parameter.name!.lexeme)
+            : shape.named.isNotEmpty)) {
       throw CompileError(
         'Invalid extension type representation arguments',
         source,
@@ -208,17 +302,69 @@ final class _ExtensionConstruction {
         ? null
         : declaration.extensionRepresentationFor(instantiatedType)!;
     final defaultValue = parameter.defaultClause?.value;
-    final value = argument != null
-        ? compileExpression(argument.argumentExpression, ctx, representation)
-        : defaultValue != null
-        ? withDefaultExpressionScope(
-            ctx,
-            declaration.library,
-            defaultValue,
-            () => compileExpression(defaultValue, ctx, representation),
-          )
-        : BuiltinValue().push(ctx);
-    return _finish(value);
+    final Variable value = switch (argument) {
+      ValueArg(:final value) => value,
+      ExpressionArg(:final expression) => compileExpression(
+        expression,
+        ctx,
+        representation,
+      ),
+      null =>
+        defaultValue != null
+            ? withDefaultExpressionScope(
+                ctx,
+                declaration.library,
+                defaultValue,
+                () => compileExpression(defaultValue, ctx, representation),
+              )
+            : BuiltinValue().push(ctx),
+      _ => throw CompileError('Unsupported representation argument', source),
+    };
+    final result = _finish(value);
+    final body = primary.body;
+    if (body == null) return result;
+    withDefaultExpressionScope(ctx, declaration.library, body, () {
+      ctx.typeParameterScope(declaration.library).addAll({
+        for (final entry in declaration.ownTypeParams.entries)
+          entry.key: entry.value.substituteTypeParameters(
+            Substitution.forInterface(instantiatedType),
+          ),
+      });
+      ctx.setLocal(
+        parameter.name!.lexeme,
+        result.copyWith(
+          type: declaration.extensionRepresentationFor(instantiatedType)!,
+        ),
+      );
+      for (final initializer in body.initializers) {
+        final assertion = initializer as AssertInitializer;
+        doAssert(
+          ctx,
+          compileExpression(assertion.condition, ctx),
+          message: assertion.message == null
+              ? (ctx) => BuiltinValue().push(ctx)
+              : (ctx) => compileExpression(assertion.message!, ctx),
+        );
+      }
+      if (body.body is BlockFunctionBody) {
+        ctx.pushOp(
+          Call(
+            DeferredOrOffset(
+              file: declaration.library,
+              className: declaration.name,
+              name: extensionPrimaryBodyName,
+            ),
+            [result.boxIntoFreshSlot(ctx).ssa],
+            result: ctx.svar('constructor_body'),
+            typeArguments: [
+              for (final argument in interfaceArgumentsOf(instantiatedType))
+                ctx.runtimeTypes.idOf(argument),
+            ],
+          ),
+        );
+      }
+    });
+    return result;
   }
 
   Variable _finish(Variable value) {

@@ -3,7 +3,6 @@ import 'package:control_flow_graph/control_flow_graph.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
 import '../context.dart';
-import '../errors.dart';
 import '../invocation/bound_call.dart';
 import '../invocation/deferred.dart';
 import '../invocation/targets.dart';
@@ -19,6 +18,8 @@ import 'const.dart';
 import 'callable_inference.dart';
 import 'default_value.dart';
 import 'tearoff.dart';
+import 'extension_type.dart';
+import '../invocation/call.dart';
 
 CallSignature constructorTearOffSignature(
   CompilerContext ctx,
@@ -27,15 +28,12 @@ CallSignature constructorTearOffSignature(
   List<TypeParameterDef>? aliasParameters,
 }) {
   final owner = nominalDeclOf(type)!;
-  if (owner is SourceTypeDecl && owner.kind == TypeDeclKind.extensionType) {
-    final primary =
-        (owner.node as ExtensionTypeDeclaration).namePart
-            as PrimaryConstructorDeclaration;
-    if (constructor != null || primary.constructorName != null) {
-      throw CompileError(
-        'Named extension constructor tear-offs are unsupported',
-      );
-    }
+  final generic = aliasParameters == null && interfaceArgumentsOf(type).isEmpty;
+  final result = generic ? owner.thisType : type;
+  final CallSignature declared;
+  if (owner is SourceTypeDecl &&
+      owner.kind == TypeDeclKind.extensionType &&
+      constructor == null) {
     final parameter = owner.extensionRepresentationParameter!;
     final defaultValue = parameter.defaultClause?.value;
     final spec = ParameterSpec(
@@ -47,18 +45,17 @@ CallSignature constructorTearOffSignature(
           ? SourceDefault(defaultValue, owner.library)
           : null,
     );
-    return CallSignature(
+    declared = CallSignature(
       positional: parameter.isPositional ? [spec] : const [],
       named: parameter.isNamed ? [spec] : const [],
       requiredPositional: parameter.isRequiredPositional ? 1 : 0,
       returnType: type,
     );
+  } else {
+    declared = constructor == null
+        ? CallSignature.returnOnly(result)
+        : CallSignature.forDeclaration(ctx, type.file, constructor);
   }
-  final generic = aliasParameters == null && interfaceArgumentsOf(type).isEmpty;
-  final result = generic ? owner.thisType : type;
-  final declared = constructor == null
-      ? CallSignature.returnOnly(result)
-      : CallSignature.forDeclaration(ctx, type.file, constructor);
   final substitution = Substitution.of({
     if (!generic)
       for (var i = 0; i < owner.typeParameters.length; i++)
@@ -178,7 +175,24 @@ Variable materializeConstructorTearOff(
         );
       }
       final result = extensionType
-          ? arguments.single.toRep(ctx, abi.result!).copyWith(type: type)
+          ? constructExtensionType(
+              ctx,
+              nominalDeclOf(type) as SourceTypeDecl,
+              signature.returnType,
+              key.substring(type.name.length + 1),
+              null,
+              isConst: false,
+              source:
+                  constructor ?? (nominalDeclOf(type) as SourceTypeDecl).node,
+              suppliedShape: CallShape.values(
+                arguments.take(signature.positional.length).toList(),
+                {
+                  for (var i = 0; i < signature.named.length; i++)
+                    signature.named[i].name:
+                        arguments[signature.positional.length + i],
+                },
+              ),
+            ).toRep(ctx, abi.result!)
           : ConstructorCall(
               staticType: type,
               instantiatedType: signature.returnType,
