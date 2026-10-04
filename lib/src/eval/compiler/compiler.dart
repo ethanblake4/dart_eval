@@ -1525,6 +1525,10 @@ _resolveImportsAndExports(
 
   final worklist = <Library>[];
   final importMap = <Library, List<_Import>>{};
+  // An unsupported SDK dependency in a wholly tree-shaken library needs no
+  // runtime binding. Defer its diagnostic until declaration reachability is
+  // known; retained libraries must still resolve every SDK dependency.
+  final unresolvedSdkImports = <Library, Set<Uri>>{};
   // Expansion creates wrappers for static members and top-level variables.
   // Reuse them while declarations are unchanged during import resolution.
   final expandedDeclarationsByLib =
@@ -1586,15 +1590,19 @@ _resolveImportsAndExports(
 
       /// Flatten and deduplicate the tree to get a list of all libraries that
       /// are visible through this import.
-      final importedLibs = [...tree.map((e) => e.last), import.uri]
-          .map(
-            (e) =>
-                uriMap[e] ??
-                (throw CompileError(
-                  "Cannot find import '$e' (while parsing '${l.uri}')",
-                )),
-          )
-          .toSet();
+      final importedLibs = <Library>{};
+      for (final uri in [...tree.map((e) => e.last), import.uri]) {
+        final library = uriMap[uri];
+        if (library != null) {
+          importedLibs.add(library);
+        } else if (uri.scheme == 'dart') {
+          (unresolvedSdkImports[l] ??= {}).add(uri);
+        } else {
+          throw CompileError(
+            "Cannot find import '$uri' (while parsing '${l.uri}')",
+          );
+        }
+      }
 
       /// Get all the [ExportDirective]s of the imported library tree. While
       /// we've already found all of the libraries that are visible through
@@ -1803,6 +1811,20 @@ _resolveImportsAndExports(
       }
       return false; // Bridges are always visible
     });*/
+  }
+
+  for (final entry in unresolvedSdkImports.entries) {
+    final library = entry.key;
+    // Extensions remain callable through the separate extension namespace,
+    // even when their declarations have been removed by tree shaking.
+    if (entrypoints.contains(library.uri) ||
+        library.declarations.isNotEmpty ||
+        extensionsOf(library).isNotEmpty) {
+      throw CompileError(
+        "Cannot find import '${entry.value.first}' "
+        "(while parsing '${library.uri}')",
+      );
+    }
   }
 
   return (result, visibleExtensions);
