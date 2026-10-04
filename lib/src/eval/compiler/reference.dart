@@ -206,9 +206,15 @@ class PrefixedIdentifierReference implements Reference {
 /// A [Reference] with a variable that can be indexed into and a variable index. Accessing its value may use [IndexList]
 /// [IndexMap] or [InvokeDynamic] depending on the state of the target variable.
 class IndexedReference implements Reference {
-  IndexedReference(this._variable, this._index, {this.lexicalSuper = false});
+  IndexedReference(
+    this._variable,
+    this._index, {
+    this.lexicalSuper = false,
+    this.extensionPin,
+  });
 
   final bool lexicalSuper;
+  final BoundExtension? extensionPin;
 
   Variable _variable;
   Variable _index;
@@ -241,7 +247,7 @@ class IndexedReference implements Reference {
     if (forSet) {
       return setterValueType(ctx, source) ?? CoreTypes.dynamic.ref(ctx);
     }
-    if (_variable.type.isAssignableTo(
+    if (extensionPin == null && _variable.type.isAssignableTo(
       ctx,
       CoreTypes.list.ref(ctx),
       forceAllowDynamic: false,
@@ -249,7 +255,7 @@ class IndexedReference implements Reference {
       final arguments = _collectionArguments(ctx, CoreTypes.list);
       return arguments.isNotEmpty ? arguments[0] : CoreTypes.dynamic.ref(ctx);
     }
-    if (_variable.type.isAssignableTo(
+    if (extensionPin == null && _variable.type.isAssignableTo(
       ctx,
       CoreTypes.map.ref(ctx),
       forceAllowDynamic: false,
@@ -268,7 +274,13 @@ class IndexedReference implements Reference {
   TypeRef? setterValueType(CompilerContext ctx, [AstNode? source]) =>
       CallResolver(
         ctx,
-      ).operatorParameterType(_variable.type, '[]=', 1, source: source);
+      ).operatorParameterType(
+        _variable.type,
+        '[]=',
+        1,
+        source: source,
+        extensionPin: extensionPin,
+      );
 
   @override
   Variable getValue(
@@ -279,9 +291,9 @@ class IndexedReference implements Reference {
   ]) {
     _refreshBindings();
 
-    final nativeList =
-        _variable.rep == ValueRep.nativeList ||
-        _variable.exactType?.isSpec(CoreTypes.list) == true;
+    final nativeList = extensionPin == null &&
+        (_variable.rep == ValueRep.nativeList ||
+        _variable.exactType?.isSpec(CoreTypes.list) == true);
     if (nativeList &&
         _variable.type.isAssignableTo(
           ctx,
@@ -314,9 +326,9 @@ class IndexedReference implements Reference {
       );
     }
 
-    final nativeMap =
-        _variable.rep == ValueRep.nativeMap ||
-        _variable.exactType?.isSpec(CoreTypes.map) == true;
+    final nativeMap = extensionPin == null &&
+        (_variable.rep == ValueRep.nativeMap ||
+        _variable.exactType?.isSpec(CoreTypes.map) == true);
     if (nativeMap &&
         _variable.type.isAssignableTo(
           ctx,
@@ -352,7 +364,13 @@ class IndexedReference implements Reference {
 
     final result = CallResolver(
       ctx,
-    ).invokeOperator(_variable, '[]', [_index], lexicalSuper: lexicalSuper);
+    ).invokeOperator(
+      _variable,
+      '[]',
+      [_index],
+      lexicalSuper: lexicalSuper,
+      extensionPin: extensionPin,
+    );
     _variable = result.target!;
     _index = result.args[0];
 
@@ -363,7 +381,7 @@ class IndexedReference implements Reference {
   Variable setValue(CompilerContext ctx, Variable value, [AstNode? source]) {
     _refreshBindings();
 
-    if (_variable.type.isAssignableTo(
+    if (extensionPin == null && _variable.type.isAssignableTo(
       ctx,
       CoreTypes.list.ref(ctx),
       forceAllowDynamic: false,
@@ -415,7 +433,7 @@ class IndexedReference implements Reference {
     final result = CallResolver(ctx).invokeOperator(_variable, '[]=', [
       _index,
       converted,
-    ], lexicalSuper: lexicalSuper);
+    ], lexicalSuper: lexicalSuper, extensionPin: extensionPin);
     _variable = result.target!;
     _index = result.args[0];
     return result.args[1];
@@ -521,6 +539,28 @@ BoundExtension? extensionPinOf(
   Expression? target,
   TypeRef receiverType,
 ) {
+  final extension = _explicitExtensionOf(ctx, target);
+  return extension == null
+      ? null
+      : boundExtensionFor(ctx, target as MethodInvocation, extension, receiverType);
+}
+
+/// The original value guarded by an explicit extension application.
+Expression extensionReceiverExpression(
+  CompilerContext ctx,
+  Expression expression,
+) {
+  while (expression is ParenthesizedExpression) {
+    expression = expression.expression;
+  }
+  if (expression is MethodInvocation &&
+      _explicitExtensionOf(ctx, expression) != null) {
+    return expression.argumentList.arguments.single.argumentExpression;
+  }
+  return expression;
+}
+
+EvalExtension? _explicitExtensionOf(CompilerContext ctx, Expression? target) {
   if (target is! MethodInvocation) return null;
   if (target.isCascaded) return null;
   final Denotation d;
@@ -554,5 +594,5 @@ BoundExtension? extensionPinOf(
     return null;
   }
   if (d is! ExtensionNamespaceDenotation) return null;
-  return boundExtensionFor(ctx, target, d.ext, receiverType);
+  return d.ext;
 }

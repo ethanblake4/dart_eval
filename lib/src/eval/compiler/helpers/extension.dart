@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:dart_eval/src/eval/compiler/helpers/eval_extension.dart';
 
 export 'package:dart_eval/src/eval/compiler/helpers/eval_extension.dart';
@@ -486,10 +487,30 @@ BoundExtension boundExtensionFor(
     bindings =
         matchExtensionOn(ctx, receiverType, ext) ??
         matchExtensionOn(ctx, nonNull, ext) ??
+        (receiverType.isSpec(CoreTypes.nullType) &&
+                _hasNullAwareExtensionSelector(e)
+            ? matchExtensionOn(ctx, CoreTypes.never.ref(ctx), ext)
+            : null) ??
         (throw CompileError(
           'Extension ${ext.name} does not apply to $receiverType',
           e,
         ));
   }
   return BoundExtension(ext, bindings);
+}
+
+bool _hasNullAwareExtensionSelector(MethodInvocation application) {
+  AstNode receiver = application;
+  while (receiver.parent is ParenthesizedExpression) {
+    receiver = receiver.parent!;
+  }
+  return switch (receiver.parent) {
+    MethodInvocation(:final target, :final operator) =>
+      target == receiver && operator?.type == TokenType.QUESTION_PERIOD,
+    PropertyAccess(:final target, :final operator) =>
+      target == receiver && operator.type == TokenType.QUESTION_PERIOD,
+    IndexExpression(:final target, :final question) =>
+      target == receiver && question != null,
+    _ => false,
+  };
 }

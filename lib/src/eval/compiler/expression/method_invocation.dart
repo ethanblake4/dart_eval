@@ -73,6 +73,7 @@ Variable compileMethodInvocation(
           receiver: compiledReceiver.withValue(t),
         ),
         source: e,
+        receiverExpression: e.target,
         narrow: e.operator?.type == TokenType.QUESTION_PERIOD,
       );
     }

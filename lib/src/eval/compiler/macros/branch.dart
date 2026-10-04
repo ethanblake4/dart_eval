@@ -125,11 +125,15 @@ StatementInfo macroBranch(
     branches = ctx.builder.split(thenBlock, elseBlock);
   }
   final initialState = ctx.saveState();
+  final enclosingReachable = ctx.flowReachable;
+  thenReachable &= thenEdgeUnreachable?.call() != true;
+  elseReachable &= elseEdgeUnreachable?.call() != true;
 
   ctx.builder = branches.block(0);
   ctx.inferTypes();
   if (conditionLocals != null) ctx.locals.add(conditionLocals);
   ctx.beginScope();
+  ctx.flowReachable = enclosingReachable && thenReachable;
   final thenResult = thenBranch(ctx, expectedReturnType);
   ctx.endScope();
   if (conditionLocals != null) ctx.endScope();
@@ -154,9 +158,11 @@ StatementInfo macroBranch(
     applyConditionPromotions(ctx, conditionExpression, false);
   }
   ctx.beginScope();
+  ctx.flowReachable = enclosingReachable && elseReachable;
   final elseResult =
       elseBranch?.call(ctx, expectedReturnType) ?? StatementInfo();
   ctx.endScope();
+  ctx.flowReachable = enclosingReachable;
   final elseEndsFlow = ctx.flowTerminated;
   final elseState = ctx.saveState();
   if (!elseResult.willAlwaysReturn &&
@@ -176,14 +182,12 @@ StatementInfo macroBranch(
   ctx.builder.float(endBlock);
   final thenContinues =
       thenReachable &&
-      thenEdgeUnreachable?.call() != true &&
       !thenEndsFlow &&
       !thenResult.willAlwaysReturn &&
       !thenResult.willAlwaysThrow &&
       !thenResult.willAlwaysBreak;
   final elseContinues =
       elseReachable &&
-      elseEdgeUnreachable?.call() != true &&
       !elseEndsFlow &&
       !elseResult.willAlwaysReturn &&
       !elseResult.willAlwaysThrow &&

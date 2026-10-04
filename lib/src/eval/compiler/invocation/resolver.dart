@@ -1399,7 +1399,22 @@ final class CallResolver {
     String operator,
     int index, {
     AstNode? source,
+    BoundExtension? extensionPin,
   }) {
+    if (extensionPin != null) {
+      final member = extensionMember(extensionPin.ext, operator);
+      final parameter = member?.parameters?.parameters.elementAtOrNull(index);
+      return parameter == null
+          ? null
+          : ctx.typeFactory.formalParameterAnnotationType(
+              extensionPin.ext.library,
+              parameter,
+              typeParameters: extBindingsMap(
+                extensionPin.ext,
+                extensionPin.onBindings,
+              ),
+            );
+    }
     if (!_needsNullableOperatorExtension(receiver, operator)) {
       try {
         return ctx.memberLookup
@@ -1465,6 +1480,7 @@ final class CallResolver {
           (value) => value.type.isSpec(CoreTypes.never) && !value.type.nullable,
         );
     if ((namedArgs == null || namedArgs.isEmpty) &&
+        extensionPin == null &&
         !hasNeverOperand &&
         !nullableOperator) {
       Variable primitiveView(Variable value) {

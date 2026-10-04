@@ -10,6 +10,64 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import 'package:dart_eval/src/eval/shared/types.dart';
 
 import '../variable.dart';
+import '../reference.dart';
+import '../helpers/promotion.dart';
+import '../helpers/assigned_locals.dart';
+
+void _promoteGuardReceivers(
+  CompilerContext ctx,
+  Expression expression, {
+  required bool narrow,
+}) {
+  final receivers = <(Expression, Set<String>)>[
+    if (narrow) (expression, const {}),
+  ];
+  final written = <String>{};
+  Expression? chain = expression;
+  while (chain != null) {
+    switch (chain) {
+      case PropertyAccess(:final target, :final operator):
+        if (target != null && operator.type == TokenType.QUESTION_PERIOD) {
+          receivers.add((target, written.isEmpty ? const {} : Set.of(written)));
+        }
+        chain = target;
+      case MethodInvocation(:final target, :final operator):
+        written.addAll(assignedLocalNames(chain.argumentList.arguments));
+        if (target != null && operator?.type == TokenType.QUESTION_PERIOD) {
+          receivers.add((target, written.isEmpty ? const {} : Set.of(written)));
+        }
+        chain = target;
+      case IndexExpression(:final target, :final question):
+        written.addAll(assignedLocalNames([chain.index]));
+        if (target != null && question != null) {
+          receivers.add((target, written.isEmpty ? const {} : Set.of(written)));
+        }
+        chain = target;
+      case PostfixExpression(:final operand, :final operator)
+          when operator.type == TokenType.BANG:
+        chain = operand;
+      default:
+        chain = null;
+    }
+  }
+  for (final (receiver, excluded) in receivers.reversed) {
+    promoteNonNull(
+      ctx,
+      extensionReceiverExpression(ctx, receiver),
+      excluded: excluded,
+    );
+  }
+}
+
+Iterable<AstNode> _guardSideEffects(AstNode? source) => switch (source) {
+  MethodInvocation(:final argumentList) => argumentList.arguments,
+  IndexExpression(:final index) => [index],
+  AssignmentExpression(:final leftHandSide, :final rightHandSide) => [
+    if (leftHandSide is IndexExpression) leftHandSide.index,
+    rightHandSide,
+  ],
+  _ => const [],
+};
 
 /// Whether [e]'s leftmost receiver chain contains `?.` or `?[`. The walk
 /// follows receiver positions only (targets of property/method/index access
@@ -63,6 +121,7 @@ Variable emitNullGuard(
   Variable target,
   Variable Function(Variable target) body, {
   AstNode? source,
+  Expression? receiverExpression,
   // `x?.m()` narrows `x` itself inside the guard; a chain continuation
   // (`x?.y.m()`) instead guards on the *result* of `x?.y`, whose declared
   // member type (`x.y`'s, which may be nullable) the selector still sees.
@@ -75,6 +134,20 @@ Variable emitNullGuard(
   if (target.type.isSpec(CoreTypes.nullType)) {
     return out;
   }
+  if (receiverExpression != null) {
+    final written = assignedLocalNames(_guardSideEffects(source));
+    if (written.isNotEmpty) {
+      final slot = promotableMemberSlot(
+        ctx,
+        extensionReceiverExpression(ctx, receiverExpression),
+      );
+      if (slot?.member == null &&
+          slot?.local.ssa == target.ssa &&
+          written.contains(slot?.local.binding?.name)) {
+        target = target.copyIntoFreshSlot(ctx, 'guard_receiver');
+      }
+    }
+  }
   macroBranch(
     ctx,
     null,
@@ -84,6 +157,9 @@ Variable emitNullGuard(
         ctx.soundFlowAnalysis(source) && !target.type.hasNullableRepresentation,
     condition: (ctx) => compileNonNullCondition(ctx, target),
     thenBranch: (ctx, rt) {
+      if (receiverExpression != null) {
+        _promoteGuardReceivers(ctx, receiverExpression, narrow: narrow);
+      }
       // The receiver is provably non-null here: promote it so member and
       // extension resolution (`c1n?.ext` on `extension on C1`) see the
       // non-nullable view. Detach it from the binding so boxing cannot

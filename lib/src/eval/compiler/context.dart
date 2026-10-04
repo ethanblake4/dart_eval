@@ -147,6 +147,8 @@ mixin ScopeContext on Object implements AbstractScopeContext {
         var changed = false;
         var typeChanged = false;
         var hasIncoming = includeCurrent;
+        var intersectPromotions = true;
+        var checkedPromotionMode = false;
         for (final state in incoming) {
           final other = i < state.locals.length
               ? state.locals[i][key]?.current
@@ -156,6 +158,15 @@ mixin ScopeContext on Object implements AbstractScopeContext {
           final hasHistory =
               facts.promotionHistory != null ||
               other.facts.promotionHistory != null;
+          if (!checkedPromotionMode &&
+              (hasHistory ||
+                  facts.memberPromotionHistory != null ||
+                  other.facts.memberPromotionHistory != null)) {
+            final source = binding.captureDeclaration;
+            intersectPromotions =
+                source == null || promotionChainIntersectionJoinEnabled(source);
+            checkedPromotionMode = true;
+          }
           if (hasIncoming && hasHistory) {
             if (facts.promotionHistory == null &&
                 type != binding.declaredType) {
@@ -166,9 +177,17 @@ mixin ScopeContext on Object implements AbstractScopeContext {
                     other.type != binding.declaredType
                 ? other.facts.withPromotion(other.type)
                 : other.facts;
-            facts = facts.join(otherFacts);
+            facts = facts.join(
+              otherFacts,
+              intersectPromotions: intersectPromotions,
+            );
           } else {
-            facts = hasIncoming ? facts.join(other.facts) : other.facts;
+            facts = hasIncoming
+                ? facts.join(
+                    other.facts,
+                    intersectPromotions: intersectPromotions,
+                  )
+                : other.facts;
           }
           // An edge that reassigned the local carries a higher epoch —
           // the join takes the max so records stamped on earlier values
@@ -303,8 +322,13 @@ class CompilerContext with ScopeContext {
   set flowTerminated(bool value) => _flowTerminated = value;
   bool _flowTerminated = false;
 
+  /// Dead branches still compile for diagnostics, but cannot contribute
+  /// jumping-edge facts to an enclosing loop, switch, or finally block.
+  bool flowReachable = true;
+
   int beginFunction(String name, {String? displayName}) {
     finishMethod();
+    flowReachable = true;
     final id = _nextFunctionId++;
     currentFunctionId = id;
     funcLabel = label(name);
@@ -1178,6 +1202,7 @@ final class NestedFunctionState {
       labels = [...context.labels],
       exceptionTargets = [...context.caughtExceptionTargets],
       exceptionDepth = context.exceptionDepth,
+      flowReachable = context.flowReachable,
       locals = context.saveState();
 
   final CompilerContext context;
@@ -1190,6 +1215,7 @@ final class NestedFunctionState {
   final List<CompilerLabel> labels;
   final List<String> exceptionTargets;
   final int exceptionDepth;
+  final bool flowReachable;
   final ContextSaveState locals;
 
   void resumeAfterFlush() {
@@ -1206,6 +1232,7 @@ final class NestedFunctionState {
       ..currentFunctionId = functionId
       ..funcLabel = functionLabel
       ..hasBegunMethod = hasBegunMethod
+      ..flowReachable = flowReachable
       ..exceptionDepth = exceptionDepth;
     context.labels
       ..clear()

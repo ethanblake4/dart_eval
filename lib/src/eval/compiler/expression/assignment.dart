@@ -39,20 +39,28 @@ Variable compileAssignmentExpression(
         bound,
       ),
       source: e,
+      receiverExpression: lhs.realTarget,
+      narrow: lhs.question != null,
     );
   }
   if (lhs is PropertyAccess && isNullShortedSelector(lhs)) {
-    final target = compileExpression(lhs.realTarget, ctx);
+    final receiver = compileReceiver(ctx, lhs.realTarget);
+    final target = receiver.value!;
     return emitNullGuard(
       ctx,
       target,
       (t) => _assignWithReference(
         e,
         ctx,
-        IdentifierReference(t, lhs.propertyName.name),
+        IdentifierReference.receiver(
+          receiver.withValue(t),
+          lhs.propertyName.name,
+        ),
         bound,
       ),
       source: e,
+      receiverExpression: lhs.realTarget,
+      narrow: lhs.operator.type == TokenType.QUESTION_PERIOD,
     );
   }
   final L = compileExpressionAsReference(e.leftHandSide, ctx);

@@ -30,16 +30,19 @@ IndexedReference compileIndexReference(
   CompilerContext ctx,
   Variable receiver,
 ) {
+  final pin = extensionPinOf(ctx, expression.realTarget, receiver.type);
   final context = CallResolver(ctx).operatorParameterType(
     receiver.type,
     expression.inGetterContext() ? '[]' : '[]=',
     0,
     source: expression,
+    extensionPin: pin,
   );
   return IndexedReference(
     receiver,
     compileExpression(expression.index, ctx, context),
     lexicalSuper: expression.realTarget is SuperExpression,
+    extensionPin: pin,
   );
 }
 
@@ -64,6 +67,8 @@ Variable compileIndexExpression(
       target,
       (t) => compileIndexReference(e, ctx, t).getValue(ctx, e),
       source: e,
+      receiverExpression: e.realTarget,
+      narrow: e.question != null,
     );
   }
   return compileIndexExpressionAsReference(e, ctx, bound: bound).getValue(ctx);

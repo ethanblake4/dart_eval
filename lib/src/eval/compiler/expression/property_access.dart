@@ -36,6 +36,7 @@ Variable compilePropertyAccess(
         pa.propertyName.name,
       ).getValue(ctx, pa, bound),
       source: pa,
+      receiverExpression: pa.realTarget,
       narrow: pa.operator.type == TokenType.QUESTION_PERIOD,
     );
   }

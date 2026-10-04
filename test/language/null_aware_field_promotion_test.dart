@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 String _source(String version) {
@@ -40,6 +41,65 @@ int main() {
 }
 
 void main() {
+  test(
+    'extension guards preserve pins and invalidate written receiver proofs',
+    () {
+      const source = r'''
+typedef Exactly<T> = T Function(T);
+extension StaticType<T> on T { T check<R extends Exactly<T>>() => this; }
+extension P on List<int> {
+  int operator [](int index) => first + index + 20;
+  void operator []=(int index, int value) { this[0] = value + 30; }
+}
+extension Q on List<int> {
+  int? operator [](int index) => null;
+  void operator []=(int index, int value) { this[0] = value + 60; }
+}
+class C { C follow(Object? ignored) => this; }
+extension Named on C { C touch(Object? ignored) => this; }
+int main() {
+  final values = <int>[2];
+  final read = P(values)?[3];
+  P(values)?[0] = 8;
+  Q(values)?[0] ??= 7;
+  C? source = C();
+  final chain = Named(source)?.touch(source = null).follow(
+    source..check<Exactly<C?>>(),
+  );
+  final skipped = P(null)?[throw 'index evaluated'];
+  return read! + values[0] + (chain != null ? 100 : 0) +
+      (source == null ? 1000 : 0) + (skipped == null ? 10000 : 0);
+}
+''';
+      final program = Compiler().compile({
+        'extension_guard_boundary': {'main.dart': source},
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        expect(
+          runtime.executeLib(
+            'package:extension_guard_boundary/main.dart',
+            'main',
+          ),
+          11192,
+        );
+      }
+      expect(
+        () => Compiler().compile({
+          'extension_guard_boundary': {
+            'main.dart': source.replaceFirst(
+              "P(null)?[throw 'index evaluated']",
+              'P(null)[0]',
+            ),
+          },
+        }),
+        throwsA(isA<CompileError>()),
+      );
+    },
+  );
+
   test('nested field proofs retain their root and reject unstable paths', () {
     final program = Compiler().compile({
       'nested_field_flow': {

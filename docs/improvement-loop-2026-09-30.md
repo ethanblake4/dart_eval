@@ -4593,3 +4593,20 @@ their expect_fail entries are removed. Ten focused neighboring tests pass,
 including one combined stability, invalidation and alternative-join control.
 Scoped analysis is clean. Never-returning pattern getter handling is included;
 its dead-jump integration is checkpointed with the following flow pass.
+
+### Cycle 28 correctness pass 4
+
+Legacy promotion joins retain the common ordered prefix; the enabled experiment
+retains shared intersection proofs. Dead branches still compile for diagnostics
+but do not export jumping-edge facts into switches, loops or finally blocks.
+Explicit extension applications retain their operator selection through indexed
+reads and writes. Null-aware guards promote their original receiver and carry
+that proof through selector chains, excluding receivers overwritten by earlier
+selectors. A receiver overwritten by a call argument is saved before argument
+evaluation, using an existing assignment only on that affected path.
+
+All five original failures pass fresh and serialized execution, as do four
+compatibility originals covering enhanced joins and finally layering. Their
+five expect_fail entries are removed. Twenty-one focused tests pass, including
+a native-verified combined guard, pinned-index and receiver-write control.
+Scoped analysis is clean. No runtime or opcode changes are introduced.

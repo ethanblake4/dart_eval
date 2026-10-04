@@ -42,6 +42,9 @@ bool _flowExperimentEnabled(AstNode source, String experiment) {
 bool inferenceUpdate4Enabled(AstNode source) =>
     _flowExperimentEnabled(source, 'inference-update-4');
 
+bool promotionChainIntersectionJoinEnabled(AstNode source) =>
+    _flowExperimentEnabled(source, 'promotion-chain-intersection-join');
+
 bool thisPromotionEnabled(CompilerContext ctx, AstNode source) =>
     ctx.anonymousThisReceiver != null ||
     _flowExperimentEnabled(source, 'this-promotion');
@@ -137,10 +140,13 @@ void _apply(CompilerContext ctx, Variable local, TypeRef type, String? member) {
 
 /// Promotes a local or promotable member (`c._f!`, `this._f!`) to its
 /// non-null type — `e!` is a checked assertion, not a branch condition.
-void promoteNonNull(CompilerContext ctx, Expression expression) =>
-    _promoteSlot(ctx, expression, null, (local, type, member) {
-      _apply(ctx, local, type, member);
-    }, const {});
+void promoteNonNull(
+  CompilerContext ctx,
+  Expression expression, {
+  Set<String> excluded = const {},
+}) => _promoteSlot(ctx, expression, null, (local, type, member) {
+  _apply(ctx, local, type, member);
+}, excluded);
 
 /// Attaches member [member]'s promotion on [local]'s binding — the fact
 /// rides on the receiver's value so it clears when `c` is reassigned and

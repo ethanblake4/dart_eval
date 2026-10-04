@@ -138,12 +138,15 @@ final class ValueFacts {
   /// const markers require both. Member promotions and recorded conditions
   /// retain shared proofs from their promotion histories; recorded conditions
   /// survive only when both edges agree on the same entry.
-  ValueFacts join(ValueFacts other) {
+  ValueFacts join(ValueFacts other, {bool intersectPromotions = true}) {
     final sameCondition = identical(
       conditionPromotionOrigin,
       other.conditionPromotionOrigin,
     );
-    final memberHistories = joinMemberHistories(other);
+    final memberHistories = joinMemberHistories(
+      other,
+      intersectPromotions: intersectPromotions,
+    );
     var members = _joinMaps(promotedMembers, other.promotedMembers);
     for (final entry
         in memberHistories?.entries ??
@@ -170,7 +173,11 @@ final class ValueFacts {
       promotionHistory:
           promotionHistory == null && other.promotionHistory == null
           ? null
-          : intersectHistories(promotionHistory, other.promotionHistory),
+          : joinHistories(
+              promotionHistory,
+              other.promotionHistory,
+              intersect: intersectPromotions,
+            ),
       memberPromotionHistory: memberHistories,
       truePromotions: sameCondition
           ? _joinMaps(truePromotions, other.truePromotions)
@@ -188,7 +195,25 @@ final class ValueFacts {
           if (b?.contains(type) ?? false) type,
       ]);
 
-  Map<String, List<TypeRef>>? joinMemberHistories(ValueFacts other) {
+  static List<TypeRef> joinHistories(
+    List<TypeRef>? a,
+    List<TypeRef>? b, {
+    required bool intersect,
+  }) {
+    if (intersect) return intersectHistories(a, b);
+    var shared = 0;
+    while (shared < (a?.length ?? 0) &&
+        shared < (b?.length ?? 0) &&
+        a![shared] == b![shared]) {
+      shared++;
+    }
+    return shared == 0 ? const [] : List.unmodifiable(a!.take(shared));
+  }
+
+  Map<String, List<TypeRef>>? joinMemberHistories(
+    ValueFacts other, {
+    bool intersectPromotions = true,
+  }) {
     if (memberPromotionHistory == null &&
         other.memberPromotionHistory == null) {
       return null;
@@ -198,9 +223,10 @@ final class ValueFacts {
         ...?memberPromotionHistory?.keys,
         ...?other.memberPromotionHistory?.keys,
       })
-        key: intersectHistories(
+        key: joinHistories(
           memberPromotionHistory?[key],
           other.memberPromotionHistory?[key],
+          intersect: intersectPromotions,
         ),
     });
   }

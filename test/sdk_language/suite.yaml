@@ -67,8 +67,6 @@ exclude:
 # suite; a test that starts passing fails loudly so the entry gets removed.
 # Same path/glob syntax as `exclude`.
 expect_fail:
-  - path: 'extension_methods/null_aware_reachability_test.dart'
-    reason: '?. on explicit extension application + expectStaticType'
   - path: 'extension_type/regress_53607_test.dart'
   - path: 'inference/issue_33298_test.dart'
   - path: 'inference_using_bounds/restricting_choices_using_bounds_test.dart'
@@ -76,8 +74,6 @@ expect_fail:
   - path: 'list/list_test.dart'
   - path: 'main/no_main_test.dart'
   - path: 'nnbd/resolution/null_assertion_null_type_test.dart'
-  - path: 'patterns/flow_analysis/list_pattern_error_test.dart'
-  - path: 'patterns/issue52409_test.dart'
   - path: 'primary_constructors/const/potentially_constant_test.dart'
   - path: 'primary_constructors/header/in_body_initializer_test.dart'
   - path: 'primary_constructors/wildcard_declaring_parameters_test.dart'
@@ -88,9 +84,5 @@ expect_fail:
   - path: 'unsorted/checked_method_error_order_test.dart'
   - path: 'unsorted/disassemble_test.dart'
   - path: 'value_class/creates_equals_test.dart'
-  - path: 'extension_methods/null_aware_promotion_test.dart'
-    reason: 'promotion-chain layering (sound flow analysis) not implemented'
   - path: 'inference_update_1/horizontal_inference_extension_method_test.dart'
     reason: 'horizontal inference (inference_update_1) not implemented'
-  - path: 'promotion_chain_intersection_join/legacy_test.dart'
-    reason: 'promotion-chain layering/demotion (sound flow analysis) not implemented'
