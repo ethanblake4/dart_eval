@@ -18,6 +18,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'dart:convert';
 
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Converter,
@@ -42,7 +43,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import './converter.dart';
 
@@ -211,8 +211,7 @@ class $Codec$bridge<S, T> extends Codec<S, T> with $Bridge<Codec<S, T>> {
       case 'encode':
         return $Function((runtime, target, r, s, c) {
           final result = super.encode(
-            TypedInterop.exportExternal((r as $Value?), runtime: runtime)
-                as dynamic,
+            TypedInterop.exportExternal((r as $Value?), runtime: runtime) as S,
           );
           return (result is List || result is Map || result is Set
               ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -221,8 +220,7 @@ class $Codec$bridge<S, T> extends Codec<S, T> with $Bridge<Codec<S, T>> {
       case 'decode':
         return $Function((runtime, target, r, s, c) {
           final result = super.decode(
-            TypedInterop.exportExternal((r as $Value?), runtime: runtime)
-                as dynamic,
+            TypedInterop.exportExternal((r as $Value?), runtime: runtime) as T,
           );
           return (result is List || result is Map || result is Set
               ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -234,7 +232,12 @@ class $Codec$bridge<S, T> extends Codec<S, T> with $Bridge<Codec<S, T>> {
           return $Codec.wrap(result);
         });
     }
-    return null;
+    return $bridgeGetObject(
+      identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
   }
 
   @override

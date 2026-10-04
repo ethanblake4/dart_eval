@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/developer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/isolate.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/typed_data.dart';
 import 'package:dart_eval/src/eval/shared/runtime_type_descriptor.dart';
@@ -111,6 +112,7 @@ class Runtime {
   void initialize() => _setup();
 
   void _loadProgram(Program program) {
+    _loadedProgram = program;
     _typedProgram = program.typedProgram;
     typedGlobals = TypedGlobalState(_typedProgram, this);
     _exports.clear();
@@ -200,6 +202,7 @@ class Runtime {
 
   /// Add a plugin to the runtime, which can register bridge functions.
   void addPlugin(EvalPlugin plugin) {
+    _customIsolateBootstrap = true;
     _plugins.add(plugin);
   }
 
@@ -212,6 +215,7 @@ class Runtime {
     EvalRegisterFunc fn, {
     bool isBridge = false,
   }) {
+    if (!_configuringPlugins) _customIsolateBootstrap = true;
     _unloadedBrFunc.add(
       _UnloadedBridgeFunction(library, isBridge ? '#$name' : name, fn),
     );
@@ -223,6 +227,7 @@ class Runtime {
     String name,
     Map<String, $Value> values,
   ) {
+    if (!_configuringPlugins) _customIsolateBootstrap = true;
     _unloadedEnumValues.add(_UnloadedEnumValues(library, name, values));
   }
 
@@ -231,8 +236,10 @@ class Runtime {
       return;
     }
     for (final plugin in _plugins) {
+      _configuringPlugins = true;
       plugin.configureForRuntime(this);
     }
+    _configuringPlugins = false;
     if (_fromBytes) {
       _load();
     } else {
@@ -419,6 +426,71 @@ class Runtime {
   }
 
   var _didSetup = false;
+  var _configuringPlugins = false;
+  var _customIsolateBootstrap = false;
+  late Program _loadedProgram;
+  Uint8List? _guestIsolateBytes;
+
+  /// Same-program workers use built-in plugins and fresh, unprivileged globals.
+  /// Native registrations cannot be serialized into another isolate.
+  Uint8List guestIsolateProgram() {
+    _setup();
+    if (_customIsolateBootstrap || _typeAutowrappers.isNotEmpty) {
+      throw UnsupportedError(
+        'Guest isolates require built-in runtime plugins; '
+        'custom native registrations cannot be transferred',
+      );
+    }
+    return _guestIsolateBytes ??= _loadedProgram.write().asUnmodifiableView();
+  }
+
+  TypedProgram get guestIsolateTypedProgram => _typedProgram;
+
+  /// Const collection payloads are interned before their guest wrappers exist.
+  bool guestIsolateConstCollection(Object value) => _constIntern.values.any(
+    (bucket) => bucket.any((entry) => identical(entry.$3, value)),
+  );
+
+  /// Descriptor rows contain only integer references, never runtime resources.
+  List<Object?> guestIsolateTypes() {
+    if (_typeIdentities
+        .skip(_programTypeCount)
+        .any((identity) => identity != null)) {
+      throw UnsupportedError(
+        'Guest isolates cannot transfer foreign nominal types',
+      );
+    }
+    return [
+      _typeDescriptors.map(List<int>.of).toList(),
+      _typeTypes.map((types) => types.toList()).toList(),
+    ];
+  }
+
+  /// Import a detached same-program table through the normal type translator.
+  List<int> importGuestIsolateTypes(List<Object?> snapshot) {
+    final origin = Runtime.ofProgram(_loadedProgram)..initialize();
+    final descriptors = (snapshot[0] as List).cast<List>();
+    final supers = (snapshot[1] as List).cast<List>();
+    origin._typeDescriptors
+      ..clear()
+      ..addAll(descriptors.map((row) => row.cast<int>().toList()));
+    origin._typeTypes
+      ..clear()
+      ..addAll(supers.map((row) => row.cast<int>().toSet()));
+    while (origin._typeIdentities.length < descriptors.length) {
+      origin._typeIdentities.add(null);
+    }
+    try {
+      return List.generate(
+        descriptors.length,
+        (id) => importRuntimeType(origin, id),
+      );
+    } finally {
+      // A detached table donor must not become a retained runtime per message.
+      _importedRuntimeTypes.remove(origin);
+    }
+  }
+
   var _libraryMap = <String, int>{};
   late final List<EvalRegisterFunc?> _bridgeFunctions;
   final _unloadedBrFunc = <_UnloadedBridgeFunction>[];
@@ -430,6 +502,7 @@ class Runtime {
     DartCorePlugin(),
     DartDeveloperPlugin(),
     DartIoPlugin(),
+    DartIsolatePlugin(),
     DartMathPlugin(),
     DartTypedDataPlugin(),
   ];

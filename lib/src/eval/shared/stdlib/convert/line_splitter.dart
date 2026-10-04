@@ -68,6 +68,9 @@ import 'package:dart_eval/stdlib/async.dart'
         $LineSplitter;
 
 import '../async/stream_transformer.dart';
+
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+
 import './string_conversion_sink.dart';
 
 /// dart_eval wrapper binding for [LineSplitter]
@@ -366,7 +369,15 @@ class $LineSplitter implements $Instance {
     Object? c,
   ) {
     final self = target! as $LineSplitter;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<String>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.lookupType(CoreTypes.string),
+        ]),
+      ),
+    );
     return $StringConversionSink.wrap(result);
   }
 

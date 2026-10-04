@@ -400,7 +400,15 @@ class $Utf8Decoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $Utf8Decoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<String>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.lookupType(CoreTypes.string),
+        ]),
+      ),
+    );
     return $ByteConversionSink.wrap(result);
   }
 
@@ -1064,7 +1072,17 @@ class $Utf8Encoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $Utf8Encoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<List<int>>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        ]),
+      ),
+    );
     return $StringConversionSink.wrap(result);
   }
 

@@ -730,7 +730,17 @@ class $AsciiEncoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $AsciiEncoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<List<int>>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        ]),
+      ),
+    );
     return $StringConversionSink.wrap(result);
   }
 
@@ -1064,7 +1074,15 @@ class $AsciiDecoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $AsciiDecoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<String>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.lookupType(CoreTypes.string),
+        ]),
+      ),
+    );
     return $ByteConversionSink.wrap(result);
   }
 

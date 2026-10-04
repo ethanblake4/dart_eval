@@ -17,7 +17,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:developer';
 
-import 'package:dart_eval/stdlib/core.dart';
+import 'package:dart_eval/stdlib/core.dart' hide $Flow, $Timeline;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval function wrapper binding for [log]

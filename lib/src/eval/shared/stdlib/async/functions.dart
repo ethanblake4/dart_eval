@@ -22,6 +22,7 @@ import 'package:dart_eval/stdlib/core.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -31,6 +32,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StreamTransformerBase,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../core/stack_trace.dart';
 
@@ -313,19 +315,32 @@ class $runZonedGuardedFn {
           ) as dynamic;
         },
       ),
-      runtime.cachedCallback(
-        (s as $Value?)! as EvalCallable,
-        "void Function(Object, StackTrace);export=false",
-        (_callable) => (Object error, StackTrace stack) {
-          _callable.call(
-            runtime,
-            null,
-            $Object(error),
-            $StackTrace.wrap(stack),
-            2,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.object);
+        final _callbackType1 = runtime.lookupType(CoreTypes.stackTrace);
+        return runtime.cachedCallback(
+          (s as $Value?)! as EvalCallable,
+          "void Function(Object, StackTrace);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (Object error, StackTrace stack) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.annotateBridgeType(
+                $Object(error),
+                runtime,
+                _callbackType0,
+              ),
+              TypedInterop.annotateBridgeType(
+                $StackTrace.wrap(stack),
+                runtime,
+                _callbackType1,
+              ),
+              2,
+            );
+          },
+        );
+      })(),
       zoneValues: (_arg2OrNull?.$reified as Map?)?.cast<Object?, Object?>(),
       zoneSpecification: _arg3OrNull?.$value,
     );

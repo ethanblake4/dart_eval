@@ -17,10 +17,13 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:async';
 
-import 'package:dart_eval/stdlib/core.dart'
+import './stream_transformer.dart';
+
+import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -31,10 +34,11 @@ import 'package:dart_eval/stdlib/core.dart'
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/stdlib/async.dart'
+import 'package:dart_eval/stdlib/core.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -46,22 +50,31 @@ import 'package:dart_eval/stdlib/async.dart'
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
-import './stream_transformer.dart';
+/// dart_eval bridge binding for [StreamTransformerBase]
+class $StreamTransformerBase$bridge<S, T> extends StreamTransformerBase<S, T>
+    with $Bridge<StreamTransformerBase<S, T>> {
+  /// Forwarded constructor for [StreamTransformerBase.new]
+  $StreamTransformerBase$bridge();
 
-/// dart_eval wrapper binding for [StreamTransformerBase]
-class $StreamTransformerBase<S, T> implements $Instance {
   /// Configure this class for use in a [Runtime]
-  static void configureForRuntime(Runtime runtime) {}
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:async',
+      'StreamTransformerBase.',
+      $StreamTransformerBase$bridge.$new,
+      isBridge: true,
+    );
+  }
 
   /// Configure this class for use during compilation
   static void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$StreamTransformerBase]
+  /// Compile-time type specification of [$StreamTransformerBase$bridge]
   static const $spec = BridgeTypeSpec('dart:async', 'StreamTransformerBase');
 
-  /// Compile-time type declaration of [$StreamTransformerBase]
+  /// Compile-time type declaration of [$StreamTransformerBase$bridge]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$StreamTransformerBase]
@@ -132,9 +145,58 @@ class $StreamTransformerBase<S, T> implements $Instance {
     getters: {},
     setters: {},
     fields: {},
-    wrap: true,
-    bridge: false,
+    wrap: false,
+    bridge: true,
   );
+
+  /// Proxy for the [StreamTransformerBase.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $StreamTransformerBase$bridge();
+  }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    final runtime = $runtime;
+    switch (identifier) {
+      case 'cast':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.cast();
+          return $StreamTransformer.wrap(result);
+        });
+    }
+    return $bridgeGetObject(
+      identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {}
+
+  @override
+  Stream<T> bind(Stream<S> stream) {
+    final runtime = $runtime;
+    return $_invoke('bind', [
+      $Stream.wrap(stream.map((e) => runtime.wrapAlways(e, recursive: true))),
+    ]);
+  }
+
+  @override
+  StreamTransformer<RS, RT> cast<RS, RT>() {
+    final runtime = $runtime;
+    return $_invoke('cast', []);
+  }
+}
+
+/// dart_eval lightweight wrapper binding for [StreamTransformerBase]
+class $StreamTransformerBase<S, T> implements $Instance {
+  /// Compile-time type specification of [$StreamTransformerBase]
+  static const $spec = BridgeTypeSpec('dart:async', 'StreamTransformerBase');
+
+  /// Compile-time type declaration of [$StreamTransformerBase]
+  static const $type = BridgeTypeRef($spec);
 
   final $Instance _superclass;
 

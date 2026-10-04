@@ -3,6 +3,58 @@ import 'package:test/test.dart';
 import '../support/dynamic_fixtures.dart';
 
 void main() {
+  test('ByteConversionSink.from exports guest Sink implementations', () {
+    for (final (mode, result) in runDynamicFixture(r'''
+      import 'dart:convert';
+      class Collecting implements Sink<List<int>> {
+        List<int> bytes = [];
+        int closes = 0;
+        void add(List<int> value) { bytes.addAll(value); }
+        void close() { closes++; }
+      }
+      String main() {
+        final guest = Collecting();
+        final sink = ByteConversionSink.from(guest);
+        sink.add([1, 2]);
+        sink.add([3]);
+        sink.close();
+        return '${guest.bytes.join(',')}/${guest.closes}';
+      }
+    ''')) {
+      expect(result, const DynamicFixtureResult.value('1,2,3/1'), reason: mode);
+    }
+  });
+
+  test(
+    'chunked callback keeps nested payload witnesses after later factory calls',
+    () {
+      for (final (mode, result) in runDynamicFixture(r'''
+      import 'dart:convert';
+      import 'dart:io';
+      bool main() {
+        final decoded = <int>[];
+        bool witnesses = false;
+        final output = ChunkedConversionSink<List<int>>.withCallback((chunks) {
+          witnesses = chunks is List<List<int>> && chunks.first is List<int>;
+          for (final chunk in chunks) { decoded.addAll(chunk); }
+        });
+        final other = ChunkedConversionSink<String>.withCallback((chunks) {});
+        other.add('other');
+        other.close();
+        final bytes = <int>[1, 2, 3, 4];
+        final encoder = ZLibEncoder();
+        final encoded = encoder.convert(bytes);
+        final sink = ZLibDecoder().startChunkedConversion(output);
+        sink.add(encoded);
+        sink.close();
+        return witnesses && decoded.join(',') == bytes.join(',');
+      }
+    ''')) {
+        expect(result, const DynamicFixtureResult.value(true), reason: mode);
+      }
+    },
+  );
+
   test('Uint64List retains 64-bit values and native buffer views', () {
     for (final (mode, result) in runDynamicFixture(r'''
       import 'dart:typed_data';

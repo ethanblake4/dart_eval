@@ -235,6 +235,12 @@ class AsyncTypes {
   /// Bridge spec for [StreamView].
   static const streamView = BridgeTypeSpec('dart:async', 'StreamView');
 
+  /// Bridge spec for [TimeoutException].
+  static const timeoutException = BridgeTypeSpec(
+    'dart:async',
+    'TimeoutException',
+  );
+
   /// Bridge spec for [Timer].
   static const timer = BridgeTypeSpec('dart:async', 'Timer');
 
@@ -396,6 +402,45 @@ class ConvertTypes {
 
   /// Bridge spec for [Utf8Encoder].
   static const utf8Encoder = BridgeTypeSpec('dart:convert', 'Utf8Encoder');
+}
+
+/// Bridge type specs for `dart:developer`.
+class DeveloperTypes {
+  /// Bridge spec for [Flow].
+  static const flow = BridgeTypeSpec('dart:developer', 'Flow');
+
+  /// Bridge spec for [Timeline].
+  static const timeline = BridgeTypeSpec('dart:developer', 'Timeline');
+}
+
+/// Bridge type specs for `dart:isolate`.
+class IsolateTypes {
+  /// Bridge spec for [Capability].
+  static const capability = BridgeTypeSpec('dart:isolate', 'Capability');
+
+  /// Bridge spec for [Isolate].
+  static const isolate = BridgeTypeSpec('dart:isolate', 'Isolate');
+
+  /// Bridge spec for [RawReceivePort].
+  static const rawReceivePort = BridgeTypeSpec(
+    'dart:isolate',
+    'RawReceivePort',
+  );
+
+  /// Bridge spec for [ReceivePort].
+  static const receivePort = BridgeTypeSpec('dart:isolate', 'ReceivePort');
+
+  /// Bridge spec for [RemoteError].
+  static const remoteError = BridgeTypeSpec('dart:isolate', 'RemoteError');
+
+  /// Bridge spec for [SendPort].
+  static const sendPort = BridgeTypeSpec('dart:isolate', 'SendPort');
+
+  /// Bridge spec for [TransferableTypedData].
+  static const transferableTypedData = BridgeTypeSpec(
+    'dart:isolate',
+    'TransferableTypedData',
+  );
 }
 
 /// Bridge type specs for `dart:io`.

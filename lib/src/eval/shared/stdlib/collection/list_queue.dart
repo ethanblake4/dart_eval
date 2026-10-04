@@ -1309,21 +1309,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     self.$value.removeWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return null;
   }
@@ -1338,21 +1348,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     self.$value.retainWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return null;
   }
@@ -1411,22 +1431,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.map(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "T Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(element, recursive: true),
-              null,
-              1,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "T Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  element,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                null,
+                1,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return $Iterable.wrap(
       (result).map(
@@ -1447,21 +1476,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.where(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return (() {
       final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
@@ -1503,21 +1542,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.expand(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "Iterable<T> Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "Iterable<T> Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as Iterable<dynamic>;
+          },
+        );
+      })(),
     );
     return $Iterable.wrap(
       (result).map(
@@ -1553,19 +1602,28 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     self.$value.forEach(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(E);export=false",
-        (_callable) => (dynamic element) {
-          _callable.call(
-            runtime,
-            null,
-            runtime.wrapAlways(element, recursive: true),
-            null,
-            1,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.boxExternal(
+                element,
+                runtime: runtime,
+                runtimeTypeId: _callbackType0,
+              ),
+              null,
+              1,
+            );
+          },
+        );
+      })(),
     );
     return null;
   }
@@ -1580,22 +1638,39 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.reduce(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "E Function(E, E);export=false",
-        (_callable) => (dynamic value, dynamic element) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(value, recursive: true),
-              runtime.wrapAlways(element, recursive: true),
-              2,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        final _callbackType1 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "E Function(E, E);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic value, dynamic element) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  value,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                TypedInterop.boxExternal(
+                  element,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType1,
+                ),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1613,22 +1688,31 @@ class $ListQueue<E> implements $Instance {
     final self = target! as $ListQueue;
     final result = self.$value.fold(
       TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
-      runtime.cachedCallback(
-        (s as $Value?)! as EvalCallable,
-        "T Function(T, E);export=false",
-        (_callable) => (dynamic previousValue, dynamic element) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(previousValue, recursive: true),
-              runtime.wrapAlways(element, recursive: true),
-              2,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType1 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (s as $Value?)! as EvalCallable,
+          "T Function(T, E);export=false" + ";types=$_callbackType1",
+          (_callable) => (dynamic previousValue, dynamic element) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                runtime.wrapAlways(previousValue, recursive: true),
+                TypedInterop.boxExternal(
+                  element,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType1,
+                ),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1645,21 +1729,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.every(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return $bool(result);
   }
@@ -1689,21 +1783,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.any(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return $bool(result);
   }
@@ -1793,21 +1897,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.takeWhile(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return (() {
       final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
@@ -1867,21 +1981,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.skipWhile(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return (() {
       final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
@@ -1912,21 +2036,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.firstWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
@@ -1956,21 +2090,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.lastWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
@@ -2000,21 +2144,31 @@ class $ListQueue<E> implements $Instance {
   ) {
     final self = target! as $ListQueue;
     final result = self.$value.singleWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(E);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(E);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null

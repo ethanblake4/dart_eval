@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:isolate';
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/stdlib/async.dart' show $TimeoutException;
+import 'package:dart_eval/stdlib/isolate.dart' show $RemoteError;
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart' show WrappedException;
 import 'typed_exception.dart';
@@ -186,8 +190,10 @@ final class TypedExceptionState {
       UnsupportedError() => $UnsupportedError.wrap(error),
       StackOverflowError() => $StackOverflowError.wrap(error),
       OutOfMemoryError() => $OutOfMemoryError.wrap(error),
+      RemoteError() => $RemoteError.wrap(error),
       Error() => $Error.wrap(error),
       FormatException() => $FormatException.wrap(error),
+      TimeoutException() => $TimeoutException.wrap(error),
       Exception() => $Exception.wrap(error),
       _ => TypedInterop.boxExternal(error, runtime: runtime),
     };

@@ -21,6 +21,7 @@ import 'package:dart_eval/stdlib/core.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -35,6 +36,7 @@ import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -326,19 +328,31 @@ class $StreamSubscription<T> implements $Instance {
     self.$value.onData(
       (r as $Value?) == null || (r as $Value?) is $null
           ? null
-          : runtime.cachedCallback(
-              (r as $Value?)! as EvalCallable,
-              "void Function(T);export=false",
-              (_callable) => (dynamic data) {
-                _callable.call(
-                  runtime,
-                  null,
-                  runtime.wrapAlways(data, recursive: true),
-                  null,
-                  1,
-                );
-              },
-            ),
+          : (() {
+              final _callbackType0 =
+                  runtime.runtimeTypeArgumentAt(
+                    self.$getRuntimeType(runtime),
+                    0,
+                  ) ??
+                  runtime.lookupType(CoreTypes.dynamic);
+              return runtime.cachedCallback(
+                (r as $Value?)! as EvalCallable,
+                "void Function(T);export=false" + ";types=$_callbackType0",
+                (_callable) => (dynamic data) {
+                  _callable.call(
+                    runtime,
+                    null,
+                    TypedInterop.boxExternal(
+                      data,
+                      runtime: runtime,
+                      runtimeTypeId: _callbackType0,
+                    ),
+                    null,
+                    1,
+                  );
+                },
+              );
+            })(),
     );
     return null;
   }

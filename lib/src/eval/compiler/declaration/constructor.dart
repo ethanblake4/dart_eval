@@ -257,22 +257,20 @@ void compileConstructorDeclaration(
                   .bindParameterList(
                     null,
                     targetRef.file,
-                    CallSignature.forDeclaration(
-                      ctx,
-                      targetRef.file,
-                      ctorDecl,
-                    ).substitute(
-                      Substitution.of({
-                        for (
-                          var i = 0;
-                          i < interfaceArgumentsOf(targetType).length;
-                          i++
-                        )
-                          nominalDeclOf(targetRef)!.typeParameters[i]:
-                              interfaceArgumentsOf(targetType)[i],
-                      }),
-                    ),
+                    CallSignature.forDeclaration(ctx, targetRef.file, ctorDecl),
                     ctorDecl,
+                    resolveGenerics: {
+                      for (
+                        var i = 0;
+                        i < interfaceArgumentsOf(targetType).length;
+                        i++
+                      )
+                        nominalDeclOf(targetRef)!.typeParameters[i]:
+                            interfaceArgumentsOf(targetType)[i],
+                    },
+                    fixedParameters: nominalDeclOf(
+                      targetRef,
+                    )!.typeParameters.toSet(),
                     suppliedShape: CallShape.values(
                       [
                         for (final p in d.parameters.parameters)
@@ -1162,6 +1160,33 @@ void _emitConstructorReturn(
           TypeRef.fromAnnotation(ctx, ctx.library, arg),
       ],
     );
+  } else {
+    // An omitted redirect type is inferred from the factory's return type.
+    // Match the target's interface view, so reordered and nested parameters
+    // follow the declared relationship between the two classes.
+    final source = d.thisOrAncestorMatching(
+      (node) => node is ClassDeclaration || node is EnumDeclaration,
+    );
+    final sourceType = source is Declaration
+        ? TypeRef.lookupDeclaration(ctx, ctx.library, source)
+        : null;
+    final sourceDecl = sourceType == null ? null : nominalDeclOf(sourceType);
+    final targetDecl = nominalDeclOf(targetRef);
+    if (sourceDecl != null && targetDecl != null) {
+      final view = ctx.typeSystem.asInstanceOf(targetDecl.thisType, sourceDecl);
+      if (view != null) {
+        final inferred = <TypeParameterDef, TypeRef>{};
+        ctx.typeSystem.unify(view, sourceDecl.thisType, inferred);
+        final arguments = ctx.typeSystem.instantiateToBounds(
+          targetDecl.typeParameters,
+          knownTypes: inferred,
+        );
+        targetType = targetDecl.instantiate([
+          for (final parameter in targetDecl.typeParameters)
+            arguments[parameter]!,
+        ]);
+      }
+    }
   }
   final targetCtors = ctx.topLevelDeclarationsMap[targetRef.file]!;
   final targetCtor = targetCtors['${targetRef.name}.$ctorName'];

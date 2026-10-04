@@ -1006,16 +1006,19 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.map(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "T Function(int);export=false",
-        (_callable) => (int e) {
-          return TypedInterop.exportExternal(
-            _callable.call(runtime, null, $int(e), null, 1),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "T Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int e) {
+            return TypedInterop.exportExternal(
+              _callable.call(runtime, null, $int(e), null, 1),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return $Iterable.wrap(
       (result).map(
@@ -1036,13 +1039,17 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.where(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(int);export=false",
-        (_callable) => (int element) {
-          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int element) {
+            return _callable.call(runtime, null, $int(element), null, 1)?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return (() {
       final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
@@ -1106,13 +1113,17 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.expand(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "Iterable<T> Function(int);export=false",
-        (_callable) => (int element) {
-          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "Iterable<T> Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int element) {
+            return _callable.call(runtime, null, $int(element), null, 1)?.$value
+                as Iterable<dynamic>;
+          },
+        );
+      })(),
     );
     return $Iterable.wrap(
       (result).map(
@@ -1148,13 +1159,16 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     self.$value.forEach(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(int);export=false",
-        (_callable) => (int element) {
-          _callable.call(runtime, null, $int(element), null, 1);
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int element) {
+            _callable.call(runtime, null, $int(element), null, 1);
+          },
+        );
+      })(),
     );
     return null;
   }
@@ -1169,15 +1183,21 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.reduce(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "int Function(int, int);export=false",
-        (_callable) => (int value, int element) {
-          return _callable
-              .call(runtime, null, $int(value), $int(element), 2)
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        final _callbackType1 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "int Function(int, int);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (int value, int element) {
+            return _callable
+                    .call(runtime, null, $int(value), $int(element), 2)
+                    ?.$value
+                as int;
+          },
+        );
+      })(),
     );
     return $int(result);
   }
@@ -1193,22 +1213,25 @@ class $Runes implements $Instance {
     final self = target! as $Runes;
     final result = self.$value.fold(
       TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
-      runtime.cachedCallback(
-        (s as $Value?)! as EvalCallable,
-        "T Function(T, int);export=false",
-        (_callable) => (dynamic previousValue, int element) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(previousValue, recursive: true),
-              $int(element),
-              2,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType1 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (s as $Value?)! as EvalCallable,
+          "T Function(T, int);export=false" + ";types=$_callbackType1",
+          (_callable) => (dynamic previousValue, int element) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                runtime.wrapAlways(previousValue, recursive: true),
+                $int(element),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1225,13 +1248,17 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.every(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(int);export=false",
-        (_callable) => (int element) {
-          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int element) {
+            return _callable.call(runtime, null, $int(element), null, 1)?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return $bool(result);
   }
@@ -1261,13 +1288,17 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.any(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(int);export=false",
-        (_callable) => (int element) {
-          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int element) {
+            return _callable.call(runtime, null, $int(element), null, 1)?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return $bool(result);
   }
@@ -1343,13 +1374,17 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.takeWhile(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(int);export=false",
-        (_callable) => (int value) {
-          return _callable.call(runtime, null, $int(value), null, 1)?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int value) {
+            return _callable.call(runtime, null, $int(value), null, 1)?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return (() {
       final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
@@ -1403,13 +1438,17 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.skipWhile(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(int);export=false",
-        (_callable) => (int value) {
-          return _callable.call(runtime, null, $int(value), null, 1)?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int value) {
+            return _callable.call(runtime, null, $int(value), null, 1)?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return (() {
       final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
@@ -1437,13 +1476,17 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.firstWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(int);export=false",
-        (_callable) => (int element) {
-          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int element) {
+            return _callable.call(runtime, null, $int(element), null, 1)?.$value
+                as bool;
+          },
+        );
+      })(),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
@@ -1451,7 +1494,8 @@ class $Runes implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "int Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return _callable.call(runtime, null, null, null, 0)?.$value
+                    as int;
               },
             ),
     );
@@ -1468,13 +1512,17 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.lastWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(int);export=false",
-        (_callable) => (int element) {
-          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int element) {
+            return _callable.call(runtime, null, $int(element), null, 1)?.$value
+                as bool;
+          },
+        );
+      })(),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
@@ -1482,7 +1530,8 @@ class $Runes implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "int Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return _callable.call(runtime, null, null, null, 0)?.$value
+                    as int;
               },
             ),
     );
@@ -1499,13 +1548,17 @@ class $Runes implements $Instance {
   ) {
     final self = target! as $Runes;
     final result = self.$value.singleWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(int);export=false",
-        (_callable) => (int element) {
-          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.int);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(int);export=false" + ";types=$_callbackType0",
+          (_callable) => (int element) {
+            return _callable.call(runtime, null, $int(element), null, 1)?.$value
+                as bool;
+          },
+        );
+      })(),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
@@ -1513,7 +1566,8 @@ class $Runes implements $Instance {
               (s is $Value ? s : null)! as EvalCallable,
               "int Function();export=false",
               (_callable) => () {
-                return _callable.call(runtime, null, null, null, 0)?.$value;
+                return _callable.call(runtime, null, null, null, 0)?.$value
+                    as int;
               },
             ),
     );

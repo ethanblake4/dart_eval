@@ -116,3 +116,52 @@ String emitSdkExtensionsSource(String uri, String declarations) {
   }
   return "final sdkExtensionsSource = DartSource('$uri', r'''\n$declarations\n''');";
 }
+
+/// Copies selected SDK class declarations verbatim from compilation units.
+String sdkSourceClassesSourceForLibrary(
+  LibraryElement library,
+  Iterable<String> names,
+) {
+  final selected = names.toList();
+  if (selected.toSet().length != selected.length) {
+    throw const FormatException('Duplicate source class name in config');
+  }
+  final wanted = selected.toSet();
+  final paths = <String>{};
+  for (final element in library.classes) {
+    if (!wanted.contains(element.name)) continue;
+    final source = element.firstFragment.libraryFragment.source;
+    paths.add(source.fullName);
+  }
+  final declarations = <String, String>{};
+  for (final path in paths) {
+    final source = File(path).readAsStringSync();
+    final unit = parseString(content: source, throwIfDiagnostics: false).unit;
+    for (final declaration in unit.declarations.whereType<ClassDeclaration>()) {
+      final name = declaration.namePart.typeName.lexeme;
+      if (!wanted.contains(name)) continue;
+      if (declarations.containsKey(name)) {
+        throw FormatException('Duplicate source class $name');
+      }
+      declarations[name] = source.substring(
+        declaration.offset,
+        declaration.end,
+      );
+    }
+  }
+  for (final name in selected) {
+    if (!declarations.containsKey(name)) {
+      throw FormatException('Class $name not found in SDK source');
+    }
+  }
+  return selected.map((name) => declarations[name]!).join('\n');
+}
+
+String emitSdkSourceClassesSource(String uri, String declarations) {
+  if (declarations.contains("'''")) {
+    throw const FormatException(
+      'Source class declarations contain a raw string delimiter',
+    );
+  }
+  return "final sdkSourceClassesSource = DartSource('$uri', r'''\n$declarations\n''');";
+}

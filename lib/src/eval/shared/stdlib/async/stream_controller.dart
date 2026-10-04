@@ -21,6 +21,7 @@ import 'package:dart_eval/stdlib/core.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -35,6 +36,7 @@ import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -511,7 +513,8 @@ class $StreamController<T> implements $Instance {
                 _arg3OrNull! as EvalCallable,
                 "FutureOr<void> Function();export=false",
                 (_callable) => () {
-                  return _callable.call(runtime, null, null, null, 0)?.$value;
+                  return _callable.call(runtime, null, null, null, 0)?.$value
+                      as FutureOr<void>;
                 },
               ),
         sync: _arg4OrNull == null ? false : (_arg4OrNull as $bool).$value,

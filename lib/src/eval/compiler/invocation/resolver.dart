@@ -2522,7 +2522,11 @@ Map<String, TypeRef> _bridgeClassTypeArguments(
   final bridge = declaration?.bridge;
   if (bridge is! BridgeClassDef) return const {};
   final names = bridge.type.generics.keys.toList();
-  final arguments = interfaceArgumentsOf(receiver);
+  // A raw receiver supplies the class's default arguments to callbacks,
+  // rather than leaving its declaration parameters in the method signature.
+  final arguments = receiver is InterfaceTypeRef && receiver.arguments.isEmpty
+      ? receiver.decl.defaultTypeArguments
+      : interfaceArgumentsOf(receiver);
   return {
     for (
       var index = 0;

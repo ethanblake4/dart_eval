@@ -110,6 +110,7 @@ class BindgenLibraryConfig {
     this.classes = const {},
     this.typedefs = const [],
     this.sourceExtensions = const [],
+    this.sourceClasses = const [],
     this.functions = const {},
     this.functionsFile,
     this.hooks,
@@ -154,6 +155,9 @@ class BindgenLibraryConfig {
   /// SDK extensions copied verbatim into eval-side source for this library.
   final List<String> sourceExtensions;
 
+  /// SDK class declarations copied verbatim into an eval-side source.
+  final List<String> sourceClasses;
+
   /// Fully-resolved defaults (root defaults merged with library overrides).
   BindgenDefaults defaults = const BindgenDefaults();
 
@@ -195,6 +199,7 @@ class BindgenLibraryConfig {
       classes: classes,
       typedefs: _strList(yaml['typedefs']),
       sourceExtensions: _strList(yaml['sourceExtensions']),
+      sourceClasses: _strList(yaml['sourceClasses']),
       functions: _memberMap(yaml['functions']),
       functionsFile: _str(yaml['functionsFile']),
       hooks: _str(yaml['hooks']),

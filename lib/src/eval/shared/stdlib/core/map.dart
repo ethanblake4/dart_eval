@@ -544,18 +544,52 @@ class $Map<K, V> implements Map<K, V>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final transform = r as EvalCallable;
-    final mapped = (target!.$reified as Map).map((key, value) {
-      final entry = transform.call(
-        runtime,
-        null,
-        runtime.wrapAlways(key, recursive: true),
-        runtime.wrapAlways(value, recursive: true),
-        2,
+    final transform = TypedInterop.nonGenericCallable(r);
+    final typeArguments = runtime.bridgeCallTypeArguments;
+    final resultType = typeArguments.length < 2
+        ? null
+        : runtime.internParameterizedType(CoreTypes.map, typeArguments);
+    final ownerType = target!.$getRuntimeType(runtime);
+    final keyType = runtime.runtimeTypeArgumentAt(ownerType, 0);
+    final valueType = runtime.runtimeTypeArgumentAt(ownerType, 1);
+    final mapped = (target.$value as Map).map((key, value) {
+      final boxedKey = TypedInterop.boxExternal(
+        key,
+        runtime: runtime,
+        runtimeTypeId: keyType,
       );
-      return (entry as $Value).$reified as MapEntry;
+      final boxedValue = TypedInterop.boxExternal(
+        value,
+        runtime: runtime,
+        runtimeTypeId: valueType,
+      );
+      if (keyType != null)
+        runtime.assertTypedTypeArgument(boxedKey, ownerType, 0);
+      if (valueType != null)
+        runtime.assertTypedTypeArgument(boxedValue, ownerType, 1);
+      final entry = transform.call(runtime, null, boxedKey, boxedValue, 2);
+      final nativeEntry = (entry as $Value).$value as MapEntry;
+      final mappedKey = TypedInterop.boxExternal(
+        nativeEntry.key,
+        runtime: runtime,
+        runtimeTypeId: resultType == null
+            ? null
+            : runtime.runtimeTypeArgumentAt(resultType, 0),
+      );
+      final mappedValue = TypedInterop.boxExternal(
+        nativeEntry.value,
+        runtime: runtime,
+        runtimeTypeId: resultType == null
+            ? null
+            : runtime.runtimeTypeArgumentAt(resultType, 1),
+      );
+      if (resultType != null) {
+        runtime.assertTypedTypeArgument(mappedKey, resultType, 0);
+        runtime.assertTypedTypeArgument(mappedValue, resultType, 1);
+      }
+      return MapEntry(mappedKey, mappedValue);
     });
-    return $Map.wrap(mapped);
+    return $Map.wrap(mapped, runtime: runtime, runtimeTypeId: resultType);
   }
 
   @override
@@ -605,13 +639,27 @@ class $Map<K, V> implements Map<K, V>, $Instance {
       case 'isEmpty':
         return $bool($value.isEmpty);
       case 'keys':
-        return $Iterable.wrap(keys);
+        return _iterableView(runtime, keys, 0);
       case 'values':
-        return $Iterable.wrap(values);
+        return _iterableView(runtime, values, 1);
       case 'isNotEmpty':
         return $bool($value.isNotEmpty);
     }
     return _superclass.$getProperty(runtime, identifier);
+  }
+
+  $Iterable _iterableView(Runtime runtime, Iterable values, int argument) {
+    final elementType = runtime.runtimeTypeArgumentAt(
+      $getRuntimeType(runtime),
+      argument,
+    );
+    return $Iterable.wrap(
+      values,
+      runtime: runtime,
+      runtimeTypeId: elementType == null
+          ? null
+          : runtime.internParameterizedType(CoreTypes.iterable, [elementType]),
+    );
   }
 
   @override

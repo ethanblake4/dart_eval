@@ -225,27 +225,50 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
 /// Renders [type] as a Dart type with type parameters erased to their bound
 /// (or `dynamic`). Wrapper method bodies are static, so class type parameters
 /// are out of scope, and `$value` is always raw — erased types are correct.
-String dartTypeErased(DartType type) {
+String dartTypeErased(
+  DartType type, {
+  InterfaceElement? nativeOwner,
+  Iterable<TypeParameterElement> localTypeParameters = const [],
+}) {
   final suffix = type.nullabilitySuffix == NullabilitySuffix.question
       ? '?'
       : '';
   if (type is TypeParameterType) {
+    if (localTypeParameters.any(
+          (parameter) => identical(parameter, type.element),
+        ) ||
+        nativeOwner != null &&
+            identical(type.element.enclosingElement, nativeOwner)) {
+      return type.getDisplayString();
+    }
     final bound = type.bound;
     if (bound.isDartCoreObject) {
       return 'dynamic';
     }
-    return dartTypeErased(bound);
+    return dartTypeErased(
+      bound,
+      nativeOwner: nativeOwner,
+      localTypeParameters: localTypeParameters,
+    );
   }
   if (type is FunctionType) {
-    return '${dartTypeErased(type.returnType)} Function('
+    return '${dartTypeErased(type.returnType, nativeOwner: nativeOwner, localTypeParameters: localTypeParameters)} Function('
         '${type.formalParameters.map((p) {
-          final t = dartTypeErased(p.type);
+          final t = dartTypeErased(p.type, nativeOwner: nativeOwner, localTypeParameters: localTypeParameters);
           final prefix = p.isRequiredNamed ? 'required ' : '';
           return p.isNamed ? '$prefix$t ${p.name ?? ''}' : t;
         }).join(', ')})$suffix';
   }
   if (type is ParameterizedType && type.typeArguments.isNotEmpty) {
-    final args = type.typeArguments.map(dartTypeErased).join(', ');
+    final args = type.typeArguments
+        .map(
+          (argument) => dartTypeErased(
+            argument,
+            nativeOwner: nativeOwner,
+            localTypeParameters: localTypeParameters,
+          ),
+        )
+        .join(', ');
     return '${type.element?.name}<$args>$suffix';
   }
   return type.getDisplayString();

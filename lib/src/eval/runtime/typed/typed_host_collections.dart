@@ -31,8 +31,14 @@ abstract final class TypedHostCollections {
       final typed = cache.typedBoxed[collection]?[typeId];
       if (typed != null) return typed;
     }
-    Object? read(Object? value) =>
-        TypedInterop.boxExternal(value, runtime: runtime);
+    Object? readArgument(Object? value, int index) => TypedInterop.boxExternal(
+      value,
+      runtime: runtime,
+      runtimeTypeId: runtimeTypeId == null
+          ? null
+          : runtime?.runtimeTypeArgumentAt(runtimeTypeId, index),
+    );
+    Object? read(Object? value) => readArgument(value, 0);
     Object? write(Object? value) =>
         TypedInterop.exportExternal(value, runtime: runtime);
     final Object backing;
@@ -46,7 +52,13 @@ abstract final class TypedHostCollections {
           runtime: runtime,
         );
       case Map<Object?, Object?>():
-        backing = _MapView(collection, read, write, write, write);
+        backing = _MapView(
+          collection,
+          (value) => readArgument(value, 1),
+          write,
+          write,
+          write,
+        );
         wrapper = TypedNativeMap.wrap(
           backing as Map<Object?, Object?>,
           runtimeTypeId: runtimeTypeId,

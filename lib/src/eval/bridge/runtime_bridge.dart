@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
@@ -10,6 +11,39 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
   $Value? $bridgeGet(String identifier);
 
   void $bridgeSet(String identifier, $Value value);
+
+  /// Resolves Object members against the bridge's native superclass.
+  /// Callers supply lexical super delegates to avoid guest dispatch recursion.
+  $Value? $bridgeGetObject(
+    String identifier, {
+    required int Function() hashCode,
+    required bool Function(Object?) equals,
+    required String Function() toString,
+  }) {
+    switch (identifier) {
+      case 'hashCode':
+        return $int(hashCode());
+      case '==':
+      case '!=':
+        return $Function((runtime, target, r, s, c) {
+          if (TypedInterop.callableCount(c) != 1) {
+            throw ArgumentError('Expected one argument');
+          }
+          final result = equals(
+            TypedInterop.exportExternal(r, runtime: runtime),
+          );
+          return $bool(identifier == '==' ? result : !result);
+        });
+      case 'toString':
+        return $Function((runtime, target, r, s, c) {
+          if (TypedInterop.callableCount(c) != 0) {
+            throw ArgumentError('Expected no arguments');
+          }
+          return $String(toString());
+        });
+    }
+    return null;
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {

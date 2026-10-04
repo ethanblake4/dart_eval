@@ -16,6 +16,19 @@ final class TypedLateLocal {
   Object? _value = _uninitialized;
   EvalCallable? initializer;
 
+  /// Heap snapshots inspect the slot without evaluating its initializer.
+  bool get isInitialized => !identical(_value, _uninitialized);
+  Object? get snapshotValue => isInitialized ? _value : null;
+
+  void restoreSnapshot({
+    required bool initialized,
+    required Object? value,
+    required EvalCallable? initializer,
+  }) {
+    _value = initialized ? value : _uninitialized;
+    this.initializer = initializer;
+  }
+
   @pragma('vm:never-inline')
   void setInitializer(Object? value) => initializer = value as EvalCallable;
 

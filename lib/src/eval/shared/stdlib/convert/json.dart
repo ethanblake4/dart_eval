@@ -17,7 +17,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:convert';
 
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Converter,
@@ -42,6 +41,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -66,7 +67,6 @@ import 'package:dart_eval/stdlib/async.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import './converter.dart';
 import './chunked_conversion.dart';
@@ -338,22 +338,30 @@ class $JsonEncoder implements $Instance {
       JsonEncoder(
         (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (r is $Value ? r : null)! as EvalCallable,
-                "Object? Function(dynamic);export=false",
-                (_callable) => (dynamic object) {
-                  return TypedInterop.exportExternal(
-                    _callable.call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(object, recursive: true),
-                      null,
-                      1,
-                    ),
-                    runtime: runtime,
-                  ) as Object?;
-                },
-              ),
+            : (() {
+                final _callbackType0 = runtime.lookupType(CoreTypes.dynamic);
+                return runtime.cachedCallback(
+                  (r is $Value ? r : null)! as EvalCallable,
+                  "Object? Function(dynamic);export=false" +
+                      ";types=$_callbackType0",
+                  (_callable) => (dynamic object) {
+                    return TypedInterop.exportExternal(
+                      _callable.call(
+                        runtime,
+                        null,
+                        TypedInterop.boxExternal(
+                          object,
+                          runtime: runtime,
+                          runtimeTypeId: _callbackType0,
+                        ),
+                        null,
+                        1,
+                      ),
+                      runtime: runtime,
+                    ) as Object?;
+                  },
+                );
+              })(),
       ),
     );
   }
@@ -365,22 +373,30 @@ class $JsonEncoder implements $Instance {
         (r as $Value?)!.$value,
         (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (s is $Value ? s : null)! as EvalCallable,
-                "Object? Function(dynamic);export=false",
-                (_callable) => (dynamic object) {
-                  return TypedInterop.exportExternal(
-                    _callable.call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(object, recursive: true),
-                      null,
-                      1,
-                    ),
-                    runtime: runtime,
-                  ) as Object?;
-                },
-              ),
+            : (() {
+                final _callbackType0 = runtime.lookupType(CoreTypes.dynamic);
+                return runtime.cachedCallback(
+                  (s is $Value ? s : null)! as EvalCallable,
+                  "Object? Function(dynamic);export=false" +
+                      ";types=$_callbackType0",
+                  (_callable) => (dynamic object) {
+                    return TypedInterop.exportExternal(
+                      _callable.call(
+                        runtime,
+                        null,
+                        TypedInterop.boxExternal(
+                          object,
+                          runtime: runtime,
+                          runtimeTypeId: _callbackType0,
+                        ),
+                        null,
+                        1,
+                      ),
+                      runtime: runtime,
+                    ) as Object?;
+                  },
+                );
+              })(),
       ),
     );
   }
@@ -494,7 +510,15 @@ class $JsonEncoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $JsonEncoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<String>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.lookupType(CoreTypes.string),
+        ]),
+      ),
+    );
     return $ChunkedConversionSink.wrap(result);
   }
 
@@ -720,22 +744,43 @@ class $JsonDecoder implements $Instance {
       JsonDecoder(
         (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (r is $Value ? r : null)! as EvalCallable,
-                "Object? Function(Object?, Object?);export=false",
-                (_callable) => (Object? key, Object? value) {
-                  return TypedInterop.exportExternal(
-                    _callable.call(
-                      runtime,
-                      null,
-                      (key == null ? const $null() : $Object(key)),
-                      (value == null ? const $null() : $Object(value)),
-                      2,
-                    ),
-                    runtime: runtime,
-                  ) as Object?;
-                },
-              ),
+            : (() {
+                final _callbackType0 = runtime.internParameterizedType(
+                  CoreTypes.object,
+                  [],
+                  nullable: true,
+                );
+                final _callbackType1 = runtime.internParameterizedType(
+                  CoreTypes.object,
+                  [],
+                  nullable: true,
+                );
+                return runtime.cachedCallback(
+                  (r is $Value ? r : null)! as EvalCallable,
+                  "Object? Function(Object?, Object?);export=false" +
+                      ";types=$_callbackType0,$_callbackType1",
+                  (_callable) => (Object? key, Object? value) {
+                    return TypedInterop.exportExternal(
+                      _callable.call(
+                        runtime,
+                        null,
+                        TypedInterop.annotateBridgeType(
+                          (key == null ? const $null() : $Object(key)),
+                          runtime,
+                          _callbackType0,
+                        ),
+                        TypedInterop.annotateBridgeType(
+                          (value == null ? const $null() : $Object(value)),
+                          runtime,
+                          _callbackType1,
+                        ),
+                        2,
+                      ),
+                      runtime: runtime,
+                    ) as Object?;
+                  },
+                );
+              })(),
       ),
     );
   }
@@ -844,7 +889,15 @@ class $JsonDecoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $JsonDecoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<Object?>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.internParameterizedType(CoreTypes.object, [], nullable: true),
+        ]),
+      ),
+    );
     return $StringConversionSink.wrap(result);
   }
 
@@ -1182,42 +1235,71 @@ class $JsonCodec implements $Instance {
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (r is $Value ? r : null)! as EvalCallable,
-                "Object? Function(Object?, Object?);export=false",
-                (_callable) => (Object? key, Object? value) {
-                  return TypedInterop.exportExternal(
-                    _callable.call(
-                      runtime,
-                      null,
-                      (key == null ? const $null() : $Object(key)),
-                      (value == null ? const $null() : $Object(value)),
-                      2,
-                    ),
-                    runtime: runtime,
-                  ) as Object?;
-                },
-              ),
+            : (() {
+                final _callbackType0 = runtime.internParameterizedType(
+                  CoreTypes.object,
+                  [],
+                  nullable: true,
+                );
+                final _callbackType1 = runtime.internParameterizedType(
+                  CoreTypes.object,
+                  [],
+                  nullable: true,
+                );
+                return runtime.cachedCallback(
+                  (r is $Value ? r : null)! as EvalCallable,
+                  "Object? Function(Object?, Object?);export=false" +
+                      ";types=$_callbackType0,$_callbackType1",
+                  (_callable) => (Object? key, Object? value) {
+                    return TypedInterop.exportExternal(
+                      _callable.call(
+                        runtime,
+                        null,
+                        TypedInterop.annotateBridgeType(
+                          (key == null ? const $null() : $Object(key)),
+                          runtime,
+                          _callbackType0,
+                        ),
+                        TypedInterop.annotateBridgeType(
+                          (value == null ? const $null() : $Object(value)),
+                          runtime,
+                          _callbackType1,
+                        ),
+                        2,
+                      ),
+                      runtime: runtime,
+                    ) as Object?;
+                  },
+                );
+              })(),
         toEncodable:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (s is $Value ? s : null)! as EvalCallable,
-                "Object? Function(dynamic);export=false",
-                (_callable) => (dynamic arg0) {
-                  return TypedInterop.exportExternal(
-                    _callable.call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(arg0, recursive: true),
-                      null,
-                      1,
-                    ),
-                    runtime: runtime,
-                  ) as Object?;
-                },
-              ),
+            : (() {
+                final _callbackType0 = runtime.lookupType(CoreTypes.dynamic);
+                return runtime.cachedCallback(
+                  (s is $Value ? s : null)! as EvalCallable,
+                  "Object? Function(dynamic);export=false" +
+                      ";types=$_callbackType0",
+                  (_callable) => (dynamic arg0) {
+                    return TypedInterop.exportExternal(
+                      _callable.call(
+                        runtime,
+                        null,
+                        TypedInterop.boxExternal(
+                          arg0,
+                          runtime: runtime,
+                          runtimeTypeId: _callbackType0,
+                        ),
+                        null,
+                        1,
+                      ),
+                      runtime: runtime,
+                    ) as Object?;
+                  },
+                );
+              })(),
       ),
     );
   }
@@ -1231,22 +1313,43 @@ class $JsonCodec implements $Instance {
   ) {
     return $JsonCodec.wrap(
       JsonCodec.withReviver(
-        runtime.cachedCallback(
-          (r as $Value?)! as EvalCallable,
-          "dynamic Function(Object?, Object?);export=false",
-          (_callable) => (Object? key, Object? value) {
-            return TypedInterop.exportExternal(
-              _callable.call(
-                runtime,
-                null,
-                (key == null ? const $null() : $Object(key)),
-                (value == null ? const $null() : $Object(value)),
-                2,
-              ),
-              runtime: runtime,
-            ) as dynamic;
-          },
-        ),
+        (() {
+          final _callbackType0 = runtime.internParameterizedType(
+            CoreTypes.object,
+            [],
+            nullable: true,
+          );
+          final _callbackType1 = runtime.internParameterizedType(
+            CoreTypes.object,
+            [],
+            nullable: true,
+          );
+          return runtime.cachedCallback(
+            (r as $Value?)! as EvalCallable,
+            "dynamic Function(Object?, Object?);export=false" +
+                ";types=$_callbackType0,$_callbackType1",
+            (_callable) => (Object? key, Object? value) {
+              return TypedInterop.exportExternal(
+                _callable.call(
+                  runtime,
+                  null,
+                  TypedInterop.annotateBridgeType(
+                    (key == null ? const $null() : $Object(key)),
+                    runtime,
+                    _callbackType0,
+                  ),
+                  TypedInterop.annotateBridgeType(
+                    (value == null ? const $null() : $Object(value)),
+                    runtime,
+                    _callbackType1,
+                  ),
+                  2,
+                ),
+                runtime: runtime,
+              ) as dynamic;
+            },
+          );
+        })(),
       ),
     );
   }
@@ -1303,22 +1406,30 @@ class $JsonCodec implements $Instance {
       toEncodable:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : runtime.cachedCallback(
-              (s is $Value ? s : null)! as EvalCallable,
-              "Object? Function(dynamic);export=false",
-              (_callable) => (dynamic object) {
-                return TypedInterop.exportExternal(
-                  _callable.call(
-                    runtime,
-                    null,
-                    runtime.wrapAlways(object, recursive: true),
-                    null,
-                    1,
-                  ),
-                  runtime: runtime,
-                ) as Object?;
-              },
-            ),
+          : (() {
+              final _callbackType0 = runtime.lookupType(CoreTypes.dynamic);
+              return runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "Object? Function(dynamic);export=false" +
+                    ";types=$_callbackType0",
+                (_callable) => (dynamic object) {
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        object,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    ),
+                    runtime: runtime,
+                  ) as Object?;
+                },
+              );
+            })(),
     );
     return $String(result);
   }
@@ -1337,22 +1448,43 @@ class $JsonCodec implements $Instance {
       reviver:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : runtime.cachedCallback(
-              (s is $Value ? s : null)! as EvalCallable,
-              "Object? Function(Object?, Object?);export=false",
-              (_callable) => (Object? key, Object? value) {
-                return TypedInterop.exportExternal(
-                  _callable.call(
-                    runtime,
-                    null,
-                    (key == null ? const $null() : $Object(key)),
-                    (value == null ? const $null() : $Object(value)),
-                    2,
-                  ),
-                  runtime: runtime,
-                ) as Object?;
-              },
-            ),
+          : (() {
+              final _callbackType0 = runtime.internParameterizedType(
+                CoreTypes.object,
+                [],
+                nullable: true,
+              );
+              final _callbackType1 = runtime.internParameterizedType(
+                CoreTypes.object,
+                [],
+                nullable: true,
+              );
+              return runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "Object? Function(Object?, Object?);export=false" +
+                    ";types=$_callbackType0,$_callbackType1",
+                (_callable) => (Object? key, Object? value) {
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      TypedInterop.annotateBridgeType(
+                        (key == null ? const $null() : $Object(key)),
+                        runtime,
+                        _callbackType0,
+                      ),
+                      TypedInterop.annotateBridgeType(
+                        (value == null ? const $null() : $Object(value)),
+                        runtime,
+                        _callbackType1,
+                      ),
+                      2,
+                    ),
+                    runtime: runtime,
+                  ) as Object?;
+                },
+              );
+            })(),
     );
     return runtime.wrapAlways(result, recursive: true);
   }

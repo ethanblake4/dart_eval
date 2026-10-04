@@ -23,7 +23,11 @@ String $bridgeGet(BindgenContext ctx, ClassElement element) {
   \$Value? \$bridgeGet(String identifier) {
     final runtime = \$runtime;
     ${propertyGetters(ctx, element, isBridge: true)}
-    return null;
+    return \$bridgeGetObject(identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
   }
 ''';
 }

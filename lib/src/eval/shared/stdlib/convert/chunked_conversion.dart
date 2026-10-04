@@ -17,6 +17,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:convert';
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Converter,
@@ -41,8 +43,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [ChunkedConversionSink]
 class $ChunkedConversionSink<T> implements $Instance {
@@ -169,22 +169,36 @@ class $ChunkedConversionSink<T> implements $Instance {
   ) {
     return $ChunkedConversionSink.wrap(
       ChunkedConversionSink.withCallback(
-        runtime.cachedCallback(
-          (r as $Value?)! as EvalCallable,
-          "void Function(List<T>);export=false",
-          (_callable) => (List<dynamic> accumulated) {
-            _callable.call(
-              runtime,
-              null,
-              $List.view(
-                accumulated,
-                (e) => runtime.wrapAlways(e, recursive: true),
-              ),
-              null,
-              1,
-            );
-          },
-        ),
+        (() {
+          final _callbackType0 = runtime.internParameterizedType(
+            CoreTypes.list,
+            [
+              runtime.runtimeTypeArgumentAt(
+                    (runtime.bridgeConstructorTypeId ??
+                        runtime.lookupType(ConvertTypes.chunkedConversionSink)),
+                    0,
+                  ) ??
+                  runtime.lookupType(CoreTypes.dynamic),
+            ],
+          );
+          return runtime.cachedCallback(
+            (r as $Value?)! as EvalCallable,
+            "void Function(List<T>);export=false" + ";types=$_callbackType0",
+            (_callable) => (List<dynamic> accumulated) {
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  accumulated,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                null,
+                1,
+              );
+            },
+          );
+        })(),
       ),
     );
   }

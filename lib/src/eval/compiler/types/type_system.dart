@@ -1086,7 +1086,7 @@ final class TypeSystem {
               arguments.add(
                 variance == TypeParameterVariance.contravariant
                     ? greatestLowerBound(argsA[i], argsB[i])
-                    : _pairwiseUpperBound(argsA[i], argsB[i]),
+                    : leastUpperBound({argsA[i], argsB[i]}),
               );
             }
           }

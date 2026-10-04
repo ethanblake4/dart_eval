@@ -7,8 +7,8 @@ void main() {
     'facade.dart': "export 'ordinary.dart'; export 'parallel.dart';",
     'ordinary.dart': 'int ordinary() => 42;',
     'parallel.dart': '''
-      import 'dart:isolate';
-      Future<int> parallel() => Isolate.run(() => 7);
+      import 'dart:ffi';
+      int parallel() => sizeOf<Int64>();
     ''',
   };
 
@@ -39,7 +39,7 @@ void main() {
         isA<CompileError>().having(
           (error) => error.toString(),
           'diagnostic',
-          contains("Cannot find import 'dart:isolate'"),
+          contains("Cannot find import 'dart:ffi'"),
         ),
       ),
     );
@@ -62,7 +62,7 @@ void main() {
   test('unsupported SDK import in the entrypoint still fails', () {
     expect(
       () => Compiler().compile({
-        'sources': {'main.dart': "import 'dart:isolate'; int main() => 42;"},
+        'sources': {'main.dart': "import 'dart:ffi'; int main() => 42;"},
       }),
       throwsA(isA<CompileError>()),
     );
@@ -74,7 +74,7 @@ void main() {
         'sources': {
           'main.dart': "import 'extension.dart'; int main() => 42.answer;",
           'extension.dart': '''
-            import 'dart:isolate';
+            import 'dart:ffi';
             extension Answer on int { int get answer => this; }
           ''',
         },

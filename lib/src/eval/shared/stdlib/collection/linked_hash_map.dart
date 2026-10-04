@@ -17,7 +17,6 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:collection';
 
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $LinkedHashMap,
@@ -35,6 +34,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $MapBase,
         $SetBase;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import '../core/map_entry.dart';
 
@@ -865,59 +865,108 @@ class $LinkedHashMap<K, V> implements $Instance {
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (r is $Value ? r : null)! as EvalCallable,
-                "bool Function(K, K);export=false",
-                (_callable) => (dynamic arg0, dynamic arg1) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        runtime.wrapAlways(arg0, recursive: true),
-                        runtime.wrapAlways(arg1, recursive: true),
-                        2,
-                      )
-                      ?.$value;
-                },
-              ),
+            : (() {
+                final _callbackType0 =
+                    runtime.runtimeTypeArgumentAt(
+                      (runtime.bridgeConstructorTypeId ??
+                          runtime.lookupType(CollectionTypes.linkedHashMap)),
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic);
+                final _callbackType1 =
+                    runtime.runtimeTypeArgumentAt(
+                      (runtime.bridgeConstructorTypeId ??
+                          runtime.lookupType(CollectionTypes.linkedHashMap)),
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic);
+                return runtime.cachedCallback(
+                  (r is $Value ? r : null)! as EvalCallable,
+                  "bool Function(K, K);export=false" +
+                      ";types=$_callbackType0,$_callbackType1",
+                  (_callable) => (dynamic arg0, dynamic arg1) {
+                    return _callable
+                            .call(
+                              runtime,
+                              null,
+                              TypedInterop.boxExternal(
+                                arg0,
+                                runtime: runtime,
+                                runtimeTypeId: _callbackType0,
+                              ),
+                              TypedInterop.boxExternal(
+                                arg1,
+                                runtime: runtime,
+                                runtimeTypeId: _callbackType1,
+                              ),
+                              2,
+                            )
+                            ?.$value
+                        as bool;
+                  },
+                );
+              })(),
         hashCode:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (s is $Value ? s : null)! as EvalCallable,
-                "int Function(K);export=false",
-                (_callable) => (dynamic arg0) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        runtime.wrapAlways(arg0, recursive: true),
-                        null,
-                        1,
-                      )
-                      ?.$value;
-                },
-              ),
+            : (() {
+                final _callbackType0 =
+                    runtime.runtimeTypeArgumentAt(
+                      (runtime.bridgeConstructorTypeId ??
+                          runtime.lookupType(CollectionTypes.linkedHashMap)),
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic);
+                return runtime.cachedCallback(
+                  (s is $Value ? s : null)! as EvalCallable,
+                  "int Function(K);export=false" + ";types=$_callbackType0",
+                  (_callable) => (dynamic arg0) {
+                    return _callable
+                            .call(
+                              runtime,
+                              null,
+                              TypedInterop.boxExternal(
+                                arg0,
+                                runtime: runtime,
+                                runtimeTypeId: _callbackType0,
+                              ),
+                              null,
+                              1,
+                            )
+                            ?.$value
+                        as int;
+                  },
+                );
+              })(),
         isValidKey:
             (c is $Value ? c : null) == null ||
                 (c is $Value ? c : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (c is $Value ? c : null)! as EvalCallable,
-                "bool Function(dynamic);export=false",
-                (_callable) => (dynamic arg0) {
-                  return _callable
-                      .call(
-                        runtime,
-                        null,
-                        runtime.wrapAlways(arg0, recursive: true),
-                        null,
-                        1,
-                      )
-                      ?.$value;
-                },
-              ),
+            : (() {
+                final _callbackType0 = runtime.lookupType(CoreTypes.dynamic);
+                return runtime.cachedCallback(
+                  (c is $Value ? c : null)! as EvalCallable,
+                  "bool Function(dynamic);export=false" +
+                      ";types=$_callbackType0",
+                  (_callable) => (dynamic arg0) {
+                    return _callable
+                            .call(
+                              runtime,
+                              null,
+                              TypedInterop.boxExternal(
+                                arg0,
+                                runtime: runtime,
+                                runtimeTypeId: _callbackType0,
+                              ),
+                              null,
+                              1,
+                            )
+                            ?.$value
+                        as bool;
+                  },
+                );
+              })(),
       ),
     );
   }
@@ -959,42 +1008,56 @@ class $LinkedHashMap<K, V> implements $Instance {
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (s is $Value ? s : null)! as EvalCallable,
-                "K Function(dynamic);export=false",
-                (_callable) => (dynamic element) {
-                  return TypedInterop.exportExternal(
-                    _callable.call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(element, recursive: true),
-                      null,
-                      1,
-                    ),
-                    runtime: runtime,
-                  ) as dynamic;
-                },
-              ),
+            : (() {
+                final _callbackType0 = runtime.lookupType(CoreTypes.dynamic);
+                return runtime.cachedCallback(
+                  (s is $Value ? s : null)! as EvalCallable,
+                  "K Function(dynamic);export=false" + ";types=$_callbackType0",
+                  (_callable) => (dynamic element) {
+                    return TypedInterop.exportExternal(
+                      _callable.call(
+                        runtime,
+                        null,
+                        TypedInterop.boxExternal(
+                          element,
+                          runtime: runtime,
+                          runtimeTypeId: _callbackType0,
+                        ),
+                        null,
+                        1,
+                      ),
+                      runtime: runtime,
+                    ) as dynamic;
+                  },
+                );
+              })(),
         value:
             (c is $Value ? c : null) == null ||
                 (c is $Value ? c : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (c is $Value ? c : null)! as EvalCallable,
-                "V Function(dynamic);export=false",
-                (_callable) => (dynamic element) {
-                  return TypedInterop.exportExternal(
-                    _callable.call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(element, recursive: true),
-                      null,
-                      1,
-                    ),
-                    runtime: runtime,
-                  ) as dynamic;
-                },
-              ),
+            : (() {
+                final _callbackType0 = runtime.lookupType(CoreTypes.dynamic);
+                return runtime.cachedCallback(
+                  (c is $Value ? c : null)! as EvalCallable,
+                  "V Function(dynamic);export=false" + ";types=$_callbackType0",
+                  (_callable) => (dynamic element) {
+                    return TypedInterop.exportExternal(
+                      _callable.call(
+                        runtime,
+                        null,
+                        TypedInterop.boxExternal(
+                          element,
+                          runtime: runtime,
+                          runtimeTypeId: _callbackType0,
+                        ),
+                        null,
+                        1,
+                      ),
+                      runtime: runtime,
+                    ) as dynamic;
+                  },
+                );
+              })(),
       ),
     );
   }
@@ -1276,21 +1339,39 @@ class $LinkedHashMap<K, V> implements $Instance {
   ) {
     final self = target! as $LinkedHashMap;
     final result = self.$value.map(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "MapEntry<K2, V2> Function(K, V);export=false",
-        (_callable) => (dynamic key, dynamic value) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(key, recursive: true),
-                runtime.wrapAlways(value, recursive: true),
-                2,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        final _callbackType1 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 1) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "MapEntry<K2, V2> Function(K, V);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic key, dynamic value) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        key,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      TypedInterop.boxExternal(
+                        value,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType1,
+                      ),
+                      2,
+                    )
+                    ?.$value
+                as MapEntry<dynamic, dynamic>;
+          },
+        );
+      })(),
     );
     return wrapMap(
       result,
@@ -1331,22 +1412,31 @@ class $LinkedHashMap<K, V> implements $Instance {
     final self = target! as $LinkedHashMap;
     final result = self.$value.update(
       TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
-      runtime.cachedCallback(
-        (s as $Value?)! as EvalCallable,
-        "V Function(V);export=false",
-        (_callable) => (dynamic value) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(value, recursive: true),
-              null,
-              1,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 1) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (s as $Value?)! as EvalCallable,
+          "V Function(V);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic value) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  value,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                null,
+                1,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
       ifAbsent:
           (c is List && (c as List).length > 0
                       ? (c as List)[0] as $Value?
@@ -1386,22 +1476,39 @@ class $LinkedHashMap<K, V> implements $Instance {
   ) {
     final self = target! as $LinkedHashMap;
     self.$value.updateAll(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "V Function(K, V);export=false",
-        (_callable) => (dynamic key, dynamic value) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(key, recursive: true),
-              runtime.wrapAlways(value, recursive: true),
-              2,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        final _callbackType1 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 1) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "V Function(K, V);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic key, dynamic value) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  key,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                TypedInterop.boxExternal(
+                  value,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType1,
+                ),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return null;
   }
@@ -1416,21 +1523,39 @@ class $LinkedHashMap<K, V> implements $Instance {
   ) {
     final self = target! as $LinkedHashMap;
     self.$value.removeWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(K, V);export=false",
-        (_callable) => (dynamic key, dynamic value) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(key, recursive: true),
-                runtime.wrapAlways(value, recursive: true),
-                2,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        final _callbackType1 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 1) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(K, V);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic key, dynamic value) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        key,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      TypedInterop.boxExternal(
+                        value,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType1,
+                      ),
+                      2,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return null;
   }
@@ -1519,19 +1644,36 @@ class $LinkedHashMap<K, V> implements $Instance {
   ) {
     final self = target! as $LinkedHashMap;
     self.$value.forEach(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(K, V);export=false",
-        (_callable) => (dynamic key, dynamic value) {
-          _callable.call(
-            runtime,
-            null,
-            runtime.wrapAlways(key, recursive: true),
-            runtime.wrapAlways(value, recursive: true),
-            2,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        final _callbackType1 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 1) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(K, V);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic key, dynamic value) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.boxExternal(
+                key,
+                runtime: runtime,
+                runtimeTypeId: _callbackType0,
+              ),
+              TypedInterop.boxExternal(
+                value,
+                runtime: runtime,
+                runtimeTypeId: _callbackType1,
+              ),
+              2,
+            );
+          },
+        );
+      })(),
     );
     return null;
   }

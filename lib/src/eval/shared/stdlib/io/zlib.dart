@@ -1407,7 +1407,17 @@ class $ZLibEncoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $ZLibEncoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<List<int>>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        ]),
+      ),
+    );
     return $ByteConversionSink.wrap(result);
   }
 
@@ -1848,7 +1858,17 @@ class $ZLibDecoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $ZLibDecoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<List<int>>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        ]),
+      ),
+    );
     return $ByteConversionSink.wrap(result);
   }
 

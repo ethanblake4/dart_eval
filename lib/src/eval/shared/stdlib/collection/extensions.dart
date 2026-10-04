@@ -89,4 +89,11 @@ extension IterableExtensions<T> on Iterable<T> {
     return iterator.current;
   }
 }
+extension NullableIterableExtensions<T extends Object> on Iterable<T?> {
+  /// The non-`null` elements of this iterable.
+  ///
+  /// The same elements as this iterable, except that `null` values
+  /// are omitted.
+  Iterable<T> get nonNulls => NonNullsIterable<T>(this);
+}
 ''');

@@ -388,7 +388,15 @@ class $Base64Encoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $Base64Encoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<String>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.lookupType(CoreTypes.string),
+        ]),
+      ),
+    );
     return $ByteConversionSink.wrap(result);
   }
 
@@ -721,7 +729,17 @@ class $Base64Decoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $Base64Decoder;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<List<int>>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        ]),
+      ),
+    );
     return $StringConversionSink.wrap(result);
   }
 

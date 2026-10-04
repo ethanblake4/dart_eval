@@ -33,6 +33,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/developer.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/isolate.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/math.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/typed_data.dart';
@@ -110,6 +111,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     DartConvertPlugin(),
     DartCorePlugin(),
     DartDeveloperPlugin(),
+    DartIsolatePlugin(),
     DartIoPlugin(),
     DartMathPlugin(),
     DartTypedDataPlugin(),

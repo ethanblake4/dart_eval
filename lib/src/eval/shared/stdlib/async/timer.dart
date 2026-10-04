@@ -17,10 +17,13 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:async';
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -217,13 +220,26 @@ class $Timer implements $Instance {
     return $Timer.wrap(
       Timer.periodic(
         (r as $Value?)!.$value,
-        runtime.cachedCallback(
-          (s as $Value?)! as EvalCallable,
-          "void Function(Timer);export=false",
-          (_callable) => (Timer timer) {
-            _callable.call(runtime, null, $Timer.wrap(timer), null, 1);
-          },
-        ),
+        (() {
+          final _callbackType0 = runtime.lookupType(AsyncTypes.timer);
+          return runtime.cachedCallback(
+            (s as $Value?)! as EvalCallable,
+            "void Function(Timer);export=false" + ";types=$_callbackType0",
+            (_callable) => (Timer timer) {
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.annotateBridgeType(
+                  $Timer.wrap(timer),
+                  runtime,
+                  _callbackType0,
+                ),
+                null,
+                1,
+              );
+            },
+          );
+        })(),
       ),
     );
   }

@@ -48,7 +48,8 @@ final class TypedClosure extends EvalFunction {
            descriptor.defaultTypeArguments.isEmpty &&
            definingTypeEnvironmentReceiver == null &&
            definingTypeArguments.isEmpty &&
-           definingTypeEnvironment == null,
+           definingTypeEnvironment == null &&
+           _runtimeTypeIdOverride == null,
        function = program.functions[descriptor.functionId];
 
   final TypedProgram program;
@@ -56,7 +57,7 @@ final class TypedClosure extends EvalFunction {
   final TypedFunction function;
   final List<Object?> captures;
   final Runtime? runtime;
-  final Object? definingTypeEnvironmentReceiver;
+  Object? definingTypeEnvironmentReceiver;
   final List<int> definingTypeArguments;
   final TypedTypeEnvironment? definingTypeEnvironment;
   final bool plainCapturedEntry;
@@ -200,6 +201,28 @@ final class TypedClosure extends EvalFunction {
     receiver,
     const [],
     null,
+    runtimeTypeId,
+  );
+
+  /// Rebind a transferred closure without retaining the sending runtime.
+  /// Captures are allocated first so recursive closures can be hydrated later.
+  static TypedClosure restore(
+    TypedProgram program,
+    TypedClosureDescriptor descriptor,
+    List<Object?> captures,
+    Runtime runtime,
+    Object? receiver,
+    List<int> arguments,
+    TypedTypeEnvironment? environment,
+    int runtimeTypeId,
+  ) => TypedClosure._(
+    program,
+    descriptor,
+    captures,
+    runtime,
+    receiver,
+    arguments,
+    environment,
     runtimeTypeId,
   );
   static final _defaultArguments = Expando<List<$Value?>>();

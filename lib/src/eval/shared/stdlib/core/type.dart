@@ -45,6 +45,10 @@ class $TypeImpl implements $Type {
   final int _typeId;
   final Runtime? _runtime;
 
+  /// Rebind a guest Type without exposing or transferring its owning runtime.
+  int typeIdIn(Runtime runtime) =>
+      _runtime == null ? _typeId : runtime.importRuntimeType(_runtime, _typeId);
+
   @override
   final $Instance _superclass;
 

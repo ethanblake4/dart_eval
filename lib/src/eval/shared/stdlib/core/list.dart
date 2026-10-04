@@ -1148,12 +1148,21 @@ class $List<E> implements List<E>, $Instance {
   );
 
   /// Wrap an [List] in an [$List]
-  $List.wrap(this.$value, {int? runtimeTypeId, Runtime? runtime})
-    : _runtimeTypeId = runtimeTypeId,
-      _runtime = runtime;
+  $List.wrap(
+    this.$value, {
+    int? runtimeTypeId,
+    Runtime? runtime,
+    this.isolateGrowable = true,
+    this.isolateReadOnly = false,
+  }) : _runtimeTypeId = runtimeTypeId,
+       _runtime = runtime;
 
   final int? _runtimeTypeId;
   final Runtime? _runtime;
+
+  /// Native storage capabilities retained by guest heap snapshots.
+  final bool isolateGrowable;
+  final bool isolateReadOnly;
 
   // The translated owner descriptor id is stable per (wrapper, runtime) pair;
   // keep the last translation instead of importing on every element write.
@@ -1947,6 +1956,7 @@ class $List<E> implements List<E>, $Instance {
     }
     return $List.wrap(
       List.filled(length, fill, growable: growable),
+      isolateGrowable: growable,
       runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
@@ -1961,6 +1971,7 @@ class $List<E> implements List<E>, $Instance {
     final growable = (r as $Value?)?.$value as bool? ?? false;
     return $List.wrap(
       List.empty(growable: growable),
+      isolateGrowable: growable,
       runtimeTypeId: runtime.bridgeConstructorTypeId,
       runtime: runtime,
     );
@@ -1975,6 +1986,7 @@ class $List<E> implements List<E>, $Instance {
         _checkedConstructorElements(runtime, elements, runtimeTypeId),
         growable: growable,
       ),
+      isolateGrowable: growable,
       runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
@@ -1989,6 +2001,7 @@ class $List<E> implements List<E>, $Instance {
         _checkedConstructorElements(runtime, elements, runtimeTypeId),
         growable: growable,
       ),
+      isolateGrowable: growable,
       runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
@@ -2012,6 +2025,7 @@ class $List<E> implements List<E>, $Instance {
         }
         return value;
       }, growable: growable),
+      isolateGrowable: growable,
       runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
@@ -2029,6 +2043,7 @@ class $List<E> implements List<E>, $Instance {
       List.unmodifiable(
         _checkedConstructorElements(runtime, elements, runtimeTypeId),
       ),
+      isolateReadOnly: true,
       runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );

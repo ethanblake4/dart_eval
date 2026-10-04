@@ -12,7 +12,9 @@ $Value iterableWhereType(
   final elementType = arguments.isEmpty
       ? runtime.lookupType(CoreTypes.dynamic)
       : arguments[0];
-  final resultType = runtime.internParameterizedType(CoreTypes.iterable, [elementType]);
+  final resultType = runtime.internParameterizedType(CoreTypes.iterable, [
+    elementType,
+  ]);
   final source = target!.$value as Iterable;
   Iterable<$Value?> filtered() sync* {
     for (final element in source) {
@@ -20,7 +22,12 @@ $Value iterableWhereType(
       if (runtime.isTypedValueType(value, elementType)) yield value;
     }
   }
-  return $Iterable.wrap(filtered(), runtime: runtime, runtimeTypeId: resultType);
+
+  return $Iterable.wrap(
+    filtered(),
+    runtime: runtime,
+    runtimeTypeId: resultType,
+  );
 }
 
 /// dart_eval bimodal wrapper for [Iterable]
@@ -841,11 +848,47 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   final Runtime? _runtime;
   final bool _hasListType;
 
+  static $Value? _boxElement(Runtime runtime, $Value target, Object? value) {
+    final ownerType = target.$getRuntimeType(runtime);
+    final elementType = runtime.runtimeTypeArgumentAt(ownerType, 0);
+    final boxed = TypedInterop.boxExternal(
+      value,
+      runtime: runtime,
+      runtimeTypeId: elementType,
+    );
+    if (elementType != null)
+      runtime.assertTypedTypeArgument(boxed, ownerType, 0);
+    return boxed;
+  }
+
+  static Iterable<$Value?> _boxedValues(Runtime runtime, $Value target) =>
+      (target.$value as Iterable).map(
+        (value) => _boxElement(runtime, target, value),
+      );
+
+  static $Iterable _elementView(
+    Runtime runtime,
+    $Value target,
+    Iterable values,
+  ) {
+    final elementType = runtime.runtimeTypeArgumentAt(
+      target.$getRuntimeType(runtime),
+      0,
+    );
+    return $Iterable.wrap(
+      values,
+      runtime: runtime,
+      runtimeTypeId: elementType == null
+          ? null
+          : runtime.internParameterizedType(CoreTypes.iterable, [elementType]),
+    );
+  }
+
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'iterator':
-        return $Iterator.wrap($value.iterator);
+        return $Iterator.wrap(_boxedValues(runtime, this).iterator);
       case 'toString':
         return $Closure(__toString.func, this);
       case 'length':
@@ -855,11 +898,11 @@ class $Iterable<E> implements Iterable<E>, $Instance {
       case 'isNotEmpty':
         return $bool($value.isNotEmpty);
       case 'first':
-        return $value.first as $Value?;
+        return _boxElement(runtime, this, $value.first);
       case 'last':
-        return $value.last as $Value?;
+        return _boxElement(runtime, this, $value.last);
       case 'single':
-        return $value.single as $Value?;
+        return _boxElement(runtime, this, $value.single);
       case 'cast':
         return $Closure(__$cast.func, this);
       case 'followedBy':
@@ -973,7 +1016,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final $result = $this.cast();
     return $Iterable.wrap($result);
   }
@@ -988,10 +1031,10 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
-    final other = (r as $Value?)?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
+    final other = _boxedValues(runtime, r as $Value);
     final $result = $this.followedBy(other);
-    return $Iterable.wrap($result);
+    return _elementView(runtime, target!, $result);
   }
 
   @override
@@ -1004,15 +1047,18 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final toElement = TypedInterop.nonGenericCallable(r);
     final typeArguments = runtime.bridgeCallTypeArguments;
     final resultType = typeArguments.isEmpty
         ? null
-        : runtime.internParameterizedType(CoreTypes.iterable, [typeArguments[0]]);
+        : runtime.internParameterizedType(CoreTypes.iterable, [
+            typeArguments[0],
+          ]);
     final $result = $this.map((e) {
       final value = toElement.call(runtime, null, e, null, 1);
-      if (resultType != null) runtime.assertTypedTypeArgument(value, resultType, 0);
+      if (resultType != null)
+        runtime.assertTypedTypeArgument(value, resultType, 0);
       return value;
     });
     return $Iterable.wrap($result, runtime: runtime, runtimeTypeId: resultType);
@@ -1028,13 +1074,13 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final test = (r as $Value?) as EvalCallable;
     final $result = $this.where(
       (element) =>
           test.call(runtime, null, element as $Value?, null, 1)!.$value as bool,
     );
-    return $Iterable.wrap($result);
+    return _elementView(runtime, target!, $result);
   }
 
   @override
@@ -1061,7 +1107,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final toElements = (r as $Value?) as EvalCallable;
     final $result = $this.expand(
       (element) =>
@@ -1080,7 +1126,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final element = (r as $Value?);
     final $result = $this.contains(element);
     return $bool($result);
@@ -1096,7 +1142,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final action = (r as $Value?) as EvalCallable;
     for (var element in $this) {
       action.call(runtime, null, element, null, 1);
@@ -1114,7 +1160,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final combine = (r as $Value?) as EvalCallable;
     final $result = $this.reduce(
       (value, element) => combine.call(runtime, null, value, element, 2),
@@ -1133,7 +1179,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final initialValue = (r as $Value?);
     final combine = (s as $Value?) as EvalCallable;
     final $result = $this.fold(
@@ -1154,7 +1200,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final test = (r as $Value?) as EvalCallable;
     final $result = $this.every(
       (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
@@ -1172,7 +1218,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final separator = (r as $Value?)?.$value as String? ?? "";
     final $result = $this
         .map((v) => v is $Value ? runtime.valueToString(v) : v)
@@ -1190,7 +1236,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final test = (r as $Value?) as EvalCallable;
     final $result = $this.any(
       (element) => test.call(runtime, null, element, null, 1)!.$value as bool,
@@ -1208,12 +1254,13 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final growable = (r as $Value?)?.$value as bool? ?? true;
     final $result = $this.toList(growable: growable);
     if (target is $Iterable && target._hasListType) {
       return $List.wrap(
         $result,
+        isolateGrowable: growable,
         runtime: target._runtime,
         runtimeTypeId: target._runtimeTypeId,
       );
@@ -1228,6 +1275,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
       runtimeTypeId: elementType == null
           ? null
           : runtime.internParameterizedType(CoreTypes.list, [elementType]),
+      isolateGrowable: growable,
     );
   }
 
@@ -1241,7 +1289,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final $result = $this.toList();
     return $List.wrap($result);
   }
@@ -1256,10 +1304,10 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final count = (r as $Value?)?.$value as int;
     final $result = $this.take(count);
-    return $Iterable.wrap($result);
+    return _elementView(runtime, target!, $result);
   }
 
   @override
@@ -1272,12 +1320,12 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final test = (r as $Value?) as EvalCallable;
     final $result = $this.takeWhile(
       (value) => test.call(runtime, null, value, null, 1)!.$value as bool,
     );
-    return $Iterable.wrap($result);
+    return _elementView(runtime, target!, $result);
   }
 
   @override
@@ -1290,10 +1338,10 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final count = (r as $Value?)?.$value as int;
     final $result = $this.skip(count);
-    return $Iterable.wrap($result);
+    return _elementView(runtime, target!, $result);
   }
 
   @override
@@ -1306,12 +1354,12 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final test = (r as $Value?) as EvalCallable;
     final $result = $this.skipWhile(
       (value) => test.call(runtime, null, value, null, 1)!.$value as bool,
     );
-    return $Iterable.wrap($result);
+    return _elementView(runtime, target!, $result);
   }
 
   @override
@@ -1325,7 +1373,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final test = (r as $Value?) as EvalCallable;
     final orElse = (s as $Value?) as EvalCallable?;
     final $result = $this.firstWhere(
@@ -1348,7 +1396,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final test = (r as $Value?) as EvalCallable;
     final orElse = (s as $Value?) as EvalCallable?;
     final $result = $this.lastWhere(
@@ -1371,7 +1419,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final test = (r as $Value?) as EvalCallable;
     final orElse = (s as $Value?) as EvalCallable?;
     final $result = $this.singleWhere(
@@ -1393,7 +1441,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
+    final $this = _boxedValues(runtime, target!);
     final index = (r as $Value?)?.$value as int;
     final $result = $this.elementAt(index);
     return $result;

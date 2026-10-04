@@ -17,6 +17,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:convert';
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Converter,
@@ -41,8 +43,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StringConversionSink,
         $ClosableStringSink,
         $LineSplitter;
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval bridge binding for [ByteConversionSink]
 class $ByteConversionSink$bridge extends ByteConversionSink
@@ -267,33 +267,45 @@ class $ByteConversionSink$bridge extends ByteConversionSink
     Object? c,
   ) {
     final result = ByteConversionSink.withCallback(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(List<int>);export=true",
-        (_callable) => (List<int> accumulated) {
-          _callable.call(
-            runtime,
-            null,
-            $List.view(
-              accumulated,
-              (e) => $int(e),
-              runtime: runtime,
-              runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
-                runtime.lookupType(CoreTypes.int),
-              ]),
-            ),
-            null,
-            1,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(CoreTypes.int),
+        ]);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(List<int>);export=true" + ";types=$_callbackType0",
+          (_callable) => (List<int> accumulated) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.boxExternal(
+                accumulated,
+                runtime: runtime,
+                runtimeTypeId: _callbackType0,
+              ),
+              null,
+              1,
+            );
+          },
+        );
+      })(),
     );
     return $ByteConversionSink.wrap(result);
   }
 
   /// Wrapper for the [ByteConversionSink.from] constructor
   static $Value? $from(Runtime runtime, Object? r, Object? s, Object? c) {
-    final result = ByteConversionSink.from((r as $Value?)!.$value);
+    final result = ByteConversionSink.from(
+      TypedInterop.exportSink<List<int>>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        ]),
+      ),
+    );
     return $ByteConversionSink.wrap(result);
   }
 
@@ -315,7 +327,12 @@ class $ByteConversionSink$bridge extends ByteConversionSink
           return null;
         });
     }
-    return null;
+    return $bridgeGetObject(
+      identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
   }
 
   @override

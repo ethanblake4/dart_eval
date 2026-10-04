@@ -630,6 +630,7 @@ String? runtimeTypeIdFor(
   String? owner, {
   String? methodTypeArguments,
 }) {
+  ctx.imports.add('package:dart_eval/src/eval/runtime/runtime.dart');
   if (type is TypeParameterType) {
     final host = type.element.enclosingElement;
     if (owner == null) return null;
@@ -648,7 +649,9 @@ String? runtimeTypeIdFor(
     final receiver = owner == 'this' ? '' : '$owner.';
     // The guest subclass can have different type parameters from its SDK
     // superclass. The constructor records the substituted SDK type separately.
-    final ownerType = owner == 'bridge'
+    final ownerType = owner == 'constructor'
+        ? '(runtime.bridgeConstructorTypeId ?? runtime.lookupType(${bridgeTypeSpecFrom(ctx, host.thisType)}))'
+        : owner == 'bridge'
         ? 'Runtime.bridgeData[this]!.\$runtimeType'
         : '$receiver\$getRuntimeType(runtime)';
     final typeId =

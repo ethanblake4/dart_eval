@@ -211,7 +211,12 @@ class $Error$bridge extends Error with $Bridge<Error> {
             ? const $null()
             : $StackTrace.wrap(_stackTrace);
     }
-    return null;
+    return $bridgeGetObject(
+      identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
   }
 
   @override

@@ -13,6 +13,34 @@ void main() {
     addTearDown(() => directory.deleteSync(recursive: true));
     final source = File(p.join(directory.path, 'native.dart'))
       ..writeAsStringSync('''
+import 'dart:convert';
+import 'dart:async';
+class Accumulator<E> {
+  Accumulator();
+  E reduce(E Function(E, E) callback, E left, E right) => callback(left, right);
+}
+class CallbackChecks {
+  CallbackChecks();
+  bool accept([bool Function(int)? callback]) => callback?.call(1) ?? false;
+  void stream(StreamSubscription<int> Function(Stream<int>, bool) callback) {
+    StreamTransformer<int, int>(callback);
+  }
+  bool nullableIterable(Iterable<int>? values) => values == null;
+  void nullableSink(Sink<List<int>>? sink) { sink?.close(); }
+  int voidFuture(FutureOr<int> Function(void) callback) => callback(null) as int;
+  void voidReturn(FutureOr<void> Function(void) callback) { callback(null); }
+  void generic(List<T> Function<T>(int) callback) {}
+}
+class SinkConsumer {
+  SinkConsumer(Sink<List<int>> sink) { sink.add([7]); sink.close(); }
+}
+class CallbackSink<T> implements Sink<T> {
+  final Sink<T> _sink;
+  CallbackSink(void Function(List<T>) callback)
+      : _sink = ChunkedConversionSink<T>.withCallback(callback);
+  void add(T event) { _sink.add(event); }
+  void close() { _sink.close(); }
+}
 abstract class Reader {
   Reader();
   int readList(List<int> values);
@@ -47,6 +75,16 @@ version: 1
 libraries:
   - uri: package:bindgen/native.dart
     classes:
+      Accumulator:
+        include: true
+        mode: bridge
+        nativeSuper: true
+      CallbackChecks:
+        include: true
+      SinkConsumer:
+        include: true
+      CallbackSink:
+        include: true
       Reader:
         include: true
         mode: bridge
@@ -55,8 +93,13 @@ libraries:
       Mapper:
         include: true
   - uri: dart:core
+    registry:
+      file: lib/src/eval/shared/types.dart
+      class: CoreTypes
     classes:
       Iterable:
+        handMaintained: true
+      Sink:
         handMaintained: true
       List:
         handMaintained: true
@@ -65,6 +108,16 @@ libraries:
       bool:
         handMaintained: true
       int:
+        handMaintained: true
+  - uri: dart:async
+    registry:
+      file: lib/src/eval/shared/types.dart
+      class: AsyncTypes
+    classes:
+      Stream:
+        handMaintained: true
+        overrideLibrary: dart:core
+      StreamSubscription:
         handMaintained: true
 ''')..resolveDefaults();
     final generated = (await Bindgen().parse(
@@ -96,10 +149,57 @@ void main() {
   final compiler = Compiler()
     ..entrypoints.add('package:main/main.dart')
     ..defineBridgeClass($Reader$bridge.$declaration)
+    ..defineBridgeClass($Accumulator$bridge.$declaration)
+    ..defineBridgeClass($SinkConsumer.$declaration)
+    ..defineBridgeClass($CallbackSink.$declaration)
+    ..defineBridgeClass($CallbackChecks.$declaration)
     ..defineBridgeClass($ObjectStore.$declaration)
     ..defineBridgeClass($Mapper.$declaration);
   final program = compiler.compile({'main': {'main.dart': '''
     import 'package:bindgen/native.dart';
+    import 'dart:async';
+    class Collecting implements Sink<List<int>> {
+      List<int> values = [];
+      int closes = 0;
+      void add(List<int> chunk) { values.addAll(chunk); }
+      void close() { closes++; }
+    }
+    class GuestAccumulator extends Accumulator<int> {
+      GuestAccumulator();
+    }
+    bool sinkBoundary() {
+      if (GuestAccumulator().reduce((a, b) => a + b, 2, 3) != 5) return false;
+      final checks = CallbackChecks();
+      if (!checks.accept((n) => n == 1) || checks.accept()) return false;
+      if (!checks.nullableIterable(null)) return false;
+      checks.nullableSink(null);
+      if (checks.voidFuture((value) => 7) != 7) return false;
+      checks.voidReturn((value) {});
+      checks.stream((stream, cancel) => stream.listen((n) {}));
+      final collecting = Collecting();
+      SinkConsumer(collecting);
+      if (collecting.values.single != 7 || collecting.closes != 1) return false;
+      bool witnessed = false;
+      final callback = CallbackSink<List<int>>((chunks) {
+        witnessed = chunks is List<List<int>> && chunks.first is List<int>
+            && chunks.first.single == 7;
+      });
+      final other = CallbackSink<String>((chunks) {});
+      other.close();
+      SinkConsumer(callback);
+      final types = <String>[];
+      void shared(List<Object> chunks) {
+        if (chunks is List<int>) types.add('int');
+        if (chunks is List<String>) types.add('String');
+      }
+      final ints = CallbackSink<int>(shared);
+      final strings = CallbackSink<String>(shared);
+      ints.add(1);
+      strings.add('s');
+      ints.close();
+      strings.close();
+      return witnessed && types.join(',') == 'int,String';
+    }
     class Guest extends Reader {
       Guest();
       int readList(List<int> values) => values.first;
@@ -185,6 +285,10 @@ void main() {
   '''}});
   for (final runtime in [Runtime.ofProgram(program), Runtime(program.write().buffer)]) {
     $Reader$bridge.configureForRuntime(runtime);
+    $Accumulator$bridge.configureForRuntime(runtime);
+    $SinkConsumer.configureForRuntime(runtime);
+    $CallbackSink.configureForRuntime(runtime);
+    $CallbackChecks.configureForRuntime(runtime);
     $ObjectStore.configureForRuntime(runtime);
     $Mapper.configureForRuntime(runtime);
     final reader = runtime.executeLib('package:main/main.dart', 'make') as Reader;
@@ -192,6 +296,7 @@ void main() {
     final token = runtime.executeLib('package:main/main.dart', 'makeToken');
     check(identical(reader.transform<Object>((value) => value, token), token));
     check(runtime.executeLib('package:main/main.dart', 'lookup') == true);
+    check(runtime.executeLib('package:main/main.dart', 'sinkBoundary') == true);
     check(runtime.executeLib('package:main/main.dart', 'mapResults') == true);
     check(runtime.executeLib('package:main/main.dart', 'listArguments') == true);
     check(runtime.bridgeCallTypeArguments.isEmpty);

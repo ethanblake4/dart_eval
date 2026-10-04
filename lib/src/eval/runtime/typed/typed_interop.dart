@@ -126,6 +126,27 @@ abstract final class TypedInterop {
     );
   }
 
+  /// Export a reified Sink contract to an SDK interface parameter.
+  /// Guest implementations retain their receiver; erased native sinks retain
+  /// their delegate's own checks and exceptions behind a typed interface.
+  static Sink<T> exportSink<T>(
+    Object? value,
+    Runtime runtime,
+    int expectedType,
+  ) {
+    if (!runtime.isTypedValueType(value, expectedType)) {
+      throwTypeError(runtime, value, expectedType);
+    }
+    final native = exportExternal(value, runtime: runtime);
+    if (native is Sink<T>) return native;
+    return _ExportedSink<T>(
+      value,
+      native is Sink ? native : null,
+      runtime,
+      runtime.runtimeTypeArgumentAt(expectedType, 0),
+    );
+  }
+
   /// The host-side value of an object-bank slot: `$Value`s unwrap to their
   /// reified form, raw host objects pass through.
   static Object? reify(Object? value) =>
@@ -808,6 +829,43 @@ final class _GuestHostIterable<T> extends Iterable<T> {
     TypedInterop.getProperty(runtime, receiver, 'iterator'),
     runtime,
   );
+}
+
+final class _ExportedSink<T> implements Sink<T> {
+  _ExportedSink(this.receiver, this.delegate, this.runtime, this.payloadType);
+
+  final Object? receiver;
+  final Sink? delegate;
+  final Runtime runtime;
+  final int? payloadType;
+
+  @override
+  void add(T event) {
+    final boxed = TypedInterop.boxExternal(
+      event,
+      runtime: runtime,
+      runtimeTypeId: payloadType,
+    );
+    if (payloadType case final type?) {
+      if (!runtime.isTypedValueType(boxed, type)) {
+        TypedInterop.throwTypeError(runtime, boxed, type);
+      }
+    }
+    if (delegate case final sink?) {
+      sink.add(event);
+    } else {
+      TypedInterop.invoke(runtime, receiver, 'add', 1, boxed, null);
+    }
+  }
+
+  @override
+  void close() {
+    if (delegate case final sink?) {
+      sink.close();
+    } else {
+      TypedInterop.invoke(runtime, receiver, 'close', 0, null, null);
+    }
+  }
 }
 
 final class _ExportedIterator<T> implements Iterator<T> {

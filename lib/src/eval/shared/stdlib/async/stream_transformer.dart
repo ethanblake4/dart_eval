@@ -17,10 +17,13 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:async';
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -34,6 +37,7 @@ import 'package:dart_eval/stdlib/core.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -46,9 +50,6 @@ import 'package:dart_eval/stdlib/core.dart'
 
 import './event_sink.dart';
 import '../core/stack_trace.dart';
-
-import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [StreamTransformer]
 class $StreamTransformer<S, T> implements $Instance {
@@ -376,23 +377,45 @@ class $StreamTransformer<S, T> implements $Instance {
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $StreamTransformer.wrap(
       StreamTransformer(
-        runtime.cachedCallback(
-          (r as $Value?)! as EvalCallable,
-          "StreamSubscription<T> Function(Stream<S>, bool);export=false",
-          (_callable) => (Stream<dynamic> stream, bool cancelOnError) {
-            return _callable
-                .call(
-                  runtime,
-                  null,
-                  $Stream.wrap(
-                    stream.map((e) => runtime.wrapAlways(e, recursive: true)),
-                  ),
-                  $bool(cancelOnError),
-                  2,
-                )
-                ?.$value;
-          },
-        ),
+        (() {
+          final _callbackType0 = runtime.internParameterizedType(
+            CoreTypes.stream,
+            [
+              runtime.runtimeTypeArgumentAt(
+                    (runtime.bridgeConstructorTypeId ??
+                        runtime.lookupType(AsyncTypes.streamTransformer)),
+                    0,
+                  ) ??
+                  runtime.lookupType(CoreTypes.dynamic),
+            ],
+          );
+          final _callbackType1 = runtime.lookupType(CoreTypes.bool);
+          return runtime.cachedCallback(
+            (r as $Value?)! as EvalCallable,
+            "StreamSubscription<T> Function(Stream<S>, bool);export=false" +
+                ";types=$_callbackType0,$_callbackType1",
+            (_callable) => (Stream<dynamic> stream, bool cancelOnError) {
+              return _callable
+                      .call(
+                        runtime,
+                        null,
+                        TypedInterop.annotateBridgeType(
+                          $Stream.wrap(
+                            stream.map(
+                              (e) => runtime.wrapAlways(e, recursive: true),
+                            ),
+                          ),
+                          runtime,
+                          _callbackType0,
+                        ),
+                        $bool(cancelOnError),
+                        2,
+                      )
+                      ?.$value
+                  as StreamSubscription<dynamic>;
+            },
+          );
+        })(),
       ),
     );
   }
@@ -410,52 +433,135 @@ class $StreamTransformer<S, T> implements $Instance {
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (r is $Value ? r : null)! as EvalCallable,
-                "void Function(S, EventSink<T>);export=false",
-                (_callable) => (dynamic data, EventSink<dynamic> sink) {
-                  _callable.call(
-                    runtime,
-                    null,
-                    runtime.wrapAlways(data, recursive: true),
-                    $EventSink.wrap(sink),
-                    2,
-                  );
-                },
-              ),
+            : (() {
+                final _callbackType0 =
+                    runtime.runtimeTypeArgumentAt(
+                      (runtime.bridgeConstructorTypeId ??
+                          runtime.lookupType(AsyncTypes.streamTransformer)),
+                      0,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic);
+                final _callbackType1 = runtime.internParameterizedType(
+                  AsyncTypes.eventSink,
+                  [
+                    runtime.runtimeTypeArgumentAt(
+                          (runtime.bridgeConstructorTypeId ??
+                              runtime.lookupType(AsyncTypes.streamTransformer)),
+                          1,
+                        ) ??
+                        runtime.lookupType(CoreTypes.dynamic),
+                  ],
+                );
+                return runtime.cachedCallback(
+                  (r is $Value ? r : null)! as EvalCallable,
+                  "void Function(S, EventSink<T>);export=false" +
+                      ";types=$_callbackType0,$_callbackType1",
+                  (_callable) => (dynamic data, EventSink<dynamic> sink) {
+                    _callable.call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        data,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      TypedInterop.annotateBridgeType(
+                        $EventSink.wrap(sink),
+                        runtime,
+                        _callbackType1,
+                      ),
+                      2,
+                    );
+                  },
+                );
+              })(),
         handleError:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (s is $Value ? s : null)! as EvalCallable,
-                "void Function(Object, StackTrace, EventSink<T>);export=false",
-                (_callable) =>
-                    (
-                      Object error,
-                      StackTrace stackTrace,
-                      EventSink<dynamic> sink,
-                    ) {
-                      _callable.call(
-                        runtime,
-                        null,
-                        $Object(error),
-                        $StackTrace.wrap(stackTrace),
-                        [$EventSink.wrap(sink)],
-                      );
-                    },
-              ),
+            : (() {
+                final _callbackType0 = runtime.lookupType(CoreTypes.object);
+                final _callbackType1 = runtime.lookupType(CoreTypes.stackTrace);
+                final _callbackType2 = runtime.internParameterizedType(
+                  AsyncTypes.eventSink,
+                  [
+                    runtime.runtimeTypeArgumentAt(
+                          (runtime.bridgeConstructorTypeId ??
+                              runtime.lookupType(AsyncTypes.streamTransformer)),
+                          1,
+                        ) ??
+                        runtime.lookupType(CoreTypes.dynamic),
+                  ],
+                );
+                return runtime.cachedCallback(
+                  (s is $Value ? s : null)! as EvalCallable,
+                  "void Function(Object, StackTrace, EventSink<T>);export=false" +
+                      ";types=$_callbackType0,$_callbackType1,$_callbackType2",
+                  (_callable) =>
+                      (
+                        Object error,
+                        StackTrace stackTrace,
+                        EventSink<dynamic> sink,
+                      ) {
+                        _callable.call(
+                          runtime,
+                          null,
+                          TypedInterop.annotateBridgeType(
+                            $Object(error),
+                            runtime,
+                            _callbackType0,
+                          ),
+                          TypedInterop.annotateBridgeType(
+                            $StackTrace.wrap(stackTrace),
+                            runtime,
+                            _callbackType1,
+                          ),
+                          [
+                            TypedInterop.annotateBridgeType(
+                              $EventSink.wrap(sink),
+                              runtime,
+                              _callbackType2,
+                            ),
+                          ],
+                        );
+                      },
+                );
+              })(),
         handleDone:
             (c is $Value ? c : null) == null ||
                 (c is $Value ? c : null) is $null
             ? null
-            : runtime.cachedCallback(
-                (c is $Value ? c : null)! as EvalCallable,
-                "void Function(EventSink<T>);export=false",
-                (_callable) => (EventSink<dynamic> sink) {
-                  _callable.call(runtime, null, $EventSink.wrap(sink), null, 1);
-                },
-              ),
+            : (() {
+                final _callbackType0 = runtime.internParameterizedType(
+                  AsyncTypes.eventSink,
+                  [
+                    runtime.runtimeTypeArgumentAt(
+                          (runtime.bridgeConstructorTypeId ??
+                              runtime.lookupType(AsyncTypes.streamTransformer)),
+                          1,
+                        ) ??
+                        runtime.lookupType(CoreTypes.dynamic),
+                  ],
+                );
+                return runtime.cachedCallback(
+                  (c is $Value ? c : null)! as EvalCallable,
+                  "void Function(EventSink<T>);export=false" +
+                      ";types=$_callbackType0",
+                  (_callable) => (EventSink<dynamic> sink) {
+                    _callable.call(
+                      runtime,
+                      null,
+                      TypedInterop.annotateBridgeType(
+                        $EventSink.wrap(sink),
+                        runtime,
+                        _callbackType0,
+                      ),
+                      null,
+                      1,
+                    );
+                  },
+                );
+              })(),
       ),
     );
   }
@@ -464,23 +570,44 @@ class $StreamTransformer<S, T> implements $Instance {
   static $Value? $fromBind(Runtime runtime, Object? r, Object? s, Object? c) {
     return $StreamTransformer.wrap(
       StreamTransformer.fromBind(
-        runtime.cachedCallback(
-          (r as $Value?)! as EvalCallable,
-          "Stream<T> Function(Stream<S>);export=false",
-          (_callable) => (Stream<dynamic> arg0) {
-            return _callable
-                .call(
-                  runtime,
-                  null,
-                  $Stream.wrap(
-                    arg0.map((e) => runtime.wrapAlways(e, recursive: true)),
-                  ),
-                  null,
-                  1,
-                )
-                ?.$value;
-          },
-        ),
+        (() {
+          final _callbackType0 = runtime.internParameterizedType(
+            CoreTypes.stream,
+            [
+              runtime.runtimeTypeArgumentAt(
+                    (runtime.bridgeConstructorTypeId ??
+                        runtime.lookupType(AsyncTypes.streamTransformer)),
+                    0,
+                  ) ??
+                  runtime.lookupType(CoreTypes.dynamic),
+            ],
+          );
+          return runtime.cachedCallback(
+            (r as $Value?)! as EvalCallable,
+            "Stream<T> Function(Stream<S>);export=false" +
+                ";types=$_callbackType0",
+            (_callable) => (Stream<dynamic> arg0) {
+              return _callable
+                      .call(
+                        runtime,
+                        null,
+                        TypedInterop.annotateBridgeType(
+                          $Stream.wrap(
+                            arg0.map(
+                              (e) => runtime.wrapAlways(e, recursive: true),
+                            ),
+                          ),
+                          runtime,
+                          _callbackType0,
+                        ),
+                        null,
+                        1,
+                      )
+                      ?.$value
+                  as Stream<dynamic>;
+            },
+          );
+        })(),
       ),
     );
   }

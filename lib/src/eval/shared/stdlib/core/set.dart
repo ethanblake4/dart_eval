@@ -3,12 +3,17 @@ part of 'collection.dart';
 /// dart_eval bimodal wrapper for [Set]
 class $Set<E> implements Set<E>, $Instance {
   /// Wrap a [Set] in a [$Set]
-  $Set.wrap(this.$value, {int? runtimeTypeId, Runtime? runtime})
-    : _runtimeTypeId = runtimeTypeId,
-      _runtime = runtime;
+  $Set.wrap(
+    this.$value, {
+    int? runtimeTypeId,
+    Runtime? runtime,
+    this.isolateIdentity = false,
+  }) : _runtimeTypeId = runtimeTypeId,
+       _runtime = runtime;
 
   final int? _runtimeTypeId;
   final Runtime? _runtime;
+  final bool isolateIdentity;
 
   // The translated owner descriptor id is stable per (wrapper, runtime) pair;
   // keep the last translation instead of importing on every element write.
@@ -294,6 +299,7 @@ class $Set<E> implements Set<E>, $Instance {
   ) {
     return $Set<Object?>.wrap(
       LinkedHashSet<Object?>.identity(),
+      isolateIdentity: true,
       runtimeTypeId: runtime.bridgeConstructorTypeId,
       runtime: runtime,
     );

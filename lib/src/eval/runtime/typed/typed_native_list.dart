@@ -5,6 +5,11 @@ import 'package:dart_eval/stdlib/core.dart' show $List;
 /// Internal boxing uses this final wrapper so indexed dispatch can trust its
 /// inherited List adapter without bypassing external wrapper overrides.
 final class TypedNativeList<E> extends $List<E> {
-  TypedNativeList.wrap(super.$value, {super.runtimeTypeId, super.runtime})
-    : super.wrap();
+  TypedNativeList.wrap(
+    super.$value, {
+    super.runtimeTypeId,
+    super.runtime,
+    super.isolateGrowable,
+    super.isolateReadOnly,
+  }) : super.wrap();
 }

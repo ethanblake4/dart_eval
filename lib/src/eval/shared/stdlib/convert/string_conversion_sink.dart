@@ -17,6 +17,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:convert';
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Converter,
@@ -292,20 +294,31 @@ class $StringConversionSink$bridge extends StringConversionSink
     Object? c,
   ) {
     final result = StringConversionSink.withCallback(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(String);export=true",
-        (_callable) => (String accumulated) {
-          _callable.call(runtime, null, $String(accumulated), null, 1);
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.string);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(String);export=true" + ";types=$_callbackType0",
+          (_callable) => (String accumulated) {
+            _callable.call(runtime, null, $String(accumulated), null, 1);
+          },
+        );
+      })(),
     );
     return $StringConversionSink.wrap(result);
   }
 
   /// Wrapper for the [StringConversionSink.from] constructor
   static $Value? $from(Runtime runtime, Object? r, Object? s, Object? c) {
-    final result = StringConversionSink.from((r as $Value?)!.$value);
+    final result = StringConversionSink.from(
+      TypedInterop.exportSink<String>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.lookupType(CoreTypes.string),
+        ]),
+      ),
+    );
     return $StringConversionSink.wrap(result);
   }
 
@@ -340,7 +353,12 @@ class $StringConversionSink$bridge extends StringConversionSink
           return $ClosableStringSink.wrap(result);
         });
     }
-    return null;
+    return $bridgeGetObject(
+      identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
   }
 
   @override

@@ -123,6 +123,9 @@ bool _unifyOnPattern(
   if (pattern.isTypeParameter) {
     final parameter = pattern as TypeParameterTypeRef;
     actual = ctx.typeSystem.typeParameterEvidence(parameter, actual);
+    // The nullable pattern already admits null; only the non-null part of
+    // the receiver constrains T in an `on Iterable<T?>` clause.
+    if (parameter.nullable) actual = actual.withNullable(false);
     final index = parameter.parameter.index;
     final previous = bound[index];
     if (previous == null) {

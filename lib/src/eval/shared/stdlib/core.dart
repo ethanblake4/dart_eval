@@ -41,6 +41,8 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/typedefs.dart'
     as core_typedefs;
 import 'package:dart_eval/src/eval/shared/stdlib/core/type.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/uri.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/internal/source_classes.dart'
+    as internal_source_classes;
 import 'core/duration.dart';
 import 'core/future.dart';
 import 'core/map_entry.dart';
@@ -48,7 +50,8 @@ import 'core/print.dart';
 
 final _sdkCoreSource = DartSource(
   'dart:core',
-  '${core_typedefs.sdkTypedefsSource.stringSource!}\n'
+  'import \'dart:_internal\' show NonNullsIterable;\n'
+      '${core_typedefs.sdkTypedefsSource.stringSource!}\n'
       '${core_extensions.sdkExtensionsSource.stringSource!}\n'
       '${collection_extensions.sdkExtensionsSource.stringSource!}',
 );
@@ -60,6 +63,7 @@ class DartCorePlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.addSource(internal_source_classes.sdkSourceClassesSource);
     registry.addSource(_sdkCoreSource);
     configurePrintForCompile(registry);
     configureIdenticalForCompile(registry);

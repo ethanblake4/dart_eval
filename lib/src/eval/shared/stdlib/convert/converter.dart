@@ -320,11 +320,28 @@ class $Converter$bridge<S, T> extends Converter<S, T>
         });
       case 'startChunkedConversion':
         return $Function((runtime, target, r, s, c) {
-          final result = super.startChunkedConversion((r as $Value?)!.$value);
+          final result = super.startChunkedConversion(
+            TypedInterop.exportSink<T>(
+              (r as $Value?),
+              runtime,
+              runtime.internParameterizedType(CoreTypes.sink, [
+                runtime.runtimeTypeArgumentAt(
+                      Runtime.bridgeData[this]!.$runtimeType,
+                      1,
+                    ) ??
+                    runtime.lookupType(CoreTypes.dynamic),
+              ]),
+            ),
+          );
           return $Sink.wrap(result);
         });
     }
-    return null;
+    return $bridgeGetObject(
+      identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
   }
 
   @override
@@ -493,7 +510,16 @@ class $Converter<S, T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $Converter;
-    final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<dynamic>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 1) ??
+              runtime.lookupType(CoreTypes.dynamic),
+        ]),
+      ),
+    );
     return $Sink.wrap(result);
   }
 

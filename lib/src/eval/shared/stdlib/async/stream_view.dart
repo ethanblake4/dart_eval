@@ -21,6 +21,7 @@ import 'package:dart_eval/stdlib/core.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -35,6 +36,7 @@ import 'package:dart_eval/stdlib/async.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -1426,35 +1428,69 @@ class $StreamView<T> implements $Instance {
       onListen:
           (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
-          : runtime.cachedCallback(
-              (r is $Value ? r : null)! as EvalCallable,
-              "void Function(StreamSubscription<T>);export=false",
-              (_callable) => (StreamSubscription<dynamic> subscription) {
-                _callable.call(
-                  runtime,
-                  null,
-                  $StreamSubscription.wrap(subscription),
-                  null,
-                  1,
-                );
-              },
-            ),
+          : (() {
+              final _callbackType0 = runtime.internParameterizedType(
+                AsyncTypes.streamSubscription,
+                [
+                  runtime.runtimeTypeArgumentAt(
+                        self.$getRuntimeType(runtime),
+                        0,
+                      ) ??
+                      runtime.lookupType(CoreTypes.dynamic),
+                ],
+              );
+              return runtime.cachedCallback(
+                (r is $Value ? r : null)! as EvalCallable,
+                "void Function(StreamSubscription<T>);export=false" +
+                    ";types=$_callbackType0",
+                (_callable) => (StreamSubscription<dynamic> subscription) {
+                  _callable.call(
+                    runtime,
+                    null,
+                    TypedInterop.annotateBridgeType(
+                      $StreamSubscription.wrap(subscription),
+                      runtime,
+                      _callbackType0,
+                    ),
+                    null,
+                    1,
+                  );
+                },
+              );
+            })(),
       onCancel:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : runtime.cachedCallback(
-              (s is $Value ? s : null)! as EvalCallable,
-              "void Function(StreamSubscription<T>);export=false",
-              (_callable) => (StreamSubscription<dynamic> subscription) {
-                _callable.call(
-                  runtime,
-                  null,
-                  $StreamSubscription.wrap(subscription),
-                  null,
-                  1,
-                );
-              },
-            ),
+          : (() {
+              final _callbackType0 = runtime.internParameterizedType(
+                AsyncTypes.streamSubscription,
+                [
+                  runtime.runtimeTypeArgumentAt(
+                        self.$getRuntimeType(runtime),
+                        0,
+                      ) ??
+                      runtime.lookupType(CoreTypes.dynamic),
+                ],
+              );
+              return runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "void Function(StreamSubscription<T>);export=false" +
+                    ";types=$_callbackType0",
+                (_callable) => (StreamSubscription<dynamic> subscription) {
+                  _callable.call(
+                    runtime,
+                    null,
+                    TypedInterop.annotateBridgeType(
+                      $StreamSubscription.wrap(subscription),
+                      runtime,
+                      _callbackType0,
+                    ),
+                    null,
+                    1,
+                  );
+                },
+              );
+            })(),
     );
     return $Stream.wrap(
       result.map(
@@ -1482,19 +1518,31 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.listen(
       (r as $Value?) == null || (r as $Value?) is $null
           ? null
-          : runtime.cachedCallback(
-              (r as $Value?)! as EvalCallable,
-              "void Function(T);export=false",
-              (_callable) => (dynamic value) {
-                _callable.call(
-                  runtime,
-                  null,
-                  runtime.wrapAlways(value, recursive: true),
-                  null,
-                  1,
-                );
-              },
-            ),
+          : (() {
+              final _callbackType0 =
+                  runtime.runtimeTypeArgumentAt(
+                    self.$getRuntimeType(runtime),
+                    0,
+                  ) ??
+                  runtime.lookupType(CoreTypes.dynamic);
+              return runtime.cachedCallback(
+                (r as $Value?)! as EvalCallable,
+                "void Function(T);export=false" + ";types=$_callbackType0",
+                (_callable) => (dynamic value) {
+                  _callable.call(
+                    runtime,
+                    null,
+                    TypedInterop.boxExternal(
+                      value,
+                      runtime: runtime,
+                      runtimeTypeId: _callbackType0,
+                    ),
+                    null,
+                    1,
+                  );
+                },
+              );
+            })(),
       onError:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
@@ -1555,21 +1603,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.where(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(T);export=false",
-        (_callable) => (dynamic event) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(event, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic event) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        event,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return $Stream.wrap(
       result.map(
@@ -1595,22 +1653,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.map(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "S Function(T);export=false",
-        (_callable) => (dynamic event) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(event, recursive: true),
-              null,
-              1,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "S Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic event) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  event,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                null,
+                1,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return $Stream.wrap(
       result.map(
@@ -1631,21 +1698,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.asyncMap(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "FutureOr<E> Function(T);export=false",
-        (_callable) => (dynamic event) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(event, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "FutureOr<E> Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic event) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        event,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as FutureOr<dynamic>;
+          },
+        );
+      })(),
     );
     return $Stream.wrap(
       result.map(
@@ -1666,21 +1743,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.asyncExpand(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "Stream<E>? Function(T);export=false",
-        (_callable) => (dynamic event) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(event, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "Stream<E>? Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic event) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        event,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as Stream<dynamic>?;
+          },
+        );
+      })(),
     );
     return $Stream.wrap(
       result.map(
@@ -1722,21 +1809,30 @@ class $StreamView<T> implements $Instance {
       test:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : runtime.cachedCallback(
-              (s is $Value ? s : null)! as EvalCallable,
-              "bool Function(dynamic);export=false",
-              (_callable) => (dynamic error) {
-                return _callable
-                    .call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(error, recursive: true),
-                      null,
-                      1,
-                    )
-                    ?.$value;
-              },
-            ),
+          : (() {
+              final _callbackType0 = runtime.lookupType(CoreTypes.dynamic);
+              return runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "bool Function(dynamic);export=false" +
+                    ";types=$_callbackType0",
+                (_callable) => (dynamic error) {
+                  return _callable
+                          .call(
+                            runtime,
+                            null,
+                            TypedInterop.boxExternal(
+                              error,
+                              runtime: runtime,
+                              runtimeTypeId: _callbackType0,
+                            ),
+                            null,
+                            1,
+                          )
+                          ?.$value
+                      as bool;
+                },
+              );
+            })(),
     );
     return $Stream.wrap(
       result.map(
@@ -1762,21 +1858,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.expand(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "Iterable<S> Function(T);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "Iterable<S> Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as Iterable<dynamic>;
+          },
+        );
+      })(),
     );
     return $Stream.wrap(
       result.map(
@@ -1835,22 +1941,39 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.reduce(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "T Function(T, T);export=false",
-        (_callable) => (dynamic previous, dynamic element) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(previous, recursive: true),
-              runtime.wrapAlways(element, recursive: true),
-              2,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        final _callbackType1 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "T Function(T, T);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic previous, dynamic element) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  previous,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                TypedInterop.boxExternal(
+                  element,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType1,
+                ),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return $Future.wrap(
       result.then(
@@ -1877,22 +2000,31 @@ class $StreamView<T> implements $Instance {
     final self = target! as $StreamView;
     final result = self.$value.fold(
       TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
-      runtime.cachedCallback(
-        (s as $Value?)! as EvalCallable,
-        "S Function(S, T);export=false",
-        (_callable) => (dynamic previous, dynamic element) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(previous, recursive: true),
-              runtime.wrapAlways(element, recursive: true),
-              2,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType1 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (s as $Value?)! as EvalCallable,
+          "S Function(S, T);export=false" + ";types=$_callbackType1",
+          (_callable) => (dynamic previous, dynamic element) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                runtime.wrapAlways(previous, recursive: true),
+                TypedInterop.boxExternal(
+                  element,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType1,
+                ),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return $Future.wrap(
       result.then(
@@ -1955,19 +2087,28 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.forEach(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(T);export=false",
-        (_callable) => (dynamic element) {
-          _callable.call(
-            runtime,
-            null,
-            runtime.wrapAlways(element, recursive: true),
-            null,
-            1,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.boxExternal(
+                element,
+                runtime: runtime,
+                runtimeTypeId: _callbackType0,
+              ),
+              null,
+              1,
+            );
+          },
+        );
+      })(),
     );
     return $Future.wrap(
       (result as Future<dynamic>).then(
@@ -1990,21 +2131,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.every(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(T);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return $Future.wrap(
       result.then((e) => $bool(e)),
@@ -2025,21 +2176,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.any(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(T);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return $Future.wrap(
       result.then((e) => $bool(e)),
@@ -2209,21 +2370,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.takeWhile(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(T);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return $Stream.wrap(
       result.map(
@@ -2273,21 +2444,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.skipWhile(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(T);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
     );
     return $Stream.wrap(
       result.map(
@@ -2315,21 +2496,45 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.distinct(
       (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
-          : runtime.cachedCallback(
-              (r is $Value ? r : null)! as EvalCallable,
-              "bool Function(T, T);export=false",
-              (_callable) => (dynamic previous, dynamic next) {
-                return _callable
-                    .call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(previous, recursive: true),
-                      runtime.wrapAlways(next, recursive: true),
-                      2,
-                    )
-                    ?.$value;
-              },
-            ),
+          : (() {
+              final _callbackType0 =
+                  runtime.runtimeTypeArgumentAt(
+                    self.$getRuntimeType(runtime),
+                    0,
+                  ) ??
+                  runtime.lookupType(CoreTypes.dynamic);
+              final _callbackType1 =
+                  runtime.runtimeTypeArgumentAt(
+                    self.$getRuntimeType(runtime),
+                    0,
+                  ) ??
+                  runtime.lookupType(CoreTypes.dynamic);
+              return runtime.cachedCallback(
+                (r is $Value ? r : null)! as EvalCallable,
+                "bool Function(T, T);export=false" +
+                    ";types=$_callbackType0,$_callbackType1",
+                (_callable) => (dynamic previous, dynamic next) {
+                  return _callable
+                          .call(
+                            runtime,
+                            null,
+                            TypedInterop.boxExternal(
+                              previous,
+                              runtime: runtime,
+                              runtimeTypeId: _callbackType0,
+                            ),
+                            TypedInterop.boxExternal(
+                              next,
+                              runtime: runtime,
+                              runtimeTypeId: _callbackType1,
+                            ),
+                            2,
+                          )
+                          ?.$value
+                      as bool;
+                },
+              );
+            })(),
     );
     return $Stream.wrap(
       result.map(
@@ -2355,21 +2560,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.firstWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(T);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
@@ -2408,21 +2623,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.lastWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(T);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
@@ -2461,21 +2686,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.singleWhere(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "bool Function(T);export=false",
-        (_callable) => (dynamic element) {
-          return _callable
-              .call(
-                runtime,
-                null,
-                runtime.wrapAlways(element, recursive: true),
-                null,
-                1,
-              )
-              ?.$value;
-        },
-      ),
+      (() {
+        final _callbackType0 =
+            runtime.runtimeTypeArgumentAt(self.$getRuntimeType(runtime), 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "bool Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic element) {
+            return _callable
+                    .call(
+                      runtime,
+                      null,
+                      TypedInterop.boxExternal(
+                        element,
+                        runtime: runtime,
+                        runtimeTypeId: _callbackType0,
+                      ),
+                      null,
+                      1,
+                    )
+                    ?.$value
+                as bool;
+          },
+        );
+      })(),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
@@ -2542,13 +2777,36 @@ class $StreamView<T> implements $Instance {
       onTimeout:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : runtime.cachedCallback(
-              (s is $Value ? s : null)! as EvalCallable,
-              "void Function(EventSink<T>);export=false",
-              (_callable) => (EventSink<dynamic> sink) {
-                _callable.call(runtime, null, $EventSink.wrap(sink), null, 1);
-              },
-            ),
+          : (() {
+              final _callbackType0 = runtime.internParameterizedType(
+                AsyncTypes.eventSink,
+                [
+                  runtime.runtimeTypeArgumentAt(
+                        self.$getRuntimeType(runtime),
+                        0,
+                      ) ??
+                      runtime.lookupType(CoreTypes.dynamic),
+                ],
+              );
+              return runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "void Function(EventSink<T>);export=false" +
+                    ";types=$_callbackType0",
+                (_callable) => (EventSink<dynamic> sink) {
+                  _callable.call(
+                    runtime,
+                    null,
+                    TypedInterop.annotateBridgeType(
+                      $EventSink.wrap(sink),
+                      runtime,
+                      _callbackType0,
+                    ),
+                    null,
+                    1,
+                  );
+                },
+              );
+            })(),
     );
     return $Stream.wrap(
       result.map(

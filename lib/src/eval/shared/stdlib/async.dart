@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/completer.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/event_sink.dart';
+import 'async/exceptions.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/functions.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_controller.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_sink.dart';
@@ -82,9 +83,10 @@ class DartAsyncPlugin implements EvalPlugin {
     $StreamIterator.configureForCompile(registry);
     $StreamController.configureForCompile(registry);
     $Zone.configureForCompile(registry);
-    $StreamTransformerBase.configureForCompile(registry);
+    $StreamTransformerBase$bridge.configureForCompile(registry);
     registry.addSource(_sdkAsyncSource);
     $Timer.configureForCompile(registry);
+    $TimeoutException.configureForCompile(registry);
     $StreamTransformer.configureForCompile(registry);
   }
 
@@ -105,8 +107,9 @@ class DartAsyncPlugin implements EvalPlugin {
     $StreamIterator.configureForRuntime(runtime);
     $StreamController.configureForRuntime(runtime);
     $Zone.configureForRuntime(runtime);
-    $StreamTransformerBase.configureForRuntime(runtime);
+    $StreamTransformerBase$bridge.configureForRuntime(runtime);
     $Timer.configureForRuntime(runtime);
+    $TimeoutException.configureForRuntime(runtime);
     $StreamTransformer.configureForRuntime(runtime);
   }
 }

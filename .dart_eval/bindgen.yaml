@@ -8,6 +8,8 @@
 #   optionally gives the import exposing the wrapper when it isn't the
 #   `package:dart_eval/stdlib/<which>.dart` umbrella.
 # - `include: false`: spec-only entry (no wrapper exists for the type).
+# `typedefs`, `sourceExtensions`, and `sourceClasses` copy selected SDK source
+# declarations verbatim for guest code that depends on those declarations.
 version: 1
 defaults:
   mode: wrap
@@ -229,6 +231,9 @@ libraries:
         file: completer.dart
       Timer:
         file: timer.dart
+      TimeoutException:
+        file: exceptions.dart
+        implementsSdk: true
       Zone:
         file: zone.dart
       StreamSubscription:
@@ -247,6 +252,7 @@ libraries:
         file: stream_transformer.dart
       StreamTransformerBase:
         file: stream_transformer_base.dart
+        mode: both
       StreamView:
         file: stream_view.dart
       StreamController:
@@ -255,9 +261,12 @@ libraries:
         methods:
           add:
             hook: streamControllerAdd
+  - uri: dart:_internal
+    outDir: lib/src/eval/shared/stdlib/internal
+    sourceClasses: [NonNullsIterable, NonNullsIterator, IterableElementError]
   - uri: dart:collection
     typedefs: [IterableBase, IterableMixin, MapMixin, ListMixin]
-    sourceExtensions: [IterableExtensions]
+    sourceExtensions: [IterableExtensions, NullableIterableExtensions]
     outDir: lib/src/eval/shared/stdlib/collection
     registry:
       file: lib/src/eval/shared/types.dart
@@ -402,10 +411,94 @@ libraries:
       - jsonDecode
   - uri: dart:developer
     outDir: lib/src/eval/shared/stdlib/developer
+    registry:
+      file: lib/src/eval/shared/types.dart
+      class: DeveloperTypes
+    classes:
+      Flow:
+        file: timeline.dart
+      Timeline:
+        file: timeline.dart
+        hooks: timeline_hooks.dart
+        statics:
+          timeSync:
+            hook: guestTimelineTimeSync
     imports:
       - package:dart_eval/stdlib/core.dart
     functions:
       - log
+  - uri: dart:isolate
+    outDir: lib/src/eval/shared/stdlib/isolate
+    registry:
+      file: lib/src/eval/shared/types.dart
+      class: IsolateTypes
+    classes:
+      Isolate:
+        file: isolate.dart
+        hooks: isolate_hooks.dart
+        methods:
+          kill:
+            params:
+              priority:
+                default: Isolate.beforeNextEvent
+          ping:
+            hook: guestIsolatePing
+            params:
+              priority:
+                default: Isolate.immediate
+          addOnExitListener:
+            hook: guestIsolateAddOnExitListener
+          runSync:
+            include: false
+          shutdownSync:
+            include: false
+          runEventLoopSync:
+            include: false
+          handleEvent:
+            include: false
+        constructors:
+          new:
+            include: false
+        statics:
+          spawn:
+            hook: guestIsolateSpawn
+          exit:
+            hook: guestIsolateExit
+          run:
+            include: false
+          spawnUri:
+            include: false
+          create:
+            include: false
+          pinToCurrentThread:
+            include: false
+        getters:
+          packageConfigSync:
+            include: false
+      RawReceivePort:
+        file: ports.dart
+        hooks: isolate_hooks.dart
+        constructors:
+          new:
+            hook: guestRawReceivePort
+        setters:
+          handler:
+            hook: guestRawReceivePortHandler
+      SendPort:
+        file: ports.dart
+        hooks: isolate_hooks.dart
+        methods:
+          send:
+            hook: guestSendPortSend
+      ReceivePort:
+        include: false
+      Capability:
+        file: isolate.dart
+      RemoteError:
+        file: isolate.dart
+      TransferableTypedData:
+        file: isolate.dart
+        imports: [dart:typed_data]
   - uri: dart:io
     outDir: lib/src/eval/shared/stdlib/io
     registry:

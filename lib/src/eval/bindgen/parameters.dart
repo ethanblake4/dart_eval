@@ -108,6 +108,14 @@ String argumentAccessor(
     );
   }
   final type = param.type;
+  final enclosing = param.enclosingElement;
+  final owner = enclosing is ConstructorElement
+      ? 'constructor'
+      : enclosing is ExecutableElement && !enclosing.isStatic
+      ? exportValues
+            ? 'bridge'
+            : 'self'
+      : 'static';
   final defaultExpr = useDefaultValue
       ? paramConfig?.defaultValue ?? param.defaultValueCode
       : null;
@@ -116,14 +124,61 @@ String argumentAccessor(
   }
   if (type.isDartCoreFunction || type is FunctionType) {
     if (type.nullabilitySuffix == NullabilitySuffix.question) {
+      ctx.imports.add('package:dart_eval/stdlib/core.dart');
       paramBuffer.write('$source == null || $source is \$null ? null : ');
     }
     final signature = type is FunctionType
         ? type.getDisplayString().replaceFirst(RegExp(r'\?$'), '')
         : 'Function';
+    // Capture witnesses while the caller's constructor/method context is live.
+    // Native callbacks can run after that context has been restored.
+    final callbackTypes = type is FunctionType
+        ? [
+            for (final p in type.formalParameters)
+              p.type is VoidType
+                  ? null
+                  : runtimeTypeIdFor(
+                      ctx,
+                      p.type,
+                      owner,
+                      methodTypeArguments: 'runtime.bridgeCallTypeArguments',
+                    ),
+          ]
+        : <String?>[];
+    final callbackReturnType =
+        type is FunctionType && _isDartCoreSink(type.returnType)
+        ? runtimeTypeIdFor(
+            ctx,
+            type.returnType,
+            owner,
+            methodTypeArguments: 'runtime.bridgeCallTypeArguments',
+          )
+        : null;
+    final captureCallbackTypes =
+        callbackTypes.any((type) => type != null) || callbackReturnType != null;
+    if (captureCallbackTypes) {
+      ctx.imports.add(
+        'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+      );
+      paramBuffer.write('(() { ');
+      for (final (i, typeId) in callbackTypes.indexed) {
+        if (typeId != null) {
+          paramBuffer.write('final _callbackType$i = $typeId; ');
+        }
+      }
+      if (callbackReturnType != null) {
+        paramBuffer.write('final _callbackReturnType = $callbackReturnType; ');
+      }
+      paramBuffer.write('return ');
+    }
+    final witnessKey = [
+      for (final (i, typeId) in callbackTypes.indexed)
+        if (typeId != null) '\$_callbackType$i',
+      if (callbackReturnType != null) '\$_callbackReturnType',
+    ].join(',');
     paramBuffer.write(
       'runtime.cachedCallback($source! as EvalCallable, '
-      '${jsonEncode('$signature;export=$exportValues')}, (_callable) => ',
+      '${jsonEncode('$signature;export=$exportValues')}${witnessKey.isEmpty ? '' : ' + ";types=$witnessKey"'}, (_callable) => ',
     );
     if (type is FunctionType) {
       if (type.typeParameters.isNotEmpty) {
@@ -149,6 +204,25 @@ String argumentAccessor(
         final (index, parameter) = entry;
         final name = parameter.name ?? '';
         final value = name.isEmpty ? 'arg$index' : name;
+        if (parameter.type is VoidType) {
+          ctx.imports.add('package:dart_eval/stdlib/core.dart');
+          return 'const \$null()';
+        }
+        if (callbackTypes[index] != null) {
+          final payload = parameter.type;
+          if (payload.isDartCoreList ||
+              payload.isDartCoreMap ||
+              payload.isDartCoreSet ||
+              payload is TypeParameterType ||
+              payload is DynamicType) {
+            return 'TypedInterop.boxExternal($value, runtime: runtime, '
+                'runtimeTypeId: _callbackType$index)';
+          }
+          final wrapped = wrapVar(ctx, payload, value, forCollection: true)!;
+          if (_isDartCoreScalar(payload)) return wrapped;
+          return 'TypedInterop.annotateBridgeType('
+              '${_asExpression(wrapped)}, runtime, _callbackType$index)';
+        }
         return exportValues
             ? wrapBridgeArgument(
                 ctx,
@@ -169,13 +243,30 @@ String argumentAccessor(
       if (type.returnType is VoidType) {
         paramBuffer.write(invocation);
       } else {
+        final nativeReturnType = _nativeCallbackReturnType(
+          ctx,
+          type.returnType,
+          owner,
+          type.typeParameters,
+        );
         paramBuffer.write(
           exportValues ||
+                  _isDartCoreSink(type.returnType) ||
                   type.returnType is TypeParameterType ||
                   type.returnType.isDartCoreObject ||
                   type.returnType is DynamicType
-              ? _exportValue(ctx, type.returnType, invocation)
-              : '$invocation?.\$value',
+              ? _exportValue(
+                  ctx,
+                  type.returnType,
+                  invocation,
+                  owner: owner,
+                  nativeTypeParameters: owner == 'bridge',
+                  localTypeParameters: type.typeParameters,
+                  runtimeTypeId: callbackReturnType == null
+                      ? null
+                      : '_callbackReturnType',
+                )
+              : '$invocation?.\$value as $nativeReturnType',
         );
       }
       paramBuffer.write(';\n}');
@@ -192,6 +283,9 @@ String argumentAccessor(
       );
     }
     paramBuffer.write(')');
+    if (captureCallbackTypes) {
+      paramBuffer.write('; })()');
+    }
   } else {
     final primitiveName = type.element?.name;
     if (primitiveSource != null &&
@@ -206,8 +300,17 @@ String argumentAccessor(
         type.isDartCoreIterable ||
         type.isDartCoreObject ||
         type is DynamicType ||
-        exportValues && _isDartCoreIterator(type)) {
-      paramBuffer.write(_exportValue(ctx, type, source));
+        exportValues && _isDartCoreIterator(type) ||
+        _isDartCoreSink(type)) {
+      paramBuffer.write(
+        _exportValue(
+          ctx,
+          type,
+          source,
+          owner: owner,
+          nativeTypeParameters: owner == 'bridge',
+        ),
+      );
       return paramBuffer.toString();
     }
     final needsCast =
@@ -294,6 +397,11 @@ bool _isDartCoreIterator(DartType type) =>
     type.element.name == 'Iterator' &&
     type.element.library.uri.toString() == 'dart:core';
 
+bool _isDartCoreSink(DartType type) =>
+    type is InterfaceType &&
+    type.element.name == 'Sink' &&
+    type.element.library.uri.toString() == 'dart:core';
+
 bool _isDartCoreScalar(DartType type) =>
     type.element?.library?.uri.toString() == 'dart:core' &&
     const {
@@ -304,24 +412,91 @@ bool _isDartCoreScalar(DartType type) =>
       'String',
     }.contains(type.element?.name);
 
-String _exportValue(BindgenContext ctx, DartType type, String source) {
+String _exportValue(
+  BindgenContext ctx,
+  DartType type,
+  String source, {
+  String? owner,
+  bool nativeTypeParameters = false,
+  String? runtimeTypeId,
+  Iterable<TypeParameterElement> localTypeParameters = const [],
+}) {
   if (_isDartCoreScalar(type)) {
     return '$source?.\$value as ${dartTypeErased(type)}';
   }
   ctx.imports.add(
     'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
   );
+  if (_isDartCoreSink(type)) {
+    if (type.nullabilitySuffix == NullabilitySuffix.question) {
+      ctx.imports.add('package:dart_eval/stdlib/core.dart');
+    }
+    final sink = type as InterfaceType;
+    final payload = sink.typeArguments.single;
+    final nativeType = dartTypeErased(
+      payload,
+      nativeOwner: nativeTypeParameters ? ctx.classElement : null,
+      localTypeParameters: localTypeParameters,
+    );
+    final typeId =
+        runtimeTypeId ??
+        runtimeTypeIdFor(
+          ctx,
+          sink,
+          owner,
+          methodTypeArguments: 'runtime.bridgeCallTypeArguments',
+        )!;
+    final exported =
+        'TypedInterop.exportSink<$nativeType>($source, runtime, $typeId)';
+    return type.nullabilitySuffix == NullabilitySuffix.question
+        ? '$source == null || $source is \$null ? null : $exported'
+        : exported;
+  }
   if (_isDartCoreIterator(type)) {
     return 'TypedInterop.exportIterator($source, runtime)';
   }
   if (type.isDartCoreIterable) {
+    if (type.nullabilitySuffix == NullabilitySuffix.question) {
+      ctx.imports.add('package:dart_eval/stdlib/core.dart');
+    }
     final exported = 'TypedInterop.exportIterable($source, runtime)';
     return type.nullabilitySuffix == NullabilitySuffix.question
         ? '$source == null || $source is \$null ? null : $exported'
         : exported;
   }
   return 'TypedInterop.exportExternal($source, runtime: runtime) '
-      'as ${dartTypeErased(type)}';
+      'as ${dartTypeErased(type, nativeOwner: nativeTypeParameters ? ctx.classElement : null, localTypeParameters: localTypeParameters)}';
+}
+
+String _nativeCallbackReturnType(
+  BindgenContext ctx,
+  DartType type,
+  String owner,
+  Iterable<TypeParameterElement> localTypeParameters,
+) {
+  void importAsync(DartType type) {
+    if (type.isDartAsyncFutureOr || type.isDartAsyncFuture) {
+      ctx.imports.add('dart:async');
+    }
+    if (type is ParameterizedType) {
+      for (final argument in type.typeArguments) {
+        importAsync(argument);
+      }
+    }
+    if (type is FunctionType) {
+      importAsync(type.returnType);
+      for (final parameter in type.formalParameters) {
+        importAsync(parameter.type);
+      }
+    }
+  }
+
+  importAsync(type);
+  return dartTypeErased(
+    type,
+    nativeOwner: owner == 'bridge' ? ctx.classElement : null,
+    localTypeParameters: localTypeParameters,
+  );
 }
 
 /// Converts a collection element produced by [wrapVar] (`if (cond) a else b`)

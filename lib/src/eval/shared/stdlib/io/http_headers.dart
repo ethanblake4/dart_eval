@@ -1910,26 +1910,30 @@ class $HttpHeaders implements $Instance {
   ) {
     final self = target! as $HttpHeaders;
     self.$value.forEach(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(String, List<String>);export=false",
-        (_callable) => (String name, List<String> values) {
-          _callable.call(
-            runtime,
-            null,
-            $String(name),
-            $List.view(
-              values,
-              (e) => $String(e),
-              runtime: runtime,
-              runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
-                runtime.lookupType(CoreTypes.string),
-              ]),
-            ),
-            2,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(CoreTypes.string);
+        final _callbackType1 = runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(CoreTypes.string),
+        ]);
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(String, List<String>);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (String name, List<String> values) {
+            _callable.call(
+              runtime,
+              null,
+              $String(name),
+              TypedInterop.boxExternal(
+                values,
+                runtime: runtime,
+                runtimeTypeId: _callbackType1,
+              ),
+              2,
+            );
+          },
+        );
+      })(),
     );
     return null;
   }

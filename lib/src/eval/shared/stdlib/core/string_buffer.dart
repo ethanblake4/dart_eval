@@ -300,7 +300,12 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
           return null;
         });
     }
-    return null;
+    return $bridgeGetObject(
+      identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
   }
 
   @override

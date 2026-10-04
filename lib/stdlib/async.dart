@@ -1,6 +1,8 @@
 /// Provides dart:async bridge classes and wrappers
 library;
 
+export '../src/eval/shared/stdlib/async/exceptions.dart';
+
 export '../src/eval/shared/stdlib/async/completer.dart';
 export '../src/eval/shared/stdlib/async/event_sink.dart';
 export '../src/eval/shared/stdlib/async/stream_controller.dart';

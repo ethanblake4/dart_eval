@@ -131,6 +131,11 @@ final class TypedInstance implements $Instance {
   TypedClass get descriptor => program.classes[classId];
   TypedInstance get dispatchRoot => _dispatchRoot ?? this;
 
+  /// Superclass parts of a transferred receiver retain virtual dispatch.
+  void restoreDispatchRoot(TypedInstance root) {
+    _dispatchRoot = identical(root, this) ? null : root;
+  }
+
   $Value? _noSuchMethod(Invocation invocation, Runtime? runtime) {
     final handler = resolve(TypedMemberKind.method, 'noSuchMethod');
     if (handler != null) {

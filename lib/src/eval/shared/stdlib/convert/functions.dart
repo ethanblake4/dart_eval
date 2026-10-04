@@ -45,6 +45,8 @@ import 'package:dart_eval/stdlib/core.dart'
 
 import '../typed_data/typed_data.dart';
 
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
+
 /// dart_eval function wrapper binding for [base64Encode]
 class $base64EncodeFn {
   const $base64EncodeFn();
@@ -201,24 +203,36 @@ class $jsonEncodeFn {
       toEncodable:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : runtime.cachedCallback(
-              (s is $Value ? s : null)! as EvalCallable,
-              "Object? Function(Object?);export=false",
-              (_callable) => (Object? nonEncodable) {
-                return TypedInterop.exportExternal(
-                  _callable.call(
-                    runtime,
-                    null,
-                    (nonEncodable == null
-                        ? const $null()
-                        : $Object(nonEncodable)),
-                    null,
-                    1,
-                  ),
-                  runtime: runtime,
-                ) as Object?;
-              },
-            ),
+          : (() {
+              final _callbackType0 = runtime.internParameterizedType(
+                CoreTypes.object,
+                [],
+                nullable: true,
+              );
+              return runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "Object? Function(Object?);export=false" +
+                    ";types=$_callbackType0",
+                (_callable) => (Object? nonEncodable) {
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      TypedInterop.annotateBridgeType(
+                        (nonEncodable == null
+                            ? const $null()
+                            : $Object(nonEncodable)),
+                        runtime,
+                        _callbackType0,
+                      ),
+                      null,
+                      1,
+                    ),
+                    runtime: runtime,
+                  ) as Object?;
+                },
+              );
+            })(),
     );
     return $String(result);
   }
@@ -299,22 +313,43 @@ class $jsonDecodeFn {
       reviver:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : runtime.cachedCallback(
-              (s is $Value ? s : null)! as EvalCallable,
-              "Object? Function(Object?, Object?);export=false",
-              (_callable) => (Object? key, Object? value) {
-                return TypedInterop.exportExternal(
-                  _callable.call(
-                    runtime,
-                    null,
-                    (key == null ? const $null() : $Object(key)),
-                    (value == null ? const $null() : $Object(value)),
-                    2,
-                  ),
-                  runtime: runtime,
-                ) as Object?;
-              },
-            ),
+          : (() {
+              final _callbackType0 = runtime.internParameterizedType(
+                CoreTypes.object,
+                [],
+                nullable: true,
+              );
+              final _callbackType1 = runtime.internParameterizedType(
+                CoreTypes.object,
+                [],
+                nullable: true,
+              );
+              return runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "Object? Function(Object?, Object?);export=false" +
+                    ";types=$_callbackType0,$_callbackType1",
+                (_callable) => (Object? key, Object? value) {
+                  return TypedInterop.exportExternal(
+                    _callable.call(
+                      runtime,
+                      null,
+                      TypedInterop.annotateBridgeType(
+                        (key == null ? const $null() : $Object(key)),
+                        runtime,
+                        _callbackType0,
+                      ),
+                      TypedInterop.annotateBridgeType(
+                        (value == null ? const $null() : $Object(value)),
+                        runtime,
+                        _callbackType1,
+                      ),
+                      2,
+                    ),
+                    runtime: runtime,
+                  ) as Object?;
+                },
+              );
+            })(),
     );
     return runtime.wrapAlways(result, recursive: true);
   }

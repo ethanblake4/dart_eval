@@ -21,6 +21,7 @@ import 'package:dart_eval/stdlib/core.dart'
     hide
         $Completer,
         $Timer,
+        $TimeoutException,
         $Zone,
         $StreamSubscription,
         $StreamSink,
@@ -31,6 +32,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import './timer.dart';
 
@@ -1198,22 +1200,31 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.runUnary(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "R Function(T);export=false",
-        (_callable) => (dynamic argument) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(argument, recursive: true),
-              null,
-              1,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 1
+            ? runtime.bridgeCallTypeArguments[1]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "R Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic argument) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  argument,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                null,
+                1,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
       TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
     );
     return (result is List || result is Map || result is Set
@@ -1231,22 +1242,39 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.runBinary(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "R Function(T1, T2);export=false",
-        (_callable) => (dynamic argument1, dynamic argument2) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(argument1, recursive: true),
-              runtime.wrapAlways(argument2, recursive: true),
-              2,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 1
+            ? runtime.bridgeCallTypeArguments[1]
+            : runtime.lookupType(CoreTypes.dynamic));
+        final _callbackType1 = (runtime.bridgeCallTypeArguments.length > 2
+            ? runtime.bridgeCallTypeArguments[2]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "R Function(T1, T2);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic argument1, dynamic argument2) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  argument1,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                TypedInterop.boxExternal(
+                  argument2,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType1,
+                ),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
       TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
       TypedInterop.exportExternal(
         ((c as List<Object?>)[0] as $Value?),
@@ -1289,19 +1317,28 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     self.$value.runUnaryGuarded(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(T);export=false",
-        (_callable) => (dynamic argument) {
-          _callable.call(
-            runtime,
-            null,
-            runtime.wrapAlways(argument, recursive: true),
-            null,
-            1,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 0
+            ? runtime.bridgeCallTypeArguments[0]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic argument) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.boxExternal(
+                argument,
+                runtime: runtime,
+                runtimeTypeId: _callbackType0,
+              ),
+              null,
+              1,
+            );
+          },
+        );
+      })(),
       TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
     );
     return null;
@@ -1317,19 +1354,36 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     self.$value.runBinaryGuarded(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(T1, T2);export=false",
-        (_callable) => (dynamic argument1, dynamic argument2) {
-          _callable.call(
-            runtime,
-            null,
-            runtime.wrapAlways(argument1, recursive: true),
-            runtime.wrapAlways(argument2, recursive: true),
-            2,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 0
+            ? runtime.bridgeCallTypeArguments[0]
+            : runtime.lookupType(CoreTypes.dynamic));
+        final _callbackType1 = (runtime.bridgeCallTypeArguments.length > 1
+            ? runtime.bridgeCallTypeArguments[1]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(T1, T2);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic argument1, dynamic argument2) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.boxExternal(
+                argument1,
+                runtime: runtime,
+                runtimeTypeId: _callbackType0,
+              ),
+              TypedInterop.boxExternal(
+                argument2,
+                runtime: runtime,
+                runtimeTypeId: _callbackType1,
+              ),
+              2,
+            );
+          },
+        );
+      })(),
       TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
       TypedInterop.exportExternal(
         ((c as List<Object?>)[0] as $Value?),
@@ -1380,22 +1434,31 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.registerUnaryCallback(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "R Function(T);export=false",
-        (_callable) => (dynamic arg) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(arg, recursive: true),
-              null,
-              1,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 1
+            ? runtime.bridgeCallTypeArguments[1]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "R Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic arg) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  arg,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                null,
+                1,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return $Function((runtime, target, r, s, c) {
       final funcResult = result(
@@ -1420,22 +1483,39 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.registerBinaryCallback(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "R Function(T1, T2);export=false",
-        (_callable) => (dynamic arg1, dynamic arg2) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(arg1, recursive: true),
-              runtime.wrapAlways(arg2, recursive: true),
-              2,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 1
+            ? runtime.bridgeCallTypeArguments[1]
+            : runtime.lookupType(CoreTypes.dynamic));
+        final _callbackType1 = (runtime.bridgeCallTypeArguments.length > 2
+            ? runtime.bridgeCallTypeArguments[2]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "R Function(T1, T2);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic arg1, dynamic arg2) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  arg1,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                TypedInterop.boxExternal(
+                  arg2,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType1,
+                ),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return $Function((runtime, target, r, s, c) {
       final funcResult = result(
@@ -1489,22 +1569,31 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindUnaryCallback(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "R Function(T);export=false",
-        (_callable) => (dynamic argument) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(argument, recursive: true),
-              null,
-              1,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 1
+            ? runtime.bridgeCallTypeArguments[1]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "R Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic argument) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  argument,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                null,
+                1,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return $Function((runtime, target, r, s, c) {
       final funcResult = result(
@@ -1527,22 +1616,39 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindBinaryCallback(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "R Function(T1, T2);export=false",
-        (_callable) => (dynamic argument1, dynamic argument2) {
-          return TypedInterop.exportExternal(
-            _callable.call(
-              runtime,
-              null,
-              runtime.wrapAlways(argument1, recursive: true),
-              runtime.wrapAlways(argument2, recursive: true),
-              2,
-            ),
-            runtime: runtime,
-          ) as dynamic;
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 1
+            ? runtime.bridgeCallTypeArguments[1]
+            : runtime.lookupType(CoreTypes.dynamic));
+        final _callbackType1 = (runtime.bridgeCallTypeArguments.length > 2
+            ? runtime.bridgeCallTypeArguments[2]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "R Function(T1, T2);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic argument1, dynamic argument2) {
+            return TypedInterop.exportExternal(
+              _callable.call(
+                runtime,
+                null,
+                TypedInterop.boxExternal(
+                  argument1,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType0,
+                ),
+                TypedInterop.boxExternal(
+                  argument2,
+                  runtime: runtime,
+                  runtimeTypeId: _callbackType1,
+                ),
+                2,
+              ),
+              runtime: runtime,
+            ) as dynamic;
+          },
+        );
+      })(),
     );
     return $Function((runtime, target, r, s, c) {
       final funcResult = result(
@@ -1595,19 +1701,28 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindUnaryCallbackGuarded(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(T);export=false",
-        (_callable) => (dynamic argument) {
-          _callable.call(
-            runtime,
-            null,
-            runtime.wrapAlways(argument, recursive: true),
-            null,
-            1,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 0
+            ? runtime.bridgeCallTypeArguments[0]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(T);export=false" + ";types=$_callbackType0",
+          (_callable) => (dynamic argument) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.boxExternal(
+                argument,
+                runtime: runtime,
+                runtimeTypeId: _callbackType0,
+              ),
+              null,
+              1,
+            );
+          },
+        );
+      })(),
     );
     return $Function((runtime, target, r, s, c) {
       result(
@@ -1630,19 +1745,36 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.bindBinaryCallbackGuarded(
-      runtime.cachedCallback(
-        (r as $Value?)! as EvalCallable,
-        "void Function(T1, T2);export=false",
-        (_callable) => (dynamic argument1, dynamic argument2) {
-          _callable.call(
-            runtime,
-            null,
-            runtime.wrapAlways(argument1, recursive: true),
-            runtime.wrapAlways(argument2, recursive: true),
-            2,
-          );
-        },
-      ),
+      (() {
+        final _callbackType0 = (runtime.bridgeCallTypeArguments.length > 0
+            ? runtime.bridgeCallTypeArguments[0]
+            : runtime.lookupType(CoreTypes.dynamic));
+        final _callbackType1 = (runtime.bridgeCallTypeArguments.length > 1
+            ? runtime.bridgeCallTypeArguments[1]
+            : runtime.lookupType(CoreTypes.dynamic));
+        return runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(T1, T2);export=false" +
+              ";types=$_callbackType0,$_callbackType1",
+          (_callable) => (dynamic argument1, dynamic argument2) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.boxExternal(
+                argument1,
+                runtime: runtime,
+                runtimeTypeId: _callbackType0,
+              ),
+              TypedInterop.boxExternal(
+                argument2,
+                runtime: runtime,
+                runtimeTypeId: _callbackType1,
+              ),
+              2,
+            );
+          },
+        );
+      })(),
     );
     return $Function((runtime, target, r, s, c) {
       result(
@@ -1727,13 +1859,26 @@ class $Zone implements $Instance {
     final self = target! as $Zone;
     final result = self.$value.createPeriodicTimer(
       (r as $Value?)!.$value,
-      runtime.cachedCallback(
-        (s as $Value?)! as EvalCallable,
-        "void Function(Timer);export=false",
-        (_callable) => (Timer timer) {
-          _callable.call(runtime, null, $Timer.wrap(timer), null, 1);
-        },
-      ),
+      (() {
+        final _callbackType0 = runtime.lookupType(AsyncTypes.timer);
+        return runtime.cachedCallback(
+          (s as $Value?)! as EvalCallable,
+          "void Function(Timer);export=false" + ";types=$_callbackType0",
+          (_callable) => (Timer timer) {
+            _callable.call(
+              runtime,
+              null,
+              TypedInterop.annotateBridgeType(
+                $Timer.wrap(timer),
+                runtime,
+                _callbackType0,
+              ),
+              null,
+              1,
+            );
+          },
+        );
+      })(),
     );
     return $Timer.wrap(result);
   }
