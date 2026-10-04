@@ -39,6 +39,7 @@ import '../type.dart';
 import 'package:dart_eval/dart_eval_bridge.dart'
     show BridgeMethodDef, CoreTypes;
 import '../context.dart';
+import '../optimizer/ssa.dart';
 import '../invocation/deferred.dart';
 import 'representation.dart';
 import 'primitive_optimization.dart';
@@ -214,7 +215,7 @@ class TypedBackend {
     void extendReachable() {
       for (; scanned < reachable.length; scanned++) {
         final functionId = reachable[scanned];
-        final graph = context.ssaFunctionGraphs[functionId]!;
+        final graph = prepareFunctionSSA(context, functionId);
         // Hidden default thunks are referenced by closure descriptors and
         // exports rather than call ops.
         for (final param
@@ -331,7 +332,7 @@ class TypedBackend {
           methods: _classMembers(allocation, MemberKind.method, indices),
         ),
     ];
-    onPhase?.call('bytecode reachability and class metadata');
+    onPhase?.call('bytecode reachability, SSA and class metadata');
     final compiled = [
       for (final functionId in reachable) _compileFunction(functionId, indices),
     ];
@@ -865,7 +866,7 @@ class TypedBackend {
 
   int _resolveFunction(DeferredOrOffset target) {
     final id = target.resolveFunctionId(context);
-    if (id == null || !context.ssaFunctionGraphs.containsKey(id)) {
+    if (id == null || !context.functionGraphs.containsKey(id)) {
       throw UnsupportedError(
         'Typed direct-call target $target className=${target.className} kind=${target.methodType}',
       );

@@ -1,5 +1,19 @@
 import 'package:control_flow_graph/control_flow_graph.dart';
 
+import '../context.dart';
+import 'indexed_loops.dart';
+import 'validate.dart';
+
+/// Specialize and cache a function's SSA graph for backend reachability.
+ControlFlowGraph prepareFunctionSSA(CompilerContext context, int id) {
+  final cached = context.ssaFunctionGraphs[id];
+  if (cached != null) return cached;
+  final graph = context.functionGraphs[id]!;
+  specializeIndexedLoops(graph);
+  validateFrontendGraph(graph);
+  return context.ssaFunctionGraphs[id] = buildSSA(graph);
+}
+
 ControlFlowGraph buildSSA(ControlFlowGraph source) {
   final graph = source.clone();
   graph.insertPhiNodes();

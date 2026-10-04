@@ -5,6 +5,41 @@ import 'package:dart_eval/src/eval/ir/memory.dart' show LoadInt;
 import 'package:test/test.dart';
 
 void main() {
+  test(
+    'prepares reachable defaults and globals without unused entrypoints',
+    () {
+      final compiler = Compiler()..entrypointFunctions['main.dart'] = {'main'};
+      final sources = {
+        'ssa_test': {
+          'main.dart': '''
+class Value {
+  const Value(this.number);
+  final int number;
+}
+int read([Value value = const Value(7)]) => value.number;
+final callback = read;
+int unused() => 42;
+int main() => callback();
+''',
+        },
+      };
+      for (var i = 0; i < 2; i++) {
+        final program = compiler.compile(sources);
+        final unusedId = compiler.functionNames.entries
+            .singleWhere((entry) => entry.value.startsWith('unused()'))
+            .key;
+        expect(compiler.functionGraphs, contains(unusedId));
+        expect(compiler.ssaFunctionGraphs, isNot(contains(unusedId)));
+        for (final runtime in [
+          Runtime.ofProgram(program),
+          Runtime(program.write().buffer),
+        ]) {
+          expect(runtime.executeLib('package:ssa_test/main.dart', 'main'), 7);
+        }
+      }
+    },
+  );
+
   ControlFlowGraph compileMain(String source) {
     final compiler = Compiler();
     compiler.compile({

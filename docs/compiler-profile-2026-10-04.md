@@ -150,3 +150,70 @@ tests with 86 existing skips and no failures: runner elapsed 2:14, external
 wall time 139.326 seconds. Changed-source analysis and focused profiling/
 loading controls also pass. The cleanup saves work, but no causal suite-time
 percentage is claimed against the unpaired historical 2:29 run.
+
+## Implemented: prepare SSA on demand
+
+The existing backend reachability walk now calls `prepareFunctionSSA` when
+it visits a function. That helper specializes indexed loops, validates the
+frontend graph, builds SSA, and caches it in the compilation context. Calls
+resolve against frontend function graphs, so a callee need not already have
+SSA to be discovered. Class members, global initializers, closures, and
+default thunks continue to use the same walk, including thunks minted during
+backend metadata construction.
+
+Weak-reference programs retain eager SSA preparation. Their escape analysis
+follows inlined and escaped callees beyond ordinary backend reachability.
+Frontend declaration compilation, cleanup, validation, and inlining are
+unchanged; skipping their unused work remains a separate followup.
+
+The `ssaFunctionGraphs` inspection API now contains prepared reachable
+functions for ordinary programs, rather than every frontend function. All
+frontend functions remain available through `functionGraphs`. Profiling
+reports lazy SSA work under `bytecode reachability, SSA and class metadata`;
+the earlier `SSA construction` phase covers eager weak-reference preparation.
+
+Paired AOT comparison used separate executables built before and after the
+change, three rounds of 31 samples per workload/mode, three discarded warmups
+per process, and reversed executable order in the middle round. No tests or
+other agent compilations ran during these rounds. The following medians pool
+the 93 unprofiled compile samples for each executable:
+
+| Workload | Mode | Before ms | After ms | Reduction |
+| --- | --- | ---: | ---: | ---: |
+| Small | Fresh | 6.498 | 3.696 | 43.1% |
+| Small | Cached | 5.881 | 4.046 | 31.2% |
+| Mixed | Fresh | 21.410 | 19.688 | 8.0% |
+| Mixed | Cached | 19.340 | 18.257 | 5.6% |
+| Pipeline | Fresh | 31.682 | 31.117 | 1.8% |
+| Pipeline | Cached | 30.792 | 27.816 | 9.7% |
+
+Individual rounds were noisy, including occasional complex-workload
+regressions. The small fixture improved in every round. SSA preparation
+counts fell from 105 to 1, 133 to 24, and 234 to 130 respectively. SHA-256 of
+the complete serialized program matched before and after in all 36 runs,
+with unchanged serialized lengths. The profiling tool now records this hash
+to make future comparisons reproducible. No runtime, stdlib, opcode, or
+register-allocation changes were made in this optimization.
+
+A bounded regression adds one case to the existing SSA test file. It checks
+that an unused frontend function receives no SSA while a global closure and
+constructor default remain callable, including compiler reuse and fresh/
+serialized loading. Existing compiler, weak-reference, inherited-default,
+contextual-default, and closure-default controls passed 376 tests before
+that new case; the complete SSA file then passed 14 tests. Changed-source
+analysis is clean.
+
+Final gates:
+
+- `dart test --concurrency=4`: 2314 passed, 86 existing skips, no failures;
+  runner elapsed 3:25, external wall time 209.538 seconds.
+- `dart test -P sdk-full test/sdk_language/full_test.dart`: 2737 passed,
+  557 registered skips, no failures; the eligible-fixture summary reports
+  three existing unsupported skips. Runner elapsed 3:39, external wall time
+  229.832 seconds.
+- Two earlier default-concurrency runs each hit one subprocess deadline:
+  the CLI network test at 30 seconds and a binding-generator analyzer test
+  at 60 seconds. The CLI file passed independently in 14 seconds, and both
+  cases passed in the four-isolate complete run. No timeout limits or test
+  configuration were changed. Suite-wide speedup is not inferred from these
+  runs with differing contention and concurrency.

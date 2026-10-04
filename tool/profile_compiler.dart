@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:crypto/crypto.dart';
 import 'package:dart_eval/dart_eval.dart';
 
 import '../benchmark/compile.dart' show compileSource;
@@ -41,6 +42,7 @@ void main(List<String> args) {
   var profiledCompiler = Compiler(onPhase: record);
   var bytes = 0;
   var emittedFunctions = 0;
+  var programHash = '';
   for (var i = -3; i < samples; i++) {
     if (mode == 'fresh') {
       plainCompiler = Compiler();
@@ -67,6 +69,7 @@ void main(List<String> args) {
     final encoded = measure('serialization', profiled.write);
     bytes = encoded.length;
     emittedFunctions = profiled.typedProgram.functions.length;
+    if (i == samples - 1) programHash = sha256.convert(encoded).toString();
     if (i == 0 && !const ListEquality().equals(plain.write(), encoded)) {
       throw StateError('Profiling changed the serialized program');
     }
@@ -89,6 +92,7 @@ void main(List<String> args) {
       entry.key: (List<int>.of(entry.value)..sort())[entry.value.length ~/ 2],
   };
   print('$workload $mode samples=$samples program_bytes=$bytes');
+  print('program_sha256=$programHash');
   final preparedFunctions = profiledCompiler.ssaFunctionGraphs.length;
   print(
     'prepared_functions=$preparedFunctions emitted_functions=$emittedFunctions',
@@ -103,6 +107,7 @@ void main(List<String> args) {
         'mode': mode,
         'samples': samples,
         'program_bytes': bytes,
+        'program_sha256': programHash,
         'prepared_functions': preparedFunctions,
         'emitted_functions': emittedFunctions,
         'median_us': medians,

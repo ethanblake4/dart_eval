@@ -8,7 +8,6 @@ import 'package:dart_eval/src/eval/runtime/typed/typed_program.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/validate.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/ssa.dart';
 import 'package:dart_eval/src/eval/compiler/optimizer/inline.dart';
-import 'optimizer/indexed_loops.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/declaration.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/field.dart';
 import 'package:dart_eval/src/eval/compiler/declaration/method.dart';
@@ -93,7 +92,8 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
   Map<int, MachineFunctionSignature> get functionSignatures =>
       Map.unmodifiable(_ctx.functionSignatures);
 
-  /// Per-function SSA graphs prepared for instruction selection.
+  /// SSA graphs prepared for reachable functions by the backend.
+  /// Weak-reference analysis also prepares functions needed for escape analysis.
   Map<int, ControlFlowGraph> get ssaFunctionGraphs =>
       Map.unmodifiable(_ctx.ssaFunctionGraphs);
 
@@ -966,11 +966,13 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     }
     if (enableLeafInlining) inlineLeafCalls(_ctx);
     _finishPhase('graph cleanup and inlining');
-    for (final entry in _ctx.functionGraphs.entries) {
-      final graph = entry.value;
-      specializeIndexedLoops(graph);
-      validateFrontendGraph(graph);
-      _ctx.ssaFunctionGraphs[entry.key] = buildSSA(graph);
+    // Weak escape analysis follows inlined and escaped callees beyond the
+    // ordinary backend walk. Keep its complete graph set; otherwise prepare
+    // SSA only when that walk discovers a reachable function.
+    if (_ctx.hasWeakTearOffReferences) {
+      for (final id in _ctx.functionGraphs.keys) {
+        prepareFunctionSSA(_ctx, id);
+      }
     }
 
     // Optimization and lowering are separate stages. Keep the typed graphs
