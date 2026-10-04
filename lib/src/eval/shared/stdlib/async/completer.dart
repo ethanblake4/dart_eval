@@ -27,6 +27,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -40,13 +41,13 @@ import 'package:dart_eval/stdlib/async.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Completer]
 class $Completer<T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -110,7 +111,7 @@ class $Completer<T> implements $Instance {
             BridgeParameter(
               'value',
               BridgeTypeAnnotation(
-                BridgeTypeRef(CoreTypes.object, [
+                BridgeTypeRef(AsyncTypes.futureOr, [
                   BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
                 ]),
                 nullable: true,
@@ -119,6 +120,8 @@ class $Completer<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'completeError': BridgeMethodDef(
@@ -142,6 +145,8 @@ class $Completer<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -155,6 +160,8 @@ class $Completer<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isCompleted': BridgeMethodDef(
@@ -163,6 +170,8 @@ class $Completer<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -187,7 +196,7 @@ class $Completer<T> implements $Instance {
   final Completer<T> $value;
 
   @override
-  Completer get $reified => $value;
+  Completer<T> get $reified => $value;
 
   /// Wrap a [Completer] in a [$Completer]
   $Completer.wrap(this.$value) : _superclass = $Object($value);
@@ -252,7 +261,7 @@ class $Completer<T> implements $Instance {
   ) {
     final self = target! as $Completer;
     self.$value.completeError(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object,
       (s is $Value ? s : null)?.$value,
     );
     return null;

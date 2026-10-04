@@ -693,6 +693,20 @@ final class ArgumentBinder {
           parameterDefs,
         );
       }
+      if (argBound is InterfaceTypeRef) {
+        // A nested call sees a schema, not the outer invocation's unresolved
+        // parameter as a fixed lexical type. Its arguments can then infer the
+        // hole (`choose(items)` under `Box<S>`, where S is still unknown).
+        argBound = argBound.substituteTypeParameters(
+          Substitution.of({
+            for (final parameter in parameterDefs)
+              if (argumentSubstitution.bindings[parameter]
+                  case TypeParameterTypeRef(parameter: final unresolved)
+                  when unresolved == parameter)
+                parameter: UnknownTypeRef.instance,
+          }),
+        );
+      }
       var arg0 = _compileArg(ctx, argument, argBound);
       if (unifyPattern != null) {
         // Inference reads the argument's own type — coercion below may
@@ -1621,6 +1635,66 @@ final class ArgumentBinder {
               ) ||
               _usesParameter(signature.returnType, parameters),
       };
+
+  /// Infers a call's result without evaluating arguments or emitting bytecode.
+  /// Global storage inference uses the same argument constraints as binding.
+  TypeRef inferStaticCallResult(
+    CallSignature signature,
+    List<TypeRef> positional,
+    Map<String, TypeRef> named, {
+    List<TypeRef>? explicitArguments,
+    AstNode? source,
+  }) {
+    final parameters = signature.typeParameters;
+    final bindings = <TypeParameterDef, TypeRef>{};
+    if (explicitArguments != null) {
+      if (explicitArguments.length != parameters.length) {
+        throw CompileError(
+          'Expected ${parameters.length} type arguments, '
+          'but found ${explicitArguments.length}',
+          source,
+        );
+      }
+      for (var i = 0; i < parameters.length; i++) {
+        bindings[parameters[i]] = explicitArguments[i];
+      }
+    } else if (parameters.isNotEmpty) {
+      final candidates = <TypeParameterDef, _InferenceConstraints>{};
+      final parameterSet = parameters.toSet();
+      for (
+        var i = 0;
+        i < positional.length && i < signature.positional.length;
+        i++
+      ) {
+        _inferArgument(
+          signature.positional[i].type,
+          positional[i],
+          parameterSet,
+          candidates,
+          source: source,
+        );
+      }
+      for (final parameter in signature.named) {
+        if (named[parameter.name] case final actual?) {
+          _inferArgument(
+            parameter.type,
+            actual,
+            parameterSet,
+            candidates,
+            source: source,
+          );
+        }
+      }
+      bindings.addAll(_solveArguments(candidates));
+    }
+    final defaults = ctx.typeSystem.instantiateToBounds(
+      parameters,
+      knownTypes: bindings,
+    );
+    return signature.returnType.substituteTypeParameters(
+      Substitution.of(defaults),
+    );
+  }
 
   /// Bind a source target using its selected declaration, signature, and
   /// default policy. A virtual target leaves defaults to the runtime.

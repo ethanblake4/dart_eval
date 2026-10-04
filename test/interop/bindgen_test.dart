@@ -5,6 +5,65 @@ import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('returned callbacks emit named arguments once', () async {
+    final directory = Directory(
+      'test',
+    ).absolute.createTempSync('bindgen_named_');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final source = File(p.join(directory.path, 'native.dart'))
+      ..writeAsStringSync('''
+class Callbacks {
+  static int Function(int, {required int extra, required int bonus}) get combine =>
+      (value, {required extra, required bonus}) => value * 100 + extra * 10 + bonus;
+}
+''');
+    final config = BindgenConfig.parse('''
+libraries:
+  - uri: dart:core
+    classes:
+      int:
+        handMaintained: true
+        file: package:dart_eval/stdlib/core.dart
+  - uri: package:bindgen/native.dart
+    classes: [Callbacks]
+''')..resolveDefaults();
+    final generated = (await Bindgen().parse(
+      source,
+      'native.eval.dart',
+      'package:bindgen/native.dart',
+      false,
+      config: config,
+      libraryConfig: config.libraries.last,
+    ))!;
+    File(p.join(directory.path, 'native.eval.dart')).writeAsStringSync('''
+import 'native.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+$generated
+''');
+    File(p.join(directory.path, 'run.dart')).writeAsStringSync(r"""
+import 'native.eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/stdlib/core.dart';
+void main() {
+  final program = Compiler().compile({'main': {'main.dart': 'void main() {}'}});
+  for (final runtime in [Runtime.ofProgram(program), Runtime(program.write().buffer)]) {
+    $Callbacks.configureForRuntime(runtime);
+    final callback = $Callbacks.$combine(runtime, null, null, null) as EvalCallable;
+    final result = callback.call(runtime, null, $int(2), $int(4), [$int(3)]);
+    if (result != $int(234)) {
+      throw StateError('Wrong callback result: $result');
+    }
+  }
+}
+""");
+    final result = await Process.run(Platform.resolvedExecutable, [
+      'run',
+      p.join(directory.path, 'run.dart'),
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
   test('renamed wrappers preserve SDK names and evaluated lifecycle', () async {
     final directory = Directory(
       'test',

@@ -18,16 +18,20 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
         $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
         $StackOverflowError,
         $OutOfMemoryError,
@@ -46,7 +50,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import 'expando_hooks.dart' as hooks;

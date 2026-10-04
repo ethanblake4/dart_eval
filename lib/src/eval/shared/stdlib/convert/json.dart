@@ -25,6 +25,9 @@ import 'package:dart_eval/stdlib/core.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -32,7 +35,12 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -41,6 +49,9 @@ import 'package:dart_eval/stdlib/async.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -48,16 +59,24 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-import 'converter.dart';
-import 'chunked_conversion.dart';
-import 'codec.dart';
+import './converter.dart';
+
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+
+import './chunked_conversion.dart';
+import './string_conversion_sink.dart';
+import './codec.dart';
 
 /// dart_eval wrapper binding for [JsonEncoder]
 class $JsonEncoder implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -97,7 +116,7 @@ class $JsonEncoder implements $Instance {
           ),
           BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
         ]),
-        BridgeTypeRef(CoreTypes.object, [
+        BridgeTypeRef(AsyncTypes.streamTransformerBase, [
           BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.object, []),
             nullable: true,
@@ -321,17 +340,21 @@ class $JsonEncoder implements $Instance {
       JsonEncoder(
         (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
             ? null
-            : (dynamic object) {
-                return ((r is $Value ? r : null)! as EvalCallable?)
-                    ?.call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(object, recursive: true),
-                      null,
-                      1,
-                    )
-                    ?.$value;
-              },
+            : runtime.cachedCallback(
+                (r is $Value ? r : null)! as EvalCallable,
+                "Object? Function(dynamic);export=false",
+                (_callable) => (dynamic object) {
+                  return _callable
+                      .call(
+                        runtime,
+                        null,
+                        runtime.wrapAlways(object, recursive: true),
+                        null,
+                        1,
+                      )
+                      ?.$value;
+                },
+              ),
       ),
     );
   }
@@ -343,17 +366,21 @@ class $JsonEncoder implements $Instance {
         (r as $Value?)!.$value,
         (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
             ? null
-            : (dynamic object) {
-                return ((s is $Value ? s : null)! as EvalCallable?)
-                    ?.call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(object, recursive: true),
-                      null,
-                      1,
-                    )
-                    ?.$value;
-              },
+            : runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "Object? Function(dynamic);export=false",
+                (_callable) => (dynamic object) {
+                  return _callable
+                      .call(
+                        runtime,
+                        null,
+                        runtime.wrapAlways(object, recursive: true),
+                        null,
+                        1,
+                      )
+                      ?.$value;
+                },
+              ),
       ),
     );
   }
@@ -437,7 +464,9 @@ class $JsonEncoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $JsonEncoder;
-    final result = self.$value.convert((r as $Value?)!.$reified);
+    final result = self.$value.convert(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $String(result);
   }
 
@@ -478,7 +507,6 @@ class $JsonEncoder implements $Instance {
 /// dart_eval wrapper binding for [JsonDecoder]
 class $JsonDecoder implements $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:convert',
@@ -511,7 +539,7 @@ class $JsonDecoder implements $Instance {
             nullable: true,
           ),
         ]),
-        BridgeTypeRef(CoreTypes.object, [
+        BridgeTypeRef(AsyncTypes.streamTransformerBase, [
           BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
           BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.object, []),
@@ -658,7 +686,9 @@ class $JsonDecoder implements $Instance {
 
       'startChunkedConversion': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object, [])),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.stringConversionSink, []),
+          ),
           namedParams: [],
           params: [
             BridgeParameter(
@@ -690,17 +720,21 @@ class $JsonDecoder implements $Instance {
       JsonDecoder(
         (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
             ? null
-            : (Object? key, Object? value) {
-                return ((r is $Value ? r : null)! as EvalCallable?)
-                    ?.call(
-                      runtime,
-                      null,
-                      (key == null ? const $null() : $Object(key)),
-                      (value == null ? const $null() : $Object(value)),
-                      2,
-                    )
-                    ?.$value;
-              },
+            : runtime.cachedCallback(
+                (r is $Value ? r : null)! as EvalCallable,
+                "Object? Function(Object?, Object?);export=false",
+                (_callable) => (Object? key, Object? value) {
+                  return _callable
+                      .call(
+                        runtime,
+                        null,
+                        (key == null ? const $null() : $Object(key)),
+                        (value == null ? const $null() : $Object(value)),
+                        2,
+                      )
+                      ?.$value;
+                },
+              ),
       ),
     );
   }
@@ -810,7 +844,7 @@ class $JsonDecoder implements $Instance {
   ) {
     final self = target! as $JsonDecoder;
     final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
-    return $Object(result);
+    return $StringConversionSink.wrap(result);
   }
 
   @override
@@ -821,7 +855,6 @@ class $JsonDecoder implements $Instance {
 
 /// dart_eval wrapper binding for [JsonCodec]
 class $JsonCodec implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -1148,32 +1181,40 @@ class $JsonCodec implements $Instance {
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null
             ? null
-            : (Object? key, Object? value) {
-                return ((r is $Value ? r : null)! as EvalCallable?)
-                    ?.call(
-                      runtime,
-                      null,
-                      (key == null ? const $null() : $Object(key)),
-                      (value == null ? const $null() : $Object(value)),
-                      2,
-                    )
-                    ?.$value;
-              },
+            : runtime.cachedCallback(
+                (r is $Value ? r : null)! as EvalCallable,
+                "Object? Function(Object?, Object?);export=false",
+                (_callable) => (Object? key, Object? value) {
+                  return _callable
+                      .call(
+                        runtime,
+                        null,
+                        (key == null ? const $null() : $Object(key)),
+                        (value == null ? const $null() : $Object(value)),
+                        2,
+                      )
+                      ?.$value;
+                },
+              ),
         toEncodable:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
-            : (dynamic arg0) {
-                return ((s is $Value ? s : null)! as EvalCallable?)
-                    ?.call(
-                      runtime,
-                      null,
-                      runtime.wrapAlways(arg0, recursive: true),
-                      null,
-                      1,
-                    )
-                    ?.$value;
-              },
+            : runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "Object? Function(dynamic);export=false",
+                (_callable) => (dynamic arg0) {
+                  return _callable
+                      .call(
+                        runtime,
+                        null,
+                        runtime.wrapAlways(arg0, recursive: true),
+                        null,
+                        1,
+                      )
+                      ?.$value;
+                },
+              ),
       ),
     );
   }
@@ -1186,15 +1227,23 @@ class $JsonCodec implements $Instance {
     Object? c,
   ) {
     return $JsonCodec.wrap(
-      JsonCodec.withReviver((Object? key, Object? value) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          (key == null ? const $null() : $Object(key)),
-          (value == null ? const $null() : $Object(value)),
-          2,
-        )?.$value;
-      }),
+      JsonCodec.withReviver(
+        runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "dynamic Function(Object?, Object?);export=false",
+          (_callable) => (Object? key, Object? value) {
+            return _callable
+                .call(
+                  runtime,
+                  null,
+                  (key == null ? const $null() : $Object(key)),
+                  (value == null ? const $null() : $Object(value)),
+                  2,
+                )
+                ?.$value;
+          },
+        ),
+      ),
     );
   }
 
@@ -1246,21 +1295,25 @@ class $JsonCodec implements $Instance {
   ) {
     final self = target! as $JsonCodec;
     final result = self.$value.encode(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
       toEncodable:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (dynamic object) {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    runtime.wrapAlways(object, recursive: true),
-                    null,
-                    1,
-                  )
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "Object? Function(dynamic);export=false",
+              (_callable) => (dynamic object) {
+                return _callable
+                    .call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(object, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
+              },
+            ),
     );
     return $String(result);
   }
@@ -1279,17 +1332,21 @@ class $JsonCodec implements $Instance {
       reviver:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (Object? key, Object? value) {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    (key == null ? const $null() : $Object(key)),
-                    (value == null ? const $null() : $Object(value)),
-                    2,
-                  )
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "Object? Function(Object?, Object?);export=false",
+              (_callable) => (Object? key, Object? value) {
+                return _callable
+                    .call(
+                      runtime,
+                      null,
+                      (key == null ? const $null() : $Object(key)),
+                      (value == null ? const $null() : $Object(value)),
+                      2,
+                    )
+                    ?.$value;
+              },
+            ),
     );
     return runtime.wrapAlways(result, recursive: true);
   }

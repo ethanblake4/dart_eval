@@ -25,6 +25,9 @@ import 'package:dart_eval/stdlib/core.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -32,12 +35,16 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [ByteConversionSink]
 class $ByteConversionSink implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -69,6 +76,7 @@ class $ByteConversionSink implements $Instance {
     BridgeClassType(
       $type,
       isAbstract: true,
+      isMixinClass: true,
 
       $implements: [
         BridgeTypeRef(ConvertTypes.chunkedConversionSink, [
@@ -175,6 +183,8 @@ class $ByteConversionSink implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'close': BridgeMethodDef(
@@ -183,6 +193,8 @@ class $ByteConversionSink implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'addSlice': BridgeMethodDef(
@@ -236,22 +248,28 @@ class $ByteConversionSink implements $Instance {
     Object? c,
   ) {
     return $ByteConversionSink.wrap(
-      ByteConversionSink.withCallback((List<int> accumulated) {
-        ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          $List.view(
-            accumulated,
-            (e) => $int(e),
-            runtime: runtime,
-            runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
-              runtime.lookupType(CoreTypes.int),
-            ]),
-          ),
-          null,
-          1,
-        );
-      }),
+      ByteConversionSink.withCallback(
+        runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(List<int>);export=false",
+          (_callable) => (List<int> accumulated) {
+            _callable.call(
+              runtime,
+              null,
+              $List.view(
+                accumulated,
+                (e) => $int(e),
+                runtime: runtime,
+                runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+                  runtime.lookupType(CoreTypes.int),
+                ]),
+              ),
+              null,
+              1,
+            );
+          },
+        ),
+      ),
     );
   }
 

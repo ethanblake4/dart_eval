@@ -17,26 +17,28 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:collection';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $LinkedHashMap,
+        $UnmodifiableListView,
         $ListQueue,
         $Queue,
         $HashMap,
+        $SplayTreeMap,
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
         $DoubleLinkedQueueEntry,
         $ListBase,
-        $MapBase;
+        $MapBase,
+        $SetBase;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
-import 'queue.dart';
+import './queue.dart';
 
 /// dart_eval wrapper binding for [DoubleLinkedQueue]
 class $DoubleLinkedQueue<E> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -612,6 +614,7 @@ class $DoubleLinkedQueue<E> implements $Instance {
               'separator',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
@@ -659,6 +662,7 @@ class $DoubleLinkedQueue<E> implements $Instance {
               'growable',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "true",
             ),
           ],
           params: [],
@@ -1065,14 +1069,18 @@ class $DoubleLinkedQueue<E> implements $Instance {
   /// Wrapper for the [DoubleLinkedQueue.from] constructor
   static $Value? $from(Runtime runtime, Object? r, Object? s, Object? c) {
     return $DoubleLinkedQueue.wrap(
-      DoubleLinkedQueue.from((r as $Value?)!.$value),
+      DoubleLinkedQueue.from(
+        TypedInterop.exportIterable((r as $Value?), runtime),
+      ),
     );
   }
 
   /// Wrapper for the [DoubleLinkedQueue.of] constructor
   static $Value? $of(Runtime runtime, Object? r, Object? s, Object? c) {
     return $DoubleLinkedQueue.wrap(
-      DoubleLinkedQueue.of((r as $Value?)!.$value),
+      DoubleLinkedQueue.of(
+        TypedInterop.exportIterable((r as $Value?), runtime),
+      ),
     );
   }
 
@@ -1082,7 +1090,7 @@ class $DoubleLinkedQueue<E> implements $Instance {
   final DoubleLinkedQueue<E> $value;
 
   @override
-  DoubleLinkedQueue get $reified => $value;
+  DoubleLinkedQueue<E> get $reified => $value;
 
   /// Wrap a [DoubleLinkedQueue] in a [$DoubleLinkedQueue]
   $DoubleLinkedQueue.wrap(this.$value) : _superclass = $Object($value);
@@ -1288,7 +1296,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    self.$value.addFirst((r as $Value?)!.$value);
+    self.$value.addFirst(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 
@@ -1301,7 +1311,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    self.$value.addLast((r as $Value?)!.$value);
+    self.$value.addLast(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 
@@ -1314,7 +1326,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    self.$value.add((r as $Value?)!.$value);
+    self.$value.add(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 
@@ -1327,7 +1341,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.remove((r as $Value?)!.$reified);
+    final result = self.$value.remove(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -1340,7 +1356,7 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    self.$value.addAll((r as $Value?)!.$value);
+    self.$value.addAll(TypedInterop.exportIterable((r as $Value?), runtime));
     return null;
   }
 
@@ -1353,15 +1369,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    self.$value.removeWhere((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    self.$value.removeWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return null;
   }
 
@@ -1374,15 +1398,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    self.$value.retainWhere((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    self.$value.retainWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return null;
   }
 
@@ -1408,7 +1440,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.followedBy((r as $Value?)!.$value);
+    final result = self.$value.followedBy(
+      TypedInterop.exportIterable((r as $Value?), runtime),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -1427,15 +1461,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.map((dynamic e) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(e, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.map(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "T Function(E);export=false",
+        (_callable) => (dynamic e) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(e, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -1454,15 +1496,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.where((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.where(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -1500,15 +1550,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.expand((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.expand(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Iterable<T> Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -1527,7 +1585,9 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.contains((r as $Value?)!.$reified);
+    final result = self.$value.contains(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -1540,15 +1600,21 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    self.$value.forEach((dynamic element) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      );
-    });
+    self.$value.forEach(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(E);export=false",
+        (_callable) => (dynamic element) {
+          _callable.call(
+            runtime,
+            null,
+            runtime.wrapAlways(element, recursive: true),
+            null,
+            1,
+          );
+        },
+      ),
+    );
     return null;
   }
 
@@ -1561,15 +1627,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.reduce((dynamic value, dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(value, recursive: true),
-        runtime.wrapAlways(element, recursive: true),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.reduce(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "E Function(E, E);export=false",
+        (_callable) => (dynamic value, dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(value, recursive: true),
+                runtime.wrapAlways(element, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));
@@ -1584,18 +1658,24 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.fold((r as $Value?)!.$value, (
-      dynamic previousValue,
-      dynamic element,
-    ) {
-      return ((s as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(previousValue, recursive: true),
-        runtime.wrapAlways(element, recursive: true),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.fold(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+      runtime.cachedCallback(
+        (s as $Value?)! as EvalCallable,
+        "T Function(T, E);export=false",
+        (_callable) => (dynamic previousValue, dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(previousValue, recursive: true),
+                runtime.wrapAlways(element, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));
@@ -1610,15 +1690,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.every((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.every(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $bool(result);
   }
 
@@ -1646,15 +1734,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.any((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.any(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $bool(result);
   }
 
@@ -1732,15 +1828,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.takeWhile((dynamic value) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(value, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.takeWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic value) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(value, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -1778,15 +1882,23 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    final result = self.$value.skipWhile((dynamic value) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(value, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.skipWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic value) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(value, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -1806,23 +1918,31 @@ class $DoubleLinkedQueue<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.firstWhere(
-      (dynamic element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(element, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "E Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1839,23 +1959,31 @@ class $DoubleLinkedQueue<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.lastWhere(
-      (dynamic element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(element, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "E Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1872,23 +2000,31 @@ class $DoubleLinkedQueue<E> implements $Instance {
   ) {
     final self = target! as $DoubleLinkedQueue;
     final result = self.$value.singleWhere(
-      (dynamic element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(element, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(E);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "E Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1945,15 +2081,15 @@ class $DoubleLinkedQueue<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueue;
-    self.$value.forEachEntry((DoubleLinkedQueueEntry<dynamic> element) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Object(element),
-        null,
-        1,
-      );
-    });
+    self.$value.forEachEntry(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(DoubleLinkedQueueEntry<E>);export=false",
+        (_callable) => (DoubleLinkedQueueEntry<dynamic> element) {
+          _callable.call(runtime, null, $Object(element), null, 1);
+        },
+      ),
+    );
     return null;
   }
 
@@ -1965,7 +2101,6 @@ class $DoubleLinkedQueue<E> implements $Instance {
 
 /// dart_eval wrapper binding for [DoubleLinkedQueueEntry]
 class $DoubleLinkedQueueEntry<E> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -2087,7 +2222,10 @@ class $DoubleLinkedQueueEntry<E> implements $Instance {
   /// Wrapper for the [DoubleLinkedQueueEntry.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $DoubleLinkedQueueEntry.wrap(
-      DoubleLinkedQueueEntry((r as $Value?)!.$value),
+      DoubleLinkedQueueEntry(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
+      ),
     );
   }
 
@@ -2097,7 +2235,7 @@ class $DoubleLinkedQueueEntry<E> implements $Instance {
   final DoubleLinkedQueueEntry<E> $value;
 
   @override
-  DoubleLinkedQueueEntry get $reified => $value;
+  DoubleLinkedQueueEntry<E> get $reified => $value;
 
   /// Wrap a [DoubleLinkedQueueEntry] in a [$DoubleLinkedQueueEntry]
   $DoubleLinkedQueueEntry.wrap(this.$value) : _superclass = $Object($value);
@@ -2145,7 +2283,9 @@ class $DoubleLinkedQueueEntry<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueueEntry;
-    self.$value.append((r as $Value?)!.$value);
+    self.$value.append(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 
@@ -2158,7 +2298,9 @@ class $DoubleLinkedQueueEntry<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $DoubleLinkedQueueEntry;
-    self.$value.prepend((r as $Value?)!.$value);
+    self.$value.prepend(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 

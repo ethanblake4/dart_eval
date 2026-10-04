@@ -64,7 +64,10 @@ TypeRef inferredConstructorType(
       : argumentsByParameter;
   // Legacy contextual applications stay fixed. Their constructor can belong
   // to a superclass whose parameters already occur inside these arguments.
+  // Schema holes have no parameter identity, so rebuild them from the
+  // finalized constructor arguments instead of substituting into the schema.
   if (type.arguments.isNotEmpty &&
+      !type.hasSchemaHoles &&
       !parameters.any((parameter) => parameter.hasExplicitVariance)) {
     return type.substituteTypeParameters(
       Substitution.of({...defaults, ...argumentsByParameter}),

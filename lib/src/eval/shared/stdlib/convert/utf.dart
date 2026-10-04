@@ -25,6 +25,9 @@ import 'package:dart_eval/stdlib/core.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -32,7 +35,12 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -41,6 +49,9 @@ import 'package:dart_eval/stdlib/async.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -48,33 +59,22 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-import 'converter.dart';
-import 'byte_conversion.dart';
-import 'codec.dart';
-
-import 'package:dart_eval/stdlib/typed_data.dart'
-    hide
-        $Converter,
-        $Codec,
-        $Encoding,
-        $JsonEncoder,
-        $JsonDecoder,
-        $JsonCodec,
-        $Utf8Decoder,
-        $Utf8Codec,
-        $Utf8Encoder,
-        $Base64Encoder,
-        $Base64Decoder,
-        $Base64Codec,
-        $ByteConversionSink,
-        $ChunkedConversionSink;
+import './converter.dart';
+import './byte_conversion.dart';
+import './codec.dart';
+import '../typed_data/typed_data.dart';
+import './string_conversion_sink.dart';
 
 /// dart_eval wrapper binding for [Utf8Decoder]
 class $Utf8Decoder implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -109,7 +109,7 @@ class $Utf8Decoder implements $Instance {
           ),
           BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
         ]),
-        BridgeTypeRef(CoreTypes.object, [
+        BridgeTypeRef(AsyncTypes.streamTransformerBase, [
           BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.list, [
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
@@ -136,6 +136,7 @@ class $Utf8Decoder implements $Instance {
               'allowMalformed',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
           ],
           params: [],
@@ -204,6 +205,7 @@ class $Utf8Decoder implements $Instance {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
@@ -407,7 +409,6 @@ class $Utf8Decoder implements $Instance {
 /// dart_eval wrapper binding for [Utf8Codec]
 class $Utf8Codec implements $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:convert',
@@ -453,6 +454,7 @@ class $Utf8Codec implements $Instance {
               'allowMalformed',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
           ],
           params: [],
@@ -737,7 +739,6 @@ class $Utf8Codec implements $Instance {
 /// dart_eval wrapper binding for [Utf8Encoder]
 class $Utf8Encoder implements $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:convert',
@@ -771,7 +772,7 @@ class $Utf8Encoder implements $Instance {
             ]),
           ),
         ]),
-        BridgeTypeRef(CoreTypes.object, [
+        BridgeTypeRef(AsyncTypes.streamTransformerBase, [
           BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
           BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.list, [
@@ -858,6 +859,7 @@ class $Utf8Encoder implements $Instance {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
@@ -903,7 +905,9 @@ class $Utf8Encoder implements $Instance {
 
       'startChunkedConversion': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object, [])),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.stringConversionSink, []),
+          ),
           namedParams: [],
           params: [
             BridgeParameter(
@@ -1056,7 +1060,7 @@ class $Utf8Encoder implements $Instance {
   ) {
     final self = target! as $Utf8Encoder;
     final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
-    return $Object(result);
+    return $StringConversionSink.wrap(result);
   }
 
   @override

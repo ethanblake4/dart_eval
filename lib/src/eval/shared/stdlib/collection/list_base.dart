@@ -21,9 +21,11 @@ import 'dart:math';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $LinkedHashMap,
+        $UnmodifiableListView,
         $ListQueue,
         $Queue,
         $HashMap,
+        $SplayTreeMap,
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
@@ -2548,7 +2550,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('map', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = f((r as $Value?)!.$value);
+        final funcResult = f(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
     ]);
@@ -2560,7 +2565,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('where', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2579,7 +2587,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('expand', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = f((r as $Value?)!.$value);
+        final funcResult = f(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $Iterable.wrap(
           (funcResult).map((e) => runtime.wrapAlways(e, recursive: true)),
         );
@@ -2603,7 +2614,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     $_invoke('forEach', [
       $Function((runtime, target, r, s, c) {
-        action((r as $Value?)!.$value);
+        action(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return const $null();
       }),
     ]);
@@ -2615,8 +2629,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     return $_invoke('reduce', [
       $Function((runtime, target, r, s, c) {
         final funcResult = combine(
-          (r as $Value?)!.$value,
-          (s as $Value?)!.$value,
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
         );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
@@ -2632,8 +2648,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
           : runtime.wrapAlways(initialValue)),
       $Function((runtime, target, r, s, c) {
         final funcResult = combine(
-          (r as $Value?)!.$value,
-          (s as $Value?)!.$value,
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
         );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
@@ -2645,7 +2663,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     return $_invoke('every', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2662,7 +2683,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     return $_invoke('any', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2692,7 +2716,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('takeWhile', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2711,7 +2738,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('skipWhile', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2723,7 +2753,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     return $_invoke('firstWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       orElse == null
@@ -2740,7 +2773,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     return $_invoke('lastWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       orElse == null
@@ -2757,7 +2793,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     return $_invoke('singleWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       orElse == null
@@ -2820,8 +2859,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
           ? const $null()
           : $Function((runtime, target, r, s, c) {
               final funcResult = compare(
-                (r as $Value?)!.$value,
-                (s as $Value?)!.$value,
+                TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+                    as dynamic,
+                TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+                    as dynamic,
               );
               return $int(funcResult);
             }),
@@ -2852,7 +2893,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     return $_invoke('indexWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       $int(start),
@@ -2864,7 +2908,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     return $_invoke('lastIndexWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       start == null ? const $null() : $int(start),
@@ -2948,7 +2995,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     $_invoke('removeWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2959,7 +3009,10 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     final runtime = $runtime;
     $_invoke('retainWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -3295,7 +3348,9 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.followedBy((r as $Value?)!.$value);
+    final result = self.$value.followedBy(
+      TypedInterop.exportIterable((r as $Value?), runtime),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -3438,7 +3493,9 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.contains((r as $Value?)!.$reified);
+    final result = self.$value.contains(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -3510,7 +3567,7 @@ class $ListBase<E> implements $Instance {
   ) {
     final self = target! as $ListBase;
     final result = self.$value.fold(
-      (r as $Value?)!.$value,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
       runtime.cachedCallback(
         (s as $Value?)! as EvalCallable,
         "T Function(T, E);export=false",
@@ -3921,7 +3978,10 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    self.$value[(r as $int).$value] = (s as $Value?)!.$value;
+    self.$value[(r as $int).$value] = TypedInterop.exportExternal(
+      (s as $Value?),
+      runtime: runtime,
+    ) as dynamic;
     return null;
   }
 
@@ -3934,7 +3994,9 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    self.$value.add((r as $Value?)!.$value);
+    self.$value.add(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 
@@ -3947,7 +4009,7 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    self.$value.addAll((r as $Value?)!.$value);
+    self.$value.addAll(TypedInterop.exportIterable((r as $Value?), runtime));
     return null;
   }
 
@@ -4005,7 +4067,7 @@ class $ListBase<E> implements $Instance {
   ) {
     final self = target! as $ListBase;
     final result = self.$value.indexOf(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
       (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
     );
     return $int(result);
@@ -4081,7 +4143,7 @@ class $ListBase<E> implements $Instance {
   ) {
     final self = target! as $ListBase;
     final result = self.$value.lastIndexOf(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
       (s is $Value ? s : null)?.$value,
     );
     return $int(result);
@@ -4109,7 +4171,10 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    self.$value.insert((r as $int).$value, (s as $Value?)!.$value);
+    self.$value.insert(
+      (r as $int).$value,
+      TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 
@@ -4122,7 +4187,10 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    self.$value.insertAll((r as $int).$value, (s as $Value?)!.$value);
+    self.$value.insertAll(
+      (r as $int).$value,
+      TypedInterop.exportIterable((s as $Value?), runtime),
+    );
     return null;
   }
 
@@ -4135,7 +4203,10 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    self.$value.setAll((r as $int).$value, (s as $Value?)!.$value);
+    self.$value.setAll(
+      (r as $int).$value,
+      TypedInterop.exportIterable((s as $Value?), runtime),
+    );
     return null;
   }
 
@@ -4148,7 +4219,9 @@ class $ListBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ListBase;
-    final result = self.$value.remove((r as $Value?)!.$reified);
+    final result = self.$value.remove(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -4321,7 +4394,10 @@ class $ListBase<E> implements $Instance {
     self.$value.setRange(
       (r as $int).$value,
       (s as $int).$value,
-      ((c as List<Object?>)[0] as $Value?)!.$value,
+      TypedInterop.exportIterable(
+        ((c as List<Object?>)[0] as $Value?),
+        runtime,
+      ),
       (c is List && (c as List).length > 1
                   ? (c as List)[1] as $Value?
                   : null) ==
@@ -4359,8 +4435,12 @@ class $ListBase<E> implements $Instance {
     self.$value.fillRange(
       (r as $int).$value,
       (s as $int).$value,
-      (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
-          ?.$value,
+      TypedInterop.exportExternal(
+        (c is List && (c as List).length > 0
+            ? (c as List)[0] as $Value?
+            : null),
+        runtime: runtime,
+      ) as dynamic,
     );
     return null;
   }
@@ -4377,7 +4457,10 @@ class $ListBase<E> implements $Instance {
     self.$value.replaceRange(
       (r as $int).$value,
       (s as $int).$value,
-      ((c as List<Object?>)[0] as $Value?)!.$value,
+      TypedInterop.exportIterable(
+        ((c as List<Object?>)[0] as $Value?),
+        runtime,
+      ),
     );
     return null;
   }

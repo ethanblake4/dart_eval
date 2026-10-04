@@ -20,6 +20,11 @@ class $Future<T> implements Future<T>, $Instance {
     runtime.registerBridgeFuncRegisters('dart:core', 'Future.', _futureNew);
     runtime.registerBridgeFuncRegisters(
       'dart:core',
+      'Future.wait',
+      _futureWait,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
       'Future.delayed',
       _futureDelayed,
     );
@@ -162,6 +167,64 @@ class $Future<T> implements Future<T>, $Instance {
       ),
     },
     methods: {
+      'wait': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                ]),
+              ),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'futures',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.future, [
+                      BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                    ]),
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'eagerError',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool)),
+              true,
+            ),
+            BridgeParameter(
+              'cleanUp',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.voidType),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'successValue',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          generics: {'T': BridgeGenericParam()},
+        ),
+        isStatic: true,
+      ),
       'then': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -706,5 +769,57 @@ $Value? _futureMicrotask(Runtime runtime, Object? r, Object? s, Object? c) {
     ),
     runtime: runtime,
     runtimeTypeId: resultType,
+  );
+}
+
+$Value? _futureWait(Runtime runtime, Object? r, Object? s, Object? c) {
+  final futures = TypedInterop.exportExternal(r, runtime: runtime) as Iterable;
+  final cleanUp = c is $null ? null : c as EvalFunction?;
+  final iterableType = r is $Value ? r.$getRuntimeType(runtime) : null;
+  final futureType = iterableType == null
+      ? null
+      : runtime.runtimeTypeArgumentAt(iterableType, 0);
+  final elementType = futureType == null
+      ? runtime.lookupType(CoreTypes.dynamic)
+      : runtime.runtimeTypeArgumentAt(futureType, 0) ??
+            runtime.lookupType(CoreTypes.dynamic);
+  // The declared T can be wider than the input futures' actual type argument.
+  // Capture the call's resolved result before the asynchronous completion.
+  final resultType = runtime.bridgeCallReturnTypeId;
+  final listType =
+      (resultType == null
+          ? null
+          : runtime.runtimeTypeArgumentAt(resultType, 0)) ??
+      runtime.internParameterizedType(CoreTypes.list, [elementType]);
+  void cleanUpValue(Object? value) {
+    final unwrapped = unwrapGuestFuturePayload(value);
+    cleanUp!.call(
+      runtime,
+      null,
+      unwrapped is $Value ? unwrapped : runtime.wrap(unwrapped),
+      null,
+      1,
+    );
+  }
+
+  return $Future.wrap(
+    Future.wait<Object?>(
+      futures.map((future) => future as Future<Object?>),
+      eagerError: (s is $Value ? s.$value : s) as bool? ?? false,
+      cleanUp: cleanUp == null ? null : cleanUpValue,
+    ).then(
+      (values) => $List.wrap(
+        values.map((value) {
+          final unwrapped = unwrapGuestFuturePayload(value);
+          return unwrapped is $Value ? unwrapped : runtime.wrap(unwrapped);
+        }).toList(),
+        runtime: runtime,
+        runtimeTypeId: listType,
+      ),
+    ),
+    runtime: runtime,
+    runtimeTypeId:
+        resultType ??
+        runtime.internParameterizedType(CoreTypes.future, [listType]),
   );
 }

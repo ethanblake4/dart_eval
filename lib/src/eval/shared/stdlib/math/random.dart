@@ -22,7 +22,6 @@ import 'package:dart_eval/stdlib/core.dart' hide $Point, $Random;
 /// dart_eval wrapper binding for [Random]
 class $Random implements $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:math', 'Random.', $Random.$new);
 
@@ -89,6 +88,8 @@ class $Random implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'nextDouble': BridgeMethodDef(
@@ -97,6 +98,8 @@ class $Random implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'nextBool': BridgeMethodDef(
@@ -105,6 +108,8 @@ class $Random implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {},

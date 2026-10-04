@@ -103,6 +103,9 @@ class CoreTypes {
   /// Bridge spec for [Pattern].
   static const pattern = BridgeTypeSpec('dart:core', 'Pattern');
 
+  /// Bridge spec for [pragma].
+  static const pragma = BridgeTypeSpec('dart:core', 'pragma');
+
   /// Bridge spec for [RangeError].
   static const rangeError = BridgeTypeSpec('dart:core', 'RangeError');
 
@@ -114,6 +117,12 @@ class CoreTypes {
 
   /// Bridge spec for [RegExpMatch].
   static const regExpMatch = BridgeTypeSpec('dart:core', 'RegExpMatch');
+
+  /// Bridge spec for [RuneIterator].
+  static const runeIterator = BridgeTypeSpec('dart:core', 'RuneIterator');
+
+  /// Bridge spec for [Runes].
+  static const runes = BridgeTypeSpec('dart:core', 'Runes');
 
   /// Bridge spec for [Set].
   static const set = BridgeTypeSpec('dart:core', 'Set');
@@ -211,6 +220,12 @@ class AsyncTypes {
     'StreamTransformer',
   );
 
+  /// Bridge spec for [StreamTransformerBase].
+  static const streamTransformerBase = BridgeTypeSpec(
+    'dart:async',
+    'StreamTransformerBase',
+  );
+
   /// Bridge spec for [StreamView].
   static const streamView = BridgeTypeSpec('dart:async', 'StreamView');
 
@@ -292,6 +307,15 @@ class CollectionTypes {
 
 /// Bridge type specs for `dart:convert`.
 class ConvertTypes {
+  /// Bridge spec for [AsciiCodec].
+  static const asciiCodec = BridgeTypeSpec('dart:convert', 'AsciiCodec');
+
+  /// Bridge spec for [AsciiDecoder].
+  static const asciiDecoder = BridgeTypeSpec('dart:convert', 'AsciiDecoder');
+
+  /// Bridge spec for [AsciiEncoder].
+  static const asciiEncoder = BridgeTypeSpec('dart:convert', 'AsciiEncoder');
+
   /// Bridge spec for [Base64Codec].
   static const base64Codec = BridgeTypeSpec('dart:convert', 'Base64Codec');
 
@@ -313,6 +337,12 @@ class ConvertTypes {
     'ChunkedConversionSink',
   );
 
+  /// Bridge spec for [ClosableStringSink].
+  static const closableStringSink = BridgeTypeSpec(
+    'dart:convert',
+    'ClosableStringSink',
+  );
+
   /// Bridge spec for [Codec].
   static const codec = BridgeTypeSpec('dart:convert', 'Codec');
 
@@ -322,6 +352,15 @@ class ConvertTypes {
   /// Bridge spec for [Encoding].
   static const encoding = BridgeTypeSpec('dart:convert', 'Encoding');
 
+  /// Bridge spec for [HtmlEscape].
+  static const htmlEscape = BridgeTypeSpec('dart:convert', 'HtmlEscape');
+
+  /// Bridge spec for [HtmlEscapeMode].
+  static const htmlEscapeMode = BridgeTypeSpec(
+    'dart:convert',
+    'HtmlEscapeMode',
+  );
+
   /// Bridge spec for [JsonCodec].
   static const jsonCodec = BridgeTypeSpec('dart:convert', 'JsonCodec');
 
@@ -330,6 +369,15 @@ class ConvertTypes {
 
   /// Bridge spec for [JsonEncoder].
   static const jsonEncoder = BridgeTypeSpec('dart:convert', 'JsonEncoder');
+
+  /// Bridge spec for [LineSplitter].
+  static const lineSplitter = BridgeTypeSpec('dart:convert', 'LineSplitter');
+
+  /// Bridge spec for [StringConversionSink].
+  static const stringConversionSink = BridgeTypeSpec(
+    'dart:convert',
+    'StringConversionSink',
+  );
 
   /// Bridge spec for [Utf8Codec].
   static const utf8Codec = BridgeTypeSpec('dart:convert', 'Utf8Codec');
@@ -454,17 +502,26 @@ class TypedDataTypes {
   /// Bridge spec for [ByteData].
   static const byteData = BridgeTypeSpec('dart:typed_data', 'ByteData');
 
+  /// Bridge spec for [Endian].
+  static const endian = BridgeTypeSpec('dart:typed_data', 'Endian');
+
   /// Bridge spec for [Float32List].
   static const float32List = BridgeTypeSpec('dart:typed_data', 'Float32List');
 
   /// Bridge spec for [Float64List].
   static const float64List = BridgeTypeSpec('dart:typed_data', 'Float64List');
 
+  /// Bridge spec for [Int16List].
+  static const int16List = BridgeTypeSpec('dart:typed_data', 'Int16List');
+
   /// Bridge spec for [Int32List].
   static const int32List = BridgeTypeSpec('dart:typed_data', 'Int32List');
 
   /// Bridge spec for [Int64List].
   static const int64List = BridgeTypeSpec('dart:typed_data', 'Int64List');
+
+  /// Bridge spec for [Int8List].
+  static const int8List = BridgeTypeSpec('dart:typed_data', 'Int8List');
 
   /// Bridge spec for [TypedData].
   static const typedData = BridgeTypeSpec('dart:typed_data', 'TypedData');
@@ -474,6 +531,12 @@ class TypedDataTypes {
 
   /// Bridge spec for [Uint32List].
   static const uint32List = BridgeTypeSpec('dart:typed_data', 'Uint32List');
+
+  /// Bridge spec for [Uint8ClampedList].
+  static const uint8ClampedList = BridgeTypeSpec(
+    'dart:typed_data',
+    'Uint8ClampedList',
+  );
 
   /// Bridge spec for [Uint8List].
   static const uint8List = BridgeTypeSpec('dart:typed_data', 'Uint8List');

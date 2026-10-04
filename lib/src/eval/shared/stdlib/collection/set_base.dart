@@ -20,9 +20,11 @@ import 'dart:collection';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $LinkedHashMap,
+        $UnmodifiableListView,
         $ListQueue,
         $Queue,
         $HashMap,
+        $SplayTreeMap,
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
@@ -1848,7 +1850,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('map', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = f((r as $Value?)!.$value);
+        final funcResult = f(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
     ]);
@@ -1860,7 +1865,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('where', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = f((r as $Value?)!.$value);
+        final funcResult = f(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -1879,7 +1887,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('expand', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = f((r as $Value?)!.$value);
+        final funcResult = f(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $Iterable.wrap(
           (funcResult).map((e) => runtime.wrapAlways(e, recursive: true)),
         );
@@ -1903,7 +1914,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     $_invoke('forEach', [
       $Function((runtime, target, r, s, c) {
-        f((r as $Value?)!.$value);
+        f(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return const $null();
       }),
     ]);
@@ -1915,8 +1929,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     return $_invoke('reduce', [
       $Function((runtime, target, r, s, c) {
         final funcResult = combine(
-          (r as $Value?)!.$value,
-          (s as $Value?)!.$value,
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
         );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
@@ -1932,8 +1948,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
           : runtime.wrapAlways(initialValue)),
       $Function((runtime, target, r, s, c) {
         final funcResult = combine(
-          (r as $Value?)!.$value,
-          (s as $Value?)!.$value,
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
         );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
@@ -1945,7 +1963,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     return $_invoke('every', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = f((r as $Value?)!.$value);
+        final funcResult = f(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -1962,7 +1983,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     return $_invoke('any', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -1992,7 +2016,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('takeWhile', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2011,7 +2038,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     final result = $_invoke('skipWhile', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2023,7 +2053,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     return $_invoke('firstWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       orElse == null
@@ -2040,7 +2073,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     return $_invoke('lastWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       orElse == null
@@ -2057,7 +2093,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     return $_invoke('singleWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       orElse == null
@@ -2140,7 +2179,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     $_invoke('removeWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2151,7 +2193,10 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
     final runtime = $runtime;
     $_invoke('retainWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -2418,7 +2463,9 @@ class $SetBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SetBase;
-    final result = self.$value.followedBy((r as $Value?)!.$value);
+    final result = self.$value.followedBy(
+      TypedInterop.exportIterable((r as $Value?), runtime),
+    );
     return $Iterable.wrap(
       (result).map(
         (e) => (e is List || e is Map || e is Set
@@ -2561,7 +2608,9 @@ class $SetBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SetBase;
-    final result = self.$value.contains((r as $Value?)!.$reified);
+    final result = self.$value.contains(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -2633,7 +2682,7 @@ class $SetBase<E> implements $Instance {
   ) {
     final self = target! as $SetBase;
     final result = self.$value.fold(
-      (r as $Value?)!.$value,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
       runtime.cachedCallback(
         (s as $Value?)! as EvalCallable,
         "T Function(T, E);export=false",
@@ -3029,7 +3078,9 @@ class $SetBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SetBase;
-    final result = self.$value.add((r as $Value?)!.$value);
+    final result = self.$value.add(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return $bool(result);
   }
 
@@ -3042,7 +3093,7 @@ class $SetBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SetBase;
-    self.$value.addAll((r as $Value?)!.$value);
+    self.$value.addAll(TypedInterop.exportIterable((r as $Value?), runtime));
     return null;
   }
 
@@ -3055,7 +3106,9 @@ class $SetBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SetBase;
-    final result = self.$value.remove((r as $Value?)!.$reified);
+    final result = self.$value.remove(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -3068,7 +3121,9 @@ class $SetBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SetBase;
-    final result = self.$value.lookup((r as $Value?)!.$reified);
+    final result = self.$value.lookup(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return result == null
         ? const $null()
         : (result is List || result is Map || result is Set
@@ -3085,7 +3140,7 @@ class $SetBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SetBase;
-    self.$value.removeAll((r as $Value?)!.$value);
+    self.$value.removeAll(TypedInterop.exportIterable((r as $Value?), runtime));
     return null;
   }
 
@@ -3098,7 +3153,7 @@ class $SetBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SetBase;
-    self.$value.retainAll((r as $Value?)!.$value);
+    self.$value.retainAll(TypedInterop.exportIterable((r as $Value?), runtime));
     return null;
   }
 
@@ -3169,7 +3224,9 @@ class $SetBase<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SetBase;
-    final result = self.$value.containsAll((r as $Value?)!.$value);
+    final result = self.$value.containsAll(
+      TypedInterop.exportIterable((r as $Value?), runtime),
+    );
     return $bool(result);
   }
 

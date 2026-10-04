@@ -869,7 +869,7 @@ class $Stream implements $Instance {
     },
     setters: {},
     fields: {},
-    wrap: true,
+    bridge: true,
   );
 
   @override
@@ -1134,7 +1134,7 @@ class $Stream implements $Instance {
     final convert = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
       $target.$value.asyncMap(
-        (event) => convert.call(runtime, null, event, null, 1),
+        (event) => convert.call(runtime, null, runtime.wrap(event), null, 1),
       ),
       runtime: runtime,
       runtimeTypeId: $target._typedStreamId(
@@ -1286,7 +1286,9 @@ class $Stream implements $Instance {
     final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.firstWhere(
-        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
+        (event) =>
+            test.call(runtime, null, runtime.wrap(event), null, 1)!.$value
+                as bool,
       ))(),
       runtime: runtime,
       runtimeTypeId: $target._typedFutureId(runtime),
@@ -1308,8 +1310,13 @@ class $Stream implements $Instance {
     return $Future.wrap(
       (() async => $target.$value.fold(
         initialValue,
-        (previous, element) =>
-            combine.call(runtime, null, previous as dynamic, element, 2),
+        (previous, element) => combine.call(
+          runtime,
+          null,
+          runtime.wrap(previous),
+          runtime.wrap(element),
+          2,
+        ),
       ))(),
       runtime: runtime,
       runtimeTypeId: $target._typedFutureId(runtime),
@@ -1385,7 +1392,9 @@ class $Stream implements $Instance {
     final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.lastWhere(
-        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
+        (event) =>
+            test.call(runtime, null, runtime.wrap(event), null, 1)!.$value
+                as bool,
       ))(),
       runtime: runtime,
       runtimeTypeId: $target._typedFutureId(runtime),
@@ -1566,8 +1575,13 @@ class $Stream implements $Instance {
     final combine = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.reduce(
-        (previous, element) =>
-            combine.call(runtime, null, previous, element, 2),
+        (previous, element) => combine.call(
+          runtime,
+          null,
+          runtime.wrap(previous),
+          runtime.wrap(element),
+          2,
+        ),
       ))(),
       runtime: runtime,
       runtimeTypeId: $target._typedFutureId(runtime),
@@ -1587,7 +1601,9 @@ class $Stream implements $Instance {
     final test = (r as $Value?) as EvalCallable;
     return $Future.wrap(
       (() async => $target.$value.singleWhere(
-        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
+        (event) =>
+            test.call(runtime, null, runtime.wrap(event), null, 1)!.$value
+                as bool,
       ))(),
       runtime: runtime,
       runtimeTypeId: $target._typedFutureId(runtime),
@@ -1625,7 +1641,9 @@ class $Stream implements $Instance {
     final test = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
       $target.$value.skipWhile(
-        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
+        (event) =>
+            test.call(runtime, null, runtime.wrap(event), null, 1)!.$value
+                as bool,
       ),
       runtime: runtime,
       runtimeTypeId: $target._typedStreamId(runtime),
@@ -1645,7 +1663,9 @@ class $Stream implements $Instance {
     final test = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
       $target.$value.takeWhile(
-        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
+        (event) =>
+            test.call(runtime, null, runtime.wrap(event), null, 1)!.$value
+                as bool,
       ),
       runtime: runtime,
       runtimeTypeId: $target._typedStreamId(runtime),
@@ -1683,7 +1703,9 @@ class $Stream implements $Instance {
     final test = (r as $Value?) as EvalCallable;
     return $Stream.wrap(
       $target.$value.where(
-        (event) => test.call(runtime, null, event, null, 1)!.$value as bool,
+        (event) =>
+            test.call(runtime, null, runtime.wrap(event), null, 1)!.$value
+                as bool,
       ),
       runtime: runtime,
       runtimeTypeId: $target._typedStreamId(runtime),
@@ -1757,4 +1779,63 @@ class $Stream implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {}
+}
+
+/// Native superclass for guest Stream implementations. SDK operators use the
+/// guest's listen implementation through the existing guest stream adapter.
+class $Stream$bridge extends Stream<Object?> with $Bridge<Stream<Object?>> {
+  static $Value $new(Runtime runtime, Object? r, Object? s, Object? c) =>
+      $Stream$bridge();
+
+  late final $Stream _wrapper = $Stream.wrap(
+    this,
+    runtime: $runtime,
+    runtimeTypeId: Runtime.bridgeData[this]!.$runtimeType,
+  );
+
+  @override
+  bool get isBroadcast => $_get('isBroadcast') as bool;
+
+  @override
+  StreamSubscription<Object?> listen(
+    void Function(Object?)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    final subclass = Runtime.bridgeData[this]!.subclass;
+    if (subclass is! TypedInstance) {
+      throw UnsupportedError('Stream subclasses must implement listen');
+    }
+    return TypedInterop.stream(subclass, $runtime).listen(
+      onData == null
+          ? null
+          : (event) =>
+                onData(TypedInterop.exportExternal(event, runtime: $runtime)),
+      onError: onError == null
+          ? null
+          : (Object error, StackTrace trace) {
+              final exported = TypedInterop.exportExternal(
+                error,
+                runtime: $runtime,
+              );
+              if (onError is void Function(Object, StackTrace)) {
+                onError(exported!, trace);
+              } else {
+                Function.apply(onError, [exported]);
+              }
+            },
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
+
+  @override
+  $Value? $bridgeGet(String identifier) => identifier == 'isBroadcast'
+      ? $bool(false)
+      : _wrapper.$getProperty($runtime, identifier);
+
+  @override
+  void $bridgeSet(String identifier, $Value value) =>
+      _wrapper.$setProperty($runtime, identifier, value);
 }

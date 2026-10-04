@@ -85,6 +85,10 @@ class Runtime {
   /// Nested bridge calls restore their caller's context on return.
   int? bridgeConstructorTypeId;
 
+  /// Resolved declared result while invoking a non-constructor bridge call.
+  /// Bridges capture it synchronously before starting asynchronous work.
+  int? bridgeCallReturnTypeId;
+
   /// The current runtime version code
   static const int versionCode = 107;
 

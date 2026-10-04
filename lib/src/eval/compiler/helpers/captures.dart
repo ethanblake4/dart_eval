@@ -14,6 +14,9 @@ CaptureAnalysis capturesFor(AstNode node) {
 /// Resolves lexical bindings before code generation, so conditional closure
 /// creation never controls whether a shared cell exists.
 class CaptureAnalysis extends RecursiveAstVisitor<void> {
+  /// Identifier uses resolved to lexical bindings rather than receiver members.
+  final lexicalReferences = <SimpleIdentifier>{};
+
   /// Constant references can be rematerialized outside their declaring graph,
   /// including optional defaults, without capturing an enclosing SSA value.
   final lexicalConstants = <SimpleIdentifier, VariableDeclaration>{};
@@ -57,6 +60,7 @@ class CaptureAnalysis extends RecursiveAstVisitor<void> {
       if (binding != null) break;
     }
     if (source != null) {
+      if (binding != null) lexicalReferences.add(source);
       if (binding?.$1 case VariableDeclaration declaration
           when declaration.isConst) {
         lexicalConstants[source] = declaration;

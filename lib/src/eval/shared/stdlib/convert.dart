@@ -1,4 +1,5 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert/ascii.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/base64.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/byte_conversion.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/chunked_conversion.dart';
@@ -6,10 +7,14 @@ import 'package:dart_eval/src/eval/shared/stdlib/convert/codec.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/converter.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/encoding.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/functions.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert/html_escape.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert/line_splitter.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/json.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/convert/string_conversion_sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/convert/utf.dart';
 
 const convertSource = '''
+final ascii = AsciiCodec();
 final utf8 = Utf8Codec();
 final latin1 = Encoding.getByName('latin1')!;
 final json = JsonCodec();
@@ -24,6 +29,9 @@ class DartConvertPlugin implements EvalPlugin {
 
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
+    $AsciiCodec.configureForCompile(registry);
+    $AsciiEncoder.configureForCompile(registry);
+    $AsciiDecoder.configureForCompile(registry);
     $Converter.configureForCompile(registry);
     $Codec.configureForCompile(registry);
     $Encoding.configureForCompile(registry);
@@ -36,7 +44,12 @@ class DartConvertPlugin implements EvalPlugin {
     $JsonEncoder.configureForCompile(registry);
     $JsonCodec.configureForCompile(registry);
     $ChunkedConversionSink.configureForCompile(registry);
+    $HtmlEscapeMode.configureForCompile(registry);
+    $HtmlEscape.configureForCompile(registry);
     $ByteConversionSink.configureForCompile(registry);
+    $StringConversionSink.configureForCompile(registry);
+    $ClosableStringSink.configureForCompile(registry);
+    $LineSplitter.configureForCompile(registry);
     registry.addSource(DartSource('dart:convert', convertSource));
     registry.defineBridgeTopLevelFunction($jsonEncodeFn.$declaration);
     registry.defineBridgeTopLevelFunction($jsonDecodeFn.$declaration);
@@ -44,6 +57,9 @@ class DartConvertPlugin implements EvalPlugin {
 
   @override
   void configureForRuntime(Runtime runtime) {
+    $AsciiCodec.configureForRuntime(runtime);
+    $AsciiEncoder.configureForRuntime(runtime);
+    $AsciiDecoder.configureForRuntime(runtime);
     $Converter.configureForRuntime(runtime);
     $Codec.configureForRuntime(runtime);
     $Encoding.configureForRuntime(runtime);
@@ -59,5 +75,10 @@ class DartConvertPlugin implements EvalPlugin {
     $jsonDecodeFn.configureForRuntime(runtime);
     $ByteConversionSink.configureForRuntime(runtime);
     $ChunkedConversionSink.configureForRuntime(runtime);
+    $HtmlEscapeMode.configureForRuntime(runtime);
+    $HtmlEscape.configureForRuntime(runtime);
+    $StringConversionSink.configureForRuntime(runtime);
+    $ClosableStringSink.configureForRuntime(runtime);
+    $LineSplitter.configureForRuntime(runtime);
   }
 }

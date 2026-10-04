@@ -18,16 +18,23 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -36,7 +43,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -44,11 +50,11 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 
 /// dart_eval wrapper binding for [Duration]
 class $Duration implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -185,36 +191,42 @@ class $Duration implements $Instance {
               'days',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
               'hours',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
               'minutes',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
               'seconds',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
               'milliseconds',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
               'microseconds',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
           ],
           params: [],
@@ -351,6 +363,14 @@ class $Duration implements $Instance {
       ),
 
       'abs': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'unary-': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.duration, [])),
           namedParams: [],
@@ -755,6 +775,9 @@ class $Duration implements $Instance {
 
       case 'abs':
         return $Closure(__abs.func, this);
+
+      case 'unary-':
+        return $Closure(__operatorMinusUnary.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -886,6 +909,19 @@ class $Duration implements $Instance {
   ) {
     final self = target! as $Duration;
     final result = self.$value.abs();
+    return $Duration.wrap(result);
+  }
+
+  static const $Function __operatorMinusUnary = $Function(_operatorMinusUnary);
+  static $Value? _operatorMinusUnary(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Duration;
+    final result = -self.$value;
     return $Duration.wrap(result);
   }
 

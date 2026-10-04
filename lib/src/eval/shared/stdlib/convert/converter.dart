@@ -25,6 +25,9 @@ import 'package:dart_eval/stdlib/core.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -32,7 +35,12 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
@@ -42,6 +50,9 @@ import 'package:dart_eval/stdlib/async.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -49,12 +60,18 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+
+import '../core/sink.dart';
 
 /// dart_eval wrapper binding for [Converter]
 class $Converter<S, T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -80,11 +97,12 @@ class $Converter<S, T> implements $Instance {
     BridgeClassType(
       $type,
       isAbstract: true,
+      isMixinClass: true,
 
       generics: {'S': BridgeGenericParam(), 'T': BridgeGenericParam()},
 
       $implements: [
-        BridgeTypeRef(CoreTypes.object, [
+        BridgeTypeRef(AsyncTypes.streamTransformerBase, [
           BridgeTypeAnnotation(BridgeTypeRef.ref('S')),
           BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
         ]),
@@ -186,6 +204,8 @@ class $Converter<S, T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'fuse': BridgeMethodDef(
@@ -254,7 +274,7 @@ class $Converter<S, T> implements $Instance {
   final Converter<S, T> $value;
 
   @override
-  Converter get $reified => $value;
+  Converter<S, T> get $reified => $value;
 
   /// Wrap a [Converter] in a [$Converter]
   $Converter.wrap(this.$value) : _superclass = $Object($value);
@@ -334,7 +354,9 @@ class $Converter<S, T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $Converter;
-    final result = self.$value.convert((r as $Value?)!.$value);
+    final result = self.$value.convert(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));

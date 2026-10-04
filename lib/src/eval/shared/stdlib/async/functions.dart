@@ -27,6 +27,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 

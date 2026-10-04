@@ -25,6 +25,9 @@ import 'package:dart_eval/stdlib/core.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -32,7 +35,12 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -41,6 +49,9 @@ import 'package:dart_eval/stdlib/async.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -48,34 +59,22 @@ import 'package:dart_eval/stdlib/async.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-import 'converter.dart';
-import 'byte_conversion.dart';
-
-import 'package:dart_eval/stdlib/typed_data.dart'
-    hide
-        $Converter,
-        $Codec,
-        $Encoding,
-        $JsonEncoder,
-        $JsonDecoder,
-        $JsonCodec,
-        $Utf8Decoder,
-        $Utf8Codec,
-        $Utf8Encoder,
-        $Base64Encoder,
-        $Base64Decoder,
-        $Base64Codec,
-        $ByteConversionSink,
-        $ChunkedConversionSink;
-
-import 'codec.dart';
+import './converter.dart';
+import './byte_conversion.dart';
+import '../typed_data/typed_data.dart';
+import './string_conversion_sink.dart';
+import './codec.dart';
 
 /// dart_eval wrapper binding for [Base64Encoder]
 class $Base64Encoder implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -116,7 +115,7 @@ class $Base64Encoder implements $Instance {
           ),
           BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
         ]),
-        BridgeTypeRef(CoreTypes.object, [
+        BridgeTypeRef(AsyncTypes.streamTransformerBase, [
           BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.list, [
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
@@ -398,7 +397,6 @@ class $Base64Encoder implements $Instance {
 /// dart_eval wrapper binding for [Base64Decoder]
 class $Base64Decoder implements $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:convert',
@@ -432,7 +430,7 @@ class $Base64Decoder implements $Instance {
             ]),
           ),
         ]),
-        BridgeTypeRef(CoreTypes.object, [
+        BridgeTypeRef(AsyncTypes.streamTransformerBase, [
           BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
           BridgeTypeAnnotation(
             BridgeTypeRef(CoreTypes.list, [
@@ -519,6 +517,7 @@ class $Base64Decoder implements $Instance {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
@@ -564,7 +563,9 @@ class $Base64Decoder implements $Instance {
 
       'startChunkedConversion': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object, [])),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.stringConversionSink, []),
+          ),
           namedParams: [],
           params: [
             BridgeParameter(
@@ -717,7 +718,7 @@ class $Base64Decoder implements $Instance {
   ) {
     final self = target! as $Base64Decoder;
     final result = self.$value.startChunkedConversion((r as $Value?)!.$value);
-    return $Object(result);
+    return $StringConversionSink.wrap(result);
   }
 
   @override
@@ -728,7 +729,6 @@ class $Base64Decoder implements $Instance {
 
 /// dart_eval wrapper binding for [Base64Codec]
 class $Base64Codec implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -870,6 +870,7 @@ class $Base64Codec implements $Instance {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(

@@ -401,6 +401,9 @@ String? wrapType(
       final which = lib.uri.toString().substring(5);
       ctx.imports.add('package:dart_eval/stdlib/$which.dart');
     }
+    if (boundName == 'num') {
+      return '${unionStr}runtime.wrap($expr)';
+    }
     if (defaultCstr.contains(boundName)) {
       return '$unionStr\$$boundName($expr)';
     }
@@ -827,14 +830,6 @@ class _TypeName {
   }
 }
 
-/// Read the flat positional/named argument vector of an [EvalCallable.call]
-/// body: slot 0/1 travel in R/S, slot 2+ in the C tail list.
-String _callableArgSource(int slot) => switch (slot) {
-  0 => '(r as \$Value?)',
-  1 => '(s as \$Value?)',
-  _ => '((c as List<Object?>)[${slot - 2}] as \$Value?)',
-};
-
 String wrapFunctionType(
   BindgenContext ctx,
   FunctionType type,
@@ -846,58 +841,14 @@ String wrapFunctionType(
     buffer.write('final funcResult = ');
   }
   buffer.write('$expr(');
-  var i = 0;
-  for (; i < type.normalParameterTypes.length; i++) {
-    buffer.write(_callableArgSource(i));
-    final type0 = type.normalParameterTypes[i];
-    if (type0.nullabilitySuffix == NullabilitySuffix.question) {
-      buffer.write('?.\$value');
-    } else {
-      buffer.write('!.\$value');
-    }
-    if (i < type.normalParameterTypes.length - 1) {
-      buffer.write(', ');
-    }
-  }
-
-  if (type.optionalParameterTypes.isNotEmpty) {
-    for (var j = i; j < type.optionalParameterTypes.length + i; j++) {
-      if (type.normalParameterTypes.isNotEmpty) {
-        buffer.write(', ');
-      }
-      final type0 = type.optionalParameterTypes[i];
-      buffer.write(_callableArgSource(j));
-      if (type0.nullabilitySuffix == NullabilitySuffix.question) {
-        buffer.write('?.\$value');
-      } else {
-        buffer.write('!.\$value');
-      }
-      if (j < type.optionalParameterTypes.length + i - 1) {
-        buffer.write(', ');
-      }
-    }
-  }
-
-  if (type.namedParameterTypes.isNotEmpty) {
-    if (type.normalParameterTypes.isNotEmpty ||
-        type.optionalParameterTypes.isNotEmpty) {
-      buffer.write(', ');
-    }
-
-    var k = i;
-    type.namedParameterTypes.forEach((npName, npType) {
-      buffer.write(npName);
-      buffer.write(': ${_callableArgSource(k)}');
-      if (type.nullabilitySuffix == NullabilitySuffix.question) {
-        buffer.write('?.\$value');
-      } else {
-        buffer.write('!.\$value');
-      }
-      if (k < type.namedParameterTypes.length + i - 1) {
-        buffer.write(', ');
-      }
-    });
-  }
+  final parameters = type.formalParameters;
+  final accessors = argumentAccessors(
+    ctx,
+    parameters,
+    callable: true,
+    exportValues: true,
+  );
+  buffer.write(accessors.join(', '));
   buffer.write(
     '); return ${wrapVar(ctx, type.returnType, 'funcResult', func: true, runtimeTypeOwner: runtimeTypeOwner)}; })',
   );

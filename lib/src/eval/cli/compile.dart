@@ -15,8 +15,6 @@ void cliCompile(String outputName) {
   var commandRoot = Directory(current);
   var projectRoot = findProjectRoot(commandRoot);
 
-  final bridgedPackages = <String>[];
-
   if (FileSystemEntity.typeSync('./.dart_eval/bindings') ==
       FileSystemEntityType.directory) {
     final files = Directory('./.dart_eval/bindings')
@@ -46,16 +44,14 @@ void cliCompile(String outputName) {
         );
       }
     }
-
-    for (final lib in compiler.bridgedLibraries) {
-      if (lib.startsWith('package:')) {
-        final packageName = lib.split('/')[0].substring(8);
-        if (!bridgedPackages.contains(packageName)) {
-          bridgedPackages.add(packageName);
-        }
-      }
-    }
   }
+
+  // Bindings replace their exact libraries, while unbridged package files
+  // remain available for imports and exports.
+  final replacedLibraries = {
+    ...compiler.bridgedLibraries.map(Uri.parse),
+    ...compiler.additionalSources.map((source) => source.uri),
+  };
 
   final pubspecFile = File(join(projectRoot.path, 'pubspec.yaml'));
   final pubspec = Pubspec.parse(pubspecFile.readAsStringSync());
@@ -77,10 +73,11 @@ void cliCompile(String outputName) {
     }
     for (final file in dir.listSync()) {
       if (file is File && file.path.endsWith('.dart')) {
+        final p = relative(file.path, from: root).replaceAll('\\', '/');
+        if (replacedLibraries.contains(Uri.parse('package:$pkg/$p'))) continue;
         final fileData = file.readAsStringSync();
         sourceLength += fileData.length;
 
-        final p = relative(file.path, from: root).replaceAll('\\', '/');
         data[pkg]![p] = fileData;
       } else if (file is Directory) {
         addFiles(pkg, file, root);
@@ -96,13 +93,7 @@ void cliCompile(String outputName) {
   if (packageConfig.packages.length > 1) {
     print('Adding packages from package config:');
   }
-  var skips = '';
   for (final package in packageConfig.packages) {
-    if (bridgedPackages.contains(package.name)) {
-      skips += 'Skipped package ${package.name} because it is bridged.\n';
-      continue;
-    }
-
     if (packageName == package.name) {
       continue;
     }
@@ -120,7 +111,7 @@ void cliCompile(String outputName) {
     addFiles(package.name, pkgDir, pkgDir.path);
   }
 
-  stdout.write('\n$skips');
+  stdout.write('\n');
 
   print('\nCompiling package $packageName...');
 

@@ -18,16 +18,23 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -36,7 +43,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -44,11 +50,12 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [StringSink]
 class $StringSink implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {}
 
@@ -93,6 +100,8 @@ class $StringSink implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'writeAll': BridgeMethodDef(
@@ -114,9 +123,12 @@ class $StringSink implements $Instance {
               'separator',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'writeln': BridgeMethodDef(
@@ -131,9 +143,12 @@ class $StringSink implements $Instance {
                 nullable: true,
               ),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'writeCharCode': BridgeMethodDef(
@@ -148,6 +163,8 @@ class $StringSink implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {},
@@ -198,7 +215,9 @@ class $StringSink implements $Instance {
     Object? c,
   ) {
     final self = target! as $StringSink;
-    self.$value.write((r as $Value?)!.$reified);
+    self.$value.write(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return null;
   }
 
@@ -212,7 +231,7 @@ class $StringSink implements $Instance {
   ) {
     final self = target! as $StringSink;
     self.$value.writeAll(
-      (r as $Value?)!.$value,
+      TypedInterop.exportIterable((r as $Value?), runtime),
       (s is $Value ? s : null) == null ? "" : (s as $String).$value,
     );
     return null;
@@ -230,7 +249,10 @@ class $StringSink implements $Instance {
     self.$value.writeln(
       (r is $Value ? r : null) == null
           ? ""
-          : (r is $Value ? r : null)?.$reified,
+          : TypedInterop.exportExternal(
+              (r is $Value ? r : null),
+              runtime: runtime,
+            ) as Object?,
     );
     return null;
   }

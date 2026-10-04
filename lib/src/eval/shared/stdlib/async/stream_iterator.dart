@@ -27,6 +27,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -41,6 +42,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 
@@ -48,7 +50,6 @@ import 'stream_hooks.dart' as hooks;
 
 /// dart_eval wrapper binding for [StreamIterator]
 class $StreamIterator<T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -109,6 +110,8 @@ class $StreamIterator<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'cancel': BridgeMethodDef(
@@ -121,6 +124,8 @@ class $StreamIterator<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -130,6 +135,8 @@ class $StreamIterator<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -149,7 +156,7 @@ class $StreamIterator<T> implements $Instance {
   final StreamIterator<T> $value;
 
   @override
-  StreamIterator get $reified => $value;
+  StreamIterator<T> get $reified => $value;
 
   /// Wrap a [StreamIterator] in a [$StreamIterator]
   $StreamIterator.wrap(this.$value) : _superclass = $Object($value);

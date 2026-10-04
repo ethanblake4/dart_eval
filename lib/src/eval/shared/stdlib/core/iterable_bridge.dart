@@ -18,16 +18,20 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
         $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
         $StackOverflowError,
         $OutOfMemoryError,
@@ -46,7 +50,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
@@ -1064,7 +1069,9 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
 
   /// Wrapper for the [Iterable.castFrom] method
   static $Value? $castFrom(Runtime runtime, Object? r, Object? s, Object? c) {
-    final value = Iterable.castFrom((r as $Value?)!.$value);
+    final value = Iterable.castFrom(
+      TypedInterop.exportIterable((r as $Value?), runtime),
+    );
     return $Iterable.wrap(
       (value).map((e) => runtime.wrapAlways(e, recursive: true)),
     );
@@ -1078,7 +1085,7 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     Object? c,
   ) {
     final value = Iterable.iterableToShortString(
-      (r as $Value?)!.$value,
+      TypedInterop.exportIterable((r as $Value?), runtime),
       (s is $Value ? s : null) == null ? '(' : (s as $String).$value,
       (c is $Value ? c : null) == null ? ')' : (c as $String).$value,
     );
@@ -1093,7 +1100,7 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     Object? c,
   ) {
     final value = Iterable.iterableToFullString(
-      (r as $Value?)!.$value,
+      TypedInterop.exportIterable((r as $Value?), runtime),
       (s is $Value ? s : null) == null ? '(' : (s as $String).$value,
       (c is $Value ? c : null) == null ? ')' : (c as $String).$value,
     );
@@ -1727,7 +1734,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     final result = $_invoke('map', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = toElement((r as $Value?)!.$value);
+        final funcResult = toElement(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
     ]);
@@ -1739,7 +1749,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     final result = $_invoke('where', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -1758,7 +1771,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     final result = $_invoke('expand', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = toElements((r as $Value?)!.$value);
+        final funcResult = toElements(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $Iterable.wrap(
           (funcResult).map((e) => runtime.wrapAlways(e, recursive: true)),
         );
@@ -1782,7 +1798,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     $_invoke('forEach', [
       $Function((runtime, target, r, s, c) {
-        action((r as $Value?)!.$value);
+        action(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return const $null();
       }),
     ]);
@@ -1794,8 +1813,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     return $_invoke('reduce', [
       $Function((runtime, target, r, s, c) {
         final funcResult = combine(
-          (r as $Value?)!.$value,
-          (s as $Value?)!.$value,
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
         );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
@@ -1811,8 +1832,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
           : runtime.wrapAlways(initialValue)),
       $Function((runtime, target, r, s, c) {
         final funcResult = combine(
-          (r as $Value?)!.$value,
-          (s as $Value?)!.$value,
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
         );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
@@ -1824,7 +1847,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     return $_invoke('every', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -1841,7 +1867,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     return $_invoke('any', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -1871,7 +1900,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     final result = $_invoke('takeWhile', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -1890,7 +1922,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     final result = $_invoke('skipWhile', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -1902,7 +1937,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     return $_invoke('firstWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       orElse == null
@@ -1919,7 +1957,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     return $_invoke('lastWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       orElse == null
@@ -1936,7 +1977,10 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
     final runtime = $runtime;
     return $_invoke('singleWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
       orElse == null

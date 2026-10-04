@@ -18,6 +18,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'dart:developer';
 
 import 'package:dart_eval/stdlib/core.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval function wrapper binding for [log]
 class $logFn {
@@ -126,7 +127,8 @@ class $logFn {
       level: _arg3OrNull == null ? 0 : (_arg3OrNull as $int).$value,
       name: _arg4OrNull == null ? '' : (_arg4OrNull as $String).$value,
       zone: _arg5OrNull?.$value,
-      error: _arg6OrNull?.$reified,
+      error:
+          TypedInterop.exportExternal(_arg6OrNull, runtime: runtime) as Object?,
       stackTrace: _arg7OrNull?.$value,
     );
     return null;

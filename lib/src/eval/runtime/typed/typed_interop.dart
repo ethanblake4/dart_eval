@@ -189,15 +189,28 @@ abstract final class TypedInterop {
     final target = _runtime(runtime);
     final site = program.externalCalls[siteIndex];
     if (site.constructorTypeId < 0) {
-      final result = target.invokeTypedExternal(
-        site.externalFunctionId,
-        site.argumentCount,
-        first,
-        second,
-        rest,
-      );
-      return annotateBridgeFuture(target, result, site.returnTypeId, frame)
-          as $Value?;
+      final previous = target.bridgeCallReturnTypeId;
+      target.bridgeCallReturnTypeId = site.returnTypeId < 0
+          ? null
+          : target.resolveTypedEnvironmentType(
+              site.returnTypeId,
+              actualOwnerType: frame.typeEnvironmentOwnerType(target),
+              callableTypeArguments: frame.effectiveTypeArguments,
+              typeEnvironment: frame.typeEnvironment,
+            );
+      try {
+        final result = target.invokeTypedExternal(
+          site.externalFunctionId,
+          site.argumentCount,
+          first,
+          second,
+          rest,
+        );
+        return annotateBridgeFuture(target, result, site.returnTypeId, frame)
+            as $Value?;
+      } finally {
+        target.bridgeCallReturnTypeId = previous;
+      }
     }
     final previous = target.bridgeConstructorTypeId;
     target.bridgeConstructorTypeId = target.resolveTypedEnvironmentType(

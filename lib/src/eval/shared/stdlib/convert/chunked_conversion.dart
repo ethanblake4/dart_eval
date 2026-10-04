@@ -25,6 +25,9 @@ import 'package:dart_eval/stdlib/core.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -32,12 +35,17 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [ChunkedConversionSink]
 class $ChunkedConversionSink<T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -131,6 +139,8 @@ class $ChunkedConversionSink<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'close': BridgeMethodDef(
@@ -139,6 +149,8 @@ class $ChunkedConversionSink<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {},
@@ -156,18 +168,24 @@ class $ChunkedConversionSink<T> implements $Instance {
     Object? c,
   ) {
     return $ChunkedConversionSink.wrap(
-      ChunkedConversionSink.withCallback((List<dynamic> accumulated) {
-        ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          $List.view(
-            accumulated,
-            (e) => runtime.wrapAlways(e, recursive: true),
-          ),
-          null,
-          1,
-        );
-      }),
+      ChunkedConversionSink.withCallback(
+        runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "void Function(List<T>);export=false",
+          (_callable) => (List<dynamic> accumulated) {
+            _callable.call(
+              runtime,
+              null,
+              $List.view(
+                accumulated,
+                (e) => runtime.wrapAlways(e, recursive: true),
+              ),
+              null,
+              1,
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -177,7 +195,7 @@ class $ChunkedConversionSink<T> implements $Instance {
   final ChunkedConversionSink<T> $value;
 
   @override
-  ChunkedConversionSink get $reified => $value;
+  ChunkedConversionSink<T> get $reified => $value;
 
   /// Wrap a [ChunkedConversionSink] in a [$ChunkedConversionSink]
   $ChunkedConversionSink.wrap(this.$value) : _superclass = $Object($value);
@@ -211,7 +229,9 @@ class $ChunkedConversionSink<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $ChunkedConversionSink;
-    self.$value.add((r as $Value?)!.$value);
+    self.$value.add(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 

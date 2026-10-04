@@ -48,6 +48,10 @@ libraries:
         methods:
           toString:
             include: true
+      Runes:
+        file: runes.dart
+      RuneIterator:
+        file: runes.dart
       Expando:
         file: expando.dart
         hooks: expando_hooks.dart
@@ -65,6 +69,8 @@ libraries:
         file: map_entry.dart
       Stopwatch:
         file: stopwatch.dart
+      pragma:
+        file: pragma.dart
       Error:
         file: errors.dart
         implementsSdk: true
@@ -190,6 +196,7 @@ libraries:
         include: false
   - uri: dart:async
     outDir: lib/src/eval/shared/stdlib/async
+    typedefs: [ControllerCallback, ControllerCancelCallback]
     functions:
       - unawaited
       - runZoned
@@ -229,6 +236,8 @@ libraries:
             hook: streamIterator
       StreamTransformer:
         file: stream_transformer.dart
+      StreamTransformerBase:
+        file: stream_transformer_base.dart
       StreamView:
         file: stream_view.dart
       StreamController:
@@ -239,6 +248,7 @@ libraries:
             hook: streamControllerAdd
   - uri: dart:collection
     typedefs: [IterableBase, IterableMixin, MapMixin, ListMixin]
+    sourceExtensions: [IterableExtensions]
     outDir: lib/src/eval/shared/stdlib/collection
     registry:
       file: lib/src/eval/shared/types.dart
@@ -302,6 +312,12 @@ libraries:
         file: json.dart
       JsonCodec:
         file: json.dart
+      AsciiCodec:
+        file: ascii.dart
+      AsciiEncoder:
+        file: ascii.dart
+      AsciiDecoder:
+        file: ascii.dart
       Utf8Decoder:
         file: utf.dart
       Utf8Codec:
@@ -318,6 +334,16 @@ libraries:
         file: byte_conversion.dart
       ChunkedConversionSink:
         file: chunked_conversion.dart
+      HtmlEscapeMode:
+        file: html_escape.dart
+      HtmlEscape:
+        file: html_escape.dart
+      StringConversionSink:
+        file: string_conversion_sink.dart
+      ClosableStringSink:
+        file: string_conversion_sink.dart
+      LineSplitter:
+        file: line_splitter.dart
     functions:
       - jsonEncode
       - jsonDecode
@@ -434,7 +460,15 @@ libraries:
         file: typed_data.dart
       ByteData:
         file: typed_data.dart
+      Endian:
+        file: typed_data.dart
+      Int8List:
+        file: typed_data.dart
+      Int16List:
+        file: typed_data.dart
       Uint8List:
+        file: typed_data.dart
+      Uint8ClampedList:
         file: typed_data.dart
       Uint16List:
         file: typed_data.dart

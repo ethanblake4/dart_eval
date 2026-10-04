@@ -25,6 +25,9 @@ import 'package:dart_eval/stdlib/core.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -32,16 +35,20 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
-import 'converter.dart';
+import './converter.dart';
 
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Codec]
 class $Codec<S, T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {}
 
@@ -61,6 +68,7 @@ class $Codec<S, T> implements $Instance {
     BridgeClassType(
       $type,
       isAbstract: true,
+      isMixinClass: true,
 
       generics: {'S': BridgeGenericParam(), 'T': BridgeGenericParam()},
     ),
@@ -141,6 +149,8 @@ class $Codec<S, T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'decoder': BridgeMethodDef(
@@ -154,6 +164,8 @@ class $Codec<S, T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'inverted': BridgeMethodDef(
@@ -181,7 +193,7 @@ class $Codec<S, T> implements $Instance {
   final Codec<S, T> $value;
 
   @override
-  Codec get $reified => $value;
+  Codec<S, T> get $reified => $value;
 
   /// Wrap a [Codec] in a [$Codec]
   $Codec.wrap(this.$value) : _superclass = $Object($value);
@@ -227,7 +239,9 @@ class $Codec<S, T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $Codec;
-    final result = self.$value.encode((r as $Value?)!.$value);
+    final result = self.$value.encode(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));
@@ -242,7 +256,9 @@ class $Codec<S, T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $Codec;
-    final result = self.$value.decode((r as $Value?)!.$value);
+    final result = self.$value.decode(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));

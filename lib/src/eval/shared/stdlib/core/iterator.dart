@@ -18,16 +18,23 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -36,7 +43,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -44,13 +50,13 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Iterator]
 class $Iterator<E> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {}
 
@@ -91,6 +97,8 @@ class $Iterator<E> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -100,6 +108,8 @@ class $Iterator<E> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -114,7 +124,7 @@ class $Iterator<E> implements $Instance {
   final Iterator<E> $value;
 
   @override
-  Iterator get $reified => $value;
+  Iterator<E> get $reified => $value;
 
   /// Wrap a [Iterator] in a [$Iterator]
   $Iterator.wrap(this.$value) : _superclass = $Object($value);

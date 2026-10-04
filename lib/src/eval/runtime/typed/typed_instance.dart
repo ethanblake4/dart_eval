@@ -1,5 +1,7 @@
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bridge/runtime_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/error_hooks.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol_literal.dart';
@@ -726,6 +728,21 @@ final class TypedMember extends EvalFunction {
 
   $Value? invokeBridgeArguments(List<$Value?> arguments, {Runtime? runtime}) {
     final closure = boundClosure;
+    if (closure != null && runtime != null) {
+      List<$Value?>? imported;
+      for (var i = 0; i < arguments.length; i++) {
+        final argument = _importBridgeArgument(
+          arguments[i],
+          i,
+          closure,
+          runtime,
+        );
+        if (!identical(argument, arguments[i])) {
+          (imported ??= List.of(arguments))[i] = argument;
+        }
+      }
+      arguments = imported ?? arguments;
+    }
     final (first, rest) = TypedInterop.splitVector(arguments);
     if (closure == null ||
         arguments.length != closure.descriptor.argumentCount) {
@@ -740,6 +757,51 @@ final class TypedMember extends EvalFunction {
       namedNames: closure.descriptor.namedNames,
       runtime: runtime,
     );
+  }
+
+  $Value? _importBridgeArgument(
+    $Value? argument,
+    int index,
+    TypedClosure closure,
+    Runtime runtime,
+  ) {
+    if (argument is! $Function &&
+        argument is! $Closure &&
+        argument is! $Iterable) {
+      return argument;
+    }
+    final parameters = closure.descriptor.parameterTypeIds;
+    if (index >= parameters.length || parameters[index] < 0) return argument;
+    final type = runtime.resolveTypedEnvironmentType(
+      parameters[index],
+      actualOwnerType: receiver.$getRuntimeType(runtime),
+      callableTypeArguments: closure.definingTypeArguments,
+      typeEnvironment: closure.definingTypeEnvironment,
+    );
+    if (argument is $Iterable) {
+      final descriptor = runtime.descriptorFor(type);
+      // Native bridge signatures erase SDK type parameters. A raw iterable
+      // can adopt that declaration's contract only with checked element reads.
+      if (argument.$getRuntimeType(runtime) ==
+              runtime.lookupType(CoreTypes.iterable) &&
+          descriptor.length == 3 &&
+          descriptor[0] == runtime.lookupType(CoreTypes.iterable)) {
+        return $Iterable.wrap(
+          argument.$value.map((value) {
+            runtime.assertTypedTypeArgument(value, type, 0);
+            return value;
+          }),
+          runtimeTypeId: type,
+          runtime: runtime,
+        );
+      }
+      return argument;
+    }
+    // Generated bridge callbacks have no structural signature. Import them
+    // using the same checked positional adapter as typed export callbacks.
+    return runtime.isSupportedTypedFunctionAdapterDescriptor(type)
+        ? TypedCheckedFunction(runtime, type, argument as EvalFunction)
+        : argument;
   }
 
   $Value? invoke(int count, Object? first, Object? rest, {Runtime? runtime}) {

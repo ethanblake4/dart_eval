@@ -18,16 +18,23 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -36,7 +43,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -44,12 +50,13 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Sink]
 class $Sink<T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {}
 
@@ -96,6 +103,8 @@ class $Sink<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'close': BridgeMethodDef(
@@ -104,6 +113,8 @@ class $Sink<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {},
@@ -119,7 +130,7 @@ class $Sink<T> implements $Instance {
   final Sink<T> $value;
 
   @override
-  Sink get $reified => $value;
+  Sink<T> get $reified => $value;
 
   /// Wrap a [Sink] in a [$Sink]
   $Sink.wrap(this.$value) : _superclass = $Object($value);
@@ -153,7 +164,9 @@ class $Sink<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $Sink;
-    self.$value.add((r as $Value?)!.$value);
+    self.$value.add(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 

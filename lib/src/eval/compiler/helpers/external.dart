@@ -78,11 +78,13 @@ bool isCorePragma(CompilerContext ctx, int library, Annotation annotation) {
   if (declaration != null) {
     final bridge = declaration.bridge;
     return bridge is BridgeClassDef &&
-        bridge.type.type.spec?.library == 'dart:core' &&
-        bridge.type.type.spec?.name == 'pragma';
+        TypeRef.fromBridgeTypeRef(
+          ctx,
+          bridge.type.type,
+        ).isSpec(CoreTypes.pragma);
   }
-  // pragma has no runtime bridge. Resolve its missing SDK declaration through
-  // the unit's core imports while respecting explicit show/hide combinators.
+  // If pragma has no visible bridge, resolve its SDK declaration through the
+  // unit's core imports while respecting explicit show/hide combinators.
   final unit = annotation.thisOrAncestorOfType<CompilationUnit>();
   if (unit == null || unit.directives.any((d) => d is PartOfDirective)) {
     return false;

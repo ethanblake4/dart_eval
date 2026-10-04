@@ -214,20 +214,19 @@ bool _unifyOnPattern(
       forceAllowDynamic: false,
     );
   }
-  final candidates = [actual, ...ctx.typeSystem.directSupertypes(actual)];
-  for (final candidate in candidates) {
-    if (candidate.file != pattern.file || candidate.name != pattern.name) {
-      continue;
-    }
-    final args = interfaceArgumentsOf(pattern);
-    final actualArgs = interfaceArgumentsOf(candidate);
-    var ok = true;
-    for (var i = 0; i < args.length && i < actualArgs.length; i++) {
-      if (!_unifyOnPattern(ctx, args[i], actualArgs[i], bound)) ok = false;
-    }
-    if (ok) return true;
+  // Match the instantiated view across the full hierarchy. A generic
+  // extension on Base<T> also applies through Intermediate<U> to Leaf<V>.
+  final candidate = ctx.typeSystem.asInstanceOf(
+    actual,
+    nominalDeclOf(pattern) ?? ctx.types.find(pattern.file, pattern.name),
+  );
+  if (candidate == null) return false;
+  final args = interfaceArgumentsOf(pattern);
+  final actualArgs = interfaceArgumentsOf(candidate);
+  for (var i = 0; i < args.length && i < actualArgs.length; i++) {
+    if (!_unifyOnPattern(ctx, args[i], actualArgs[i], bound)) return false;
   }
-  return false;
+  return true;
 }
 
 /// Matches [receiverType] against [ext]'s `on` clause. Returns null when the

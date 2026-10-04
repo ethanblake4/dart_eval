@@ -381,11 +381,10 @@ final class ConstructorCall extends CallTarget {
             externalIndex!,
             subclass.ssa,
             arguments,
-            // Wrapped bridge instances (`$Future`, `$Stream`, ...) carry no
-            // type parameters themselves — the attached type-id lets `is`
-            // and argument checks see `Future<int>` over the bare nominal.
+            // The attached type carries the invocation's generic arguments for
+            // wrappers and native superclass bridges alike.
             runtimeTypeId: ctx.runtimeTypes.idOf(
-              classBridge!.wrap && instantiatedType is InterfaceTypeRef
+              instantiatedType is InterfaceTypeRef
                   ? instantiatedType
                   : staticType,
             ),

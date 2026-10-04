@@ -21,6 +21,7 @@ import 'dart:typed_data';
 
 import 'package:dart_eval/stdlib/core.dart'
     hide
+        $Platform,
         $SocketException,
         $HttpException,
         $OSError,
@@ -29,6 +30,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Socket;
 import 'package:dart_eval/stdlib/async.dart'
     hide
+        $Platform,
         $SocketException,
         $HttpException,
         $OSError,
@@ -36,24 +38,13 @@ import 'package:dart_eval/stdlib/async.dart'
         $RedirectInfo,
         $Socket;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/stdlib/convert.dart'
-    hide
-        $SocketException,
-        $HttpException,
-        $OSError,
-        $HttpHeaders,
-        $RedirectInfo,
-        $Socket;
-import 'package:dart_eval/stdlib/typed_data.dart'
-    hide
-        $SocketException,
-        $HttpException,
-        $OSError,
-        $HttpHeaders,
-        $RedirectInfo,
-        $Socket;
+
+import '../convert/encoding.dart';
+import '../typed_data/typed_data.dart';
+
 import 'package:dart_eval/stdlib/io.dart'
     hide
+        $Platform,
         $SocketException,
         $HttpException,
         $OSError,
@@ -62,11 +53,12 @@ import 'package:dart_eval/stdlib/io.dart'
         $Socket;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
+import '../async/stream_subscription.dart';
+import '../async/event_sink.dart';
 import 'socket_hooks.dart' as hooks;
 
 /// dart_eval wrapper binding for [Socket]
 class $Socket implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -162,6 +154,8 @@ class $Socket implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'writeAll': BridgeMethodDef(
@@ -183,9 +177,12 @@ class $Socket implements $Instance {
               'separator',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'writeln': BridgeMethodDef(
@@ -200,9 +197,12 @@ class $Socket implements $Instance {
                 nullable: true,
               ),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'writeCharCode': BridgeMethodDef(
@@ -217,6 +217,8 @@ class $Socket implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'addStream': BridgeMethodDef(
@@ -243,6 +245,8 @@ class $Socket implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'close': BridgeMethodDef(
@@ -255,6 +259,8 @@ class $Socket implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'add': BridgeMethodDef(
@@ -273,6 +279,8 @@ class $Socket implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'addError': BridgeMethodDef(
@@ -296,6 +304,8 @@ class $Socket implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'flush': BridgeMethodDef(
@@ -308,6 +318,8 @@ class $Socket implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'asBroadcastStream': BridgeMethodDef(
@@ -450,6 +462,8 @@ class $Socket implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'where': BridgeMethodDef(
@@ -539,7 +553,7 @@ class $Socket implements $Instance {
                 BridgeTypeRef.genericFunction(
                   BridgeFunctionDef(
                     returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.object, [
+                      BridgeTypeRef(AsyncTypes.futureOr, [
                         BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
                       ]),
                     ),
@@ -836,6 +850,7 @@ class $Socket implements $Instance {
               'separator',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
@@ -1433,6 +1448,7 @@ class $Socket implements $Instance {
               'sourcePort',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
@@ -1484,6 +1500,7 @@ class $Socket implements $Instance {
               'sourcePort',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
           ],
           params: [
@@ -1510,6 +1527,8 @@ class $Socket implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'setOption': BridgeMethodDef(
@@ -1530,6 +1549,8 @@ class $Socket implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'getRawOption': BridgeMethodDef(
@@ -1546,6 +1567,8 @@ class $Socket implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'setRawOption': BridgeMethodDef(
@@ -1560,6 +1583,8 @@ class $Socket implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -1641,6 +1666,8 @@ class $Socket implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'port': BridgeMethodDef(
@@ -1649,6 +1676,8 @@ class $Socket implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'remotePort': BridgeMethodDef(
@@ -1657,6 +1686,8 @@ class $Socket implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'address': BridgeMethodDef(
@@ -1667,6 +1698,8 @@ class $Socket implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'remoteAddress': BridgeMethodDef(
@@ -1677,6 +1710,8 @@ class $Socket implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -1692,6 +1727,10 @@ class $Socket implements $Instance {
 
   /// Wrapper for the [Socket.connect] method
   static $Value? $connect(Runtime runtime, Object? r, Object? s, Object? c) {
+    final _arg2OrNull = c is List && c.length > 0 ? c[0] as $Value? : null;
+    final _arg3OrNull = c is List && c.length > 1 ? c[1] as $Value? : null;
+    final _arg4OrNull = c is List && c.length > 2 ? c[2] as $Value? : null;
+
     return hooks.socketConnect(runtime, null, [
       r as $Value?,
       s as $Value?,
@@ -1706,6 +1745,9 @@ class $Socket implements $Instance {
     Object? s,
     Object? c,
   ) {
+    final _arg2OrNull = c is List && c.length > 0 ? c[0] as $Value? : null;
+    final _arg3OrNull = c is List && c.length > 1 ? c[1] as $Value? : null;
+
     return hooks.socketStartConnect(runtime, null, [
       r as $Value?,
       s as $Value?,
@@ -1946,7 +1988,9 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    self.$value.write((r as $Value?)!.$reified);
+    self.$value.write(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return null;
   }
 
@@ -1960,7 +2004,7 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     self.$value.writeAll(
-      (r as $Value?)!.$value,
+      TypedInterop.exportIterable((r as $Value?), runtime),
       (s is $Value ? s : null) == null ? "" : (s as $String).$value,
     );
     return null;
@@ -1978,7 +2022,10 @@ class $Socket implements $Instance {
     self.$value.writeln(
       (r is $Value ? r : null) == null
           ? ""
-          : (r is $Value ? r : null)?.$reified,
+          : TypedInterop.exportExternal(
+              (r is $Value ? r : null),
+              runtime: runtime,
+            ) as Object?,
     );
     return null;
   }
@@ -2057,7 +2104,7 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     self.$value.addError(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object,
       (s is $Value ? s : null)?.$value,
     );
     return null;
@@ -2095,27 +2142,35 @@ class $Socket implements $Instance {
       onListen:
           (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
-          : (StreamSubscription<Uint8List> subscription) {
-              ((r is $Value ? r : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                $StreamSubscription.wrap(subscription),
-                null,
-                1,
-              );
-            },
+          : runtime.cachedCallback(
+              (r is $Value ? r : null)! as EvalCallable,
+              "void Function(StreamSubscription<Uint8List>);export=false",
+              (_callable) => (StreamSubscription<Uint8List> subscription) {
+                _callable.call(
+                  runtime,
+                  null,
+                  $StreamSubscription.wrap(subscription),
+                  null,
+                  1,
+                );
+              },
+            ),
       onCancel:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (StreamSubscription<Uint8List> subscription) {
-              ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                $StreamSubscription.wrap(subscription),
-                null,
-                1,
-              );
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "void Function(StreamSubscription<Uint8List>);export=false",
+              (_callable) => (StreamSubscription<Uint8List> subscription) {
+                _callable.call(
+                  runtime,
+                  null,
+                  $StreamSubscription.wrap(subscription),
+                  null,
+                  1,
+                );
+              },
+            ),
     );
     return $Stream.wrap(
       result.map((e) => $Uint8List.wrap(e)),
@@ -2138,32 +2193,34 @@ class $Socket implements $Instance {
     final result = self.$value.listen(
       (r as $Value?) == null || (r as $Value?) is $null
           ? null
-          : (Uint8List event) {
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                $Uint8List.wrap(event),
-                null,
-                1,
-              );
-            },
+          : runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "void Function(Uint8List);export=false",
+              (_callable) => (Uint8List event) {
+                _callable.call(runtime, null, $Uint8List.wrap(event), null, 1);
+              },
+            ),
       onError:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (a0, [a1, a2]) {
-              final _a0 = runtime.wrapAlways(a0);
-              ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                _a0,
-                a1 != null ? runtime.wrapAlways(a1) : null,
-                a2 != null
-                    ? [runtime.wrapAlways(a2)]
-                    : a1 != null
-                    ? 2
-                    : 1,
-              );
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "Function;export=false",
+              (_callable) => (a0, [a1, a2]) {
+                final _a0 = runtime.wrapAlways(a0);
+                _callable.call(
+                  runtime,
+                  null,
+                  _a0,
+                  a1 != null ? runtime.wrapAlways(a1) : null,
+                  a2 != null
+                      ? [runtime.wrapAlways(a2)]
+                      : a1 != null
+                      ? 2
+                      : 1,
+                );
+              },
+            ),
       onDone:
           (c is List && (c as List).length > 0
                       ? (c as List)[0] as $Value?
@@ -2174,13 +2231,16 @@ class $Socket implements $Instance {
                       : null)
                   is $null
           ? null
-          : () {
-              ((c is List && (c as List).length > 0
-                          ? (c as List)[0] as $Value?
-                          : null)!
-                      as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0);
-            },
+          : runtime.cachedCallback(
+              (c is List && (c as List).length > 0
+                      ? (c as List)[0] as $Value?
+                      : null)!
+                  as EvalCallable,
+              "void Function();export=false",
+              (_callable) => () {
+                _callable.call(runtime, null, null, null, 0);
+              },
+            ),
       cancelOnError:
           (c is List && (c as List).length > 1
                   ? (c as List)[1] as $Value?
@@ -2199,15 +2259,17 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.where((Uint8List event) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(event),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.where(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(Uint8List);export=false",
+        (_callable) => (Uint8List event) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(event), null, 1)
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map((e) => $Uint8List.wrap(e)),
       runtime: runtime,
@@ -2226,15 +2288,17 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.map((Uint8List event) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(event),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.map(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "S Function(Uint8List);export=false",
+        (_callable) => (Uint8List event) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(event), null, 1)
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -2253,15 +2317,17 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.asyncMap((Uint8List event) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(event),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.asyncMap(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "FutureOr<E> Function(Uint8List);export=false",
+        (_callable) => (Uint8List event) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(event), null, 1)
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -2280,15 +2346,17 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.asyncExpand((Uint8List event) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(event),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.asyncExpand(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Stream<E>? Function(Uint8List);export=false",
+        (_callable) => (Uint8List event) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(event), null, 1)
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -2308,34 +2376,42 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     final result = self.$value.handleError(
-      (a0, [a1, a2]) {
-        final _a0 = runtime.wrapAlways(a0);
-        ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          _a0,
-          a1 != null ? runtime.wrapAlways(a1) : null,
-          a2 != null
-              ? [runtime.wrapAlways(a2)]
-              : a1 != null
-              ? 2
-              : 1,
-        );
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Function;export=false",
+        (_callable) => (a0, [a1, a2]) {
+          final _a0 = runtime.wrapAlways(a0);
+          _callable.call(
+            runtime,
+            null,
+            _a0,
+            a1 != null ? runtime.wrapAlways(a1) : null,
+            a2 != null
+                ? [runtime.wrapAlways(a2)]
+                : a1 != null
+                ? 2
+                : 1,
+          );
+        },
+      ),
       test:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (dynamic error) {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    runtime.wrapAlways(error, recursive: true),
-                    null,
-                    1,
-                  )
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "bool Function(dynamic);export=false",
+              (_callable) => (dynamic error) {
+                return _callable
+                    .call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(error, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
+              },
+            ),
     );
     return $Stream.wrap(
       result.map((e) => $Uint8List.wrap(e)),
@@ -2355,15 +2431,17 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.expand((Uint8List element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(element),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.expand(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Iterable<S> Function(Uint8List);export=false",
+        (_callable) => (Uint8List element) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(element), null, 1)
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -2420,15 +2498,23 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.reduce((Uint8List previous, Uint8List element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(previous),
-        $Uint8List.wrap(element),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.reduce(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Uint8List Function(Uint8List, Uint8List);export=false",
+        (_callable) => (Uint8List previous, Uint8List element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                $Uint8List.wrap(previous),
+                $Uint8List.wrap(element),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Future.wrap(
       result.then((e) => $Uint8List.wrap(e)),
       runtime: runtime,
@@ -2447,18 +2533,24 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.fold((r as $Value?)!.$value, (
-      dynamic previous,
-      Uint8List element,
-    ) {
-      return ((s as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(previous, recursive: true),
-        $Uint8List.wrap(element),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.fold(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+      runtime.cachedCallback(
+        (s as $Value?)! as EvalCallable,
+        "S Function(S, Uint8List);export=false",
+        (_callable) => (dynamic previous, Uint8List element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(previous, recursive: true),
+                $Uint8List.wrap(element),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Future.wrap(
       result.then(
         (e) => (e is List || e is Map || e is Set
@@ -2498,7 +2590,9 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.contains((r as $Value?)!.$reified);
+    final result = self.$value.contains(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $Future.wrap(
       result.then((e) => $bool(e)),
       runtime: runtime,
@@ -2517,17 +2611,19 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.forEach((Uint8List element) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(element),
-        null,
-        1,
-      );
-    });
+    final result = self.$value.forEach(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(Uint8List);export=false",
+        (_callable) => (Uint8List element) {
+          _callable.call(runtime, null, $Uint8List.wrap(element), null, 1);
+        },
+      ),
+    );
     return $Future.wrap(
-      result.then((e) => null),
+      (result as Future<dynamic>).then(
+        (e) => runtime.wrapAlways(e, recursive: true),
+      ),
       runtime: runtime,
       runtimeTypeId: runtime.internParameterizedType(CoreTypes.future, [
         runtime.lookupType(CoreTypes.voidType),
@@ -2544,15 +2640,17 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.every((Uint8List element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(element),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.every(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(Uint8List);export=false",
+        (_callable) => (Uint8List element) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(element), null, 1)
+              ?.$value;
+        },
+      ),
+    );
     return $Future.wrap(
       result.then((e) => $bool(e)),
       runtime: runtime,
@@ -2571,15 +2669,17 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.any((Uint8List element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(element),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.any(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(Uint8List);export=false",
+        (_callable) => (Uint8List element) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(element), null, 1)
+              ?.$value;
+        },
+      ),
+    );
     return $Future.wrap(
       result.then((e) => $bool(e)),
       runtime: runtime,
@@ -2668,7 +2768,10 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.drain((r is $Value ? r : null)?.$value);
+    final result = self.$value.drain(
+      TypedInterop.exportExternal((r is $Value ? r : null), runtime: runtime)
+          as dynamic,
+    );
     return $Future.wrap(
       result.then(
         (e) => (e is List || e is Map || e is Set
@@ -2706,15 +2809,17 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.takeWhile((Uint8List element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(element),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.takeWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(Uint8List);export=false",
+        (_callable) => (Uint8List element) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(element), null, 1)
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map((e) => $Uint8List.wrap(e)),
       runtime: runtime,
@@ -2752,15 +2857,17 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    final result = self.$value.skipWhile((Uint8List element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Uint8List.wrap(element),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.skipWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(Uint8List);export=false",
+        (_callable) => (Uint8List element) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(element), null, 1)
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map((e) => $Uint8List.wrap(e)),
       runtime: runtime,
@@ -2782,17 +2889,21 @@ class $Socket implements $Instance {
     final result = self.$value.distinct(
       (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
-          : (Uint8List previous, Uint8List next) {
-              return ((r is $Value ? r : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    $Uint8List.wrap(previous),
-                    $Uint8List.wrap(next),
-                    2,
-                  )
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (r is $Value ? r : null)! as EvalCallable,
+              "bool Function(Uint8List, Uint8List);export=false",
+              (_callable) => (Uint8List previous, Uint8List next) {
+                return _callable
+                    .call(
+                      runtime,
+                      null,
+                      $Uint8List.wrap(previous),
+                      $Uint8List.wrap(next),
+                      2,
+                    )
+                    ?.$value;
+              },
+            ),
     );
     return $Stream.wrap(
       result.map((e) => $Uint8List.wrap(e)),
@@ -2813,23 +2924,25 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     final result = self.$value.firstWhere(
-      (Uint8List element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          $Uint8List.wrap(element),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(Uint8List);export=false",
+        (_callable) => (Uint8List element) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(element), null, 1)
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "Uint8List Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return $Future.wrap(
       result.then((e) => $Uint8List.wrap(e)),
@@ -2850,23 +2963,25 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     final result = self.$value.lastWhere(
-      (Uint8List element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          $Uint8List.wrap(element),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(Uint8List);export=false",
+        (_callable) => (Uint8List element) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(element), null, 1)
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "Uint8List Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return $Future.wrap(
       result.then((e) => $Uint8List.wrap(e)),
@@ -2887,23 +3002,25 @@ class $Socket implements $Instance {
   ) {
     final self = target! as $Socket;
     final result = self.$value.singleWhere(
-      (Uint8List element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          $Uint8List.wrap(element),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(Uint8List);export=false",
+        (_callable) => (Uint8List element) {
+          return _callable
+              .call(runtime, null, $Uint8List.wrap(element), null, 1)
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "Uint8List Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return $Future.wrap(
       result.then((e) => $Uint8List.wrap(e)),
@@ -2947,15 +3064,13 @@ class $Socket implements $Instance {
       onTimeout:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (EventSink<Uint8List> sink) {
-              ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                $EventSink.wrap(sink),
-                null,
-                1,
-              );
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "void Function(EventSink<Uint8List>);export=false",
+              (_callable) => (EventSink<Uint8List> sink) {
+                _callable.call(runtime, null, $EventSink.wrap(sink), null, 1);
+              },
+            ),
     );
     return $Stream.wrap(
       result.map((e) => $Uint8List.wrap(e)),

@@ -20,9 +20,11 @@ import 'dart:collection';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $LinkedHashMap,
+        $UnmodifiableListView,
         $ListQueue,
         $Queue,
         $HashMap,
+        $SplayTreeMap,
         $HashSet,
         $LinkedHashSet,
         $DoubleLinkedQueue,
@@ -949,8 +951,10 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
     return ($_invoke('map', [
       $Function((runtime, target, r, s, c) {
         final funcResult = transform(
-          (r as $Value?)!.$value,
-          (s as $Value?)!.$value,
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
         );
         return $MapEntry.wrap(funcResult);
       }),
@@ -973,7 +977,10 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
           ? TypedInterop.boxExternal(key, runtime: runtime)!
           : runtime.wrapAlways(key)),
       $Function((runtime, target, r, s, c) {
-        final funcResult = update((r as $Value?)!.$value);
+        final funcResult = update(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
       ifAbsent == null
@@ -991,8 +998,10 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
     $_invoke('updateAll', [
       $Function((runtime, target, r, s, c) {
         final funcResult = update(
-          (r as $Value?)!.$value,
-          (s as $Value?)!.$value,
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
         );
         return runtime.wrapAlways(funcResult, recursive: true);
       }),
@@ -1004,7 +1013,12 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
     final runtime = $runtime;
     $_invoke('removeWhere', [
       $Function((runtime, target, r, s, c) {
-        final funcResult = test((r as $Value?)!.$value, (s as $Value?)!.$value);
+        final funcResult = test(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return $bool(funcResult);
       }),
     ]);
@@ -1068,7 +1082,12 @@ class $MapBase$bridge<K, V> extends MapBase<K, V> with $Bridge<MapBase<K, V>> {
     final runtime = $runtime;
     $_invoke('forEach', [
       $Function((runtime, target, r, s, c) {
-        action((r as $Value?)!.$value, (s as $Value?)!.$value);
+        action(
+          TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+              as dynamic,
+          TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+              as dynamic,
+        );
         return const $null();
       }),
     ]);
@@ -1215,7 +1234,9 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    final result = self.$value.containsValue((r as $Value?)!.$reified);
+    final result = self.$value.containsValue(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -1228,7 +1249,9 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    final result = self.$value.containsKey((r as $Value?)!.$reified);
+    final result = self.$value.containsKey(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -1241,7 +1264,11 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    final result = self.$value[(r as $Value?)!.$reified];
+    final result =
+        self.$value[TypedInterop.exportExternal(
+          (r as $Value?),
+          runtime: runtime,
+        ) as Object?];
     return result == null
         ? const $null()
         : (result is List || result is Map || result is Set
@@ -1258,7 +1285,11 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    self.$value[(r as $Value?)!.$value] = (s as $Value?)!.$value;
+    self.$value[TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+        as dynamic] = TypedInterop.exportExternal(
+      (s as $Value?),
+      runtime: runtime,
+    ) as dynamic;
     return null;
   }
 
@@ -1310,7 +1341,9 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    self.$value.addEntries((r as $Value?)!.$value);
+    self.$value.addEntries(
+      TypedInterop.exportIterable((r as $Value?), runtime),
+    );
     return null;
   }
 
@@ -1324,7 +1357,7 @@ class $MapBase<K, V> implements $Instance {
   ) {
     final self = target! as $MapBase;
     final result = self.$value.update(
-      (r as $Value?)!.$value,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
       runtime.cachedCallback(
         (s as $Value?)! as EvalCallable,
         "V Function(V);export=false",
@@ -1434,7 +1467,7 @@ class $MapBase<K, V> implements $Instance {
   ) {
     final self = target! as $MapBase;
     final result = self.$value.putIfAbsent(
-      (r as $Value?)!.$value,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
       runtime.cachedCallback(
         (s as $Value?)! as EvalCallable,
         "V Function();export=false",
@@ -1472,7 +1505,9 @@ class $MapBase<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $MapBase;
-    final result = self.$value.remove((r as $Value?)!.$reified);
+    final result = self.$value.remove(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return result == null
         ? const $null()
         : (result is List || result is Map || result is Set

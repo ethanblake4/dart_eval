@@ -15,19 +15,24 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
         $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
         $StackOverflowError,
         $OutOfMemoryError,
@@ -46,8 +51,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+        $StringSink,
+        $Enum;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval bridge binding for [StringBuffer]
@@ -228,7 +233,10 @@ class $StringBuffer$bridge extends StringBuffer with $Bridge<StringBuffer> {
     return $StringBuffer$bridge(
       (r is $Value ? r : null) == null
           ? ""
-          : (r is $Value ? r : null)!.$reified,
+          : TypedInterop.exportExternal(
+              (r is $Value ? r : null),
+              runtime: runtime,
+            ) as Object,
     );
   }
 
@@ -449,7 +457,9 @@ class $StringBuffer implements $Instance {
     Object? c,
   ) {
     final self = target! as $StringBuffer;
-    self.$value.write((r as $Value?)!.$reified);
+    self.$value.write(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return null;
   }
 
@@ -463,7 +473,7 @@ class $StringBuffer implements $Instance {
   ) {
     final self = target! as $StringBuffer;
     self.$value.writeAll(
-      (r as $Value?)!.$value,
+      TypedInterop.exportIterable((r as $Value?), runtime),
       (s is $Value ? s : null) == null ? "" : (s as $String).$value,
     );
     return null;
@@ -481,7 +491,10 @@ class $StringBuffer implements $Instance {
     self.$value.writeln(
       (r is $Value ? r : null) == null
           ? ""
-          : (r is $Value ? r : null)!.$reified,
+          : TypedInterop.exportExternal(
+              (r is $Value ? r : null),
+              runtime: runtime,
+            ) as Object?,
     );
     return null;
   }

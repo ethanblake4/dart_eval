@@ -27,6 +27,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -40,16 +41,16 @@ import 'package:dart_eval/stdlib/async.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
-import 'stream_sink.dart';
+import './stream_sink.dart';
 import 'stream_hooks.dart' as hooks;
 
 /// dart_eval wrapper binding for [StreamController]
 class $StreamController<T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -178,6 +179,7 @@ class $StreamController<T> implements $Instance {
               'sync',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
           ],
           params: [],
@@ -227,6 +229,7 @@ class $StreamController<T> implements $Instance {
               'sync',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
           ],
           params: [],
@@ -265,6 +268,8 @@ class $StreamController<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'close': BridgeMethodDef(
@@ -277,6 +282,8 @@ class $StreamController<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'add': BridgeMethodDef(
@@ -291,6 +298,8 @@ class $StreamController<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'addError': BridgeMethodDef(
@@ -314,6 +323,8 @@ class $StreamController<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -327,6 +338,8 @@ class $StreamController<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'stream': BridgeMethodDef(
@@ -339,6 +352,8 @@ class $StreamController<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'sink': BridgeMethodDef(
@@ -351,6 +366,8 @@ class $StreamController<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isClosed': BridgeMethodDef(
@@ -359,6 +376,8 @@ class $StreamController<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isPaused': BridgeMethodDef(
@@ -367,6 +386,8 @@ class $StreamController<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'hasListener': BridgeMethodDef(
@@ -375,6 +396,8 @@ class $StreamController<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -455,46 +478,42 @@ class $StreamController<T> implements $Instance {
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null
             ? null
-            : () {
-                ((r is $Value ? r : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  null,
-                  null,
-                  0,
-                );
-              },
+            : runtime.cachedCallback(
+                (r is $Value ? r : null)! as EvalCallable,
+                "void Function();export=false",
+                (_callable) => () {
+                  _callable.call(runtime, null, null, null, 0);
+                },
+              ),
         onPause:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
-            : () {
-                ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  null,
-                  null,
-                  0,
-                );
-              },
+            : runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "void Function();export=false",
+                (_callable) => () {
+                  _callable.call(runtime, null, null, null, 0);
+                },
+              ),
         onResume: _arg2OrNull == null || _arg2OrNull is $null
             ? null
-            : () {
-                (_arg2OrNull! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  null,
-                  null,
-                  0,
-                );
-              },
+            : runtime.cachedCallback(
+                _arg2OrNull! as EvalCallable,
+                "void Function();export=false",
+                (_callable) => () {
+                  _callable.call(runtime, null, null, null, 0);
+                },
+              ),
         onCancel: _arg3OrNull == null || _arg3OrNull is $null
             ? null
-            : () {
-                return (_arg3OrNull! as EvalCallable?)
-                    ?.call(runtime, null, null, null, 0)
-                    ?.$value;
-              },
+            : runtime.cachedCallback(
+                _arg3OrNull! as EvalCallable,
+                "FutureOr<void> Function();export=false",
+                (_callable) => () {
+                  return _callable.call(runtime, null, null, null, 0)?.$value;
+                },
+              ),
         sync: _arg4OrNull == null ? false : (_arg4OrNull as $bool).$value,
       ),
     );
@@ -508,28 +527,24 @@ class $StreamController<T> implements $Instance {
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null
             ? null
-            : () {
-                ((r is $Value ? r : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  null,
-                  null,
-                  0,
-                );
-              },
+            : runtime.cachedCallback(
+                (r is $Value ? r : null)! as EvalCallable,
+                "void Function();export=false",
+                (_callable) => () {
+                  _callable.call(runtime, null, null, null, 0);
+                },
+              ),
         onCancel:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
-            : () {
-                ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  null,
-                  null,
-                  0,
-                );
-              },
+            : runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "void Function();export=false",
+                (_callable) => () {
+                  _callable.call(runtime, null, null, null, 0);
+                },
+              ),
         sync: (c is $Value ? c : null) == null ? false : (c as $bool).$value,
       ),
     );
@@ -541,7 +556,7 @@ class $StreamController<T> implements $Instance {
   final StreamController<T> $value;
 
   @override
-  StreamController get $reified => $value;
+  StreamController<T> get $reified => $value;
 
   /// Wrap a [StreamController] in a [$StreamController]
   $StreamController.wrap(this.$value) : _superclass = $Object($value);
@@ -710,7 +725,7 @@ class $StreamController<T> implements $Instance {
   ) {
     final self = target! as $StreamController;
     self.$value.addError(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object,
       (s is $Value ? s : null)?.$value,
     );
     return null;

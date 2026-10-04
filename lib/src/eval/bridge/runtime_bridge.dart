@@ -2,6 +2,7 @@
 
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// A bridge class can be extended inside the dart_eval VM and used both in
 /// and outside of it.
@@ -30,7 +31,10 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
 
   dynamic $_get(String prop) {
     final runtime = Runtime.bridgeData[this]!.runtime;
-    return $getProperty(runtime, prop)?.$reified;
+    return TypedInterop.exportExternal(
+      $getProperty(runtime, prop),
+      runtime: runtime,
+    );
   }
 
   void $_set(String prop, $Value value) {
@@ -42,17 +46,21 @@ mixin $Bridge<T> on Object implements $Value, $Instance {
     final runtime = Runtime.bridgeData[this]!.runtime;
     final subclass = Runtime.bridgeData[this]!.subclass;
     if (subclass is TypedInstance) {
-      return subclass.invokeBridge(method, args, runtime: runtime)?.$reified;
+      return TypedInterop.exportExternal(
+        subclass.invokeBridge(method, args, runtime: runtime),
+        runtime: runtime,
+      );
     }
-    return ($getProperty(runtime, method) as EvalFunction)
-        .call(
-          runtime,
-          this,
-          args.isEmpty ? null : args[0],
-          args.length > 1 ? args[1] : null,
-          args.length < 3 ? args.length : args.sublist(2),
-        )
-        ?.$reified;
+    return TypedInterop.exportExternal(
+      ($getProperty(runtime, method) as EvalFunction).call(
+        runtime,
+        this,
+        args.isEmpty ? null : args[0],
+        args.length > 1 ? args[1] : null,
+        args.length < 3 ? args.length : args.sublist(2),
+      ),
+      runtime: runtime,
+    );
   }
 
   @override

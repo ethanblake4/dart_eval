@@ -1809,7 +1809,9 @@ class $UnmodifiableListView<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $UnmodifiableListView;
-    final result = self.$value.remove((r as $Value?)!.$reified);
+    final result = self.$value.remove(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -2213,7 +2215,9 @@ class $UnmodifiableListView<E> implements $Instance {
     Object? c,
   ) {
     final self = target! as $UnmodifiableListView;
-    final result = self.$value.contains((r as $Value?)!.$reified);
+    final result = self.$value.contains(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -2697,7 +2701,7 @@ class $UnmodifiableListView<E> implements $Instance {
   ) {
     final self = target! as $UnmodifiableListView;
     final result = self.$value.indexOf(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
       (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
     );
     return $int(result);
@@ -2773,7 +2777,7 @@ class $UnmodifiableListView<E> implements $Instance {
   ) {
     final self = target! as $UnmodifiableListView;
     final result = self.$value.lastIndexOf(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
       (s is $Value ? s : null)?.$value,
     );
     return $int(result);

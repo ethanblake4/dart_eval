@@ -27,13 +27,14 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [EventSink]
 class $EventSink<T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {}
 
@@ -86,6 +87,8 @@ class $EventSink<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'close': BridgeMethodDef(
@@ -94,6 +97,8 @@ class $EventSink<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'addError': BridgeMethodDef(
@@ -117,6 +122,8 @@ class $EventSink<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {},
@@ -132,7 +139,7 @@ class $EventSink<T> implements $Instance {
   final EventSink<T> $value;
 
   @override
-  EventSink get $reified => $value;
+  EventSink<T> get $reified => $value;
 
   /// Wrap a [EventSink] in a [$EventSink]
   $EventSink.wrap(this.$value) : _superclass = $Object($value);
@@ -169,7 +176,9 @@ class $EventSink<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $EventSink;
-    self.$value.add((r as $Value?)!.$value);
+    self.$value.add(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 
@@ -196,7 +205,7 @@ class $EventSink<T> implements $Instance {
   ) {
     final self = target! as $EventSink;
     self.$value.addError(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object,
       (s is $Value ? s : null)?.$value,
     );
     return null;

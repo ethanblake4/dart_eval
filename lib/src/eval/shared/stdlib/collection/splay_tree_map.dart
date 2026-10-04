@@ -17,9 +17,11 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:collection';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $LinkedHashMap,
+        $UnmodifiableListView,
         $ListQueue,
         $Queue,
         $HashMap,
@@ -35,7 +37,6 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../core/map_entry.dart';
 
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
 /// dart_eval wrapper binding for [SplayTreeMap]
@@ -1147,7 +1148,7 @@ class $SplayTreeMap<K, V> implements $Instance {
 
     return $SplayTreeMap.wrap(
       SplayTreeMap.fromIterable(
-        (r as $Value?)!.$value,
+        TypedInterop.exportIterable((r as $Value?), runtime),
         key:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
@@ -1234,8 +1235,8 @@ class $SplayTreeMap<K, V> implements $Instance {
 
     return $SplayTreeMap.wrap(
       SplayTreeMap.fromIterables(
-        (r as $Value?)!.$value,
-        (s as $Value?)!.$value,
+        TypedInterop.exportIterable((r as $Value?), runtime),
+        TypedInterop.exportIterable((s as $Value?), runtime),
         _arg2OrNull == null || _arg2OrNull is $null
             ? null
             : runtime.cachedCallback(
@@ -1418,7 +1419,9 @@ class $SplayTreeMap<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SplayTreeMap;
-    final result = self.$value.containsValue((r as $Value?)!.$reified);
+    final result = self.$value.containsValue(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -1431,7 +1434,9 @@ class $SplayTreeMap<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SplayTreeMap;
-    final result = self.$value.containsKey((r as $Value?)!.$reified);
+    final result = self.$value.containsKey(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $bool(result);
   }
 
@@ -1444,7 +1449,11 @@ class $SplayTreeMap<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SplayTreeMap;
-    final result = self.$value[(r as $Value?)!.$reified];
+    final result =
+        self.$value[TypedInterop.exportExternal(
+          (r as $Value?),
+          runtime: runtime,
+        ) as Object?];
     return result == null
         ? const $null()
         : (result is List || result is Map || result is Set
@@ -1461,7 +1470,11 @@ class $SplayTreeMap<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SplayTreeMap;
-    self.$value[(r as $Value?)!.$value] = (s as $Value?)!.$value;
+    self.$value[TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+        as dynamic] = TypedInterop.exportExternal(
+      (s as $Value?),
+      runtime: runtime,
+    ) as dynamic;
     return null;
   }
 
@@ -1513,7 +1526,9 @@ class $SplayTreeMap<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SplayTreeMap;
-    self.$value.addEntries((r as $Value?)!.$value);
+    self.$value.addEntries(
+      TypedInterop.exportIterable((r as $Value?), runtime),
+    );
     return null;
   }
 
@@ -1527,7 +1542,7 @@ class $SplayTreeMap<K, V> implements $Instance {
   ) {
     final self = target! as $SplayTreeMap;
     final result = self.$value.update(
-      (r as $Value?)!.$value,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
       runtime.cachedCallback(
         (s as $Value?)! as EvalCallable,
         "V Function(V);export=false",
@@ -1637,7 +1652,7 @@ class $SplayTreeMap<K, V> implements $Instance {
   ) {
     final self = target! as $SplayTreeMap;
     final result = self.$value.putIfAbsent(
-      (r as $Value?)!.$value,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
       runtime.cachedCallback(
         (s as $Value?)! as EvalCallable,
         "V Function();export=false",
@@ -1675,7 +1690,9 @@ class $SplayTreeMap<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SplayTreeMap;
-    final result = self.$value.remove((r as $Value?)!.$reified);
+    final result = self.$value.remove(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return result == null
         ? const $null()
         : (result is List || result is Map || result is Set
@@ -1766,7 +1783,9 @@ class $SplayTreeMap<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SplayTreeMap;
-    final result = self.$value.lastKeyBefore((r as $Value?)!.$value);
+    final result = self.$value.lastKeyBefore(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return result == null
         ? const $null()
         : (result is List || result is Map || result is Set
@@ -1783,7 +1802,9 @@ class $SplayTreeMap<K, V> implements $Instance {
     Object? c,
   ) {
     final self = target! as $SplayTreeMap;
-    final result = self.$value.firstKeyAfter((r as $Value?)!.$value);
+    final result = self.$value.firstKeyAfter(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return result == null
         ? const $null()
         : (result is List || result is Map || result is Set

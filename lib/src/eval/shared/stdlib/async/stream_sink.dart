@@ -27,6 +27,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -40,12 +41,13 @@ import 'package:dart_eval/stdlib/async.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [StreamSink]
 class $StreamSink<S> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {}
 
@@ -112,6 +114,8 @@ class $StreamSink<S> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'close': BridgeMethodDef(
@@ -124,6 +128,8 @@ class $StreamSink<S> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'add': BridgeMethodDef(
@@ -138,6 +144,8 @@ class $StreamSink<S> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'addError': BridgeMethodDef(
@@ -161,6 +169,8 @@ class $StreamSink<S> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -174,6 +184,8 @@ class $StreamSink<S> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -188,7 +200,7 @@ class $StreamSink<S> implements $Instance {
   final StreamSink<S> $value;
 
   @override
-  StreamSink get $reified => $value;
+  StreamSink<S> get $reified => $value;
 
   /// Wrap a [StreamSink] in a [$StreamSink]
   $StreamSink.wrap(this.$value) : _superclass = $Object($value);
@@ -275,7 +287,9 @@ class $StreamSink<S> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamSink;
-    self.$value.add((r as $Value?)!.$value);
+    self.$value.add(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 
@@ -289,7 +303,7 @@ class $StreamSink<S> implements $Instance {
   ) {
     final self = target! as $StreamSink;
     self.$value.addError(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object,
       (s is $Value ? s : null)?.$value,
     );
     return null;

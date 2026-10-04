@@ -24,12 +24,27 @@ class DeferredOrOffset {
     if (id == null && className != null) {
       final members = ctx.instanceDeclarationPositions[file]?[className];
       if (members != null) {
+        final qualifiedName = name;
+        final separator = qualifiedName?.lastIndexOf('::') ?? -1;
+        final bareName =
+            separator >= 0 &&
+                qualifiedName!.substring(0, separator) ==
+                    ctx.libraryUri(file!) &&
+                qualifiedName.substring(separator + 2).startsWith('_')
+            ? qualifiedName.substring(separator + 2)
+            : null;
         final kind = methodType;
-        if (kind != null) {
-          id = members[kind]?[name];
-        } else {
-          for (final group in members.values) {
-            id ??= group[name];
+        final groups = kind == null
+            ? members.values
+            : [if (members[kind] != null) members[kind]!];
+        for (final group in groups) {
+          id ??= group[name];
+        }
+        // Own-library private declarations use bare keys; folded private
+        // declarations retain their origin URI. Never erase a foreign URI.
+        if (id == null && bareName != null) {
+          for (final group in groups) {
+            id ??= group[bareName];
           }
         }
       }

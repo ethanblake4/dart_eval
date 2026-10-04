@@ -18,16 +18,23 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -36,7 +43,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -44,13 +50,13 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 
-import 'pattern.dart';
+import './pattern.dart';
 
 /// dart_eval wrapper binding for [RegExp]
 class $RegExp implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:core', 'RegExp.', $RegExp.$new);
@@ -90,24 +96,28 @@ class $RegExp implements $Instance {
               'multiLine',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
 
             BridgeParameter(
               'caseSensitive',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "true",
             ),
 
             BridgeParameter(
               'unicode',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
 
             BridgeParameter(
               'dotAll',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
           ],
           params: [
@@ -154,6 +164,8 @@ class $RegExp implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'allMatches': BridgeMethodDef(
@@ -175,9 +187,12 @@ class $RegExp implements $Instance {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'hasMatch': BridgeMethodDef(
@@ -192,6 +207,8 @@ class $RegExp implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'stringMatch': BridgeMethodDef(
@@ -209,6 +226,8 @@ class $RegExp implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -218,6 +237,8 @@ class $RegExp implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isMultiLine': BridgeMethodDef(
@@ -226,6 +247,8 @@ class $RegExp implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isCaseSensitive': BridgeMethodDef(
@@ -234,6 +257,8 @@ class $RegExp implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isUnicode': BridgeMethodDef(
@@ -242,6 +267,8 @@ class $RegExp implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isDotAll': BridgeMethodDef(
@@ -250,6 +277,8 @@ class $RegExp implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -396,7 +425,6 @@ class $RegExp implements $Instance {
 /// dart_eval wrapper binding for [RegExpMatch]
 class $RegExpMatch implements $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {}
 
   /// Configure this class for use during compilation
@@ -445,6 +473,8 @@ class $RegExpMatch implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -458,6 +488,8 @@ class $RegExpMatch implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'pattern': BridgeMethodDef(
@@ -466,6 +498,8 @@ class $RegExpMatch implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},

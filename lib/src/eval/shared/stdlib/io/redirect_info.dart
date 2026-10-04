@@ -19,6 +19,7 @@ import 'dart:io';
 
 import 'package:dart_eval/stdlib/core.dart'
     hide
+        $Platform,
         $SocketException,
         $HttpException,
         $OSError,
@@ -26,9 +27,10 @@ import 'package:dart_eval/stdlib/core.dart'
         $RedirectInfo,
         $Socket;
 
+import '../core/uri.dart';
+
 /// dart_eval wrapper binding for [RedirectInfo]
 class $RedirectInfo implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {}
 
@@ -65,6 +67,8 @@ class $RedirectInfo implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'method': BridgeMethodDef(
@@ -73,6 +77,8 @@ class $RedirectInfo implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'location': BridgeMethodDef(
@@ -81,6 +87,8 @@ class $RedirectInfo implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},

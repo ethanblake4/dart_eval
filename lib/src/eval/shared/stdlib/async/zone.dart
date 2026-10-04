@@ -27,15 +27,15 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
-import 'timer.dart';
+import './timer.dart';
 
 /// dart_eval wrapper binding for [Zone]
 class $Zone implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -86,6 +86,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'inSameErrorZone': BridgeMethodDef(
@@ -100,6 +102,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'fork': BridgeMethodDef(
@@ -135,6 +139,8 @@ class $Zone implements $Instance {
           ],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'run': BridgeMethodDef(
@@ -158,6 +164,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'runUnary': BridgeMethodDef(
@@ -193,6 +201,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'runBinary': BridgeMethodDef(
@@ -244,6 +254,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'runGuarded': BridgeMethodDef(
@@ -268,6 +280,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'runUnaryGuarded': BridgeMethodDef(
@@ -305,6 +319,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'runBinaryGuarded': BridgeMethodDef(
@@ -354,6 +370,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'registerCallback': BridgeMethodDef(
@@ -385,6 +403,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'registerUnaryCallback': BridgeMethodDef(
@@ -428,6 +448,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'registerBinaryCallback': BridgeMethodDef(
@@ -487,6 +509,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'bindCallback': BridgeMethodDef(
@@ -518,6 +542,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'bindUnaryCallback': BridgeMethodDef(
@@ -561,6 +587,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'bindBinaryCallback': BridgeMethodDef(
@@ -620,6 +648,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'bindCallbackGuarded': BridgeMethodDef(
@@ -654,6 +684,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'bindUnaryCallbackGuarded': BridgeMethodDef(
@@ -701,6 +733,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'bindBinaryCallbackGuarded': BridgeMethodDef(
@@ -760,6 +794,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'errorCallback': BridgeMethodDef(
@@ -786,6 +822,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'scheduleMicrotask': BridgeMethodDef(
@@ -810,6 +848,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'createTimer': BridgeMethodDef(
@@ -840,6 +880,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'createPeriodicTimer': BridgeMethodDef(
@@ -878,6 +920,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'print': BridgeMethodDef(
@@ -892,6 +936,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       '[]': BridgeMethodDef(
@@ -909,6 +955,8 @@ class $Zone implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -931,6 +979,8 @@ class $Zone implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'errorZone': BridgeMethodDef(
@@ -939,6 +989,8 @@ class $Zone implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -1074,7 +1126,7 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     self.$value.handleUncaughtError(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object,
       (s as $Value?)!.$value,
     );
     return null;
@@ -1119,15 +1171,15 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.run(() {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        null,
-        null,
-        0,
-      )?.$value;
-    });
+    final result = self.$value.run(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "R Function();export=false",
+        (_callable) => () {
+          return _callable.call(runtime, null, null, null, 0)?.$value;
+        },
+      ),
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));
@@ -1142,15 +1194,24 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.runUnary((dynamic argument) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(argument, recursive: true),
-        null,
-        1,
-      )?.$value;
-    }, (s as $Value?)!.$value);
+    final result = self.$value.runUnary(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "R Function(T);export=false",
+        (_callable) => (dynamic argument) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(argument, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+      TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
+    );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
         : runtime.wrapAlways(result));
@@ -1166,17 +1227,26 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.runBinary(
-      (dynamic argument1, dynamic argument2) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(argument1, recursive: true),
-          runtime.wrapAlways(argument2, recursive: true),
-          2,
-        )?.$value;
-      },
-      (s as $Value?)!.$value,
-      ((c as List<Object?>)[0] as $Value?)!.$value,
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "R Function(T1, T2);export=false",
+        (_callable) => (dynamic argument1, dynamic argument2) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(argument1, recursive: true),
+                runtime.wrapAlways(argument2, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+      TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
+      TypedInterop.exportExternal(
+        ((c as List<Object?>)[0] as $Value?),
+        runtime: runtime,
+      ) as dynamic,
     );
     return (result is List || result is Map || result is Set
         ? TypedInterop.boxExternal(result, runtime: runtime)!
@@ -1192,9 +1262,15 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    self.$value.runGuarded(() {
-      ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
-    });
+    self.$value.runGuarded(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function();export=false",
+        (_callable) => () {
+          _callable.call(runtime, null, null, null, 0);
+        },
+      ),
+    );
     return null;
   }
 
@@ -1207,15 +1283,22 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    self.$value.runUnaryGuarded((dynamic argument) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(argument, recursive: true),
-        null,
-        1,
-      );
-    }, (s as $Value?)!.$value);
+    self.$value.runUnaryGuarded(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(T);export=false",
+        (_callable) => (dynamic argument) {
+          _callable.call(
+            runtime,
+            null,
+            runtime.wrapAlways(argument, recursive: true),
+            null,
+            1,
+          );
+        },
+      ),
+      TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
+    );
     return null;
   }
 
@@ -1229,17 +1312,24 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     self.$value.runBinaryGuarded(
-      (dynamic argument1, dynamic argument2) {
-        ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(argument1, recursive: true),
-          runtime.wrapAlways(argument2, recursive: true),
-          2,
-        );
-      },
-      (s as $Value?)!.$value,
-      ((c as List<Object?>)[0] as $Value?)!.$value,
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(T1, T2);export=false",
+        (_callable) => (dynamic argument1, dynamic argument2) {
+          _callable.call(
+            runtime,
+            null,
+            runtime.wrapAlways(argument1, recursive: true),
+            runtime.wrapAlways(argument2, recursive: true),
+            2,
+          );
+        },
+      ),
+      TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
+      TypedInterop.exportExternal(
+        ((c as List<Object?>)[0] as $Value?),
+        runtime: runtime,
+      ) as dynamic,
     );
     return null;
   }
@@ -1253,15 +1343,15 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.registerCallback(() {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        null,
-        null,
-        0,
-      )?.$value;
-    });
+    final result = self.$value.registerCallback(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "R Function();export=false",
+        (_callable) => () {
+          return _callable.call(runtime, null, null, null, 0)?.$value;
+        },
+      ),
+    );
     return $Function((runtime, target, r, s, c) {
       final funcResult = result();
       return (funcResult is List || funcResult is Map || funcResult is Set
@@ -1281,17 +1371,28 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.registerUnaryCallback((dynamic arg) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(arg, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.registerUnaryCallback(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "R Function(T);export=false",
+        (_callable) => (dynamic arg) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(arg, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Function((runtime, target, r, s, c) {
-      final funcResult = result((r as $Value?)!.$value);
+      final funcResult = result(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
+      );
       return (funcResult is List || funcResult is Map || funcResult is Set
           ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
           : runtime.wrapAlways(funcResult));
@@ -1309,20 +1410,30 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.registerBinaryCallback((
-      dynamic arg1,
-      dynamic arg2,
-    ) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(arg1, recursive: true),
-        runtime.wrapAlways(arg2, recursive: true),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.registerBinaryCallback(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "R Function(T1, T2);export=false",
+        (_callable) => (dynamic arg1, dynamic arg2) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(arg1, recursive: true),
+                runtime.wrapAlways(arg2, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Function((runtime, target, r, s, c) {
-      final funcResult = result((r as $Value?)!.$value, (s as $Value?)!.$value);
+      final funcResult = result(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
+        TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+            as dynamic,
+      );
       return (funcResult is List || funcResult is Map || funcResult is Set
           ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
           : runtime.wrapAlways(funcResult));
@@ -1338,15 +1449,15 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.bindCallback(() {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        null,
-        null,
-        0,
-      )?.$value;
-    });
+    final result = self.$value.bindCallback(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "R Function();export=false",
+        (_callable) => () {
+          return _callable.call(runtime, null, null, null, 0)?.$value;
+        },
+      ),
+    );
     return $Function((runtime, target, r, s, c) {
       final funcResult = result();
       return (funcResult is List || funcResult is Map || funcResult is Set
@@ -1364,17 +1475,28 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.bindUnaryCallback((dynamic argument) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(argument, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.bindUnaryCallback(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "R Function(T);export=false",
+        (_callable) => (dynamic argument) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(argument, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Function((runtime, target, r, s, c) {
-      final funcResult = result((r as $Value?)!.$value);
+      final funcResult = result(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
+      );
       return (funcResult is List || funcResult is Map || funcResult is Set
           ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
           : runtime.wrapAlways(funcResult));
@@ -1390,20 +1512,30 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.bindBinaryCallback((
-      dynamic argument1,
-      dynamic argument2,
-    ) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(argument1, recursive: true),
-        runtime.wrapAlways(argument2, recursive: true),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.bindBinaryCallback(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "R Function(T1, T2);export=false",
+        (_callable) => (dynamic argument1, dynamic argument2) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(argument1, recursive: true),
+                runtime.wrapAlways(argument2, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Function((runtime, target, r, s, c) {
-      final funcResult = result((r as $Value?)!.$value, (s as $Value?)!.$value);
+      final funcResult = result(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
+        TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+            as dynamic,
+      );
       return (funcResult is List || funcResult is Map || funcResult is Set
           ? TypedInterop.boxExternal(funcResult, runtime: runtime)!
           : runtime.wrapAlways(funcResult));
@@ -1421,9 +1553,15 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.bindCallbackGuarded(() {
-      ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
-    });
+    final result = self.$value.bindCallbackGuarded(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function();export=false",
+        (_callable) => () {
+          _callable.call(runtime, null, null, null, 0);
+        },
+      ),
+    );
     return $Function((runtime, target, r, s, c) {
       result();
       return const $null();
@@ -1441,17 +1579,26 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.bindUnaryCallbackGuarded((dynamic argument) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(argument, recursive: true),
-        null,
-        1,
-      );
-    });
+    final result = self.$value.bindUnaryCallbackGuarded(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(T);export=false",
+        (_callable) => (dynamic argument) {
+          _callable.call(
+            runtime,
+            null,
+            runtime.wrapAlways(argument, recursive: true),
+            null,
+            1,
+          );
+        },
+      ),
+    );
     return $Function((runtime, target, r, s, c) {
-      result((r as $Value?)!.$value);
+      result(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
+      );
       return const $null();
     });
   }
@@ -1467,20 +1614,28 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.bindBinaryCallbackGuarded((
-      dynamic argument1,
-      dynamic argument2,
-    ) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(argument1, recursive: true),
-        runtime.wrapAlways(argument2, recursive: true),
-        2,
-      );
-    });
+    final result = self.$value.bindBinaryCallbackGuarded(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(T1, T2);export=false",
+        (_callable) => (dynamic argument1, dynamic argument2) {
+          _callable.call(
+            runtime,
+            null,
+            runtime.wrapAlways(argument1, recursive: true),
+            runtime.wrapAlways(argument2, recursive: true),
+            2,
+          );
+        },
+      ),
+    );
     return $Function((runtime, target, r, s, c) {
-      result((r as $Value?)!.$value, (s as $Value?)!.$value);
+      result(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
+        TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+            as dynamic,
+      );
       return const $null();
     });
   }
@@ -1495,7 +1650,7 @@ class $Zone implements $Instance {
   ) {
     final self = target! as $Zone;
     final result = self.$value.errorCallback(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object,
       (s as $Value?)!.$value,
     );
     return result == null ? const $null() : $Object(result);
@@ -1510,9 +1665,15 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    self.$value.scheduleMicrotask(() {
-      ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
-    });
+    self.$value.scheduleMicrotask(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function();export=false",
+        (_callable) => () {
+          _callable.call(runtime, null, null, null, 0);
+        },
+      ),
+    );
     return null;
   }
 
@@ -1525,9 +1686,16 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.createTimer((r as $Value?)!.$value, () {
-      ((s as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
-    });
+    final result = self.$value.createTimer(
+      (r as $Value?)!.$value,
+      runtime.cachedCallback(
+        (s as $Value?)! as EvalCallable,
+        "void Function();export=false",
+        (_callable) => () {
+          _callable.call(runtime, null, null, null, 0);
+        },
+      ),
+    );
     return $Timer.wrap(result);
   }
 
@@ -1542,17 +1710,16 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value.createPeriodicTimer((r as $Value?)!.$value, (
-      Timer timer,
-    ) {
-      ((s as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $Timer.wrap(timer),
-        null,
-        1,
-      );
-    });
+    final result = self.$value.createPeriodicTimer(
+      (r as $Value?)!.$value,
+      runtime.cachedCallback(
+        (s as $Value?)! as EvalCallable,
+        "void Function(Timer);export=false",
+        (_callable) => (Timer timer) {
+          _callable.call(runtime, null, $Timer.wrap(timer), null, 1);
+        },
+      ),
+    );
     return $Timer.wrap(result);
   }
 
@@ -1578,7 +1745,11 @@ class $Zone implements $Instance {
     Object? c,
   ) {
     final self = target! as $Zone;
-    final result = self.$value[(r as $Value?)!.$reified];
+    final result =
+        self.$value[TypedInterop.exportExternal(
+          (r as $Value?),
+          runtime: runtime,
+        ) as Object?];
     return runtime.wrapAlways(result, recursive: true);
   }
 

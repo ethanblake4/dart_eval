@@ -15,19 +15,24 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
         $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
         $StackOverflowError,
         $OutOfMemoryError,
@@ -176,7 +181,9 @@ class $Error$bridge extends Error with $Bridge<Error> {
     Object? s,
     Object? c,
   ) {
-    final value = Error.safeToString((r as $Value?)!.$reified);
+    final value = Error.safeToString(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $String(value);
   }
 
@@ -1072,7 +1079,12 @@ class $RangeError implements RangeError, $Instance {
 
   /// Wrapper for the [RangeError.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $RangeError.wrap(RangeError((r as $Value?)!.$reified));
+    return $RangeError.wrap(
+      RangeError(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
+      ),
+    );
   }
 
   /// Wrapper for the [RangeError.value] constructor
@@ -1112,7 +1124,8 @@ class $RangeError implements RangeError, $Instance {
     return $RangeError.wrap(
       RangeError.index(
         (r as $int).$value,
-        (s as $Value?)!.$reified,
+        TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+            as dynamic,
         _arg2OrNull?.$value,
         _arg3OrNull?.$value,
         _arg4OrNull?.$value,
@@ -1154,7 +1167,7 @@ class $RangeError implements RangeError, $Instance {
 
     final value = RangeError.checkValidIndex(
       (r as $int).$value,
-      (s as $Value?)!.$reified,
+      TypedInterop.exportExternal((s as $Value?), runtime: runtime) as dynamic,
       _arg2OrNull?.$value,
       _arg3OrNull?.$value,
       _arg4OrNull?.$value,
@@ -1219,13 +1232,15 @@ class $RangeError implements RangeError, $Instance {
     switch (identifier) {
       case 'start':
         final _start = $value.start;
-        return _start == null ? const $null() : $num(_start);
+        return _start == null ? const $null() : runtime.wrap(_start);
       case 'end':
         final _end = $value.end;
-        return _end == null ? const $null() : $num(_end);
+        return _end == null ? const $null() : runtime.wrap(_end);
       case 'invalidValue':
         final _invalidValue = $value.invalidValue;
-        return _invalidValue == null ? const $null() : $num(_invalidValue);
+        return _invalidValue == null
+            ? const $null()
+            : runtime.wrap(_invalidValue);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -1547,7 +1562,8 @@ class $ArgumentError implements ArgumentError, $Instance {
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $ArgumentError.wrap(
       ArgumentError(
-        (r is $Value ? r : null)?.$reified,
+        TypedInterop.exportExternal((r is $Value ? r : null), runtime: runtime)
+            as dynamic,
         (s is $Value ? s : null)?.$value,
       ),
     );
@@ -1557,9 +1573,11 @@ class $ArgumentError implements ArgumentError, $Instance {
   static $Value? $_value(Runtime runtime, Object? r, Object? s, Object? c) {
     return $ArgumentError.wrap(
       ArgumentError.value(
-        (r as $Value?)!.$reified,
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
         (s is $Value ? s : null)?.$value,
-        (c is $Value ? c : null)?.$reified,
+        TypedInterop.exportExternal((c is $Value ? c : null), runtime: runtime)
+            as dynamic,
       ),
     );
   }
@@ -1579,7 +1597,7 @@ class $ArgumentError implements ArgumentError, $Instance {
     Object? c,
   ) {
     final value = ArgumentError.checkNotNull(
-      (r as $Value?)!.$value,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
       (s is $Value ? s : null)?.$value,
     );
     return runtime.wrapAlways(value, recursive: true);

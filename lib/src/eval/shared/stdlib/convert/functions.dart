@@ -17,6 +17,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:convert';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Converter,
@@ -25,6 +26,9 @@ import 'package:dart_eval/stdlib/core.dart'
         $JsonEncoder,
         $JsonDecoder,
         $JsonCodec,
+        $AsciiCodec,
+        $AsciiEncoder,
+        $AsciiDecoder,
         $Utf8Decoder,
         $Utf8Codec,
         $Utf8Encoder,
@@ -32,7 +36,12 @@ import 'package:dart_eval/stdlib/core.dart'
         $Base64Decoder,
         $Base64Codec,
         $ByteConversionSink,
-        $ChunkedConversionSink;
+        $ChunkedConversionSink,
+        $HtmlEscapeMode,
+        $HtmlEscape,
+        $StringConversionSink,
+        $ClosableStringSink,
+        $LineSplitter;
 
 /// dart_eval function wrapper binding for [jsonEncode]
 class $jsonEncodeFn {
@@ -99,23 +108,27 @@ class $jsonEncodeFn {
     Object? c,
   ) {
     final result = jsonEncode(
-      (r as $Value?)!.$reified,
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
       toEncodable:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (Object? nonEncodable) {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    (nonEncodable == null
-                        ? const $null()
-                        : $Object(nonEncodable)),
-                    null,
-                    1,
-                  )
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "Object? Function(Object?);export=false",
+              (_callable) => (Object? nonEncodable) {
+                return _callable
+                    .call(
+                      runtime,
+                      null,
+                      (nonEncodable == null
+                          ? const $null()
+                          : $Object(nonEncodable)),
+                      null,
+                      1,
+                    )
+                    ?.$value;
+              },
+            ),
     );
     return $String(result);
   }
@@ -196,17 +209,21 @@ class $jsonDecodeFn {
       reviver:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (Object? key, Object? value) {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    (key == null ? const $null() : $Object(key)),
-                    (value == null ? const $null() : $Object(value)),
-                    2,
-                  )
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "Object? Function(Object?, Object?);export=false",
+              (_callable) => (Object? key, Object? value) {
+                return _callable
+                    .call(
+                      runtime,
+                      null,
+                      (key == null ? const $null() : $Object(key)),
+                      (value == null ? const $null() : $Object(value)),
+                      2,
+                    )
+                    ?.$value;
+              },
+            ),
     );
     return runtime.wrapAlways(result, recursive: true);
   }

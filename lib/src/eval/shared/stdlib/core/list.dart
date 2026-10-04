@@ -1429,11 +1429,24 @@ class $List<E> implements List<E>, $Instance {
     final $this = target?.$value as List;
     final compare =
         (r as $Value?) as EvalFunction? ??
-        $Function(
-          (runtime, target, r, s, c) => $int(
-            Comparable.compare((r as $Value?)?.$value, (s as $Value?)?.$value),
-          ),
-        );
+        $Function((runtime, target, r, s, c) {
+          final a = r as $Value?;
+          final b = s as $Value?;
+          final nativeA = TypedInterop.exportExternal(a, runtime: runtime);
+          final nativeB = TypedInterop.exportExternal(b, runtime: runtime);
+          if (nativeA is Comparable && nativeB is Comparable) {
+            return $int(Comparable.compare(nativeA, nativeB));
+          }
+          final comparable = runtime.lookupType(CoreTypes.comparable);
+          if (!runtime.isTypedValueType(a, comparable) ||
+              !runtime.isTypedValueType(b, comparable)) {
+            throw TypeError();
+          }
+          final compareTo =
+              (a as $Instance).$getProperty(runtime, 'compareTo')
+                  as EvalFunction;
+          return compareTo.call(runtime, a, b, null, 1);
+        });
     $this.sort((a, b) => compare.call(runtime, null, a, b, 2)?.$value as int);
     return null;
   }

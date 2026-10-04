@@ -1,6 +1,7 @@
 // ignore_for_file: non_constant_identifier_names, constant_identifier_names
 
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_instance.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'error_hooks.dart' show formatLanguageNoSuchMethodError;
@@ -183,6 +184,46 @@ class $Object implements $Instance {
             ),
           ],
           namedParams: [],
+        ),
+        isStatic: true,
+      ),
+      'hashAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'objects',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.object),
+                    nullable: true,
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+        isStatic: true,
+      ),
+      'hashAllUnordered': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
+          params: [
+            BridgeParameter(
+              'objects',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.object),
+                    nullable: true,
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
         ),
         isStatic: true,
       ),
@@ -407,6 +448,23 @@ class $Object implements $Instance {
     );
   }
 
+  static $int $hashAll(Runtime runtime, Object? r, Object? s, Object? c) =>
+      $int(Object.hashAll(_hashableObjects(r, runtime)));
+
+  static $int $hashAllUnordered(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) => $int(Object.hashAllUnordered(_hashableObjects(r, runtime)));
+
+  static Iterable<Object?> _hashableObjects(Object? value, Runtime runtime) =>
+      TypedInterop.exportIterable<Object?>(value, runtime).map((object) {
+        if (object is! TypedInstance) return object;
+        final hashCode = TypedInterop.getProperty(runtime, object, 'hashCode');
+        return _HashCodeValue((hashCode as $int).$value);
+      });
+
   static const $Function __equals = $Function(_equals);
 
   // Guest objects, functions and type descriptors have no native value.
@@ -516,4 +574,11 @@ class $Object implements $Instance {
 
   @override
   int $getRuntimeType(Runtime runtime) => runtime.lookupType(CoreTypes.object);
+}
+
+final class _HashCodeValue {
+  const _HashCodeValue(this.hashCode);
+
+  @override
+  final int hashCode;
 }

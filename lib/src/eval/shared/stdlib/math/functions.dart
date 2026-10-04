@@ -105,7 +105,7 @@ class $powFn {
     Object? c,
   ) {
     final result = pow((r as $num).$value, (s as $num).$value);
-    return $num(result);
+    return runtime.wrap(result);
   }
 }
 

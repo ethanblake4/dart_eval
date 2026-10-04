@@ -27,6 +27,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -40,16 +41,16 @@ import 'package:dart_eval/stdlib/async.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
-import 'stream_subscription.dart';
-import 'event_sink.dart';
+import './stream_subscription.dart';
+import './event_sink.dart';
 
 /// dart_eval wrapper binding for [StreamView]
 class $StreamView<T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -324,7 +325,7 @@ class $StreamView<T> implements $Instance {
                 BridgeTypeRef.genericFunction(
                   BridgeFunctionDef(
                     returns: BridgeTypeAnnotation(
-                      BridgeTypeRef(CoreTypes.object, [
+                      BridgeTypeRef(AsyncTypes.futureOr, [
                         BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
                       ]),
                     ),
@@ -603,6 +604,7 @@ class $StreamView<T> implements $Instance {
               'separator',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
           ],
         ),
@@ -1236,7 +1238,7 @@ class $StreamView<T> implements $Instance {
   final StreamView<T> $value;
 
   @override
-  StreamView get $reified => $value;
+  StreamView<T> get $reified => $value;
 
   /// Wrap a [StreamView] in a [$StreamView]
   $StreamView.wrap(this.$value) : _superclass = $Object($value);
@@ -1424,27 +1426,35 @@ class $StreamView<T> implements $Instance {
       onListen:
           (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
-          : (StreamSubscription<dynamic> subscription) {
-              ((r is $Value ? r : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                $StreamSubscription.wrap(subscription),
-                null,
-                1,
-              );
-            },
+          : runtime.cachedCallback(
+              (r is $Value ? r : null)! as EvalCallable,
+              "void Function(StreamSubscription<T>);export=false",
+              (_callable) => (StreamSubscription<dynamic> subscription) {
+                _callable.call(
+                  runtime,
+                  null,
+                  $StreamSubscription.wrap(subscription),
+                  null,
+                  1,
+                );
+              },
+            ),
       onCancel:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (StreamSubscription<dynamic> subscription) {
-              ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                $StreamSubscription.wrap(subscription),
-                null,
-                1,
-              );
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "void Function(StreamSubscription<T>);export=false",
+              (_callable) => (StreamSubscription<dynamic> subscription) {
+                _callable.call(
+                  runtime,
+                  null,
+                  $StreamSubscription.wrap(subscription),
+                  null,
+                  1,
+                );
+              },
+            ),
     );
     return $Stream.wrap(
       result.map(
@@ -1472,32 +1482,40 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.listen(
       (r as $Value?) == null || (r as $Value?) is $null
           ? null
-          : (dynamic value) {
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                runtime.wrapAlways(value, recursive: true),
-                null,
-                1,
-              );
-            },
+          : runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "void Function(T);export=false",
+              (_callable) => (dynamic value) {
+                _callable.call(
+                  runtime,
+                  null,
+                  runtime.wrapAlways(value, recursive: true),
+                  null,
+                  1,
+                );
+              },
+            ),
       onError:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (a0, [a1, a2]) {
-              final _a0 = runtime.wrapAlways(a0);
-              ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                _a0,
-                a1 != null ? runtime.wrapAlways(a1) : null,
-                a2 != null
-                    ? [runtime.wrapAlways(a2)]
-                    : a1 != null
-                    ? 2
-                    : 1,
-              );
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "Function;export=false",
+              (_callable) => (a0, [a1, a2]) {
+                final _a0 = runtime.wrapAlways(a0);
+                _callable.call(
+                  runtime,
+                  null,
+                  _a0,
+                  a1 != null ? runtime.wrapAlways(a1) : null,
+                  a2 != null
+                      ? [runtime.wrapAlways(a2)]
+                      : a1 != null
+                      ? 2
+                      : 1,
+                );
+              },
+            ),
       onDone:
           (c is List && (c as List).length > 0
                       ? (c as List)[0] as $Value?
@@ -1508,13 +1526,16 @@ class $StreamView<T> implements $Instance {
                       : null)
                   is $null
           ? null
-          : () {
-              ((c is List && (c as List).length > 0
-                          ? (c as List)[0] as $Value?
-                          : null)!
-                      as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0);
-            },
+          : runtime.cachedCallback(
+              (c is List && (c as List).length > 0
+                      ? (c as List)[0] as $Value?
+                      : null)!
+                  as EvalCallable,
+              "void Function();export=false",
+              (_callable) => () {
+                _callable.call(runtime, null, null, null, 0);
+              },
+            ),
       cancelOnError:
           (c is List && (c as List).length > 1
                   ? (c as List)[1] as $Value?
@@ -1533,15 +1554,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.where((dynamic event) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(event, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.where(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(T);export=false",
+        (_callable) => (dynamic event) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(event, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -1565,15 +1594,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.map((dynamic event) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(event, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.map(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "S Function(T);export=false",
+        (_callable) => (dynamic event) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(event, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -1592,15 +1629,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.asyncMap((dynamic event) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(event, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.asyncMap(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "FutureOr<E> Function(T);export=false",
+        (_callable) => (dynamic event) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(event, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -1619,15 +1664,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.asyncExpand((dynamic event) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(event, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.asyncExpand(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Stream<E>? Function(T);export=false",
+        (_callable) => (dynamic event) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(event, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -1647,34 +1700,42 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.handleError(
-      (a0, [a1, a2]) {
-        final _a0 = runtime.wrapAlways(a0);
-        ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          _a0,
-          a1 != null ? runtime.wrapAlways(a1) : null,
-          a2 != null
-              ? [runtime.wrapAlways(a2)]
-              : a1 != null
-              ? 2
-              : 1,
-        );
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Function;export=false",
+        (_callable) => (a0, [a1, a2]) {
+          final _a0 = runtime.wrapAlways(a0);
+          _callable.call(
+            runtime,
+            null,
+            _a0,
+            a1 != null ? runtime.wrapAlways(a1) : null,
+            a2 != null
+                ? [runtime.wrapAlways(a2)]
+                : a1 != null
+                ? 2
+                : 1,
+          );
+        },
+      ),
       test:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (dynamic error) {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    runtime.wrapAlways(error, recursive: true),
-                    null,
-                    1,
-                  )
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "bool Function(dynamic);export=false",
+              (_callable) => (dynamic error) {
+                return _callable
+                    .call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(error, recursive: true),
+                      null,
+                      1,
+                    )
+                    ?.$value;
+              },
+            ),
     );
     return $Stream.wrap(
       result.map(
@@ -1699,15 +1760,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.expand((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.expand(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Iterable<S> Function(T);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -1764,15 +1833,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.reduce((dynamic previous, dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(previous, recursive: true),
-        runtime.wrapAlways(element, recursive: true),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.reduce(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "T Function(T, T);export=false",
+        (_callable) => (dynamic previous, dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(previous, recursive: true),
+                runtime.wrapAlways(element, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Future.wrap(
       result.then(
         (e) => (e is List || e is Map || e is Set
@@ -1796,18 +1873,24 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.fold((r as $Value?)!.$value, (
-      dynamic previous,
-      dynamic element,
-    ) {
-      return ((s as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(previous, recursive: true),
-        runtime.wrapAlways(element, recursive: true),
-        2,
-      )?.$value;
-    });
+    final result = self.$value.fold(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+      runtime.cachedCallback(
+        (s as $Value?)! as EvalCallable,
+        "S Function(S, T);export=false",
+        (_callable) => (dynamic previous, dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(previous, recursive: true),
+                runtime.wrapAlways(element, recursive: true),
+                2,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Future.wrap(
       result.then(
         (e) => (e is List || e is Map || e is Set
@@ -1847,7 +1930,9 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.contains((r as $Value?)!.$reified);
+    final result = self.$value.contains(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
     return $Future.wrap(
       result.then((e) => $bool(e)),
       runtime: runtime,
@@ -1866,15 +1951,21 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.forEach((dynamic element) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      );
-    });
+    final result = self.$value.forEach(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(T);export=false",
+        (_callable) => (dynamic element) {
+          _callable.call(
+            runtime,
+            null,
+            runtime.wrapAlways(element, recursive: true),
+            null,
+            1,
+          );
+        },
+      ),
+    );
     return $Future.wrap(
       (result as Future<dynamic>).then(
         (e) => runtime.wrapAlways(e, recursive: true),
@@ -1895,15 +1986,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.every((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.every(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(T);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Future.wrap(
       result.then((e) => $bool(e)),
       runtime: runtime,
@@ -1922,15 +2021,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.any((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.any(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(T);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Future.wrap(
       result.then((e) => $bool(e)),
       runtime: runtime,
@@ -2034,7 +2141,10 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.drain((r is $Value ? r : null)?.$value);
+    final result = self.$value.drain(
+      TypedInterop.exportExternal((r is $Value ? r : null), runtime: runtime)
+          as dynamic,
+    );
     return $Future.wrap(
       result.then(
         (e) => (e is List || e is Map || e is Set
@@ -2077,15 +2187,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.takeWhile((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.takeWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(T);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -2133,15 +2251,23 @@ class $StreamView<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamView;
-    final result = self.$value.skipWhile((dynamic element) {
-      return ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        runtime.wrapAlways(element, recursive: true),
-        null,
-        1,
-      )?.$value;
-    });
+    final result = self.$value.skipWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(T);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
+    );
     return $Stream.wrap(
       result.map(
         (e) => (e is List || e is Map || e is Set
@@ -2168,17 +2294,21 @@ class $StreamView<T> implements $Instance {
     final result = self.$value.distinct(
       (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
           ? null
-          : (dynamic previous, dynamic next) {
-              return ((r is $Value ? r : null)! as EvalCallable?)
-                  ?.call(
-                    runtime,
-                    null,
-                    runtime.wrapAlways(previous, recursive: true),
-                    runtime.wrapAlways(next, recursive: true),
-                    2,
-                  )
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (r is $Value ? r : null)! as EvalCallable,
+              "bool Function(T, T);export=false",
+              (_callable) => (dynamic previous, dynamic next) {
+                return _callable
+                    .call(
+                      runtime,
+                      null,
+                      runtime.wrapAlways(previous, recursive: true),
+                      runtime.wrapAlways(next, recursive: true),
+                      2,
+                    )
+                    ?.$value;
+              },
+            ),
     );
     return $Stream.wrap(
       result.map(
@@ -2204,23 +2334,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.firstWhere(
-      (dynamic element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(element, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(T);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "T Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return $Future.wrap(
       result.then(
@@ -2246,23 +2384,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.lastWhere(
-      (dynamic element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(element, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(T);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "T Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return $Future.wrap(
       result.then(
@@ -2288,23 +2434,31 @@ class $StreamView<T> implements $Instance {
   ) {
     final self = target! as $StreamView;
     final result = self.$value.singleWhere(
-      (dynamic element) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          runtime.wrapAlways(element, recursive: true),
-          null,
-          1,
-        )?.$value;
-      },
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(T);export=false",
+        (_callable) => (dynamic element) {
+          return _callable
+              .call(
+                runtime,
+                null,
+                runtime.wrapAlways(element, recursive: true),
+                null,
+                1,
+              )
+              ?.$value;
+        },
+      ),
       orElse:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : () {
-              return ((s is $Value ? s : null)! as EvalCallable?)
-                  ?.call(runtime, null, null, null, 0)
-                  ?.$value;
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "T Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
     );
     return $Future.wrap(
       result.then(
@@ -2358,15 +2512,13 @@ class $StreamView<T> implements $Instance {
       onTimeout:
           (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
           ? null
-          : (EventSink<dynamic> sink) {
-              ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                runtime,
-                null,
-                $EventSink.wrap(sink),
-                null,
-                1,
-              );
-            },
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "void Function(EventSink<T>);export=false",
+              (_callable) => (EventSink<dynamic> sink) {
+                _callable.call(runtime, null, $EventSink.wrap(sink), null, 1);
+              },
+            ),
     );
     return $Stream.wrap(
       result.map(

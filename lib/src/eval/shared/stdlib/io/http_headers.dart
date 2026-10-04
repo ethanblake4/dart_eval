@@ -19,6 +19,7 @@ import 'dart:io';
 
 import 'package:dart_eval/stdlib/core.dart'
     hide
+        $Platform,
         $SocketException,
         $HttpException,
         $OSError,
@@ -27,9 +28,12 @@ import 'package:dart_eval/stdlib/core.dart'
         $Socket;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
+import '../core/date_time.dart';
+
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+
 /// dart_eval wrapper binding for [HttpHeaders]
 class $HttpHeaders implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -448,6 +452,8 @@ class $HttpHeaders implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'value': BridgeMethodDef(
@@ -465,6 +471,8 @@ class $HttpHeaders implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'add': BridgeMethodDef(
@@ -475,6 +483,7 @@ class $HttpHeaders implements $Instance {
               'preserveHeaderCase',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
           ],
           params: [
@@ -491,6 +500,8 @@ class $HttpHeaders implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'set': BridgeMethodDef(
@@ -501,6 +512,7 @@ class $HttpHeaders implements $Instance {
               'preserveHeaderCase',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
           ],
           params: [
@@ -517,6 +529,8 @@ class $HttpHeaders implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'remove': BridgeMethodDef(
@@ -537,6 +551,8 @@ class $HttpHeaders implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'removeAll': BridgeMethodDef(
@@ -551,6 +567,8 @@ class $HttpHeaders implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'forEach': BridgeMethodDef(
@@ -595,6 +613,8 @@ class $HttpHeaders implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'noFolding': BridgeMethodDef(
@@ -609,6 +629,8 @@ class $HttpHeaders implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'clear': BridgeMethodDef(
@@ -617,6 +639,8 @@ class $HttpHeaders implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {},
@@ -1804,7 +1828,7 @@ class $HttpHeaders implements $Instance {
     final self = target! as $HttpHeaders;
     self.$value.add(
       (r as $String).$value,
-      (s as $Value?)!.$reified,
+      TypedInterop.exportExternal((s as $Value?), runtime: runtime) as Object,
       preserveHeaderCase:
           (c is List && (c as List).length > 0
                   ? (c as List)[0] as $Value?
@@ -1829,7 +1853,7 @@ class $HttpHeaders implements $Instance {
     final self = target! as $HttpHeaders;
     self.$value.set(
       (r as $String).$value,
-      (s as $Value?)!.$reified,
+      TypedInterop.exportExternal((s as $Value?), runtime: runtime) as Object,
       preserveHeaderCase:
           (c is List && (c as List).length > 0
                   ? (c as List)[0] as $Value?
@@ -1852,7 +1876,10 @@ class $HttpHeaders implements $Instance {
     Object? c,
   ) {
     final self = target! as $HttpHeaders;
-    self.$value.remove((r as $String).$value, (s as $Value?)!.$reified);
+    self.$value.remove(
+      (r as $String).$value,
+      TypedInterop.exportExternal((s as $Value?), runtime: runtime) as Object,
+    );
     return null;
   }
 
@@ -1878,22 +1905,28 @@ class $HttpHeaders implements $Instance {
     Object? c,
   ) {
     final self = target! as $HttpHeaders;
-    self.$value.forEach((String name, List<String> values) {
-      ((r as $Value?)! as EvalCallable)(
-        runtime,
-        null,
-        $String(name),
-        $List.view(
-          values,
-          (e) => $String(e),
-          runtime: runtime,
-          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
-            runtime.lookupType(CoreTypes.string),
-          ]),
-        ),
-        2,
-      );
-    });
+    self.$value.forEach(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(String, List<String>);export=false",
+        (_callable) => (String name, List<String> values) {
+          _callable.call(
+            runtime,
+            null,
+            $String(name),
+            $List.view(
+              values,
+              (e) => $String(e),
+              runtime: runtime,
+              runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+                runtime.lookupType(CoreTypes.string),
+              ]),
+            ),
+            2,
+          );
+        },
+      ),
+    );
     return null;
   }
 

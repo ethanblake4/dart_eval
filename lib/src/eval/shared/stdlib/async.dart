@@ -9,8 +9,45 @@ import 'package:dart_eval/src/eval/shared/stdlib/async/stream_sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_iterator.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_subscription.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream_transformer.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/stream_transformer_base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/async/timer.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/async/typedefs.dart'
+    as async_typedefs;
 import 'package:dart_eval/src/eval/shared/stdlib/async/zone.dart';
+
+final _streamViewSource = DartSource('dart:async', '''
+class StreamView<T> implements Stream<T> {
+  final Stream<T> _stream;
+  const StreamView(this._stream);
+
+  bool get isBroadcast => _stream.isBroadcast;
+
+  StreamSubscription<T> listen(
+    Function? onData, {
+    Function? onError,
+    Function? onDone,
+    bool? cancelOnError,
+  }) => _stream.listen(
+    onData,
+    onError: onError,
+    onDone: onDone,
+    cancelOnError: cancelOnError,
+  );
+
+  Future<dynamic> pipe(dynamic sink) async {
+    await for (final chunk in _stream) {
+      sink.add(chunk);
+    }
+    return await sink.close();
+  }
+}
+''');
+
+final _sdkAsyncSource = DartSource(
+  'dart:async',
+  '${async_typedefs.sdkTypedefsSource.stringSource!}\n'
+      '${_streamViewSource.stringSource!}',
+);
 
 /// [EvalPlugin] for the `dart:async` library
 class DartAsyncPlugin implements EvalPlugin {
@@ -45,35 +82,8 @@ class DartAsyncPlugin implements EvalPlugin {
     $StreamIterator.configureForCompile(registry);
     $StreamController.configureForCompile(registry);
     $Zone.configureForCompile(registry);
-    registry.addSource(
-      DartSource('dart:async', '''
-      class StreamView<T> implements Stream<T> {
-        final Stream<T> _stream;
-        const StreamView(this._stream);
-
-        bool get isBroadcast => _stream.isBroadcast;
-
-        StreamSubscription<T> listen(
-          Function? onData, {
-          Function? onError,
-          Function? onDone,
-          bool? cancelOnError,
-        }) => _stream.listen(
-          onData,
-          onError: onError,
-          onDone: onDone,
-          cancelOnError: cancelOnError,
-        );
-
-        Future<dynamic> pipe(dynamic sink) async {
-          await for (final chunk in _stream) {
-            sink.add(chunk);
-          }
-          return await sink.close();
-        }
-      }
-    '''),
-    );
+    $StreamTransformerBase.configureForCompile(registry);
+    registry.addSource(_sdkAsyncSource);
     $Timer.configureForCompile(registry);
     $StreamTransformer.configureForCompile(registry);
   }
@@ -95,6 +105,7 @@ class DartAsyncPlugin implements EvalPlugin {
     $StreamIterator.configureForRuntime(runtime);
     $StreamController.configureForRuntime(runtime);
     $Zone.configureForRuntime(runtime);
+    $StreamTransformerBase.configureForRuntime(runtime);
     $Timer.configureForRuntime(runtime);
     $StreamTransformer.configureForRuntime(runtime);
   }

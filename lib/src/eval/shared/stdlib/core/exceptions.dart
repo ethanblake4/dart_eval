@@ -15,19 +15,27 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Runes,
+        $RuneIterator,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
+        $pragma,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -36,7 +44,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -44,11 +51,11 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 
 /// dart_eval wrapper binding for [Exception]
 class $Exception implements Exception, $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -99,7 +106,12 @@ class $Exception implements Exception, $Instance {
 
   /// Wrapper for the [Exception.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $Exception.wrap(Exception((r is $Value ? r : null)?.$reified));
+    return $Exception.wrap(
+      Exception(
+        TypedInterop.exportExternal((r is $Value ? r : null), runtime: runtime)
+            as dynamic,
+      ),
+    );
   }
 
   final $Instance _superclass;
@@ -129,7 +141,6 @@ class $Exception implements Exception, $Instance {
 
 /// dart_eval wrapper binding for [FormatException]
 class $FormatException implements FormatException, $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -167,6 +178,7 @@ class $FormatException implements FormatException, $Instance {
               'message',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
 
             BridgeParameter(
@@ -217,7 +229,8 @@ class $FormatException implements FormatException, $Instance {
     return $FormatException.wrap(
       FormatException(
         (r is $Value ? r : null) == null ? "" : (r as $String).$value,
-        (s is $Value ? s : null)?.$reified,
+        TypedInterop.exportExternal((s is $Value ? s : null), runtime: runtime)
+            as dynamic,
         (c is $Value ? c : null)?.$value,
       ),
     );

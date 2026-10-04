@@ -19,6 +19,7 @@ import 'dart:io';
 
 import 'package:dart_eval/stdlib/core.dart'
     hide
+        $Platform,
         $SocketException,
         $HttpException,
         $OSError,
@@ -27,6 +28,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Socket;
 import 'package:dart_eval/stdlib/io.dart'
     hide
+        $Platform,
         $SocketException,
         $HttpException,
         $OSError,
@@ -34,9 +36,11 @@ import 'package:dart_eval/stdlib/io.dart'
         $RedirectInfo,
         $Socket;
 
+import '../core/uri.dart';
+import '../core/exceptions.dart';
+
 /// dart_eval wrapper binding for [SocketException]
 class $SocketException implements SocketException, $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -239,7 +243,6 @@ class $SocketException implements SocketException, $Instance {
 /// dart_eval wrapper binding for [HttpException]
 class $HttpException implements HttpException, $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:io',
@@ -368,7 +371,6 @@ class $HttpException implements HttpException, $Instance {
 /// dart_eval wrapper binding for [OSError]
 class $OSError implements OSError, $Instance {
   /// Configure this class for use in a [Runtime]
-  /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:io', 'OSError.', $OSError.$new);
 
@@ -407,12 +409,14 @@ class $OSError implements OSError, $Instance {
               'message',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"\"",
             ),
 
             BridgeParameter(
               'errorCode',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "noErrorCode",
             ),
           ],
         ),

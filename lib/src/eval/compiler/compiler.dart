@@ -405,10 +405,12 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     };
 
     final discoveredIdentifiers = <Library, Map<String, Set<String>>>{};
+    final discoveredMemberReferences = <Library, Map<String, Set<String>>>{};
 
     for (final lib in reachableLibraries) {
       final treeShaker = TreeShakeVisitor();
       discoveredIdentifiers[lib] = {};
+      discoveredMemberReferences[lib] = {};
       for (final decl in lib.declarations) {
         final d = decl.declaration;
         final names = DeclarationOrBridge.nameOf(decl);
@@ -422,12 +424,18 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
           (discoveredIdentifiers[lib]!['#'] ??= {}).addAll(
             treeShaker.ctx.identifiers,
           );
+          (discoveredMemberReferences[lib]!['#'] ??= {}).addAll(
+            treeShaker.ctx.memberReferences,
+          );
         } else {
           for (final name in names) {
             discoveredIdentifiers[lib]![name] = treeShaker.ctx.identifiers;
+            discoveredMemberReferences[lib]![name] =
+                treeShaker.ctx.memberReferences;
           }
         }
         treeShaker.ctx.identifiers = {};
+        treeShaker.ctx.memberReferences = {};
       }
     }
 
@@ -436,6 +444,7 @@ class Compiler implements BridgeDeclarationRegistry, EvalPluginRegistry {
     final (visibleDeclarations, visibleExtensions) = _resolveImportsAndExports(
       reachableLibraries,
       discoveredIdentifiers,
+      discoveredMemberReferences,
       computedEntrypoints,
       libraryIndexMap,
       referencedNames,
@@ -1469,6 +1478,7 @@ List<Library> _buildLibraries(Iterable<DartCompilationUnit> units) {
 _resolveImportsAndExports(
   Iterable<Library> libraries,
   Map<Library, Map<String, Set<String>>> usedIdentifiers,
+  Map<Library, Map<String, Set<String>>> memberReferences,
   Set<Uri> entrypoints,
   Map<Library, int> libraryIds,
   Set<String> referencedNames,
@@ -1715,7 +1725,7 @@ _resolveImportsAndExports(
       final identifiers = usedIdentifiers[library] ?? {};
       final names = entrypoints.contains(library.uri) ? identifiers.keys : used;
       for (final name in names) {
-        referencedNames.addAll(identifiers[name] ?? const {});
+        referencedNames.addAll(memberReferences[library]?[name] ?? const {});
       }
     }
 
@@ -1735,6 +1745,7 @@ _resolveImportsAndExports(
           extension.declaration.typeParameters?.accept(visitor);
           member.accept(visitor);
           identifiers[key] = visitor.ctx.identifiers;
+          memberReferences[library]![key] = visitor.ctx.memberReferences;
           (usedDeclarationsForLibrary[libraryIds[library]!] ??= {}).add(key);
           if (!worklist.contains(library)) worklist.add(library);
           added = true;

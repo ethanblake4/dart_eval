@@ -103,8 +103,13 @@ Variable compileBinaryExpression(
             : boundType.isTypeParameter
             ? null
             : boundType.withNullable(true),
-      // Equality's bool result does not constrain either operand's type.
-      TokenType.EQ_EQ || TokenType.BANG_EQ => null,
+      // A comparison's bool result does not constrain its operands.
+      TokenType.EQ_EQ ||
+      TokenType.BANG_EQ ||
+      TokenType.LT ||
+      TokenType.LT_EQ ||
+      TokenType.GT ||
+      TokenType.GT_EQ => null,
       // Arithmetic determines its RHS context from the uncontextualized LHS.
       _ when contextualNumericOperators.contains(method) => null,
       _ => boundType,
@@ -133,6 +138,8 @@ Variable compileBinaryExpression(
   // static type (e.g. `.foo` shorthands resolve against it).
   final rightBound = switch (e.operator.type) {
     TokenType.EQ_EQ || TokenType.BANG_EQ => L.type,
+    TokenType.LT || TokenType.LT_EQ || TokenType.GT || TokenType.GT_EQ =>
+      CallResolver(ctx).operatorParameterType(L.type, method, 0, source: e),
     _ when contextualNumericOperators.contains(method) =>
       numericArgumentContext(ctx, L.type, boundType) ??
           CallResolver(ctx).operatorParameterType(L.type, method, 0, source: e),

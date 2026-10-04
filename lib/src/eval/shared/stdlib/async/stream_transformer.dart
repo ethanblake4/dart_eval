@@ -27,6 +27,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/stdlib/core.dart'
@@ -39,17 +40,18 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 
-import 'event_sink.dart';
+import './event_sink.dart';
+import '../core/stack_trace.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [StreamTransformer]
 class $StreamTransformer<S, T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -343,6 +345,8 @@ class $StreamTransformer<S, T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'cast': BridgeMethodDef(
@@ -357,6 +361,8 @@ class $StreamTransformer<S, T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {},
@@ -369,17 +375,25 @@ class $StreamTransformer<S, T> implements $Instance {
   /// Wrapper for the [StreamTransformer.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $StreamTransformer.wrap(
-      StreamTransformer((Stream<dynamic> stream, bool cancelOnError) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          $Stream.wrap(
-            stream.map((e) => runtime.wrapAlways(e, recursive: true)),
-          ),
-          $bool(cancelOnError),
-          2,
-        )?.$value;
-      }),
+      StreamTransformer(
+        runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "StreamSubscription<T> Function(Stream<S>, bool);export=false",
+          (_callable) => (Stream<dynamic> stream, bool cancelOnError) {
+            return _callable
+                .call(
+                  runtime,
+                  null,
+                  $Stream.wrap(
+                    stream.map((e) => runtime.wrapAlways(e, recursive: true)),
+                  ),
+                  $bool(cancelOnError),
+                  2,
+                )
+                ?.$value;
+          },
+        ),
+      ),
     );
   }
 
@@ -396,41 +410,52 @@ class $StreamTransformer<S, T> implements $Instance {
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null
             ? null
-            : (dynamic data, EventSink<dynamic> sink) {
-                ((r is $Value ? r : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  runtime.wrapAlways(data, recursive: true),
-                  $EventSink.wrap(sink),
-                  2,
-                );
-              },
+            : runtime.cachedCallback(
+                (r is $Value ? r : null)! as EvalCallable,
+                "void Function(S, EventSink<T>);export=false",
+                (_callable) => (dynamic data, EventSink<dynamic> sink) {
+                  _callable.call(
+                    runtime,
+                    null,
+                    runtime.wrapAlways(data, recursive: true),
+                    $EventSink.wrap(sink),
+                    2,
+                  );
+                },
+              ),
         handleError:
             (s is $Value ? s : null) == null ||
                 (s is $Value ? s : null) is $null
             ? null
-            : (Object error, StackTrace stackTrace, EventSink<dynamic> sink) {
-                ((s is $Value ? s : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  $Object(error),
-                  $StackTrace.wrap(stackTrace),
-                  [$EventSink.wrap(sink)],
-                );
-              },
+            : runtime.cachedCallback(
+                (s is $Value ? s : null)! as EvalCallable,
+                "void Function(Object, StackTrace, EventSink<T>);export=false",
+                (_callable) =>
+                    (
+                      Object error,
+                      StackTrace stackTrace,
+                      EventSink<dynamic> sink,
+                    ) {
+                      _callable.call(
+                        runtime,
+                        null,
+                        $Object(error),
+                        $StackTrace.wrap(stackTrace),
+                        [$EventSink.wrap(sink)],
+                      );
+                    },
+              ),
         handleDone:
             (c is $Value ? c : null) == null ||
                 (c is $Value ? c : null) is $null
             ? null
-            : (EventSink<dynamic> sink) {
-                ((c is $Value ? c : null)! as EvalCallable?)?.call(
-                  runtime,
-                  null,
-                  $EventSink.wrap(sink),
-                  null,
-                  1,
-                );
-              },
+            : runtime.cachedCallback(
+                (c is $Value ? c : null)! as EvalCallable,
+                "void Function(EventSink<T>);export=false",
+                (_callable) => (EventSink<dynamic> sink) {
+                  _callable.call(runtime, null, $EventSink.wrap(sink), null, 1);
+                },
+              ),
       ),
     );
   }
@@ -438,15 +463,25 @@ class $StreamTransformer<S, T> implements $Instance {
   /// Wrapper for the [StreamTransformer.fromBind] constructor
   static $Value? $fromBind(Runtime runtime, Object? r, Object? s, Object? c) {
     return $StreamTransformer.wrap(
-      StreamTransformer.fromBind((Stream<dynamic> arg0) {
-        return ((r as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          $Stream.wrap(arg0.map((e) => runtime.wrapAlways(e, recursive: true))),
-          null,
-          1,
-        )?.$value;
-      }),
+      StreamTransformer.fromBind(
+        runtime.cachedCallback(
+          (r as $Value?)! as EvalCallable,
+          "Stream<T> Function(Stream<S>);export=false",
+          (_callable) => (Stream<dynamic> arg0) {
+            return _callable
+                .call(
+                  runtime,
+                  null,
+                  $Stream.wrap(
+                    arg0.map((e) => runtime.wrapAlways(e, recursive: true)),
+                  ),
+                  null,
+                  1,
+                )
+                ?.$value;
+          },
+        ),
+      ),
     );
   }
 
@@ -462,7 +497,7 @@ class $StreamTransformer<S, T> implements $Instance {
   final StreamTransformer<S, T> $value;
 
   @override
-  StreamTransformer get $reified => $value;
+  StreamTransformer<S, T> get $reified => $value;
 
   /// Wrap a [StreamTransformer] in a [$StreamTransformer]
   $StreamTransformer.wrap(this.$value) : _superclass = $Object($value);

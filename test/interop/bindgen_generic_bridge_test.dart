@@ -7,13 +7,23 @@ import 'package:test/test.dart';
 
 void main() {
   test('bridge arguments retain generic host types', () async {
-    final directory = Directory('test').absolute.createTempSync('bindgen_generic_');
+    final directory = Directory(
+      'test',
+    ).absolute.createTempSync('bindgen_generic_');
     addTearDown(() => directory.deleteSync(recursive: true));
     final source = File(p.join(directory.path, 'native.dart'))
       ..writeAsStringSync('''
 abstract class Reader {
   Reader();
   int readList(List<int> values);
+  T transform<T>(T Function(T) callback, T value);
+}
+class ObjectStore {
+  final Object? key;
+  ObjectStore(this.key);
+  bool containsKey(Object? candidate) => identical(key, candidate);
+  dynamic echo(dynamic value) => value;
+  int onlyInt(int value) => value;
 }
 ''');
     final config = BindgenConfig.parse('''
@@ -24,6 +34,8 @@ libraries:
       Reader:
         include: true
         mode: bridge
+      ObjectStore:
+        include: true
 ''')..resolveDefaults();
     final generated = (await Bindgen().parse(
       source,
@@ -53,19 +65,41 @@ void check(bool condition) {
 void main() {
   final compiler = Compiler()
     ..entrypoints.add('package:main/main.dart')
-    ..defineBridgeClass($Reader$bridge.$declaration);
+    ..defineBridgeClass($Reader$bridge.$declaration)
+    ..defineBridgeClass($ObjectStore.$declaration);
   final program = compiler.compile({'main': {'main.dart': '''
     import 'package:bindgen/native.dart';
     class Guest extends Reader {
       Guest();
       int readList(List<int> values) => values.first;
+      T transform<T>(T Function(T) callback, T value) => callback(value);
+    }
+    class Token {}
+    Object makeToken() => Token();
+    bool lookup() {
+      final token = Token();
+      final store = ObjectStore(token);
+      if (!store.containsKey(token) || !identical(store.echo(token), token)) {
+        return false;
+      }
+      dynamic wrong = token;
+      try {
+        store.onlyInt(wrong);
+        return false;
+      } on TypeError {
+        return true;
+      }
     }
     Reader make() => Guest();
   '''}});
   for (final runtime in [Runtime.ofProgram(program), Runtime(program.write().buffer)]) {
     $Reader$bridge.configureForRuntime(runtime);
+    $ObjectStore.configureForRuntime(runtime);
     final reader = runtime.executeLib('package:main/main.dart', 'make') as Reader;
     check(reader.readList([5]) == 5);
+    final token = runtime.executeLib('package:main/main.dart', 'makeToken');
+    check(identical(reader.transform<Object>((value) => value, token), token));
+    check(runtime.executeLib('package:main/main.dart', 'lookup') == true);
   }
 }
 """);

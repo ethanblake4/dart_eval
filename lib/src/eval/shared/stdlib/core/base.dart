@@ -6,6 +6,7 @@ import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/runes.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 import '../../library_environment.dart';
 import 'num.dart';
@@ -726,6 +727,62 @@ class $String implements $Instance {
           ],
         ),
       ),
+      'splitMapJoin': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+          params: [
+            BridgeParameter(
+              'pattern',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.pattern)),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'onMatch',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.string),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'match',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.match)),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+            BridgeParameter(
+              'onNonMatch',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.string),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'string',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+      ),
       'replaceFirst': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string)),
@@ -898,11 +955,7 @@ class $String implements $Instance {
       ),
       'runes': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(
-            BridgeTypeRef(CoreTypes.iterable, [
-              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int)),
-            ]),
-          ),
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.runes)),
         ),
       ),
     },
@@ -991,7 +1044,7 @@ class $String implements $Instance {
       case 'codeUnitAt':
         return $Closure(__codeUnitAt.func, this);
       case 'runes':
-        return wrapList<int>($value.runes.toList(), (e) => $int(e));
+        return $Runes.wrap($value.runes);
       case 'codeUnits':
         return wrapList<int>($value.codeUnits, (e) => $int(e));
       case 'compareTo':
@@ -1022,6 +1075,13 @@ class $String implements $Instance {
         return $Closure(__startsWith.func, this);
       case 'split':
         return $Closure(__split.func, this);
+      case 'splitMapJoin':
+        return $Closure.withNamed(
+          __splitMapJoin.func,
+          this,
+          positionalParameterCount: 1,
+          namedParameters: const ['onMatch', 'onNonMatch'],
+        );
       case 'substring':
         return $Closure(__substring.func, this);
       case 'toLowerCase':
@@ -1390,6 +1450,52 @@ class $String implements $Instance {
         : pattern.$reified as Pattern;
     return $List.wrap(
       target.$value.split(hostPattern).map((e) => $String(e)).toList(),
+    );
+  }
+
+  static const $Function __splitMapJoin = $Function(_splitMapJoin);
+
+  static $Value? _splitMapJoin(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final source = (target as $String).$value;
+    final patternValue = r as $Value;
+    if (patternValue is TypedInstance) {
+      throw UnsupportedError(
+        'String.splitMapJoin requires a native Pattern implementation',
+      );
+    }
+    final pattern = patternValue is $String
+        ? patternValue.$value
+        : patternValue.$reified as Pattern;
+    final onMatch = s is EvalCallable ? s : null;
+    final namedTail = c is List<Object?> ? c : const <Object?>[];
+    final onNonMatch = namedTail.isNotEmpty && namedTail.first is EvalCallable
+        ? namedTail.first as EvalCallable
+        : null;
+
+    return $String(
+      source.splitMapJoin(
+        pattern,
+        onMatch: onMatch == null
+            ? null
+            : (match) =>
+                  ((onMatch.call(runtime, null, $Match.wrap(match), null, 1)
+                              as $Value)
+                          .$reified)
+                      as String,
+        onNonMatch: onNonMatch == null
+            ? null
+            : (text) =>
+                  ((onNonMatch.call(runtime, null, $String(text), null, 1)
+                              as $Value)
+                          .$reified)
+                      as String,
+      ),
     );
   }
 

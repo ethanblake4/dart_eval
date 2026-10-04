@@ -18,13 +18,12 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'dart:math';
 import 'dart:core';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart' hide $Point, $Random;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Point]
 class $Point<T extends num> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:math', 'Point.', $Point.$new);
@@ -199,7 +198,12 @@ class $Point<T extends num> implements $Instance {
 
   /// Wrapper for the [Point.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $Point.wrap(Point((r as $Value?)!.$value, (s as $Value?)!.$value));
+    return $Point.wrap(
+      Point(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime) as num,
+        TypedInterop.exportExternal((s as $Value?), runtime: runtime) as num,
+      ),
+    );
   }
 
   final $Instance _superclass;
@@ -208,7 +212,7 @@ class $Point<T extends num> implements $Instance {
   final Point<T> $value;
 
   @override
-  Point get $reified => $value;
+  Point<T> get $reified => $value;
 
   /// Wrap a [Point] in a [$Point]
   $Point.wrap(this.$value) : _superclass = $Object($value);

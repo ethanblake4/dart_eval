@@ -649,9 +649,9 @@ sealed class GetTarget {
             fieldType: fieldType,
           );
         }
-        final key = name.startsWith('_')
-            ? '${ctx.libraryUri(owner.file)}::$name'
-            : name;
+        final key = ctx.memberLookup
+            .linkName(MemberName.getter(name), owner)
+            .nameKey;
         return DirectGetterCall(
           receiver,
           hops: const [],
@@ -1393,9 +1393,9 @@ sealed class SetTarget {
             owner,
             MemberName(name, MemberKind.setter),
           )) {
-        final key = name.startsWith('_')
-            ? '${ctx.libraryUri(owner.file)}::$name'
-            : name;
+        final key = ctx.memberLookup
+            .linkName(MemberName.setter(name), owner)
+            .nameKey;
         return DirectSetterCall(
           object,
           hops: const [],

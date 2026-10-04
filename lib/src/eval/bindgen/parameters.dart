@@ -197,10 +197,9 @@ String argumentAccessor(
     // Iterable arguments need a typed element view at the SDK boundary.
     if (type is TypeParameterType ||
         type.isDartCoreIterable ||
-        exportValues &&
-            (_isDartCoreIterator(type) ||
-                type.isDartCoreObject ||
-                type is DynamicType)) {
+        type.isDartCoreObject ||
+        type is DynamicType ||
+        exportValues && _isDartCoreIterator(type)) {
       paramBuffer.write(_exportValue(ctx, type, source));
       return paramBuffer.toString();
     }

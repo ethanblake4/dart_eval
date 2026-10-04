@@ -11,7 +11,11 @@ class DartTypedDataPlugin implements EvalPlugin {
     $ByteBuffer.configureForCompile(registry);
     $TypedData.configureForCompile(registry);
     $ByteData.configureForCompile(registry);
+    $Endian.configureForCompile(registry);
+    $Int8List.configureForCompile(registry);
+    $Int16List.configureForCompile(registry);
     $Uint8List.configureForCompile(registry);
+    $Uint8ClampedList.configureForCompile(registry);
     $Uint16List.configureForCompile(registry);
     $Uint32List.configureForCompile(registry);
     $Float32List.configureForCompile(registry);
@@ -25,7 +29,11 @@ class DartTypedDataPlugin implements EvalPlugin {
     $ByteBuffer.configureForRuntime(runtime);
     $TypedData.configureForRuntime(runtime);
     $ByteData.configureForRuntime(runtime);
+    $Endian.configureForRuntime(runtime);
+    $Int8List.configureForRuntime(runtime);
+    $Int16List.configureForRuntime(runtime);
     $Uint8List.configureForRuntime(runtime);
+    $Uint8ClampedList.configureForRuntime(runtime);
     $Uint16List.configureForRuntime(runtime);
     $Uint32List.configureForRuntime(runtime);
     $Float32List.configureForRuntime(runtime);

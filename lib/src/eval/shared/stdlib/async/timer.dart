@@ -27,12 +27,12 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 
 /// dart_eval wrapper binding for [Timer]
 class $Timer implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:async', 'Timer.', $Timer.$new);
@@ -165,6 +165,8 @@ class $Timer implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -174,6 +176,8 @@ class $Timer implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isActive': BridgeMethodDef(
@@ -182,6 +186,8 @@ class $Timer implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -193,32 +199,46 @@ class $Timer implements $Instance {
   /// Wrapper for the [Timer.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Timer.wrap(
-      Timer((r as $Value?)!.$value, () {
-        ((s as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
-      }),
+      Timer(
+        (r as $Value?)!.$value,
+        runtime.cachedCallback(
+          (s as $Value?)! as EvalCallable,
+          "void Function();export=false",
+          (_callable) => () {
+            _callable.call(runtime, null, null, null, 0);
+          },
+        ),
+      ),
     );
   }
 
   /// Wrapper for the [Timer.periodic] constructor
   static $Value? $periodic(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Timer.wrap(
-      Timer.periodic((r as $Value?)!.$value, (Timer timer) {
-        ((s as $Value?)! as EvalCallable)(
-          runtime,
-          null,
-          $Timer.wrap(timer),
-          null,
-          1,
-        );
-      }),
+      Timer.periodic(
+        (r as $Value?)!.$value,
+        runtime.cachedCallback(
+          (s as $Value?)! as EvalCallable,
+          "void Function(Timer);export=false",
+          (_callable) => (Timer timer) {
+            _callable.call(runtime, null, $Timer.wrap(timer), null, 1);
+          },
+        ),
+      ),
     );
   }
 
   /// Wrapper for the [Timer.run] method
   static $Value? $run(Runtime runtime, Object? r, Object? s, Object? c) {
-    Timer.run(() {
-      ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
-    });
+    Timer.run(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function();export=false",
+        (_callable) => () {
+          _callable.call(runtime, null, null, null, 0);
+        },
+      ),
+    );
     return null;
   }
 

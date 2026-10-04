@@ -133,4 +133,91 @@ void main() {
     });
     expect(runtime.executeLib('package:example/main.dart', 'main'), 4);
   });
+
+  test(
+    'generated typed lists preserve narrow buffer views when serialized',
+    () {
+      final program = Compiler().compile({
+        'example': {
+          'main.dart': '''
+          import 'dart:typed_data';
+
+          int main() {
+            final bytes = Uint8List(8);
+            final int8 = bytes.buffer.asInt8List(0, 1);
+            final int16 = bytes.buffer.asInt16List(2, 1);
+            final clamped = bytes.buffer.asUint8ClampedList(4, 3);
+
+            int8[0] = -128;
+            int16[0] = -32768;
+            clamped[0] = -1;
+            clamped[1] = 256;
+            clamped[2] = 42;
+
+            final int8View = Int8List.view(bytes.buffer, 0, 1);
+            final int16View = Int16List.view(bytes.buffer, 2, 1);
+            final clampedView = Uint8ClampedList.view(bytes.buffer, 4, 3);
+            if (int8View[0] != -128 || int16View[0] != -32768) return 1;
+            if (clampedView[0] != 0 ||
+                clampedView[1] != 255 ||
+                clampedView[2] != 42) {
+              return 2;
+            }
+            if (int8.lengthInBytes != 1 || int8.offsetInBytes != 0) return 3;
+            if (int16.lengthInBytes != 2 || int16.offsetInBytes != 2) return 4;
+            if (clamped.lengthInBytes != 3 || clamped.offsetInBytes != 4) {
+              return 5;
+            }
+            return 0;
+          }
+        ''',
+        },
+      });
+
+      for (final (kind, candidate) in [
+        ('fresh', program),
+        ('serialized', Program.read(program.write().buffer)),
+      ]) {
+        final runtime = Runtime.ofProgram(candidate);
+        expect(
+          runtime.executeLib('package:example/main.dart', 'main'),
+          0,
+          reason: kind,
+        );
+      }
+    },
+  );
+
+  test('Endian constants bind to the SDK values when serialized', () {
+    final program = Compiler().compile({
+      'example': {
+        'main.dart': '''
+          import 'dart:typed_data';
+
+          int main() {
+            final data = ByteData(2);
+            data.setInt16(0, 258, Endian.little);
+            if (data.getUint8(0) != 2 || data.getUint8(1) != 1) return 1;
+            data.setInt16(0, 258, Endian.big);
+            if (data.getUint8(0) != 1 || data.getUint8(1) != 2) return 2;
+            return Endian.host == Endian.little || Endian.host == Endian.big
+                ? 0
+                : 3;
+          }
+        ''',
+      },
+    });
+
+    for (final (kind, candidate) in [
+      ('fresh', program),
+      ('serialized', Program.read(program.write().buffer)),
+    ]) {
+      final runtime = Runtime.ofProgram(candidate);
+      expect(
+        runtime.executeLib('package:example/main.dart', 'main'),
+        0,
+        reason: kind,
+      );
+    }
+  });
 }

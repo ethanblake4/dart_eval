@@ -12,6 +12,7 @@ import '../context.dart';
 import '../type.dart';
 import '../values/abi.dart';
 import '../member/member_name.dart';
+import '../member/call_signature.dart';
 import '../declaration/enum.dart' show resolveEnumValueType;
 
 final _resolving = Expando<Set<(int, String)>>();
@@ -188,6 +189,21 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     return CoreTypes.dynamic.ref(ctx);
   }
   if (expression is SimpleIdentifier) {
+    // Unqualified names in a static field initializer first resolve against
+    // its declaring class. Losing these dependencies turns integer constants
+    // into dynamic operands and widens later arithmetic to num.
+    final field = expression.thisOrAncestorOfType<FieldDeclaration>();
+    final owner = field?.parent?.parent;
+    if (field?.isStatic == true && owner is Declaration) {
+      final name = '${declarationName(owner)}.${expression.name}';
+      final member = ctx.topLevelDeclarationsMap[library]?[name]?.declaration;
+      final memberField = member?.parent?.parent;
+      if (member is VariableDeclaration &&
+          memberField is FieldDeclaration &&
+          memberField.isStatic) {
+        return resolveGlobalType(ctx, library, name);
+      }
+    }
     final declaration =
         ctx.visibleDeclarations[library]?[expression.name]?.declaration;
     if (declaration?.declaration is VariableDeclaration) {
@@ -313,13 +329,39 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       return TypeRef.fromBridgeTypeRef(ctx, bridge.type.type);
     }
     if (function is ClassDeclaration) {
-      return TypeRef.lookupDeclaration(ctx, declaration!.sourceLib, function);
-    }
-    if (function is FunctionDeclaration && function.returnType != null) {
-      return TypeRef.fromAnnotation(
+      final type = TypeRef.lookupDeclaration(
         ctx,
         declaration!.sourceLib,
-        function.returnType!,
+        function,
+      );
+      if (expression.typeArguments == null) return type;
+      return (type as InterfaceTypeRef).copyWith(
+        arguments: [
+          for (final argument in expression.typeArguments!.arguments)
+            TypeRef.fromAnnotation(ctx, library, argument),
+        ],
+      );
+    }
+    if (function is FunctionDeclaration && function.returnType != null) {
+      return ArgumentBinder(ctx).inferStaticCallResult(
+        CallSignature.forDeclaration(ctx, declaration!.sourceLib, function),
+        [
+          for (final arg in expression.argumentList.arguments)
+            if (arg is! NamedArgument)
+              _infer(ctx, library, arg.argumentExpression),
+        ],
+        {
+          for (final arg in expression.argumentList.arguments)
+            if (arg is NamedArgument)
+              arg.name.lexeme: _infer(ctx, library, arg.argumentExpression),
+        },
+        explicitArguments: expression.typeArguments == null
+            ? null
+            : [
+                for (final type in expression.typeArguments!.arguments)
+                  TypeRef.fromAnnotation(ctx, library, type),
+              ],
+        source: expression,
       );
     }
   }

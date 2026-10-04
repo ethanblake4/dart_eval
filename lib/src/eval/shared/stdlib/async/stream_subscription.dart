@@ -27,6 +27,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
@@ -40,13 +41,13 @@ import 'package:dart_eval/stdlib/async.dart'
         $EventSink,
         $StreamIterator,
         $StreamTransformer,
+        $StreamTransformerBase,
         $StreamView,
         $StreamController;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [StreamSubscription]
 class $StreamSubscription<T> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {}
 
@@ -91,6 +92,8 @@ class $StreamSubscription<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'onData': BridgeMethodDef(
@@ -122,6 +125,8 @@ class $StreamSubscription<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'onError': BridgeMethodDef(
@@ -139,6 +144,8 @@ class $StreamSubscription<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'onDone': BridgeMethodDef(
@@ -164,6 +171,8 @@ class $StreamSubscription<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'pause': BridgeMethodDef(
@@ -183,6 +192,8 @@ class $StreamSubscription<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'resume': BridgeMethodDef(
@@ -191,6 +202,8 @@ class $StreamSubscription<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'asFuture': BridgeMethodDef(
@@ -210,6 +223,8 @@ class $StreamSubscription<T> implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
     },
     getters: {
@@ -219,6 +234,8 @@ class $StreamSubscription<T> implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -233,7 +250,7 @@ class $StreamSubscription<T> implements $Instance {
   final StreamSubscription<T> $value;
 
   @override
-  StreamSubscription get $reified => $value;
+  StreamSubscription<T> get $reified => $value;
 
   /// Wrap a [StreamSubscription] in a [$StreamSubscription]
   $StreamSubscription.wrap(this.$value) : _superclass = $Object($value);
@@ -309,15 +326,19 @@ class $StreamSubscription<T> implements $Instance {
     self.$value.onData(
       (r as $Value?) == null || (r as $Value?) is $null
           ? null
-          : (dynamic data) {
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                runtime.wrapAlways(data, recursive: true),
-                null,
-                1,
-              );
-            },
+          : runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "void Function(T);export=false",
+              (_callable) => (dynamic data) {
+                _callable.call(
+                  runtime,
+                  null,
+                  runtime.wrapAlways(data, recursive: true),
+                  null,
+                  1,
+                );
+              },
+            ),
     );
     return null;
   }
@@ -334,20 +355,24 @@ class $StreamSubscription<T> implements $Instance {
     self.$value.onError(
       (r as $Value?) == null || (r as $Value?) is $null
           ? null
-          : (a0, [a1, a2]) {
-              final _a0 = runtime.wrapAlways(a0);
-              ((r as $Value?)! as EvalCallable)(
-                runtime,
-                null,
-                _a0,
-                a1 != null ? runtime.wrapAlways(a1) : null,
-                a2 != null
-                    ? [runtime.wrapAlways(a2)]
-                    : a1 != null
-                    ? 2
-                    : 1,
-              );
-            },
+          : runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "Function;export=false",
+              (_callable) => (a0, [a1, a2]) {
+                final _a0 = runtime.wrapAlways(a0);
+                _callable.call(
+                  runtime,
+                  null,
+                  _a0,
+                  a1 != null ? runtime.wrapAlways(a1) : null,
+                  a2 != null
+                      ? [runtime.wrapAlways(a2)]
+                      : a1 != null
+                      ? 2
+                      : 1,
+                );
+              },
+            ),
     );
     return null;
   }
@@ -364,9 +389,13 @@ class $StreamSubscription<T> implements $Instance {
     self.$value.onDone(
       (r as $Value?) == null || (r as $Value?) is $null
           ? null
-          : () {
-              ((r as $Value?)! as EvalCallable)(runtime, null, null, null, 0);
-            },
+          : runtime.cachedCallback(
+              (r as $Value?)! as EvalCallable,
+              "void Function();export=false",
+              (_callable) => () {
+                _callable.call(runtime, null, null, null, 0);
+              },
+            ),
     );
     return null;
   }
@@ -406,7 +435,10 @@ class $StreamSubscription<T> implements $Instance {
     Object? c,
   ) {
     final self = target! as $StreamSubscription;
-    final result = self.$value.asFuture((r is $Value ? r : null)?.$value);
+    final result = self.$value.asFuture(
+      TypedInterop.exportExternal((r is $Value ? r : null), runtime: runtime)
+          as dynamic,
+    );
     return $Future.wrap(
       result.then(
         (e) => (e is List || e is Map || e is Set

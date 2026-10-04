@@ -4,6 +4,8 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart'
     show TypedRuntimeInterop;
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/collection/extensions.dart'
+    as collection_extensions;
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/big_int.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
@@ -25,8 +27,10 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/iterable_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/num.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/pragma.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/record.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/regexp.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/runes.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/stack_trace.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/stopwatch.dart';
@@ -44,7 +48,8 @@ import 'core/print.dart';
 final _sdkCoreSource = DartSource(
   'dart:core',
   '${core_typedefs.sdkTypedefsSource.stringSource!}\n'
-      '${core_extensions.sdkExtensionsSource.stringSource!}',
+      '${core_extensions.sdkExtensionsSource.stringSource!}\n'
+      '${collection_extensions.sdkExtensionsSource.stringSource!}',
 );
 
 /// [EvalPlugin] for the `dart:core` library
@@ -76,6 +81,8 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($BigInt.$declaration);
     registry.defineBridgeClass($double.$declaration);
     registry.defineBridgeClass($String.$declaration);
+    $Runes.configureForCompile(registry);
+    $RuneIterator.configureForCompile(registry);
     registry.defineBridgeClass($Iterable$bridge.$declaration);
     registry.defineBridgeClass($Iterator.$declaration);
     registry.defineBridgeClass($List.$declaration);
@@ -105,6 +112,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Set.$declaration);
     registry.defineBridgeClass($Sink.$declaration);
     $StackTrace.configureForCompile(registry);
+    $pragma.configureForCompile(registry);
     $Error$bridge.configureForCompile(registry);
     registry.defineBridgeClass($TypeError.$declaration);
     registry.defineBridgeClass($NoSuchMethodError.$declaration);
@@ -120,6 +128,8 @@ class DartCorePlugin implements EvalPlugin {
     configureIdenticalForRuntime(runtime);
     configureSymbolLiteralsForRuntime(runtime);
     $String.configureForRuntime(runtime);
+    $Runes.configureForRuntime(runtime);
+    $RuneIterator.configureForRuntime(runtime);
     $List.configureForRuntime(runtime);
     $MapEntry.configureForRuntime(runtime);
     $Iterable$bridge.configureForRuntime(runtime);
@@ -197,6 +207,16 @@ class DartCorePlugin implements EvalPlugin {
     );
     runtime.registerBridgeFuncRegisters(
       'dart:core',
+      'Object.hashAll',
+      $Object.$hashAll,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Object.hashAllUnordered',
+      $Object.$hashAllUnordered,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
       'double.nan*g',
       $double.$nan,
     );
@@ -221,6 +241,7 @@ class DartCorePlugin implements EvalPlugin {
       $double.$tryParse,
     );
     $StackTrace.configureForRuntime(runtime);
+    $pragma.configureForRuntime(runtime);
     $Error$bridge.configureForRuntime(runtime);
     $UnimplementedError.configureForRuntime(runtime);
     $UnsupportedError.configureForRuntime(runtime);
@@ -228,31 +249,43 @@ class DartCorePlugin implements EvalPlugin {
       'dart:core',
       'Stream.empty',
       $Stream.$empty,
+      isBridge: true,
+    );
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'Stream.',
+      $Stream$bridge.$new,
+      isBridge: true,
     );
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Stream.value',
       $Stream.$_value,
+      isBridge: true,
     );
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Stream.error',
       $Stream.$error,
+      isBridge: true,
     );
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Stream.fromFuture',
       $Stream.$fromFuture,
+      isBridge: true,
     );
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Stream.fromIterable',
       $Stream.$fromIterable,
+      isBridge: true,
     );
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Stream.periodic',
       $Stream.$periodic,
+      isBridge: true,
     );
     runtime.registerBridgeFuncRegisters(
       'dart:core',
