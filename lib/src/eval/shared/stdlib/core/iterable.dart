@@ -888,7 +888,20 @@ class $Iterable<E> implements Iterable<E>, $Instance {
   $Value? $getProperty(Runtime runtime, String identifier) {
     switch (identifier) {
       case 'iterator':
-        return $Iterator.wrap(_boxedValues(runtime, this).iterator);
+        final iterator = $Iterator.wrap(_boxedValues(runtime, this).iterator);
+        final elementType = runtime.runtimeTypeArgumentAt(
+          $getRuntimeType(runtime),
+          0,
+        );
+        return elementType == null
+            ? iterator
+            : TypedInterop.annotateBridgeType(
+                iterator,
+                runtime,
+                runtime.internParameterizedType(CoreTypes.iterator, [
+                  elementType,
+                ]),
+              );
       case 'toString':
         return $Closure(__toString.func, this);
       case 'length':

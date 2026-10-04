@@ -592,34 +592,14 @@ final class InstanceMemberDenotation extends Denotation {
     TypeRef? boundContext,
     List<TypeRef>? typeArguments,
   ) {
-    final resolvedMember = declared!;
-    final member = resolvedMember.member;
     final $this =
         ctx.lookupLocal('#this') ??
         (throw CompileError(
           'Cannot access instance member $name in a static context',
         ));
 
-    final refName = _refNameOf(name);
-    if (member is SourceMember) {
-      final declaration = member.node;
-      if (declaration is MethodDeclaration &&
-          !declaration.isGetter &&
-          !declaration.isSetter) {
-        return materializeTearOff(
-          ctx,
-          DeferredOrOffset(
-            file: ctx.enclosingLibrary ?? ctx.library,
-            className: ctx.currentClassName!,
-            name: ctx.memberNameKey(refName),
-          ),
-          implicitReceiver: $this,
-          boundContext: boundContext,
-          typeArguments: typeArguments,
-        );
-      }
-    }
-
+    // An implicit receiver still dispatches method tear-offs virtually.
+    // The enclosing declaration may be abstract or overridden by a subclass.
     final value = GetTarget.read(
       ctx,
       $this,
@@ -1230,16 +1210,6 @@ final class BridgeDenotation extends Denotation {
   @override
   Variable write(CompilerContext ctx, Variable value, {AstNode? source}) =>
       throw CompileError('Cannot assign to bridged $name', source);
-}
-
-/// The reference tail for a possibly qualified name — strips a leading
-/// qualifier segment for prefix member paths like `p.C.ctor` → `C.ctor`.
-String _refNameOf(String name) {
-  final split = name.split('.');
-  if (split.length > 2) {
-    return split.sublist(1).join('.');
-  }
-  return name;
 }
 
 /// The single name-resolution cascade for a bare identifier, in Dart's
