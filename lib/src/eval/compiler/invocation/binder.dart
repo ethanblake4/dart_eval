@@ -938,12 +938,41 @@ final class ArgumentBinder {
         target.signature == null) {
       throw StateError('Bridge call target requires a bridge signature');
     }
+    var contexts = positionalContexts;
+    if (target case BridgeCall(
+      name: 'putIfAbsent',
+      receiver: final receiver?,
+    ) when contexts.isEmpty) {
+      final map = ctx.typeSystem.asInstanceOf(
+        receiver.type,
+        ctx.types.bySpec(CoreTypes.map),
+      );
+      final arguments = map == null
+          ? const <TypeRef>[]
+          : interfaceArgumentsOf(map);
+      if (arguments.length == 2) {
+        // The hand-maintained bridge exposes Function, but the SDK contract
+        // is V Function(). Recover its context from the applied Map<K, V>.
+        contexts = [
+          null,
+          FunctionTypeRef(
+            FunctionSignature(
+              positional: const [],
+              requiredPositional: 0,
+              named: const {},
+              returnType: arguments[1],
+            ),
+            decl: ctx.types.bySpec(CoreTypes.function),
+          ),
+        ];
+      }
+    }
     return bindBridgeVector(
       argumentList,
       function,
       superParams: superParams,
       targetSignature: target.signature,
-      positionalContexts: positionalContexts,
+      positionalContexts: contexts,
     );
   }
 

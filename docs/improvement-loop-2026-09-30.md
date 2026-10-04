@@ -4461,3 +4461,17 @@ choices match: Object? for the covariant list and Never for contravariant and
 invariant lists. Nine variance originals and six generic regression originals
 pass fresh and serialized, seventeen focused neighbors pass, and scoped
 analysis is clean. Caller lexical parameters remain intact.
+
+The corrected unrestricted survey finishes at 2706 passed, 20 compile errors,
+11 runtime failures and three skips. Its 31 failure paths exactly match the
+remaining expectations, down from 71 actual failures at cycle 27's start. The
+default gate passes 2298 tests with 86 skips.
+
+Independent execution verification of the compiler benchmark uncovered an
+older Map.putIfAbsent callback-inference bug, reproduced on the cycle 26
+reference. The Map binding is hand-maintained in .dart_eval/bindgen.yaml; its
+raw Function parameter loses the SDK's V Function() context. The compiler now
+recovers that context from applied Map<K, V> through the existing bridge
+positional-context path. The unchanged mixed benchmark returns 87 natively,
+fresh and serialized; seven focused neighbors pass, and an invalid callback
+result still throws TypeError. No stdlib, adapter or runtime change was added.
