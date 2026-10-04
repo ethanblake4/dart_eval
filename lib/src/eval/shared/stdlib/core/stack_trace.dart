@@ -43,6 +43,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
+        $ConcurrentModificationError,
         $Exception,
         $FormatException,
         $Uri,

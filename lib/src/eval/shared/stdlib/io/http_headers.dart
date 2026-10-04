@@ -25,7 +25,11 @@ import 'package:dart_eval/stdlib/core.dart'
         $OSError,
         $HttpHeaders,
         $RedirectInfo,
-        $Socket;
+        $Socket,
+        $ZLibCodec,
+        $GZipCodec,
+        $ZLibEncoder,
+        $ZLibDecoder;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../core/date_time.dart';

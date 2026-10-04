@@ -89,13 +89,16 @@ String propertyGetters(
       final member = ctx.memberConfig(e.name!, 'method');
       final returnsValue = e.returnType is! VoidType && !e.returnType.isDartCoreNull;
       final callOp = operatorForArity(e.name!, e.formalParameters.length);
+      final hook = member?.hook;
+      final prefix = hook == null ? null : ctx.hooksPrefix();
+      final body = hook != null ? 'return ${prefix == null ? '' : '$prefix.'}$hook(runtime, this, r, s, c);' : '${returnsValue ? 'final result = ' : ''}${callOp.format('super', argumentAccessors(ctx, e.formalParameters, callable: true, exportValues: true, member: member))};\n'
+                'return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union, runtimeTypeOwner: 'bridge')};';
       return '''
         case '${operatorMemberName(member?.rename ?? e.name!, e.formalParameters.length)}':
           return \$Function((runtime, target, r, s, c) {
             ${assertMethodPermissions(e, callable: true)}
             ${assertConfigPermissions(ctx, member, e.formalParameters, callable: true)}
-            ${returnsValue ? 'final result = ' : ''}${callOp.format('super', argumentAccessors(ctx, e.formalParameters, callable: true, exportValues: true, member: member))};
-            return ${wrapVar(ctx, e.returnType, 'result', unionTypeNames: member?.returns?.union, runtimeTypeOwner: 'bridge')};
+            $body
           });''';
     }).join('\n')}\n}';
   }

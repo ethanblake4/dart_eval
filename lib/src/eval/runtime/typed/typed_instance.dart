@@ -370,14 +370,20 @@ final class TypedInstance implements $Instance {
       if (namedNames.isNotEmpty) {
         throw UnsupportedError('Named bridge method arguments');
       }
-      return TypedInterop.invoke(
-        runtime,
-        parent,
-        name,
-        positionalCount,
-        first,
-        rest,
-      );
+      final previous = runtime?.bridgeCallTypeArguments;
+      if (runtime != null) runtime.bridgeCallTypeArguments = typeArguments;
+      try {
+        return TypedInterop.invoke(
+          runtime,
+          parent,
+          name,
+          positionalCount,
+          first,
+          rest,
+        );
+      } finally {
+        if (runtime != null) runtime.bridgeCallTypeArguments = previous!;
+      }
     }
     if (name == '==' || name == '!=') {
       if (namedNames.isNotEmpty) {

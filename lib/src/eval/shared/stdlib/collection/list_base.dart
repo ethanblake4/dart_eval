@@ -18,6 +18,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'dart:collection';
 import 'dart:math';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $LinkedHashMap,
@@ -37,11 +38,11 @@ import 'package:dart_eval/stdlib/core.dart'
 
 import '../core/iterator.dart';
 
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
 import '../math/random.dart';
+import '../core/collection.dart' as hooks;
 
 /// dart_eval bridge binding for [ListBase]
 class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
@@ -1526,7 +1527,8 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
     Object? c,
   ) {
     final value = ListBase.listToString(
-      ((r as $Value?)!.$reified as List).cast<Object?>(),
+      (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+          .cast<Object?>(),
     );
     return $String(value);
   }
@@ -1736,31 +1738,7 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case 'whereType':
         return $Function((runtime, target, r, s, c) {
-          final result = super.whereType();
-          return (() {
-            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
-            return (() {
-              final iterableType = runtime.internParameterizedType(
-                CoreTypes.iterable,
-                [
-                  (bridgeTypeArguments.length > 0
-                      ? bridgeTypeArguments[0]
-                      : runtime.lookupType(CoreTypes.dynamic)),
-                ],
-              );
-              return $Iterable.wrap(
-                (result).map((e) {
-                  final value = (e is List || e is Map || e is Set
-                      ? TypedInterop.boxExternal(e, runtime: runtime)!
-                      : runtime.wrapAlways(e));
-                  runtime.assertTypedTypeArgument(value, iterableType, 0);
-                  return value;
-                }),
-                runtime: runtime,
-                runtimeTypeId: iterableType,
-              );
-            })();
-          })();
+          return hooks.iterableWhereType(runtime, this, r, s, c);
         });
       case 'expand':
         return $Function((runtime, target, r, s, c) {
@@ -2525,7 +2503,12 @@ class $ListBase$bridge<E> extends ListBase<E> with $Bridge<ListBase<E>> {
         });
       case '+':
         return $Function((runtime, target, r, s, c) {
-          final result = (super + ((r as $Value?)!.$reified as List).cast());
+          final result =
+              (super +
+              (TypedInterop.exportExternal(
+                (r as $Value?),
+                runtime: runtime,
+              ) as List).cast());
           return $List.view(
             result,
             (e) => (e is List || e is Map || e is Set
@@ -3687,32 +3670,7 @@ class $ListBase<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $ListBase;
-    final result = self.$value.whereType();
-    return (() {
-      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
-      return (() {
-        final iterableType = runtime.internParameterizedType(
-          CoreTypes.iterable,
-          [
-            (bridgeTypeArguments.length > 0
-                ? bridgeTypeArguments[0]
-                : runtime.lookupType(CoreTypes.dynamic)),
-          ],
-        );
-        return $Iterable.wrap(
-          (result).map((e) {
-            final value = (e is List || e is Map || e is Set
-                ? TypedInterop.boxExternal(e, runtime: runtime)!
-                : runtime.wrapAlways(e));
-            runtime.assertTypedTypeArgument(value, iterableType, 0);
-            return value;
-          }),
-          runtime: runtime,
-          runtimeTypeId: iterableType,
-        );
-      })();
-    })();
+    return hooks.iterableWhereType(runtime, target, r, s, c);
   }
 
   static const $Function __expand = $Function(_expand);
@@ -4657,7 +4615,9 @@ class $ListBase<E> implements $Instance {
   ) {
     final self = target! as $ListBase;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<dynamic>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<dynamic>());
     return $List.view(
       result,
       (e) => (e is List || e is Map || e is Set

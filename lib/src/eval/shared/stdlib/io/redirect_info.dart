@@ -25,7 +25,11 @@ import 'package:dart_eval/stdlib/core.dart'
         $OSError,
         $HttpHeaders,
         $RedirectInfo,
-        $Socket;
+        $Socket,
+        $ZLibCodec,
+        $GZipCodec,
+        $ZLibEncoder,
+        $ZLibDecoder;
 
 import '../core/uri.dart';
 

@@ -116,6 +116,9 @@ libraries:
       UnimplementedError:
         file: errors.dart
         implementsSdk: true
+      ConcurrentModificationError:
+        file: errors.dart
+        implementsSdk: true
       Invocation:
         handMaintained: true
         file: invocation.dart
@@ -165,6 +168,10 @@ libraries:
         file: iterable_bridge.dart
         mode: both
         handMaintainedWrapper: true
+        hooks: collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       Type:
         handMaintained: true
         unnamedValueConstructor: true
@@ -194,6 +201,8 @@ libraries:
         include: false
       Never:
         include: false
+    functions:
+      - identityHashCode
   - uri: dart:async
     outDir: lib/src/eval/shared/stdlib/async
     typedefs: [ControllerCallback, ControllerCancelCallback]
@@ -261,22 +270,50 @@ libraries:
         include: false # Guest maps need a source-level delegating view.
       UnmodifiableListView:
         file: unmodifiable_list_view.dart
+        hooks: ../core/collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       ListQueue:
         file: list_queue.dart
+        hooks: ../core/collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       Queue:
         file: queue.dart
+        hooks: ../core/collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       HashMap:
         file: hash_map.dart
       SplayTreeMap:
         file: splay_tree_map.dart
       SplayTreeSet:
         file: splay_tree_set.dart
+        hooks: ../core/collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       HashSet:
         file: hash_set.dart
+        hooks: ../core/collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       LinkedHashSet:
         file: linked_hash_set.dart
+        hooks: ../core/collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       DoubleLinkedQueue:
         file: double_linked_queue.dart
+        hooks: ../core/collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       DoubleLinkedQueueEntry:
         file: double_linked_queue.dart
       # Base/mixin classes are not instantiable — spec-only.
@@ -287,12 +324,20 @@ libraries:
         mode: both
         implicitSupers: true
         imports: [dart:math]
+        hooks: ../core/collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       MapBase:
         file: map_base.dart
         mode: both
       SetBase:
         file: set_base.dart
         mode: both
+        hooks: ../core/collection.dart
+        methods:
+          whereType:
+            hook: iterableWhereType
       ListMixin:
         include: false
   - uri: dart:convert
@@ -307,6 +352,7 @@ libraries:
         mode: both
       Codec:
         file: codec.dart
+        mode: both
       Encoding:
         file: encoding.dart
       JsonEncoder:
@@ -335,6 +381,7 @@ libraries:
         file: base64.dart
       ByteConversionSink:
         file: byte_conversion.dart
+        mode: both
       ChunkedConversionSink:
         file: chunked_conversion.dart
       HtmlEscapeMode:
@@ -343,11 +390,14 @@ libraries:
         file: html_escape.dart
       StringConversionSink:
         file: string_conversion_sink.dart
+        mode: both
       ClosableStringSink:
         file: string_conversion_sink.dart
       LineSplitter:
         file: line_splitter.dart
     functions:
+      - base64Decode
+      - base64Encode
       - jsonEncode
       - jsonDecode
   - uri: dart:developer
@@ -419,6 +469,18 @@ libraries:
         handMaintained: true
       ProcessStartMode:
         handMaintained: true
+      ZLibCodec:
+        file: zlib.dart
+        imports: [dart:convert]
+      GZipCodec:
+        file: zlib.dart
+        imports: [dart:convert]
+      ZLibEncoder:
+        file: zlib.dart
+        imports: [dart:convert]
+      ZLibDecoder:
+        file: zlib.dart
+        imports: [dart:convert]
       FileSystemEntityType:
         include: false
       FileStat:
@@ -484,4 +546,6 @@ libraries:
       Int32List:
         file: typed_data.dart
       Int64List:
+        file: typed_data.dart
+      Uint64List:
         file: typed_data.dart

@@ -1,10 +1,139 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:dart_eval/dart_eval.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart'
+    show TypedRuntimeInterop;
+import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test(
+    'native stream collection events retain their declared type and backing',
+    () async {
+      const library = 'package:stream_collections/main.dart';
+      final program = Compiler().compile({
+        'stream_collections': {
+          'main.dart': r'''
+import 'dart:async';
+Future<List<int>> relay(Stream<List<int>> source) async {
+  final controller = StreamController<List<int>>();
+  final result = controller.stream.first;
+  source.listen(controller.add, onDone: controller.close);
+  final event = await result;
+  event[0] = event[0] + 1;
+  return event;
+}
+Future<bool> rejectsDynamicList() async {
+  final controller = StreamController<List<int>>();
+  controller.stream.listen((event) {});
+  dynamic widened = controller;
+  bool rejected = false;
+  try { widened.add(<dynamic>[1, 2]); } on TypeError { rejected = true; }
+  await controller.close();
+  return rejected;
+}
+''',
+        },
+      });
+      for (final runtime in [
+        Runtime.ofProgram(program),
+        Runtime(program.write().buffer),
+      ]) {
+        runtime.prepareTypedRuntime();
+        final listType = runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(CoreTypes.int),
+        ]);
+        final streamType = runtime.internParameterizedType(CoreTypes.stream, [
+          listType,
+        ]);
+        for (final event in <List<int>>[
+          <int>[1, 2],
+          Uint8List.fromList([1, 2]),
+        ]) {
+          final source = $Stream.wrap(
+            Stream<List<int>>.value(event),
+            runtime: runtime,
+            runtimeTypeId: streamType,
+          );
+          final result = await runtime.executeLib(
+            library,
+            'relay',
+            arguments: {'source': source},
+          );
+          expect(
+            identical(
+              TypedInterop.exportExternal(result, runtime: runtime),
+              event,
+            ),
+            isTrue,
+          );
+          expect(event, [2, 2]);
+        }
+        expect(
+          await runtime.executeLib(library, 'rejectsDynamicList'),
+          $bool(true),
+        );
+      }
+    },
+  );
+
+  test('native controllers preserve guest event identity and checks', () async {
+    const library = 'package:controller_events/main.dart';
+    final program = Compiler().compile({
+      'controller_events': {
+        'main.dart': r'''
+import 'dart:async';
+class Token {
+  final int value;
+  Token(this.value);
+}
+Future<bool> check(bool sync, bool broadcast) async {
+  final controller = broadcast
+      ? StreamController<Token>.broadcast(sync: sync)
+      : StreamController<Token>(sync: sync);
+  final token = Token(7);
+  int received = 0;
+  int secondReceived = 0;
+  bool same = true;
+  final subscription = controller.stream.listen((event) {
+    received++;
+    same = same && identical(event, token) && event.value == 7;
+  });
+  StreamSubscription<Token>? second;
+  if (broadcast) {
+    second = controller.stream.listen((event) {
+      secondReceived++;
+      same = same && identical(event, token);
+    });
+  }
+  controller.add(token);
+  if (received != (sync ? 1 : 0)) return false;
+  dynamic widened = controller;
+  try { widened.add('wrong'); return false; } on TypeError {}
+  await controller.close();
+  await subscription.cancel();
+  if (second != null) await second.cancel();
+  return same && received == 1 && secondReceived == (broadcast ? 1 : 0);
+}
+Future<bool> main() async {
+  return await check(false, false) && await check(true, false) &&
+      await check(false, true) && await check(true, true);
+}
+''',
+      },
+    });
+    for (final runtime in [
+      Runtime.ofProgram(program),
+      Runtime(program.write().buffer),
+    ]) {
+      expect(await runtime.executeLib(library, 'main'), $bool(true));
+    }
+  });
+
   test('guest Stream subclasses work with SDK and guest operators', () async {
     const library = 'package:stream_bridge/main.dart';
     final program = Compiler().compile({

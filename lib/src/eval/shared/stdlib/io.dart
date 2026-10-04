@@ -12,6 +12,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/io/io_sink.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/process.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/platform.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/socket.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/zlib.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/string_sink.dart';
 
 /// [EvalPlugin] for the `dart:io` library
@@ -43,6 +44,10 @@ class DartIoPlugin implements EvalPlugin {
     $HttpHeaders.configureForCompile(registry);
     $RedirectInfo.configureForCompile(registry);
     $Socket.configureForCompile(registry);
+    $ZLibCodec.configureForCompile(registry);
+    $GZipCodec.configureForCompile(registry);
+    $ZLibEncoder.configureForCompile(registry);
+    $ZLibDecoder.configureForCompile(registry);
     registry.addSource($HttpStatusSource());
     registry.addSource(
       DartSource('dart:io', '''
@@ -79,5 +84,9 @@ class DartIoPlugin implements EvalPlugin {
     $ProcessResult.configureForRuntime(runtime);
     $ProcessSignal.configureForRuntime(runtime);
     $ProcessStartMode.configureForRuntime(runtime);
+    $ZLibCodec.configureForRuntime(runtime);
+    $GZipCodec.configureForRuntime(runtime);
+    $ZLibEncoder.configureForRuntime(runtime);
+    $ZLibDecoder.configureForRuntime(runtime);
   }
 }

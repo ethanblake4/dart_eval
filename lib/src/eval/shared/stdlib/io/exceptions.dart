@@ -25,7 +25,11 @@ import 'package:dart_eval/stdlib/core.dart'
         $OSError,
         $HttpHeaders,
         $RedirectInfo,
-        $Socket;
+        $Socket,
+        $ZLibCodec,
+        $GZipCodec,
+        $ZLibEncoder,
+        $ZLibDecoder;
 import 'package:dart_eval/stdlib/io.dart'
     hide
         $Platform,
@@ -34,7 +38,11 @@ import 'package:dart_eval/stdlib/io.dart'
         $OSError,
         $HttpHeaders,
         $RedirectInfo,
-        $Socket;
+        $Socket,
+        $ZLibCodec,
+        $GZipCodec,
+        $ZLibEncoder,
+        $ZLibDecoder;
 
 import '../core/uri.dart';
 import '../core/exceptions.dart';

@@ -11,6 +11,7 @@ import 'package:dart_eval/src/eval/compiler/type.dart';
 import '../member/member.dart';
 import '../member/member_name.dart';
 import '../helpers/bridge_mixin.dart';
+import '../helpers/eval_extension.dart';
 
 void compileClassDeclaration(CompilerContext ctx, ClassDeclaration d) {
   return ctx.withTypeParameters(
@@ -444,7 +445,7 @@ void _checkAbstractMixinMemberConformance(
     if (decl.body is EmptyFunctionBody) {
       final impl = _effectiveConcreteMember(
         ctx,
-        decl.name.lexeme,
+        _conformanceMemberName(decl),
         decl.isGetter
             ? MemberKind.getter
             : decl.isSetter
@@ -476,7 +477,7 @@ void _checkAbstractMixinMemberConformance(
         impl,
         DeclarationOrBridge(declLib, declaration: decl),
         hostType: hostType,
-        name: decl.name.lexeme,
+        name: _conformanceMemberName(decl),
         setter: decl.isSetter,
         getter: decl.isGetter,
       )) {
@@ -493,7 +494,7 @@ void _checkAbstractMixinMemberConformance(
       // superclass chain and must conform to it (INVALID_OVERRIDE).
       final interface = _superMemberOf(
         ctx,
-        decl.name.lexeme,
+        _conformanceMemberName(decl),
         decl.isGetter
             ? MemberKind.getter
             : decl.isSetter
@@ -508,7 +509,7 @@ void _checkAbstractMixinMemberConformance(
             DeclarationOrBridge(declLib, declaration: decl),
             interface,
             hostType: hostType,
-            name: decl.name.lexeme,
+            name: _conformanceMemberName(decl),
             setter: decl.isSetter,
             getter: decl.isGetter,
           );
@@ -601,7 +602,7 @@ void _checkInterfaceConformance(
   final hostName = declarationName(host);
   for (final (member, declLib, kind) in requirements) {
     final names = member is MethodDeclaration
-        ? [member.name.lexeme]
+        ? [_conformanceMemberName(member)]
         : [
             for (final v in (member as FieldDeclaration).fields.variables)
               v.name.lexeme,
@@ -807,6 +808,10 @@ bool _fieldHasSetter(FieldDeclaration declaration, String name) =>
               (declaration.fields.isLate && field.initializer == null)),
     );
 
+/// Use the same operator identity as member registration and invocation.
+String _conformanceMemberName(MethodDeclaration member) =>
+    MemberName.method(member.name.lexeme, positionalArityOf(member)).name;
+
 /// The most-derived concrete member matching [name]/[kind]: own
 /// members first, then the last concrete same-key mixin member, then the
 /// superclass chain.
@@ -832,7 +837,7 @@ DeclarationOrBridge? _effectiveConcreteMember(
       };
     }
     return m is MethodDeclaration &&
-        m.name.lexeme == name &&
+        _conformanceMemberName(m) == name &&
         m.isGetter == (kind == MemberKind.getter) &&
         m.isSetter == (kind == MemberKind.setter);
   }

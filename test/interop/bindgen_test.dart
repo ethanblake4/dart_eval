@@ -5,6 +5,127 @@ import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('native constructor defaults retain private sentinels', () async {
+    final directory = Directory(
+      'test',
+    ).absolute.createTempSync('bindgen_default_');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final source = File(p.join(directory.path, 'native.dart'))
+      ..writeAsStringSync('''
+class Scale {
+  final double value;
+  const Scale(this.value);
+}
+class _Unspecified extends Scale {
+  const _Unspecified() : super(-1);
+}
+class Painter {
+  final int marker;
+  final double value;
+  final String? label;
+  Painter(this.marker, {double legacyScale = 1,
+      Scale scale = const _Unspecified(), this.label = 'native'})
+      : value = scale is _Unspecified ? legacyScale : scale.value;
+}
+class Positional {
+  final int marker;
+  final double value;
+  final String? label;
+  Positional(this.marker, [Scale scale = const _Unspecified(),
+      this.label = 'positional']) : value = scale.value;
+}
+class Override {
+  final int value;
+  Override({Scale scale = const _Unspecified(), int configured = 4})
+      : value = configured;
+}
+class Accessible {
+  final String label;
+  Accessible({this.label = '_ordinary string'});
+}
+''');
+    final config = BindgenConfig.parse('''
+libraries:
+  - uri: dart:core
+    classes:
+      int:
+        handMaintained: true
+      double:
+        handMaintained: true
+      String:
+        handMaintained: true
+  - uri: package:bindgen/native.dart
+    classes:
+      Scale:
+        overrideLibrary: package:bindgen/native.dart
+      Painter:
+      Positional:
+      Accessible:
+      Override:
+        constructors:
+          new:
+            params:
+              configured:
+                default: '8'
+''')..resolveDefaults();
+    final generated = (await Bindgen().parse(
+      source,
+      'native.eval.dart',
+      'package:bindgen/native.dart',
+      false,
+      config: config,
+      libraryConfig: config.libraries.last,
+    ))!;
+    expect(generated, contains('Function.apply(Painter.new'));
+    expect(generated, isNot(contains('Function.apply(Accessible.new')));
+    File(p.join(directory.path, 'native.eval.dart')).writeAsStringSync('''
+import 'native.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+$generated
+''');
+    File(p.join(directory.path, 'run.dart')).writeAsStringSync(r"""
+import 'native.eval.dart';
+import 'package:dart_eval/dart_eval.dart';
+void main() {
+  final compiler = Compiler()
+    ..defineBridgeClass($Scale.$declaration)
+    ..defineBridgeClass($Painter.$declaration)
+    ..defineBridgeClass($Positional.$declaration)
+    ..defineBridgeClass($Accessible.$declaration)
+    ..defineBridgeClass($Override.$declaration);
+  final program = compiler.compile({'main': {'main.dart': '''
+    import 'package:bindgen/native.dart';
+    bool main() {
+      final scaled = Painter(2, legacyScale: 3.0);
+      if (scaled.value != 3.0 || scaled.marker != 2 || scaled.label != 'native') return false;
+      final explicit = Painter(5, scale: Scale(7.0), label: null);
+      if (explicit.value != 7.0 || explicit.marker != 5 || explicit.label != null) return false;
+      final positional = Positional(9);
+      if (positional.marker != 9 || positional.value != -1.0 || positional.label != 'positional') return false;
+      final provided = Positional(11, Scale(4.0), null);
+      if (provided.marker != 11 || provided.value != 4.0 || provided.label != null) return false;
+      if (Override().value != 8 || Override(configured: 6).value != 6) return false;
+      return Accessible().label == '_ordinary string';
+    }
+  '''}});
+  for (final runtime in [Runtime.ofProgram(program), Runtime(program.write().buffer)]) {
+    $Scale.configureForRuntime(runtime);
+    $Painter.configureForRuntime(runtime);
+    $Positional.configureForRuntime(runtime);
+    $Accessible.configureForRuntime(runtime);
+    $Override.configureForRuntime(runtime);
+    final result = runtime.executeLib('package:main/main.dart', 'main');
+    if (result != true) throw StateError('Native defaults failed: $result');
+  }
+}
+""");
+    final result = await Process.run(Platform.resolvedExecutable, [
+      'run',
+      p.join(directory.path, 'run.dart'),
+    ]);
+    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
   test('returned callbacks emit named arguments once', () async {
     final directory = Directory(
       'test',

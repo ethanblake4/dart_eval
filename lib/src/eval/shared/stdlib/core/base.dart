@@ -7,7 +7,6 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/object.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/pattern.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/runes.dart';
-import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 import '../../library_environment.dart';
 import 'num.dart';
 
@@ -1046,7 +1045,15 @@ class $String implements $Instance {
       case 'runes':
         return $Runes.wrap($value.runes);
       case 'codeUnits':
-        return wrapList<int>($value.codeUnits, (e) => $int(e));
+        final listType = runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(CoreTypes.int),
+        ]);
+        return $List.view<int>(
+          $value.codeUnits,
+          (value) => $int(value),
+          runtimeTypeId: listType,
+          runtime: runtime,
+        );
       case 'compareTo':
         return $Closure(__compareTo.func, this);
       case 'contains':

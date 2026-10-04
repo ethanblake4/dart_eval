@@ -46,6 +46,7 @@ import './converter.dart';
 import './codec.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Converter,
@@ -387,7 +388,8 @@ class $Encoding implements $Instance {
   ) {
     final self = target! as $Encoding;
     final result = self.$value.decode(
-      ((r as $Value?)!.$reified as List).cast<int>(),
+      (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+          .cast<int>(),
     );
     return $String(result);
   }

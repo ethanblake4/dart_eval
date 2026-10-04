@@ -43,6 +43,95 @@ import 'package:dart_eval/stdlib/core.dart'
         $ClosableStringSink,
         $LineSplitter;
 
+import '../typed_data/typed_data.dart';
+
+/// dart_eval function wrapper binding for [base64Encode]
+class $base64EncodeFn {
+  const $base64EncodeFn();
+
+  static void configureForRuntime(Runtime runtime) {
+    return runtime.registerBridgeFuncRegisters(
+      'dart:convert',
+      'base64Encode',
+      $base64EncodeFn.callRegisters,
+    );
+  }
+
+  static const $declaration = BridgeFunctionDeclaration(
+    'dart:convert',
+    'base64Encode',
+    BridgeFunctionDef(
+      returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+      namedParams: [],
+      params: [
+        BridgeParameter(
+          'bytes',
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          false,
+        ),
+      ],
+    ),
+  );
+
+  static $Value? callRegisters(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final result = base64Encode(
+      (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+          .cast<int>(),
+    );
+    return $String(result);
+  }
+}
+
+/// dart_eval function wrapper binding for [base64Decode]
+class $base64DecodeFn {
+  const $base64DecodeFn();
+
+  static void configureForRuntime(Runtime runtime) {
+    return runtime.registerBridgeFuncRegisters(
+      'dart:convert',
+      'base64Decode',
+      $base64DecodeFn.callRegisters,
+    );
+  }
+
+  static const $declaration = BridgeFunctionDeclaration(
+    'dart:convert',
+    'base64Decode',
+    BridgeFunctionDef(
+      returns: BridgeTypeAnnotation(
+        BridgeTypeRef(TypedDataTypes.uint8List, []),
+      ),
+      namedParams: [],
+      params: [
+        BridgeParameter(
+          'source',
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          false,
+        ),
+      ],
+    ),
+  );
+
+  static $Value? callRegisters(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final result = base64Decode((r as $String).$value);
+    return $Uint8List.wrap(result);
+  }
+}
+
 /// dart_eval function wrapper binding for [jsonEncode]
 class $jsonEncodeFn {
   const $jsonEncodeFn();

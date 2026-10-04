@@ -43,6 +43,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
+        $ConcurrentModificationError,
         $Exception,
         $FormatException,
         $Uri,
@@ -54,6 +55,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $Enum;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+
+import 'collection.dart' as hooks;
 
 /// dart_eval bridge binding for [Iterable]
 class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
@@ -1295,31 +1298,7 @@ class $Iterable$bridge<E> extends Iterable<E> with $Bridge<Iterable<E>> {
         });
       case 'whereType':
         return $Function((runtime, target, r, s, c) {
-          final result = super.whereType();
-          return (() {
-            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
-            return (() {
-              final iterableType = runtime.internParameterizedType(
-                CoreTypes.iterable,
-                [
-                  (bridgeTypeArguments.length > 0
-                      ? bridgeTypeArguments[0]
-                      : runtime.lookupType(CoreTypes.dynamic)),
-                ],
-              );
-              return $Iterable.wrap(
-                (result).map((e) {
-                  final value = (e is List || e is Map || e is Set
-                      ? TypedInterop.boxExternal(e, runtime: runtime)!
-                      : runtime.wrapAlways(e));
-                  runtime.assertTypedTypeArgument(value, iterableType, 0);
-                  return value;
-                }),
-                runtime: runtime,
-                runtimeTypeId: iterableType,
-              );
-            })();
-          })();
+          return hooks.iterableWhereType(runtime, this, r, s, c);
         });
       case 'expand':
         return $Function((runtime, target, r, s, c) {

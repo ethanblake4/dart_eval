@@ -68,6 +68,9 @@ import 'package:dart_eval/stdlib/async.dart'
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import './converter.dart';
+
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+
 import './byte_conversion.dart';
 import '../typed_data/typed_data.dart';
 import './string_conversion_sink.dart';
@@ -355,7 +358,8 @@ class $Base64Encoder implements $Instance {
   ) {
     final self = target! as $Base64Encoder;
     final result = self.$value.convert(
-      ((r as $Value?)!.$reified as List).cast<int>(),
+      (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+          .cast<int>(),
     );
     return $String(result);
   }
@@ -990,7 +994,8 @@ class $Base64Codec implements $Instance {
   ) {
     final self = target! as $Base64Codec;
     final result = self.$value.encode(
-      ((r as $Value?)!.$reified as List).cast<int>(),
+      (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+          .cast<int>(),
     );
     return $String(result);
   }

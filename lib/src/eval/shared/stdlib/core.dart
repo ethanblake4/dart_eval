@@ -16,6 +16,7 @@ import 'package:dart_eval/src/eval/shared/stdlib/core/extensions.dart'
     as core_extensions;
 import 'package:dart_eval/src/eval/shared/stdlib/core/errors.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/expando.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/functions.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/symbol_literal.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/error_hooks.dart'
     as assertion_hooks;
@@ -63,6 +64,7 @@ class DartCorePlugin implements EvalPlugin {
     configurePrintForCompile(registry);
     configureIdenticalForCompile(registry);
     configureSymbolLiteralsForCompile(registry);
+    registry.defineBridgeTopLevelFunction($identityHashCodeFn.$declaration);
     registry.defineBridgeClass($dynamicCls);
     assertion_hooks.configureAssertionForCompile(registry);
     registry.defineBridgeClass($voidCls);
@@ -118,6 +120,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($NoSuchMethodError.$declaration);
     $UnimplementedError.configureForCompile(registry);
     $UnsupportedError.configureForCompile(registry);
+    $ConcurrentModificationError.configureForCompile(registry);
   }
 
   @override
@@ -127,6 +130,7 @@ class DartCorePlugin implements EvalPlugin {
     configurePrintForRuntime(runtime);
     configureIdenticalForRuntime(runtime);
     configureSymbolLiteralsForRuntime(runtime);
+    $identityHashCodeFn.configureForRuntime(runtime);
     $String.configureForRuntime(runtime);
     $Runes.configureForRuntime(runtime);
     $RuneIterator.configureForRuntime(runtime);
@@ -245,6 +249,7 @@ class DartCorePlugin implements EvalPlugin {
     $Error$bridge.configureForRuntime(runtime);
     $UnimplementedError.configureForRuntime(runtime);
     $UnsupportedError.configureForRuntime(runtime);
+    $ConcurrentModificationError.configureForRuntime(runtime);
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'Stream.empty',

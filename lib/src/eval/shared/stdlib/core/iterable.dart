@@ -1,5 +1,28 @@
 part of 'collection.dart';
 
+/// SDK type filtering uses guest runtime types rather than erased host types.
+$Value iterableWhereType(
+  Runtime runtime,
+  $Value? target,
+  Object? r,
+  Object? s,
+  Object? c,
+) {
+  final arguments = runtime.bridgeCallTypeArguments;
+  final elementType = arguments.isEmpty
+      ? runtime.lookupType(CoreTypes.dynamic)
+      : arguments[0];
+  final resultType = runtime.internParameterizedType(CoreTypes.iterable, [elementType]);
+  final source = target!.$value as Iterable;
+  Iterable<$Value?> filtered() sync* {
+    for (final element in source) {
+      final value = TypedInterop.boxExternal(element, runtime: runtime);
+      if (runtime.isTypedValueType(value, elementType)) yield value;
+    }
+  }
+  return $Iterable.wrap(filtered(), runtime: runtime, runtimeTypeId: resultType);
+}
+
 /// dart_eval bimodal wrapper for [Iterable]
 class $Iterable<E> implements Iterable<E>, $Instance {
   /// Configure the [$Iterable] wrapper for use in a [Runtime]
@@ -1024,9 +1047,7 @@ class $Iterable<E> implements Iterable<E>, $Instance {
     Object? s,
     Object? c,
   ) {
-    final $this = target?.$value as Iterable;
-    final $result = $this.whereType();
-    return $Iterable.wrap($result);
+    return iterableWhereType(runtime, target, r, s, c);
   }
 
   @override

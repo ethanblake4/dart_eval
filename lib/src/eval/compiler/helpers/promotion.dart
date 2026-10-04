@@ -210,6 +210,7 @@ void _visitPromotions(
   PromotionApply promote, {
   Set<String> excluded = const {},
 }) {
+  _visitCompletedAssertionPromotions(ctx, expression, value, promote, excluded);
   if (expression is ParenthesizedExpression) {
     _visitPromotions(
       ctx,
@@ -397,6 +398,159 @@ void _visitPromotions(
     return;
   }
 }
+
+/// A checked assertion proves its type on normal completion, regardless of the
+/// condition's result. Visit eager operands in order and intersect alternatives
+/// so a skipped assertion or a later write never establishes a proof.
+void _visitCompletedAssertionPromotions(
+  CompilerContext ctx,
+  Expression expression,
+  bool? outcome,
+  PromotionApply promote,
+  Set<String> excluded,
+) {
+  void sequence(List<(Expression, bool?)> parts) {
+    for (var i = 0; i < parts.length; i++) {
+      _visitCompletedAssertionPromotions(
+        ctx,
+        parts[i].$1,
+        parts[i].$2,
+        promote,
+        {
+          ...excluded,
+          ...assignedLocalNames(parts.skip(i + 1).map((part) => part.$1)),
+        },
+      );
+    }
+  }
+
+  void alternatives(List<List<(Expression, bool?)>> paths) {
+    final proofs = <Map<(String, String?), (Variable, TypeRef)>>[];
+    for (final path in paths) {
+      if (path.any(
+        (part) =>
+            part.$1 is ThrowExpression ||
+            part.$1 is BooleanLiteral &&
+                part.$2 != null &&
+                (part.$1 as BooleanLiteral).value != part.$2,
+      )) {
+        continue;
+      }
+      final collected = <(String, String?), (Variable, TypeRef)>{};
+      for (var i = 0; i < path.length; i++) {
+        _visitCompletedAssertionPromotions(
+          ctx,
+          path[i].$1,
+          path[i].$2,
+          (local, type, member) {
+            final key = (local.binding?.name ?? local.name, member);
+            final previous = collected[key];
+            if (previous == null ||
+                canPromoteTo(ctx, type, previous.$2, expression)) {
+              collected[key] = (local, type);
+            }
+          },
+          {
+            ...excluded,
+            ...assignedLocalNames(path.skip(i + 1).map((part) => part.$1)),
+          },
+        );
+      }
+      proofs.add(collected);
+    }
+    if (proofs.isEmpty) return;
+    for (final entry in proofs.first.entries) {
+      if (proofs
+          .skip(1)
+          .every((path) => path[entry.key]?.$2 == entry.value.$2)) {
+        promote(entry.value.$1, entry.value.$2, entry.key.$2);
+      }
+    }
+  }
+
+  if (expression is ParenthesizedExpression) {
+    sequence([(expression.expression, outcome)]);
+  } else if (expression is AsExpression) {
+    sequence([(expression.expression, null)]);
+    _promoteSlot(
+      ctx,
+      expression.expression,
+      TypeRef.fromAnnotation(ctx, ctx.library, expression.type),
+      promote,
+      excluded,
+    );
+  } else if (expression is ConditionalExpression) {
+    alternatives([
+      [(expression.condition, true), (expression.thenExpression, outcome)],
+      [(expression.condition, false), (expression.elseExpression, outcome)],
+    ]);
+  } else if (expression is BinaryExpression) {
+    final left = expression.leftOperand;
+    final right = expression.rightOperand;
+    final operator = expression.operator.lexeme;
+    if (operator == '&&' || operator == '||') {
+      final continuing = operator == '&&';
+      alternatives([
+        if (outcome == null || outcome == !continuing) [(left, !continuing)],
+        if (outcome == null || outcome == continuing)
+          [(left, continuing), (right, continuing)],
+        if (outcome == null || outcome == !continuing)
+          [(left, continuing), (right, !continuing)],
+      ]);
+    } else if (operator == '??') {
+      alternatives([
+        [(left, null)],
+        [(left, null), (right, outcome)],
+      ]);
+    } else {
+      sequence([(left, null), (right, null)]);
+    }
+  } else if (expression is PropertyAccess && expression.target != null) {
+    sequence([(expression.target!, null)]);
+  } else if (expression is MethodInvocation) {
+    sequence([
+      if (expression.target != null) (expression.target!, null),
+      if (!_hasNullShortingReceiver(expression))
+        for (final argument in expression.argumentList.arguments)
+          (argument.argumentExpression, null),
+    ]);
+  } else if (expression is PrefixExpression) {
+    sequence([
+      (
+        expression.operand,
+        expression.operator.lexeme == '!' && outcome != null ? !outcome : null,
+      ),
+    ]);
+  } else if (expression is PostfixExpression) {
+    sequence([(expression.operand, null)]);
+    if (expression.operator.lexeme == '!') {
+      _promoteSlot(ctx, expression.operand, null, promote, excluded);
+    }
+  } else if (expression is AssignmentExpression) {
+    if (expression.operator.lexeme == '??=') return;
+    _visitCompletedAssertionPromotions(
+      ctx,
+      expression.rightHandSide,
+      null,
+      promote,
+      {
+        ...excluded,
+        ...assignedLocalNames([expression]),
+      },
+    );
+  }
+}
+
+bool _hasNullShortingReceiver(Expression expression) => switch (expression) {
+  MethodInvocation(:final isNullAware, :final target) ||
+  PropertyAccess(
+    :final isNullAware,
+    :final target,
+  ) => isNullAware || target != null && _hasNullShortingReceiver(target),
+  IndexExpression(:final isNullAware, :final target) =>
+    isNullAware || target != null && _hasNullShortingReceiver(target),
+  _ => false,
+};
 
 bool _isCoreIdentical(CompilerContext ctx, MethodInvocation expression) {
   if (expression.methodName.name != 'identical' || expression.isCascaded) {

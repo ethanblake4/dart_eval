@@ -43,6 +43,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
+        $ConcurrentModificationError,
         $Exception,
         $FormatException,
         $Uri,
@@ -53,6 +54,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StringSink,
         $Enum;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [Pattern]
 class $Pattern implements $Instance {
@@ -455,7 +457,8 @@ class $Match implements $Instance {
   ) {
     final self = target! as $Match;
     final result = self.$value.groups(
-      ((r as $Value?)!.$reified as List).cast<int>(),
+      (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+          .cast<int>(),
     );
     return $List.view(
       result,

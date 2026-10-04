@@ -26,8 +26,14 @@ class ObjectStore {
   int onlyInt(int value) => value;
 }
 class Mapper<E> {
-  final Iterable<E> items;
+  final List<E> items;
   Mapper(this.items);
+  void setFirst(E value) { items[0] = value; }
+  void writeWrong() { (items as dynamic)[0] = 'wrong'; }
+  int readInts(List<int> values) => values.first;
+  void writeWrongInt(List<int> values) { (values as dynamic)[0] = 'wrong'; }
+  int nullableInts(List<int>? values) => values?.first ?? -1;
+  int defaultInts([List<int> values = const [9]]) => values.first;
   Iterable<R> map<R>(R Function(E) callback) => items.map(callback);
   Iterable<R> eager<R>(R Function(E) callback) => [callback(items.first)];
   Iterable<List<R>> groups<R>(R Function(E) callback) =>
@@ -100,6 +106,30 @@ void main() {
       T transform<T>(T Function(T) callback, T value) => callback(value);
     }
     class Token {}
+    bool listArguments() {
+      final token = Token();
+      final items = <Token>[token];
+      final mapper = Mapper<Token>(items);
+      if (!identical(mapper.values().single, token)) return false;
+      final replacement = Token();
+      mapper.setFirst(replacement);
+      if (!identical(items.single, replacement)) return false;
+      try { mapper.writeWrong(); return false; } on TypeError {}
+      if (!identical(items.single, replacement)) return false;
+      final integers = <int>[5];
+      if (mapper.readInts(integers) != 5) return false;
+      try { mapper.writeWrongInt(integers); return false; } on TypeError {}
+      if (integers.single != 5) return false;
+      if (mapper.nullableInts(null) != -1 ||
+          mapper.nullableInts(integers) != 5 ||
+          mapper.defaultInts() != 9 ||
+          mapper.defaultInts(integers) != 5) return false;
+      dynamic wrong = <String>['wrong'];
+      try { mapper.readInts(wrong); return false; } on TypeError {}
+      try { mapper.defaultInts(wrong); return false; } on TypeError {}
+      try { mapper.nullableInts(wrong); return false; } on TypeError {}
+      return true;
+    }
     List<T> mapped<T>(Mapper<T> mapper) => mapper.map<T>((e) => e).toList();
     bool mapResults() {
       final token = Token();
@@ -163,6 +193,7 @@ void main() {
     check(identical(reader.transform<Object>((value) => value, token), token));
     check(runtime.executeLib('package:main/main.dart', 'lookup') == true);
     check(runtime.executeLib('package:main/main.dart', 'mapResults') == true);
+    check(runtime.executeLib('package:main/main.dart', 'listArguments') == true);
     check(runtime.bridgeCallTypeArguments.isEmpty);
   }
 }

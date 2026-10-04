@@ -37,6 +37,7 @@ import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../core/iterator.dart';
+import '../core/collection.dart' as hooks;
 
 /// dart_eval bridge binding for [SetBase]
 class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
@@ -1293,31 +1294,7 @@ class $SetBase$bridge<E> extends SetBase<E> with $Bridge<SetBase<E>> {
         });
       case 'whereType':
         return $Function((runtime, target, r, s, c) {
-          final result = super.whereType();
-          return (() {
-            final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
-            return (() {
-              final iterableType = runtime.internParameterizedType(
-                CoreTypes.iterable,
-                [
-                  (bridgeTypeArguments.length > 0
-                      ? bridgeTypeArguments[0]
-                      : runtime.lookupType(CoreTypes.dynamic)),
-                ],
-              );
-              return $Iterable.wrap(
-                (result).map((e) {
-                  final value = (e is List || e is Map || e is Set
-                      ? TypedInterop.boxExternal(e, runtime: runtime)!
-                      : runtime.wrapAlways(e));
-                  runtime.assertTypedTypeArgument(value, iterableType, 0);
-                  return value;
-                }),
-                runtime: runtime,
-                runtimeTypeId: iterableType,
-              );
-            })();
-          })();
+          return hooks.iterableWhereType(runtime, this, r, s, c);
         });
       case 'expand':
         return $Function((runtime, target, r, s, c) {
@@ -2793,32 +2770,7 @@ class $SetBase<E> implements $Instance {
     Object? s,
     Object? c,
   ) {
-    final self = target! as $SetBase;
-    final result = self.$value.whereType();
-    return (() {
-      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
-      return (() {
-        final iterableType = runtime.internParameterizedType(
-          CoreTypes.iterable,
-          [
-            (bridgeTypeArguments.length > 0
-                ? bridgeTypeArguments[0]
-                : runtime.lookupType(CoreTypes.dynamic)),
-          ],
-        );
-        return $Iterable.wrap(
-          (result).map((e) {
-            final value = (e is List || e is Map || e is Set
-                ? TypedInterop.boxExternal(e, runtime: runtime)!
-                : runtime.wrapAlways(e));
-            runtime.assertTypedTypeArgument(value, iterableType, 0);
-            return value;
-          }),
-          runtime: runtime,
-          runtimeTypeId: iterableType,
-        );
-      })();
-    })();
+    return hooks.iterableWhereType(runtime, target, r, s, c);
   }
 
   static const $Function __expand = $Function(_expand);

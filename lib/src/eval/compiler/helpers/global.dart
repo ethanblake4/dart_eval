@@ -14,6 +14,7 @@ import '../values/abi.dart';
 import '../member/member_name.dart';
 import '../member/call_signature.dart';
 import '../declaration/enum.dart' show resolveEnumValueType;
+import 'extension.dart';
 
 final _resolving = Expando<Set<(int, String)>>();
 
@@ -128,11 +129,49 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     }
     return CoreTypes.dynamic.ref(ctx);
   }
-  if (expression is FunctionExpression) return CoreTypes.function.ref(ctx);
+  if (expression is FunctionExpression) {
+    final body = expression.body;
+    if (expression.typeParameters == null &&
+        body is ExpressionFunctionBody &&
+        !body.isAsynchronous) {
+      final signature = ctx.typeFactory.signatureFromParts(
+        library,
+        returnType: null,
+        typeParameterList: null,
+        parameterList: expression.parameters,
+        owner: TypeParameterOwner(
+          TypeParameterOwnerKind.functionTypeAnnotation,
+          library,
+          '',
+          expression.offset,
+        ),
+      );
+      return FunctionTypeRef(
+        FunctionSignature(
+          positional: signature.positional,
+          requiredPositional: signature.requiredPositional,
+          named: signature.named,
+          returnType: _infer(ctx, library, body.expression),
+        ),
+        decl: ctx.types.bySpec(CoreTypes.function),
+      );
+    }
+    return CoreTypes.function.ref(ctx);
+  }
   final constructorTearOff = _constructorTearOffType(ctx, library, expression);
   if (constructorTearOff != null) return constructorTearOff;
   if (expression is PrefixedIdentifier) {
     final type = ctx.visibleTypes[library]?[expression.prefix.name];
+    if (type != null) {
+      final member = ctx.memberLookup.staticMember(
+        type,
+        expression.identifier.name,
+        MemberKind.method,
+      );
+      if (member != null && !member.isField) {
+        return member.signature.toFunctionType(ctx);
+      }
+    }
     if (type != null &&
         ctx.enumValueIndices[type.file]?[type.name]?.containsKey(
               expression.identifier.name,
@@ -171,10 +210,14 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
       CoreTypes.double.ref(ctx),
       CoreTypes.num.ref(ctx),
     };
-    // Only infer operator results for known core numeric operands. User-defined
-    // operators and other expression forms retain conservative object storage.
+    // Core numeric operators have specialized result rules. Other declared
+    // operators use their instance or extension signature.
     if (!numeric.contains(left) || !numeric.contains(right)) {
-      return CoreTypes.dynamic.ref(ctx);
+      try {
+        return _memberResultType(ctx, library, left, operator, [right], {});
+      } on Object {
+        return CoreTypes.dynamic.ref(ctx);
+      }
     }
     if (['<', '<=', '>', '>='].contains(operator)) {
       return CoreTypes.bool.ref(ctx);
@@ -189,6 +232,20 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     return CoreTypes.dynamic.ref(ctx);
   }
   if (expression is SimpleIdentifier) {
+    // Arrow callbacks can reference parameters rather than globals with the
+    // same name. Unannotated parameters remain conservatively dynamic.
+    for (var node = expression.parent; node != null; node = node.parent) {
+      if (node is! FunctionExpression) continue;
+      for (final parameter
+          in node.parameters?.parameters ?? const <FormalParameter>[]) {
+        if (parameter.name?.lexeme == expression.name) {
+          return ctx.typeFactory.formalParameterAnnotationType(
+            library,
+            parameter,
+          );
+        }
+      }
+    }
     // Unqualified names in a static field initializer first resolve against
     // its declaring class. Losing these dependencies turns integer constants
     // into dynamic operands and widens later arithmetic to num.
@@ -206,6 +263,14 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
     }
     final declaration =
         ctx.visibleDeclarations[library]?[expression.name]?.declaration;
+    if (declaration?.declaration case FunctionDeclaration function
+        when !function.isGetter && !function.isSetter) {
+      return CallSignature.forDeclaration(
+        ctx,
+        declaration!.sourceLib,
+        function,
+      ).toFunctionType(ctx);
+    }
     if (declaration?.declaration is VariableDeclaration) {
       return resolveGlobalType(ctx, declaration!.sourceLib, expression.name);
     }
@@ -368,35 +433,110 @@ TypeRef _infer(CompilerContext ctx, int library, Expression? expression) {
   if (expression is MethodInvocation && expression.target != null) {
     // Receiver calls: infer the target, then ask the member signature for the
     // return type. Inference failures must not break compilation.
-    final receiver = _infer(ctx, library, expression.target!);
+    final target = expression.target!;
+    final targetName = switch (target) {
+      SimpleIdentifier(:final name) => name,
+      PrefixedIdentifier(:final prefix, :final identifier) =>
+        '${prefix.name}.${identifier.name}',
+      _ => null,
+    };
+    final declaration =
+        ctx.visibleDeclarations[library]?[targetName]?.declaration;
+    final isStaticOwner =
+        declaration?.bridge is BridgeClassDef ||
+        declaration?.declaration is ClassDeclaration ||
+        declaration?.declaration is EnumDeclaration;
+    final staticOwner = isStaticOwner
+        ? (ctx.visibleTypes[library]?[targetName])
+        : null;
+    final receiver = staticOwner ?? _infer(ctx, library, target);
     if (!receiver.isSpec(CoreTypes.dynamic)) {
       try {
-        return memberCallResultType(
-              ctx,
-              receiver,
-              expression.methodName.name,
-              [
-                for (final arg in expression.argumentList.arguments)
-                  if (arg is! NamedArgument)
-                    _infer(ctx, library, arg.argumentExpression),
-              ],
-              {
-                for (final arg in expression.argumentList.arguments)
-                  if (arg is NamedArgument)
-                    arg.name.lexeme: _infer(
-                      ctx,
-                      library,
-                      arg.argumentExpression,
-                    ),
-              },
-            ) ??
-            CoreTypes.dynamic.ref(ctx);
+        return _memberResultType(
+          ctx,
+          library,
+          receiver,
+          expression.methodName.name,
+          [
+            for (final arg in expression.argumentList.arguments)
+              if (arg is! NamedArgument)
+                _infer(ctx, library, arg.argumentExpression),
+          ],
+          {
+            for (final arg in expression.argumentList.arguments)
+              if (arg is NamedArgument)
+                arg.name.lexeme: _infer(ctx, library, arg.argumentExpression),
+          },
+          explicitArguments: expression.typeArguments == null
+              ? null
+              : [
+                  for (final type in expression.typeArguments!.arguments)
+                    TypeRef.fromAnnotation(ctx, library, type),
+                ],
+          source: expression,
+          $static: staticOwner != null,
+        );
       } on Object {
         return CoreTypes.dynamic.ref(ctx);
       }
     }
   }
   return CoreTypes.dynamic.ref(ctx);
+}
+
+TypeRef _memberResultType(
+  CompilerContext ctx,
+  int library,
+  TypeRef receiver,
+  String name,
+  List<TypeRef> positional,
+  Map<String, TypeRef> named, {
+  List<TypeRef>? explicitArguments,
+  AstNode? source,
+  bool $static = false,
+}) {
+  try {
+    if ($static) {
+      final member = ctx.memberLookup.staticMember(
+        receiver,
+        name,
+        MemberKind.method,
+      );
+      if (member == null || member.isField) return CoreTypes.dynamic.ref(ctx);
+      return ArgumentBinder(ctx).inferStaticCallResult(
+        member.signature,
+        positional,
+        named,
+        explicitArguments: explicitArguments,
+        source: source,
+      );
+    }
+    return memberCallResultType(ctx, receiver, name, positional, named) ??
+        CoreTypes.dynamic.ref(ctx);
+  } on CompileError {
+    final extension = resolveExtensionMember(
+      ctx,
+      receiver,
+      name,
+      arity: positional.length,
+      library: library,
+    );
+    if (extension == null) return CoreTypes.dynamic.ref(ctx);
+    final (owner, member, bindings) = extension;
+    final signature = CallSignature.forDeclaration(ctx, owner.library, member);
+    return ArgumentBinder(ctx).inferStaticCallResult(
+      signature.substitute(
+        signature.substitutionFor(
+          extBindingsMap(owner, bindings),
+          includeOwn: false,
+        ),
+      ),
+      positional,
+      named,
+      explicitArguments: explicitArguments,
+      source: source,
+    );
+  }
 }
 
 TypeRef _annotatedCollectionType(

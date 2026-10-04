@@ -17,6 +17,7 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:convert';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Converter,
@@ -45,22 +46,30 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import './converter.dart';
 
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+/// dart_eval bridge binding for [Codec]
+class $Codec$bridge<S, T> extends Codec<S, T> with $Bridge<Codec<S, T>> {
+  /// Forwarded constructor for [Codec.new]
+  $Codec$bridge();
 
-/// dart_eval wrapper binding for [Codec]
-class $Codec<S, T> implements $Instance {
   /// Configure this class for use in a [Runtime]
-  static void configureForRuntime(Runtime runtime) {}
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:convert',
+      'Codec.',
+      $Codec$bridge.$new,
+      isBridge: true,
+    );
+  }
 
   /// Configure this class for use during compilation
   static void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$Codec]
+  /// Compile-time type specification of [$Codec$bridge]
   static const $spec = BridgeTypeSpec('dart:convert', 'Codec');
 
-  /// Compile-time type declaration of [$Codec]
+  /// Compile-time type declaration of [$Codec$bridge]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$Codec]
@@ -183,9 +192,97 @@ class $Codec<S, T> implements $Instance {
     },
     setters: {},
     fields: {},
-    wrap: true,
-    bridge: false,
+    wrap: false,
+    bridge: true,
   );
+
+  /// Proxy for the [Codec.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Codec$bridge();
+  }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    final runtime = $runtime;
+    switch (identifier) {
+      case 'inverted':
+        final _inverted = super.inverted;
+        return $Codec.wrap(_inverted);
+      case 'encode':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.encode(
+            TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+                as dynamic,
+          );
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
+        });
+      case 'decode':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.decode(
+            TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+                as dynamic,
+          );
+          return (result is List || result is Map || result is Set
+              ? TypedInterop.boxExternal(result, runtime: runtime)!
+              : runtime.wrapAlways(result));
+        });
+      case 'fuse':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.fuse((r as $Value?)!.$value);
+          return $Codec.wrap(result);
+        });
+    }
+    return null;
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {}
+
+  @override
+  Converter<S, T> get encoder => $_get('encoder');
+
+  @override
+  Converter<T, S> get decoder => $_get('decoder');
+
+  @override
+  Codec<T, S> get inverted => $_get('inverted');
+
+  @override
+  T encode(S input) {
+    final runtime = $runtime;
+    return $_invoke('encode', [
+      (input is List || input is Map || input is Set
+          ? TypedInterop.boxExternal(input, runtime: runtime)!
+          : runtime.wrapAlways(input)),
+    ]);
+  }
+
+  @override
+  S decode(T encoded) {
+    final runtime = $runtime;
+    return $_invoke('decode', [
+      (encoded is List || encoded is Map || encoded is Set
+          ? TypedInterop.boxExternal(encoded, runtime: runtime)!
+          : runtime.wrapAlways(encoded)),
+    ]);
+  }
+
+  @override
+  Codec<S, R> fuse<R>(Codec<T, R> other) {
+    final runtime = $runtime;
+    return $_invoke('fuse', [$Codec.wrap(other)]);
+  }
+}
+
+/// dart_eval lightweight wrapper binding for [Codec]
+class $Codec<S, T> implements $Instance {
+  /// Compile-time type specification of [$Codec]
+  static const $spec = BridgeTypeSpec('dart:convert', 'Codec');
+
+  /// Compile-time type declaration of [$Codec]
+  static const $type = BridgeTypeRef($spec);
 
   final $Instance _superclass;
 

@@ -9,3 +9,4 @@ export '../src/eval/shared/stdlib/io/http.dart';
 export '../src/eval/shared/stdlib/io/io_sink.dart';
 export '../src/eval/shared/stdlib/io/socket.dart';
 export '../src/eval/shared/stdlib/io/http_status.dart';
+export '../src/eval/shared/stdlib/io/zlib.dart';

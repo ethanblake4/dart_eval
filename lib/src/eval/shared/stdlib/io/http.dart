@@ -662,7 +662,15 @@ class $HttpClientResponse implements $Instance {
     wrap: true,
   );
 
-  late final _superclass = $Stream.wrap($value);
+  $Stream _superclass(Runtime runtime) => $Stream.wrap(
+    $value,
+    runtime: runtime,
+    runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+      runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    ]),
+  );
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -675,7 +683,7 @@ class $HttpClientResponse implements $Instance {
       'persistentConnection' => $bool($value.persistentConnection),
       'reasonPhrase' => $String($value.reasonPhrase),
       'detachSocket' => $Closure(__detachSocket.func, this),
-      _ => _superclass.$getProperty(runtime, identifier),
+      _ => _superclass(runtime).$getProperty(runtime, identifier),
     };
   }
 
@@ -705,6 +713,6 @@ class $HttpClientResponse implements $Instance {
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
-    _superclass.$setProperty(runtime, identifier, value);
+    _superclass(runtime).$setProperty(runtime, identifier, value);
   }
 }

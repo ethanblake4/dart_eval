@@ -95,18 +95,22 @@ String argumentAccessor(
   String? argumentSource,
   String? primitiveSource,
   BindgenParamConfig? paramConfig,
+  bool includeNamedLabel = true,
+  bool useDefaultValue = true,
 }) {
   final paramBuffer = StringBuffer();
   // Optional params may be absent when the call site sends only provided
   // arguments, so access must be bounds-safe.
   final source = argumentSource!;
-  if (param.isNamed) {
+  if (param.isNamed && includeNamedLabel) {
     paramBuffer.write(
       '${paramMapping[param.name] ?? param.name?.replaceFirst(RegExp('^_'), '')}: ',
     );
   }
   final type = param.type;
-  final defaultExpr = paramConfig?.defaultValue ?? param.defaultValueCode;
+  final defaultExpr = useDefaultValue
+      ? paramConfig?.defaultValue ?? param.defaultValueCode
+      : null;
   if (defaultExpr != null) {
     paramBuffer.write('$source == null ? $defaultExpr : ');
   }
@@ -212,12 +216,21 @@ String argumentAccessor(
     if (needsCast) {
       paramBuffer.write('(');
     }
-    paramBuffer.write(source);
-    final accessor = reify ? 'reified' : 'value';
-    if (param.isRequired || defaultExpr != null) {
-      paramBuffer.write('!.\$$accessor');
+    if (type.isDartCoreList) {
+      ctx.imports.add(
+        'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
+      );
+      paramBuffer.write(
+        'TypedInterop.exportExternal($source, runtime: runtime)',
+      );
     } else {
-      paramBuffer.write('?.\$$accessor');
+      paramBuffer.write(source);
+      final accessor = reify ? 'reified' : 'value';
+      if (param.isRequired || defaultExpr != null) {
+        paramBuffer.write('!.\$$accessor');
+      } else {
+        paramBuffer.write('?.\$$accessor');
+      }
     }
     if (needsCast) {
       // Optional arguments can still have non-nullable types when the host

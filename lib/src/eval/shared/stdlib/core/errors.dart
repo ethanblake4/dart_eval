@@ -44,6 +44,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
+        $ConcurrentModificationError,
         $Exception,
         $FormatException,
         $Uri,
@@ -1975,6 +1976,129 @@ class $UnimplementedError implements UnimplementedError, $Instance {
 
   @override
   String? get message => $value.message;
+
+  @override
+  StackTrace? get stackTrace => $value.stackTrace;
+
+  @override
+  String toString() => $value.toString();
+}
+
+/// dart_eval wrapper binding for [ConcurrentModificationError]
+class $ConcurrentModificationError
+    implements ConcurrentModificationError, $Instance {
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:core',
+      'ConcurrentModificationError.',
+      $ConcurrentModificationError.$new,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$ConcurrentModificationError]
+  static const $spec = BridgeTypeSpec(
+    'dart:core',
+    'ConcurrentModificationError',
+  );
+
+  /// Compile-time type declaration of [$ConcurrentModificationError]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$ConcurrentModificationError]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+
+      $extends: BridgeTypeRef(CoreTypes.error, []),
+
+      $implements: [BridgeTypeRef(CoreTypes.error, [])],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'modifiedObject',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {},
+    getters: {},
+    setters: {},
+    fields: {
+      'modifiedObject': BridgeFieldDef(
+        BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.object, []),
+          nullable: true,
+        ),
+        isStatic: false,
+      ),
+    },
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [ConcurrentModificationError.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $ConcurrentModificationError.wrap(
+      ConcurrentModificationError(
+        TypedInterop.exportExternal((r is $Value ? r : null), runtime: runtime)
+            as Object?,
+      ),
+    );
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final ConcurrentModificationError $value;
+
+  @override
+  ConcurrentModificationError get $reified => $value;
+
+  /// Wrap a [ConcurrentModificationError] in a [$ConcurrentModificationError]
+  $ConcurrentModificationError.wrap(this.$value)
+    : _superclass = $Error.wrap($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'modifiedObject':
+        final _modifiedObject = $value.modifiedObject;
+        return _modifiedObject == null
+            ? const $null()
+            : $Object(_modifiedObject);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+
+  @override
+  Object? get modifiedObject => $value.modifiedObject;
 
   @override
   StackTrace? get stackTrace => $value.stackTrace;

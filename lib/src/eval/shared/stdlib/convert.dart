@@ -33,7 +33,7 @@ class DartConvertPlugin implements EvalPlugin {
     $AsciiEncoder.configureForCompile(registry);
     $AsciiDecoder.configureForCompile(registry);
     $Converter$bridge.configureForCompile(registry);
-    $Codec.configureForCompile(registry);
+    $Codec$bridge.configureForCompile(registry);
     $Encoding.configureForCompile(registry);
     $Utf8Decoder.configureForCompile(registry);
     $Utf8Codec.configureForCompile(registry);
@@ -46,11 +46,13 @@ class DartConvertPlugin implements EvalPlugin {
     $ChunkedConversionSink.configureForCompile(registry);
     $HtmlEscapeMode.configureForCompile(registry);
     $HtmlEscape.configureForCompile(registry);
-    $ByteConversionSink.configureForCompile(registry);
-    $StringConversionSink.configureForCompile(registry);
+    $ByteConversionSink$bridge.configureForCompile(registry);
+    $StringConversionSink$bridge.configureForCompile(registry);
     $ClosableStringSink.configureForCompile(registry);
     $LineSplitter.configureForCompile(registry);
     registry.addSource(DartSource('dart:convert', convertSource));
+    registry.defineBridgeTopLevelFunction($base64EncodeFn.$declaration);
+    registry.defineBridgeTopLevelFunction($base64DecodeFn.$declaration);
     registry.defineBridgeTopLevelFunction($jsonEncodeFn.$declaration);
     registry.defineBridgeTopLevelFunction($jsonDecodeFn.$declaration);
   }
@@ -61,7 +63,7 @@ class DartConvertPlugin implements EvalPlugin {
     $AsciiEncoder.configureForRuntime(runtime);
     $AsciiDecoder.configureForRuntime(runtime);
     $Converter$bridge.configureForRuntime(runtime);
-    $Codec.configureForRuntime(runtime);
+    $Codec$bridge.configureForRuntime(runtime);
     $Encoding.configureForRuntime(runtime);
     $Utf8Decoder.configureForRuntime(runtime);
     $Utf8Codec.configureForRuntime(runtime);
@@ -73,11 +75,13 @@ class DartConvertPlugin implements EvalPlugin {
     $JsonCodec.configureForRuntime(runtime);
     $jsonEncodeFn.configureForRuntime(runtime);
     $jsonDecodeFn.configureForRuntime(runtime);
-    $ByteConversionSink.configureForRuntime(runtime);
+    $base64EncodeFn.configureForRuntime(runtime);
+    $base64DecodeFn.configureForRuntime(runtime);
+    $ByteConversionSink$bridge.configureForRuntime(runtime);
     $ChunkedConversionSink.configureForRuntime(runtime);
     $HtmlEscapeMode.configureForRuntime(runtime);
     $HtmlEscape.configureForRuntime(runtime);
-    $StringConversionSink.configureForRuntime(runtime);
+    $StringConversionSink$bridge.configureForRuntime(runtime);
     $ClosableStringSink.configureForRuntime(runtime);
     $LineSplitter.configureForRuntime(runtime);
   }

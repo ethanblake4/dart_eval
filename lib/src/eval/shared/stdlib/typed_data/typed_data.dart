@@ -32,12 +32,13 @@ import 'package:dart_eval/stdlib/core.dart'
         $Float32List,
         $Float64List,
         $Int32List,
-        $Int64List;
+        $Int64List,
+        $Uint64List;
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import '../core/iterator.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 
 /// dart_eval wrapper binding for [ByteBuffer]
@@ -269,7 +270,9 @@ class $ByteBuffer implements $Instance {
 
       'asUint64List': BridgeMethodDef(
         BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.object, [])),
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(TypedDataTypes.uint64List, []),
+          ),
           namedParams: [],
           params: [
             BridgeParameter(
@@ -693,7 +696,7 @@ class $ByteBuffer implements $Instance {
       (r is $Value ? r : null) == null ? 0 : (r as $int).$value,
       (s is $Value ? s : null)?.$value,
     );
-    return $Object(result);
+    return $Uint64List.wrap(result);
   }
 
   static const $Function __asInt64List = $Function(_asInt64List);
@@ -3881,7 +3884,10 @@ class $Int8List implements $Instance {
   /// Wrapper for the [Int8List.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Int8List.wrap(
-      Int8List.fromList(((r as $Value?)!.$reified as List).cast<int>()),
+      Int8List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
+      ),
     );
   }
 
@@ -5055,7 +5061,9 @@ class $Int8List implements $Instance {
   ) {
     final self = target! as $Int8List;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>());
     return $List.view(
       result,
       (e) => $int(e),
@@ -6908,7 +6916,10 @@ class $Int16List implements $Instance {
   /// Wrapper for the [Int16List.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Int16List.wrap(
-      Int16List.fromList(((r as $Value?)!.$reified as List).cast<int>()),
+      Int16List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
+      ),
     );
   }
 
@@ -8082,7 +8093,9 @@ class $Int16List implements $Instance {
   ) {
     final self = target! as $Int16List;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>());
     return $List.view(
       result,
       (e) => $int(e),
@@ -9935,7 +9948,10 @@ class $Uint8List implements $Instance {
   /// Wrapper for the [Uint8List.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Uint8List.wrap(
-      Uint8List.fromList(((r as $Value?)!.$reified as List).cast<int>()),
+      Uint8List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
+      ),
     );
   }
 
@@ -11109,7 +11125,9 @@ class $Uint8List implements $Instance {
   ) {
     final self = target! as $Uint8List;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>());
     return $List.view(
       result,
       (e) => $int(e),
@@ -12962,7 +12980,10 @@ class $Uint8ClampedList implements $Instance {
   /// Wrapper for the [Uint8ClampedList.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Uint8ClampedList.wrap(
-      Uint8ClampedList.fromList(((r as $Value?)!.$reified as List).cast<int>()),
+      Uint8ClampedList.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
+      ),
     );
   }
 
@@ -14136,7 +14157,9 @@ class $Uint8ClampedList implements $Instance {
   ) {
     final self = target! as $Uint8ClampedList;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>());
     return $List.view(
       result,
       (e) => $int(e),
@@ -15989,7 +16012,10 @@ class $Uint16List implements $Instance {
   /// Wrapper for the [Uint16List.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Uint16List.wrap(
-      Uint16List.fromList(((r as $Value?)!.$reified as List).cast<int>()),
+      Uint16List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
+      ),
     );
   }
 
@@ -17163,7 +17189,9 @@ class $Uint16List implements $Instance {
   ) {
     final self = target! as $Uint16List;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>());
     return $List.view(
       result,
       (e) => $int(e),
@@ -19016,7 +19044,10 @@ class $Uint32List implements $Instance {
   /// Wrapper for the [Uint32List.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Uint32List.wrap(
-      Uint32List.fromList(((r as $Value?)!.$reified as List).cast<int>()),
+      Uint32List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
+      ),
     );
   }
 
@@ -20190,7 +20221,9 @@ class $Uint32List implements $Instance {
   ) {
     final self = target! as $Uint32List;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>());
     return $List.view(
       result,
       (e) => $int(e),
@@ -22083,7 +22116,10 @@ class $Float32List implements $Instance {
   /// Wrapper for the [Float32List.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Float32List.wrap(
-      Float32List.fromList(((r as $Value?)!.$reified as List).cast<double>()),
+      Float32List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<double>(),
+      ),
     );
   }
 
@@ -23279,7 +23315,9 @@ class $Float32List implements $Instance {
   ) {
     final self = target! as $Float32List;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<double>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<double>());
     return $List.view(
       result,
       (e) => $double(e),
@@ -25172,7 +25210,10 @@ class $Float64List implements $Instance {
   /// Wrapper for the [Float64List.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Float64List.wrap(
-      Float64List.fromList(((r as $Value?)!.$reified as List).cast<double>()),
+      Float64List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<double>(),
+      ),
     );
   }
 
@@ -26368,7 +26409,9 @@ class $Float64List implements $Instance {
   ) {
     final self = target! as $Float64List;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<double>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<double>());
     return $List.view(
       result,
       (e) => $double(e),
@@ -28221,7 +28264,10 @@ class $Int32List implements $Instance {
   /// Wrapper for the [Int32List.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Int32List.wrap(
-      Int32List.fromList(((r as $Value?)!.$reified as List).cast<int>()),
+      Int32List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
+      ),
     );
   }
 
@@ -29395,7 +29441,9 @@ class $Int32List implements $Instance {
   ) {
     final self = target! as $Int32List;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>());
     return $List.view(
       result,
       (e) => $int(e),
@@ -31248,7 +31296,10 @@ class $Int64List implements $Instance {
   /// Wrapper for the [Int64List.fromList] constructor
   static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
     return $Int64List.wrap(
-      Int64List.fromList(((r as $Value?)!.$reified as List).cast<int>()),
+      Int64List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
+      ),
     );
   }
 
@@ -32422,7 +32473,9 @@ class $Int64List implements $Instance {
   ) {
     final self = target! as $Int64List;
     final result =
-        (self.$value + ((r as $Value?)!.$reified as List).cast<int>());
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>());
     return $List.view(
       result,
       (e) => $int(e),
@@ -32578,6 +32631,3038 @@ class $Int64List implements $Instance {
     final self = target! as $Int64List;
     final result = self.$value.asUnmodifiableView();
     return $Int64List.wrap(result);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    switch (identifier) {
+      case 'first':
+        $value.first = value.$reified;
+        return;
+      case 'last':
+        $value.last = value.$reified;
+        return;
+      case 'length':
+        $value.length = value.$reified;
+        return;
+    }
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
+
+/// dart_eval wrapper binding for [Uint64List]
+class $Uint64List implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:typed_data',
+      'Uint64List.',
+      $Uint64List.$new,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:typed_data',
+      'Uint64List.fromList',
+      $Uint64List.$fromList,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:typed_data',
+      'Uint64List.view',
+      $Uint64List.$view,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:typed_data',
+      'Uint64List.sublistView',
+      $Uint64List.$sublistView,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:typed_data',
+      'Uint64List.bytesPerElement*g',
+      $Uint64List.$bytesPerElement,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$Uint64List]
+  static const $spec = BridgeTypeSpec('dart:typed_data', 'Uint64List');
+
+  /// Compile-time type declaration of [$Uint64List]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$Uint64List]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+      isAbstract: true,
+
+      $implements: [
+        BridgeTypeRef(CoreTypes.object, [
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+        ]),
+        BridgeTypeRef(TypedDataTypes.typedData, []),
+        BridgeTypeRef(CoreTypes.list, [
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+        ]),
+        BridgeTypeRef(CoreTypes.iterable, [
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+        ]),
+      ],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'length',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+
+      'fromList': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'elements',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+
+      'view': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'buffer',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(TypedDataTypes.byteBuffer, []),
+              ),
+              false,
+            ),
+
+            BridgeParameter(
+              'offsetInBytes',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+              defaultValueSource: "0",
+            ),
+
+            BridgeParameter(
+              'length',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+
+      'sublistView': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'data',
+              BridgeTypeAnnotation(BridgeTypeRef(TypedDataTypes.typedData, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+              defaultValueSource: "0",
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+        isFactory: true,
+      ),
+    },
+
+    methods: {
+      'cast': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'R': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'followedBy': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'map': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'T': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'toElement',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                    params: [
+                      BridgeParameter(
+                        'e',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'where': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'whereType': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'T': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'expand': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'T': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'toElements',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.iterable, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                      ]),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'contains': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'element',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'forEach': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'action',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.voidType),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'reduce': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'combine',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.int, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'fold': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'T': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'initialValue',
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+              false,
+            ),
+
+            BridgeParameter(
+              'combine',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                    params: [
+                      BridgeParameter(
+                        'previousValue',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                        false,
+                      ),
+
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'every': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'join': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'separator',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              true,
+              defaultValueSource: "\"\"",
+            ),
+          ],
+        ),
+      ),
+
+      'any': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'toList': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [
+            BridgeParameter(
+              'growable',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+              true,
+              defaultValueSource: "true",
+            ),
+          ],
+          params: [],
+        ),
+      ),
+
+      'toSet': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'take': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'count',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'takeWhile': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'skip': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'count',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'skipWhile': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'value',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'firstWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [
+            BridgeParameter(
+              'orElse',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.int, []),
+                    ),
+                    params: [],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'lastWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [
+            BridgeParameter(
+              'orElse',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.int, []),
+                    ),
+                    params: [],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'singleWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [
+            BridgeParameter(
+              'orElse',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.int, []),
+                    ),
+                    params: [],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'elementAt': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      '[]': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      '[]=': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'add': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'addAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'iterable',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'sort': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'compare',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.int, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'a',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+
+                      BridgeParameter(
+                        'b',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'shuffle': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'random',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(MathTypes.random, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'indexOf': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'element',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+              defaultValueSource: "0",
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'indexWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+              defaultValueSource: "0",
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'lastIndexWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'lastIndexOf': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'element',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'clear': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'insert': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'element',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'insertAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'iterable',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'setAll': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'iterable',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'remove': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'removeAt': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'index',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'removeLast': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'removeWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'retainWhere': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool, []),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'element',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      '+': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'sublist': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(TypedDataTypes.uint64List, []),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'getRange': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'setRange': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'iterable',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+
+            BridgeParameter(
+              'skipCount',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              true,
+              defaultValueSource: "0",
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'removeRange': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'fillRange': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'fillValue',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'replaceRange': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'start',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'end',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+
+            BridgeParameter(
+              'replacements',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.iterable, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'asMap': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.map, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'asUnmodifiableView': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(TypedDataTypes.uint64List, []),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+    },
+    getters: {
+      'elementSizeInBytes': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'offsetInBytes': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'lengthInBytes': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'buffer': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(TypedDataTypes.byteBuffer, []),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'length': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'reversed': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterable, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'iterator': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.iterator, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'isEmpty': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'isNotEmpty': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'first': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'last': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'single': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+    },
+    setters: {
+      'first': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'last': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'value',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+
+      'length': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'newLength',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+              false,
+            ),
+          ],
+        ),
+
+        isAbstract: true,
+      ),
+    },
+    fields: {
+      'bytesPerElement': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+        isStatic: true,
+      ),
+    },
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [Uint64List.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Uint64List.wrap(Uint64List((r as $int).$value));
+  }
+
+  /// Wrapper for the [Uint64List.fromList] constructor
+  static $Value? $fromList(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Uint64List.wrap(
+      Uint64List.fromList(
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uint64List.view] constructor
+  static $Value? $view(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $Uint64List.wrap(
+      Uint64List.view(
+        (r as $Value?)!.$value,
+        (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+        (c is $Value ? c : null)?.$value,
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uint64List.sublistView] constructor
+  static $Value? $sublistView(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    return $Uint64List.wrap(
+      Uint64List.sublistView(
+        (r as $Value?)!.$value,
+        (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+        (c is $Value ? c : null)?.$value,
+      ),
+    );
+  }
+
+  /// Wrapper for the [Uint64List.bytesPerElement] getter
+  static $Value? $bytesPerElement(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final value = Uint64List.bytesPerElement;
+    return $int(value);
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final Uint64List $value;
+
+  @override
+  Uint64List get $reified => $value;
+
+  /// Wrap a [Uint64List] in a [$Uint64List]
+  $Uint64List.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'length':
+        final _length = $value.length;
+        return $int(_length);
+      case 'iterator':
+        final _iterator = $value.iterator;
+        return $Iterator.wrap(_iterator);
+      case 'isEmpty':
+        final _isEmpty = $value.isEmpty;
+        return $bool(_isEmpty);
+      case 'isNotEmpty':
+        final _isNotEmpty = $value.isNotEmpty;
+        return $bool(_isNotEmpty);
+      case 'first':
+        final _first = $value.first;
+        return $int(_first);
+      case 'last':
+        final _last = $value.last;
+        return $int(_last);
+      case 'single':
+        final _single = $value.single;
+        return $int(_single);
+      case 'reversed':
+        final _reversed = $value.reversed;
+        return (() {
+          final iterableType = runtime.internParameterizedType(
+            CoreTypes.iterable,
+            [runtime.lookupType(CoreTypes.int)],
+          );
+          return $Iterable.wrap(
+            (_reversed).map((e) {
+              final value = $int(e);
+              runtime.assertTypedTypeArgument(value, iterableType, 0);
+              return value;
+            }),
+            runtime: runtime,
+            runtimeTypeId: iterableType,
+          );
+        })();
+      case 'elementSizeInBytes':
+        final _elementSizeInBytes = $value.elementSizeInBytes;
+        return $int(_elementSizeInBytes);
+      case 'offsetInBytes':
+        final _offsetInBytes = $value.offsetInBytes;
+        return $int(_offsetInBytes);
+      case 'lengthInBytes':
+        final _lengthInBytes = $value.lengthInBytes;
+        return $int(_lengthInBytes);
+      case 'buffer':
+        final _buffer = $value.buffer;
+        return $ByteBuffer.wrap(_buffer);
+      case 'cast':
+        return $Closure(__cast.func, this);
+
+      case 'followedBy':
+        return $Closure(__followedBy.func, this);
+
+      case 'map':
+        return $Closure(__map.func, this);
+
+      case 'where':
+        return $Closure(__where.func, this);
+
+      case 'whereType':
+        return $Closure(__whereType.func, this);
+
+      case 'expand':
+        return $Closure(__expand.func, this);
+
+      case 'contains':
+        return $Closure(__contains.func, this);
+
+      case 'forEach':
+        return $Closure(__forEach.func, this);
+
+      case 'reduce':
+        return $Closure(__reduce.func, this);
+
+      case 'fold':
+        return $Closure(__fold.func, this);
+
+      case 'every':
+        return $Closure(__every.func, this);
+
+      case 'join':
+        return $Closure(__join.func, this);
+
+      case 'any':
+        return $Closure(__any.func, this);
+
+      case 'toList':
+        return $Closure(__toList.func, this);
+
+      case 'toSet':
+        return $Closure(__toSet.func, this);
+
+      case 'take':
+        return $Closure(__take.func, this);
+
+      case 'takeWhile':
+        return $Closure(__takeWhile.func, this);
+
+      case 'skip':
+        return $Closure(__skip.func, this);
+
+      case 'skipWhile':
+        return $Closure(__skipWhile.func, this);
+
+      case 'firstWhere':
+        return $Closure(__firstWhere.func, this);
+
+      case 'lastWhere':
+        return $Closure(__lastWhere.func, this);
+
+      case 'singleWhere':
+        return $Closure(__singleWhere.func, this);
+
+      case 'elementAt':
+        return $Closure(__elementAt.func, this);
+
+      case '[]':
+        return $Closure(__operatorIndexGet.func, this);
+
+      case '[]=':
+        return $Closure(__operatorIndexSet.func, this);
+
+      case 'add':
+        return $Closure(__add.func, this);
+
+      case 'addAll':
+        return $Closure(__addAll.func, this);
+
+      case 'sort':
+        return $Closure(__sort.func, this);
+
+      case 'shuffle':
+        return $Closure(__shuffle.func, this);
+
+      case 'indexOf':
+        return $Closure(__indexOf.func, this);
+
+      case 'indexWhere':
+        return $Closure(__indexWhere.func, this);
+
+      case 'lastIndexWhere':
+        return $Closure(__lastIndexWhere.func, this);
+
+      case 'lastIndexOf':
+        return $Closure(__lastIndexOf.func, this);
+
+      case 'clear':
+        return $Closure(__clear.func, this);
+
+      case 'insert':
+        return $Closure(__insert.func, this);
+
+      case 'insertAll':
+        return $Closure(__insertAll.func, this);
+
+      case 'setAll':
+        return $Closure(__setAll.func, this);
+
+      case 'remove':
+        return $Closure(__remove.func, this);
+
+      case 'removeAt':
+        return $Closure(__removeAt.func, this);
+
+      case 'removeLast':
+        return $Closure(__removeLast.func, this);
+
+      case 'removeWhere':
+        return $Closure(__removeWhere.func, this);
+
+      case 'retainWhere':
+        return $Closure(__retainWhere.func, this);
+
+      case '+':
+        return $Closure(__operatorPlus.func, this);
+
+      case 'sublist':
+        return $Closure(__sublist.func, this);
+
+      case 'getRange':
+        return $Closure(__getRange.func, this);
+
+      case 'setRange':
+        return $Closure(__setRange.func, this);
+
+      case 'removeRange':
+        return $Closure(__removeRange.func, this);
+
+      case 'fillRange':
+        return $Closure(__fillRange.func, this);
+
+      case 'replaceRange':
+        return $Closure(__replaceRange.func, this);
+
+      case 'asMap':
+        return $Closure(__asMap.func, this);
+
+      case 'asUnmodifiableView':
+        return $Closure(__asUnmodifiableView.func, this);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __cast = $Function(_cast);
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.cast();
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return $List.view(
+        result,
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+        runtime: runtime,
+        runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+          (bridgeTypeArguments.length > 0
+              ? bridgeTypeArguments[0]
+              : runtime.lookupType(CoreTypes.dynamic)),
+        ]),
+      );
+    })();
+  }
+
+  static const $Function __followedBy = $Function(_followedBy);
+  static $Value? _followedBy(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.followedBy(
+      TypedInterop.exportIterable((r as $Value?), runtime),
+    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
+  }
+
+  static const $Function __map = $Function(_map);
+  static $Value? _map(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.map(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "T Function(int);export=false",
+        (_callable) => (int e) {
+          return TypedInterop.exportExternal(
+            _callable.call(runtime, null, $int(e), null, 1),
+            runtime: runtime,
+          ) as dynamic;
+        },
+      ),
+    );
+    return $Iterable.wrap(
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
+    );
+  }
+
+  static const $Function __where = $Function(_where);
+  static $Value? _where(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.where(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
+  }
+
+  static const $Function __whereType = $Function(_whereType);
+  static $Value? _whereType(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.whereType();
+    return (() {
+      final bridgeTypeArguments = runtime.bridgeCallTypeArguments;
+      return (() {
+        final iterableType = runtime.internParameterizedType(
+          CoreTypes.iterable,
+          [
+            (bridgeTypeArguments.length > 0
+                ? bridgeTypeArguments[0]
+                : runtime.lookupType(CoreTypes.dynamic)),
+          ],
+        );
+        return $Iterable.wrap(
+          (result).map((e) {
+            final value = (e is List || e is Map || e is Set
+                ? TypedInterop.boxExternal(e, runtime: runtime)!
+                : runtime.wrapAlways(e));
+            runtime.assertTypedTypeArgument(value, iterableType, 0);
+            return value;
+          }),
+          runtime: runtime,
+          runtimeTypeId: iterableType,
+        );
+      })();
+    })();
+  }
+
+  static const $Function __expand = $Function(_expand);
+  static $Value? _expand(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.expand(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "Iterable<T> Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+    );
+    return $Iterable.wrap(
+      (result).map(
+        (e) => (e is List || e is Map || e is Set
+            ? TypedInterop.boxExternal(e, runtime: runtime)!
+            : runtime.wrapAlways(e)),
+      ),
+    );
+  }
+
+  static const $Function __contains = $Function(_contains);
+  static $Value? _contains(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.contains(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
+    return $bool(result);
+  }
+
+  static const $Function __forEach = $Function(_forEach);
+  static $Value? _forEach(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.forEach(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(int);export=false",
+        (_callable) => (int element) {
+          _callable.call(runtime, null, $int(element), null, 1);
+        },
+      ),
+    );
+    return null;
+  }
+
+  static const $Function __reduce = $Function(_reduce);
+  static $Value? _reduce(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.reduce(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "int Function(int, int);export=false",
+        (_callable) => (int value, int element) {
+          return _callable
+              .call(runtime, null, $int(value), $int(element), 2)
+              ?.$value;
+        },
+      ),
+    );
+    return $int(result);
+  }
+
+  static const $Function __fold = $Function(_fold);
+  static $Value? _fold(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.fold(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as dynamic,
+      runtime.cachedCallback(
+        (s as $Value?)! as EvalCallable,
+        "T Function(T, int);export=false",
+        (_callable) => (dynamic previousValue, int element) {
+          return TypedInterop.exportExternal(
+            _callable.call(
+              runtime,
+              null,
+              runtime.wrapAlways(previousValue, recursive: true),
+              $int(element),
+              2,
+            ),
+            runtime: runtime,
+          ) as dynamic;
+        },
+      ),
+    );
+    return (result is List || result is Map || result is Set
+        ? TypedInterop.boxExternal(result, runtime: runtime)!
+        : runtime.wrapAlways(result));
+  }
+
+  static const $Function __every = $Function(_every);
+  static $Value? _every(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.every(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+    );
+    return $bool(result);
+  }
+
+  static const $Function __join = $Function(_join);
+  static $Value? _join(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.join(
+      (r is $Value ? r : null) == null ? "" : (r as $String).$value,
+    );
+    return $String(result);
+  }
+
+  static const $Function __any = $Function(_any);
+  static $Value? _any(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.any(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+    );
+    return $bool(result);
+  }
+
+  static const $Function __toList = $Function(_toList);
+  static $Value? _toList(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.toList(
+      growable: (r is $Value ? r : null) == null ? true : (r as $bool).$value,
+    );
+    return $List.view(
+      result,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
+  }
+
+  static const $Function __toSet = $Function(_toSet);
+  static $Value? _toSet(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.toSet();
+    return $Set.wrap((result).map((e) => $int(e)).toSet());
+  }
+
+  static const $Function __take = $Function(_take);
+  static $Value? _take(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.take((r as $int).$value);
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
+  }
+
+  static const $Function __takeWhile = $Function(_takeWhile);
+  static $Value? _takeWhile(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.takeWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int value) {
+          return _callable.call(runtime, null, $int(value), null, 1)?.$value;
+        },
+      ),
+    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
+  }
+
+  static const $Function __skip = $Function(_skip);
+  static $Value? _skip(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.skip((r as $int).$value);
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
+  }
+
+  static const $Function __skipWhile = $Function(_skipWhile);
+  static $Value? _skipWhile(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.skipWhile(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int value) {
+          return _callable.call(runtime, null, $int(value), null, 1)?.$value;
+        },
+      ),
+    );
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
+  }
+
+  static const $Function __firstWhere = $Function(_firstWhere);
+  static $Value? _firstWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.firstWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+      orElse:
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
+          ? null
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "int Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
+    );
+    return $int(result);
+  }
+
+  static const $Function __lastWhere = $Function(_lastWhere);
+  static $Value? _lastWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.lastWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+      orElse:
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
+          ? null
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "int Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
+    );
+    return $int(result);
+  }
+
+  static const $Function __singleWhere = $Function(_singleWhere);
+  static $Value? _singleWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.singleWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+      orElse:
+          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
+          ? null
+          : runtime.cachedCallback(
+              (s is $Value ? s : null)! as EvalCallable,
+              "int Function();export=false",
+              (_callable) => () {
+                return _callable.call(runtime, null, null, null, 0)?.$value;
+              },
+            ),
+    );
+    return $int(result);
+  }
+
+  static const $Function __elementAt = $Function(_elementAt);
+  static $Value? _elementAt(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.elementAt((r as $int).$value);
+    return $int(result);
+  }
+
+  static const $Function __operatorIndexGet = $Function(_operatorIndexGet);
+  static $Value? _operatorIndexGet(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value[(r as $int).$value];
+    return $int(result);
+  }
+
+  static const $Function __operatorIndexSet = $Function(_operatorIndexSet);
+  static $Value? _operatorIndexSet(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value[(r as $int).$value] = (s as $int).$value;
+    return null;
+  }
+
+  static const $Function __add = $Function(_add);
+  static $Value? _add(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.add((r as $int).$value);
+    return null;
+  }
+
+  static const $Function __addAll = $Function(_addAll);
+  static $Value? _addAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.addAll(TypedInterop.exportIterable((r as $Value?), runtime));
+    return null;
+  }
+
+  static const $Function __sort = $Function(_sort);
+  static $Value? _sort(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.sort(
+      (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
+          ? null
+          : runtime.cachedCallback(
+              (r is $Value ? r : null)! as EvalCallable,
+              "int Function(int, int);export=false",
+              (_callable) => (int a, int b) {
+                return _callable
+                    .call(runtime, null, $int(a), $int(b), 2)
+                    ?.$value;
+              },
+            ),
+    );
+    return null;
+  }
+
+  static const $Function __shuffle = $Function(_shuffle);
+  static $Value? _shuffle(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.shuffle((r is $Value ? r : null)?.$value);
+    return null;
+  }
+
+  static const $Function __indexOf = $Function(_indexOf);
+  static $Value? _indexOf(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.indexOf(
+      (r as $int).$value,
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+    );
+    return $int(result);
+  }
+
+  static const $Function __indexWhere = $Function(_indexWhere);
+  static $Value? _indexWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.indexWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+      (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
+    );
+    return $int(result);
+  }
+
+  static const $Function __lastIndexWhere = $Function(_lastIndexWhere);
+  static $Value? _lastIndexWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.lastIndexWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+      (s is $Value ? s : null)?.$value,
+    );
+    return $int(result);
+  }
+
+  static const $Function __lastIndexOf = $Function(_lastIndexOf);
+  static $Value? _lastIndexOf(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.lastIndexOf(
+      (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
+    );
+    return $int(result);
+  }
+
+  static const $Function __clear = $Function(_clear);
+  static $Value? _clear(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.clear();
+    return null;
+  }
+
+  static const $Function __insert = $Function(_insert);
+  static $Value? _insert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.insert((r as $int).$value, (s as $int).$value);
+    return null;
+  }
+
+  static const $Function __insertAll = $Function(_insertAll);
+  static $Value? _insertAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.insertAll(
+      (r as $int).$value,
+      TypedInterop.exportIterable((s as $Value?), runtime),
+    );
+    return null;
+  }
+
+  static const $Function __setAll = $Function(_setAll);
+  static $Value? _setAll(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.setAll(
+      (r as $int).$value,
+      TypedInterop.exportIterable((s as $Value?), runtime),
+    );
+    return null;
+  }
+
+  static const $Function __remove = $Function(_remove);
+  static $Value? _remove(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.remove(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
+    return $bool(result);
+  }
+
+  static const $Function __removeAt = $Function(_removeAt);
+  static $Value? _removeAt(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.removeAt((r as $int).$value);
+    return $int(result);
+  }
+
+  static const $Function __removeLast = $Function(_removeLast);
+  static $Value? _removeLast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.removeLast();
+    return $int(result);
+  }
+
+  static const $Function __removeWhere = $Function(_removeWhere);
+  static $Value? _removeWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.removeWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+    );
+    return null;
+  }
+
+  static const $Function __retainWhere = $Function(_retainWhere);
+  static $Value? _retainWhere(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.retainWhere(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "bool Function(int);export=false",
+        (_callable) => (int element) {
+          return _callable.call(runtime, null, $int(element), null, 1)?.$value;
+        },
+      ),
+    );
+    return null;
+  }
+
+  static const $Function __operatorPlus = $Function(_operatorPlus);
+  static $Value? _operatorPlus(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result =
+        (self.$value +
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>());
+    return $List.view(
+      result,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
+  }
+
+  static const $Function __sublist = $Function(_sublist);
+  static $Value? _sublist(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.sublist(
+      (r as $int).$value,
+      (s is $Value ? s : null)?.$value,
+    );
+    return $Uint64List.wrap(result);
+  }
+
+  static const $Function __getRange = $Function(_getRange);
+  static $Value? _getRange(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.getRange((r as $int).$value, (s as $int).$value);
+    return (() {
+      final iterableType = runtime.internParameterizedType(CoreTypes.iterable, [
+        runtime.lookupType(CoreTypes.int),
+      ]);
+      return $Iterable.wrap(
+        (result).map((e) {
+          final value = $int(e);
+          runtime.assertTypedTypeArgument(value, iterableType, 0);
+          return value;
+        }),
+        runtime: runtime,
+        runtimeTypeId: iterableType,
+      );
+    })();
+  }
+
+  static const $Function __setRange = $Function(_setRange);
+  static $Value? _setRange(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.setRange(
+      (r as $int).$value,
+      (s as $int).$value,
+      TypedInterop.exportIterable(
+        ((c as List<Object?>)[0] as $Value?),
+        runtime,
+      ),
+      (c is List && (c as List).length > 1
+                  ? (c as List)[1] as $Value?
+                  : null) ==
+              null
+          ? 0
+          : ((c is List && (c as List).length > 1 ? (c as List)[1] : null)
+                    as $int)
+                .$value,
+    );
+    return null;
+  }
+
+  static const $Function __removeRange = $Function(_removeRange);
+  static $Value? _removeRange(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.removeRange((r as $int).$value, (s as $int).$value);
+    return null;
+  }
+
+  static const $Function __fillRange = $Function(_fillRange);
+  static $Value? _fillRange(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.fillRange(
+      (r as $int).$value,
+      (s as $int).$value,
+      (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
+          ?.$value,
+    );
+    return null;
+  }
+
+  static const $Function __replaceRange = $Function(_replaceRange);
+  static $Value? _replaceRange(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    self.$value.replaceRange(
+      (r as $int).$value,
+      (s as $int).$value,
+      TypedInterop.exportIterable(
+        ((c as List<Object?>)[0] as $Value?),
+        runtime,
+      ),
+    );
+    return null;
+  }
+
+  static const $Function __asMap = $Function(_asMap);
+  static $Value? _asMap(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.asMap();
+    return wrapMap(result, (key, value) => MapEntry($int(key), $int(value)));
+  }
+
+  static const $Function __asUnmodifiableView = $Function(_asUnmodifiableView);
+  static $Value? _asUnmodifiableView(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $Uint64List;
+    final result = self.$value.asUnmodifiableView();
+    return $Uint64List.wrap(result);
   }
 
   @override

@@ -22,6 +22,7 @@ class DartTypedDataPlugin implements EvalPlugin {
     $Float64List.configureForCompile(registry);
     $Int32List.configureForCompile(registry);
     $Int64List.configureForCompile(registry);
+    $Uint64List.configureForCompile(registry);
   }
 
   @override
@@ -40,5 +41,6 @@ class DartTypedDataPlugin implements EvalPlugin {
     $Float64List.configureForRuntime(runtime);
     $Int32List.configureForRuntime(runtime);
     $Int64List.configureForRuntime(runtime);
+    $Uint64List.configureForRuntime(runtime);
   }
 }

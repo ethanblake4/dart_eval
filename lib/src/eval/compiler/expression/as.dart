@@ -85,6 +85,12 @@ Variable compileAsExpression(AsExpression e, CompilerContext ctx) {
         localBinding.promote(type);
       }
     }
+    // An unpromoted cast is an expression value, not the local's current
+    // value. Boxing it must retain the cast type instead of reading the local.
+    final binding = result.binding;
+    if (binding != null && !identical(binding.current, result)) {
+      result.binding = null;
+    }
     return result;
   }
 

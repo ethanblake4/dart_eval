@@ -68,6 +68,9 @@ import 'package:dart_eval/stdlib/async.dart'
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import './converter.dart';
+
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
+
 import './byte_conversion.dart';
 import './codec.dart';
 import '../typed_data/typed_data.dart';
@@ -364,7 +367,8 @@ class $Utf8Decoder implements $Instance {
   ) {
     final self = target! as $Utf8Decoder;
     final result = self.$value.convert(
-      ((r as $Value?)!.$reified as List).cast<int>(),
+      (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+          .cast<int>(),
       (s is $Value ? s : null) == null ? 0 : (s as $int).$value,
       (c is List && (c as List).length > 0 ? (c as List)[0] as $Value? : null)
           ?.$value,
@@ -692,7 +696,8 @@ class $Utf8Codec implements $Instance {
   ) {
     final self = target! as $Utf8Codec;
     final result = self.$value.decode(
-      ((r as $Value?)!.$reified as List).cast<int>(),
+      (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+          .cast<int>(),
       allowMalformed: (s is $Value ? s : null)?.$value,
     );
     return $String(result);

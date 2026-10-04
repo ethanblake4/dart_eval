@@ -1,6 +1,10 @@
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/permission.dart';
 import 'package:dart_eval/src/eval/bindgen/static_constants.dart';
@@ -61,9 +65,26 @@ String _$constructor(
         'return ${prefix != null ? '$prefix.' : ''}${member!.hook}(runtime, '
         'null, $argsExpr);';
   } else {
-    final invocation =
-        '$fullyQualifiedConstructorId('
-        '${argumentAccessors(ctx, constructor.formalParameters, registers: true, exportValues: bridgeFactory, member: member).join(', ')})';
+    final parameters = constructor.formalParameters;
+    final needsNativeDefaults =
+        !isBridge &&
+        parameters.any((parameter) {
+          final defaultValue = parameter.defaultValueCode;
+          return parameter.isOptional &&
+              member?.params[parameter.name]?.defaultValue == null &&
+              defaultValue != null &&
+              _usesPrivateIdentifier(defaultValue);
+        });
+    final invocation = needsNativeDefaults
+        ? _nativeConstructorInvocation(
+            ctx,
+            element,
+            constructor,
+            member,
+            bridgeFactory,
+          )
+        : '$fullyQualifiedConstructorId('
+              '${argumentAccessors(ctx, parameters, registers: true, exportValues: bridgeFactory, member: member).join(', ')})';
     body = '''
     ${bridgeFactory ? 'final result = $invocation; return ${wrapVar(ctx, element.thisType, 'result')};' : 'return ${isBridge ? invocation : '${ctx.wrapperName(element)}.wrap($invocation)'};'}''';
   }
@@ -76,6 +97,78 @@ String _$constructor(
     $body
   }
 ''';
+}
+
+bool _usesPrivateIdentifier(String expression) {
+  final visitor = _PrivateIdentifierVisitor();
+  parseString(
+    content: 'final defaultValue = $expression;',
+    throwIfDiagnostics: false,
+  ).unit.accept(visitor);
+  return visitor.found;
+}
+
+class _PrivateIdentifierVisitor extends RecursiveAstVisitor<void> {
+  bool found = false;
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    if (node.name.startsWith('_')) found = true;
+  }
+
+  @override
+  void visitNamedType(NamedType node) {
+    if (node.name.lexeme.startsWith('_')) found = true;
+    super.visitNamedType(node);
+  }
+}
+
+String _nativeConstructorInvocation(
+  BindgenContext ctx,
+  ClassElement element,
+  ConstructorElement constructor,
+  BindgenMemberConfig? member,
+  bool exportValues,
+) {
+  final parameters = constructor.formalParameters;
+  final positional = <String>[];
+  final named = <String>[];
+  for (final (index, parameter) in parameters.indexed) {
+    final source = registerArgumentSource(
+      index,
+      parameters.length,
+      optional: parameter.isOptional,
+    );
+    final configured = member?.params[parameter.name];
+    final value = argumentAccessor(
+      ctx,
+      index,
+      parameter,
+      argumentSource: source,
+      primitiveSource: registerRawArgumentSource(
+        index,
+        parameters.length,
+        optional: parameter.isOptional,
+      ),
+      exportValues: exportValues,
+      paramConfig: configured,
+      includeNamedLabel: false,
+      useDefaultValue: configured?.defaultValue != null,
+    );
+    final guard = parameter.isOptional && configured?.defaultValue == null
+        ? 'if ($source != null) '
+        : '';
+    if (parameter.isNamed) {
+      named.add('$guard#${parameter.name}: $value');
+    } else {
+      positional.add('$guard$value');
+    }
+  }
+  final name = constructor.name;
+  final tearoff =
+      '${element.name}.${name == null || name == 'new' ? 'new' : name}';
+  return 'Function.apply($tearoff, [${positional.join(', ')}], '
+      '{${named.join(', ')}}) as ${element.name}';
 }
 
 /// Emit static bodies for `synthetic:` constructor members.

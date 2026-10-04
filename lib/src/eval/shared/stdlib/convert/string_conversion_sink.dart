@@ -45,26 +45,40 @@ import 'package:dart_eval/stdlib/core.dart'
 import './byte_conversion.dart';
 import '../core/string_sink.dart';
 
-/// dart_eval wrapper binding for [StringConversionSink]
-class $StringConversionSink implements $Instance {
+/// dart_eval bridge binding for [StringConversionSink]
+class $StringConversionSink$bridge extends StringConversionSink
+    with $Bridge<StringConversionSink> {
+  /// Forwarded constructor for [StringConversionSink.new]
+  $StringConversionSink$bridge();
+
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:convert',
+      'StringConversionSink.',
+      $StringConversionSink$bridge.$new,
+      isBridge: true,
+    );
+
+    runtime.registerBridgeFuncRegisters(
+      'dart:convert',
       'StringConversionSink.withCallback',
-      $StringConversionSink.$withCallback,
+      $StringConversionSink$bridge.$withCallback,
+      isBridge: true,
     );
 
     runtime.registerBridgeFuncRegisters(
       'dart:convert',
       'StringConversionSink.from',
-      $StringConversionSink.$from,
+      $StringConversionSink$bridge.$from,
+      isBridge: true,
     );
 
     runtime.registerBridgeFuncRegisters(
       'dart:convert',
       'StringConversionSink.fromStringSink',
-      $StringConversionSink.$fromStringSink,
+      $StringConversionSink$bridge.$fromStringSink,
+      isBridge: true,
     );
   }
 
@@ -73,10 +87,10 @@ class $StringConversionSink implements $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$StringConversionSink]
+  /// Compile-time type specification of [$StringConversionSink$bridge]
   static const $spec = BridgeTypeSpec('dart:convert', 'StringConversionSink');
 
-  /// Compile-time type declaration of [$StringConversionSink]
+  /// Compile-time type declaration of [$StringConversionSink$bridge]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$StringConversionSink]
@@ -261,9 +275,14 @@ class $StringConversionSink implements $Instance {
     getters: {},
     setters: {},
     fields: {},
-    wrap: true,
-    bridge: false,
+    wrap: false,
+    bridge: true,
   );
+
+  /// Proxy for the [StringConversionSink.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $StringConversionSink$bridge();
+  }
 
   /// Wrapper for the [StringConversionSink.withCallback] constructor
   static $Value? $withCallback(
@@ -272,24 +291,22 @@ class $StringConversionSink implements $Instance {
     Object? s,
     Object? c,
   ) {
-    return $StringConversionSink.wrap(
-      StringConversionSink.withCallback(
-        runtime.cachedCallback(
-          (r as $Value?)! as EvalCallable,
-          "void Function(String);export=false",
-          (_callable) => (String accumulated) {
-            _callable.call(runtime, null, $String(accumulated), null, 1);
-          },
-        ),
+    final result = StringConversionSink.withCallback(
+      runtime.cachedCallback(
+        (r as $Value?)! as EvalCallable,
+        "void Function(String);export=true",
+        (_callable) => (String accumulated) {
+          _callable.call(runtime, null, $String(accumulated), null, 1);
+        },
       ),
     );
+    return $StringConversionSink.wrap(result);
   }
 
   /// Wrapper for the [StringConversionSink.from] constructor
   static $Value? $from(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $StringConversionSink.wrap(
-      StringConversionSink.from((r as $Value?)!.$value),
-    );
+    final result = StringConversionSink.from((r as $Value?)!.$value);
+    return $StringConversionSink.wrap(result);
   }
 
   /// Wrapper for the [StringConversionSink.fromStringSink] constructor
@@ -299,10 +316,79 @@ class $StringConversionSink implements $Instance {
     Object? s,
     Object? c,
   ) {
-    return $StringConversionSink.wrap(
-      StringConversionSink.fromStringSink((r as $Value?)!.$value),
-    );
+    final result = StringConversionSink.fromStringSink((r as $Value?)!.$value);
+    return $StringConversionSink.wrap(result);
   }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    final runtime = $runtime;
+    switch (identifier) {
+      case 'add':
+        return $Function((runtime, target, r, s, c) {
+          super.add((r as $String).$value);
+          return null;
+        });
+      case 'asUtf8Sink':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.asUtf8Sink((r as $bool).$value);
+          return $ByteConversionSink.wrap(result);
+        });
+      case 'asStringSink':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.asStringSink();
+          return $ClosableStringSink.wrap(result);
+        });
+    }
+    return null;
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {}
+
+  @override
+  void add(String str) {
+    final runtime = $runtime;
+    $_invoke('add', [$String(str)]);
+  }
+
+  @override
+  void close() {
+    final runtime = $runtime;
+    $_invoke('close', []);
+  }
+
+  @override
+  void addSlice(String chunk, int start, int end, bool isLast) {
+    final runtime = $runtime;
+    $_invoke('addSlice', [
+      $String(chunk),
+      $int(start),
+      $int(end),
+      $bool(isLast),
+    ]);
+  }
+
+  @override
+  ByteConversionSink asUtf8Sink(bool allowMalformed) {
+    final runtime = $runtime;
+    return $_invoke('asUtf8Sink', [$bool(allowMalformed)]);
+  }
+
+  @override
+  ClosableStringSink asStringSink() {
+    final runtime = $runtime;
+    return $_invoke('asStringSink', []);
+  }
+}
+
+/// dart_eval lightweight wrapper binding for [StringConversionSink]
+class $StringConversionSink implements $Instance {
+  /// Compile-time type specification of [$StringConversionSink]
+  static const $spec = BridgeTypeSpec('dart:convert', 'StringConversionSink');
+
+  /// Compile-time type declaration of [$StringConversionSink]
+  static const $type = BridgeTypeRef($spec);
 
   final $Instance _superclass;
 

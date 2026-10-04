@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/runtime/runtime.dart' show TypedRuntimeInterop;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import 'stream_iterator.dart';
@@ -18,6 +19,15 @@ $Value? streamControllerAdd(
   Object? s,
   Object? c,
 ) {
-  (target!.$value as StreamController).add((r as $Value?)?.$value);
+  final controller = target!;
+  final event = r as $Value?;
+  runtime.assertTypedTypeArgument(
+    event,
+    controller.$getRuntimeType(runtime),
+    0,
+  );
+  (controller.$value as StreamController).add(
+    TypedInterop.exportExternal(event, runtime: runtime),
+  );
   return null;
 }

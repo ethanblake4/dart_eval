@@ -19,6 +19,12 @@ class CoreTypes {
   /// Bridge spec for [Comparable].
   static const comparable = BridgeTypeSpec('dart:core', 'Comparable');
 
+  /// Bridge spec for [ConcurrentModificationError].
+  static const concurrentModificationError = BridgeTypeSpec(
+    'dart:core',
+    'ConcurrentModificationError',
+  );
+
   /// Bridge spec for [DateTime].
   static const dateTime = BridgeTypeSpec('dart:core', 'DateTime');
 
@@ -421,6 +427,9 @@ class IoTypes {
     'FileSystemException',
   );
 
+  /// Bridge spec for [GZipCodec].
+  static const gZipCodec = BridgeTypeSpec('dart:io', 'GZipCodec');
+
   /// Bridge spec for [HttpClient].
   static const httpClient = BridgeTypeSpec('dart:io', 'HttpClient');
 
@@ -486,6 +495,15 @@ class IoTypes {
 
   /// Bridge spec for [SocketException].
   static const socketException = BridgeTypeSpec('dart:io', 'SocketException');
+
+  /// Bridge spec for [ZLibCodec].
+  static const zLibCodec = BridgeTypeSpec('dart:io', 'ZLibCodec');
+
+  /// Bridge spec for [ZLibDecoder].
+  static const zLibDecoder = BridgeTypeSpec('dart:io', 'ZLibDecoder');
+
+  /// Bridge spec for [ZLibEncoder].
+  static const zLibEncoder = BridgeTypeSpec('dart:io', 'ZLibEncoder');
 }
 
 /// Bridge type specs for `dart:math`.
@@ -534,6 +552,9 @@ class TypedDataTypes {
 
   /// Bridge spec for [Uint32List].
   static const uint32List = BridgeTypeSpec('dart:typed_data', 'Uint32List');
+
+  /// Bridge spec for [Uint64List].
+  static const uint64List = BridgeTypeSpec('dart:typed_data', 'Uint64List');
 
   /// Bridge spec for [Uint8ClampedList].
   static const uint8ClampedList = BridgeTypeSpec(

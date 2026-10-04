@@ -305,6 +305,7 @@ TypeRef _instantiateOnType(
   bool getter = false,
   bool setter = false,
   int? arity,
+  int? library,
 }) {
   EvalExtension? bestExt;
   if (receiverType is TypeParameterTypeRef &&
@@ -314,7 +315,7 @@ TypeRef _instantiateOnType(
   MethodDeclaration? best;
   TypeRef? bestOnType;
   List<TypeRef>? bestBindings;
-  for (final ext in ctx.visibleExtensions[ctx.library] ?? const []) {
+  for (final ext in ctx.visibleExtensions[library ?? ctx.library] ?? const []) {
     final onType = ext.resolveOnType(ctx);
     if (onType == null) continue;
     final bindings = matchExtensionOn(ctx, receiverType, ext);

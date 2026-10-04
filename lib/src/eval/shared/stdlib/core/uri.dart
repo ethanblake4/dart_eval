@@ -46,6 +46,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
+        $ConcurrentModificationError,
         $Exception,
         $FormatException,
         $Uri,
@@ -1286,7 +1287,8 @@ class $Uri implements $Instance {
 
     return $Uri.wrap(
       Uri.dataFromBytes(
-        ((r as $Value?)!.$reified as List).cast<int>(),
+        (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+            .cast<int>(),
         mimeType: (s is $Value ? s : null) == null
             ? "application/octet-stream"
             : (s as $String).$value,

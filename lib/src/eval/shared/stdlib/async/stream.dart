@@ -1440,7 +1440,19 @@ class $Stream implements $Instance {
         onData == null
             ? null
             : (event) {
-                onData.call(runtime, null, runtime.wrap(event), null, 1);
+                // The native stream enforces E. Preserve that declaration when
+                // boxing collections instead of erasing their type arguments.
+                onData.call(
+                  runtime,
+                  null,
+                  TypedInterop.boxExternal(
+                    event,
+                    runtime: runtime,
+                    runtimeTypeId: $target._elementType(runtime),
+                  ),
+                  null,
+                  1,
+                );
               },
         onDone: () {
           onDone?.call(runtime, null, null, null, 0);

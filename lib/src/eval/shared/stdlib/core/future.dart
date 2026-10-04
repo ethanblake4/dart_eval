@@ -269,6 +269,72 @@ class $Future<T> implements Future<T>, $Instance {
           generics: {'S': BridgeGenericParam()},
         ),
       ),
+      'onError': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.future, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+            ]),
+          ),
+          params: [
+            BridgeParameter(
+              'handleError',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(AsyncTypes.futureOr, [
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('T')),
+                      ]),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'error',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+                      BridgeParameter(
+                        'stackTrace',
+                        BridgeTypeAnnotation(
+                          BridgeTypeRef(CoreTypes.stackTrace),
+                        ),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              false,
+            ),
+          ],
+          namedParams: [
+            BridgeParameter(
+              'test',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.bool),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'error',
+                        BridgeTypeAnnotation(BridgeTypeRef.ref('E')),
+                        false,
+                      ),
+                    ],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+          generics: {
+            'E': BridgeGenericParam($extends: BridgeTypeRef(CoreTypes.object)),
+          },
+        ),
+      ),
       'asStream': BridgeMethodDef(
         BridgeFunctionDef(
           returns: BridgeTypeAnnotation(
@@ -382,6 +448,13 @@ class $Future<T> implements Future<T>, $Instance {
           ],
         ),
       ),
+      'ignore': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+          params: [],
+          namedParams: [],
+        ),
+      ),
     },
     getters: {},
     setters: {},
@@ -408,6 +481,8 @@ class $Future<T> implements Future<T>, $Instance {
     switch (identifier) {
       case 'then':
         return $Closure(__then.func, this);
+      case 'onError':
+        return $Closure(__onError.func, this);
       case 'asStream':
         return $Closure(__asStream.func, this);
       case 'timeout':
@@ -416,6 +491,8 @@ class $Future<T> implements Future<T>, $Instance {
         return $Closure(__whenComplete.func, this);
       case 'catchError':
         return $Closure(__catchError.func, this);
+      case 'ignore':
+        return $Closure(__ignore.func, this);
       default:
         return _superclass.$getProperty(runtime, identifier);
     }
@@ -492,6 +569,77 @@ class $Future<T> implements Future<T>, $Instance {
       runtimeTypeId: runtimeTypeId,
       runtime: runtime,
     );
+  }
+
+  static const $Function __onError = $Function(_onError);
+
+  static $Value? _onError(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final $future = target as $Future;
+    final handleError = r as EvalFunction;
+    final test = s as EvalFunction?;
+    final typeArguments = runtime.bridgeCallTypeArguments;
+    final errorType = typeArguments.isEmpty ? null : typeArguments.first;
+    final errorCheckType = errorType == null
+        ? null
+        : runtime.internParameterizedType(CoreTypes.list, [errorType]);
+
+    bool matchesErrorType(Object error) {
+      if (errorCheckType == null) return true;
+      try {
+        runtime.assertTypedTypeArgument(
+          TypedExceptionState.boxException(error, runtime),
+          errorCheckType,
+          0,
+        );
+        return true;
+      } on TypeError {
+        return false;
+      }
+    }
+
+    Object? rethrowOriginal(Object error, StackTrace trace) {
+      final original = error is WrappedException ? error.exception : error;
+      Error.throwWithStackTrace(original, trace);
+    }
+
+    FutureOr<Object?> onErrorCallback(Object error, StackTrace trace) {
+      if (!matchesErrorType(error)) rethrowOriginal(error, trace);
+      final boxedError = TypedExceptionState.boxException(error, runtime);
+      try {
+        if (test != null &&
+            (test.call(runtime, target, boxedError, null, 1)?.$value as bool? ??
+                    false) ==
+                false) {
+          rethrowOriginal(error, trace);
+        }
+        return _futureArg(
+          runtime,
+          handleError.call(
+            runtime,
+            target,
+            boxedError,
+            $StackTrace.wrap(trace),
+            2,
+          ),
+        );
+      } on WrappedException catch (wrapped, callbackTrace) {
+        Error.throwWithStackTrace(wrapped.exception, callbackTrace);
+      }
+    }
+
+    final resultType =
+        runtime.bridgeCallReturnTypeId ?? $future.$getRuntimeType(runtime);
+    final future = $future.$value.then<Object?>(
+      (value) => value,
+      onError: onErrorCallback,
+    );
+    return $Future.wrap(future, runtime: runtime, runtimeTypeId: resultType);
   }
 
   static const $Function __asStream = $Function(_asStream);
@@ -609,6 +757,19 @@ class $Future<T> implements Future<T>, $Instance {
     );
   }
 
+  static const $Function __ignore = $Function(_ignore);
+
+  static $Value? _ignore(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    (target as $Future).$value.ignore();
+    return null;
+  }
+
   @override
   Future<R> then<R>(
     FutureOr<R> Function(T value) onValue, {
@@ -622,6 +783,9 @@ class $Future<T> implements Future<T>, $Instance {
   @override
   Future<T> whenComplete(FutureOr<void> Function() action) =>
       $value.whenComplete(action);
+
+  @override
+  void ignore() => $value.ignore();
 }
 
 $Value? _futureDelayed(Runtime runtime, Object? r, Object? s, Object? c) {

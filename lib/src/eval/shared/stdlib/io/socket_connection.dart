@@ -27,7 +27,11 @@ import 'package:dart_eval/stdlib/core.dart'
         $OSError,
         $HttpHeaders,
         $RedirectInfo,
-        $Socket;
+        $Socket,
+        $ZLibCodec,
+        $GZipCodec,
+        $ZLibEncoder,
+        $ZLibDecoder;
 import 'package:dart_eval/stdlib/async.dart'
     hide
         $Platform,
@@ -36,7 +40,11 @@ import 'package:dart_eval/stdlib/async.dart'
         $OSError,
         $HttpHeaders,
         $RedirectInfo,
-        $Socket;
+        $Socket,
+        $ZLibCodec,
+        $GZipCodec,
+        $ZLibEncoder,
+        $ZLibDecoder;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 import '../convert/encoding.dart';
@@ -50,7 +58,11 @@ import 'package:dart_eval/stdlib/io.dart'
         $OSError,
         $HttpHeaders,
         $RedirectInfo,
-        $Socket;
+        $Socket,
+        $ZLibCodec,
+        $GZipCodec,
+        $ZLibEncoder,
+        $ZLibDecoder;
 import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 import '../async/stream_subscription.dart';
@@ -2090,7 +2102,10 @@ class $Socket implements $Instance {
     Object? c,
   ) {
     final self = target! as $Socket;
-    self.$value.add(((r as $Value?)!.$reified as List).cast<int>());
+    self.$value.add(
+      (TypedInterop.exportExternal((r as $Value?), runtime: runtime) as List)
+          .cast<int>(),
+    );
     return null;
   }
 
