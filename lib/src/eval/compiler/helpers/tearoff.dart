@@ -33,6 +33,7 @@ Variable materializeTearOff(
   TypeRef? boundContext,
   List<TypeRef>? typeArguments,
   Map<String, TypeRef>? memberTypeParameters,
+  TypeRef? runtimeSignatureReceiver,
 }) {
   final Declaration declaration;
   if (offset.className != null) {
@@ -218,9 +219,12 @@ Variable materializeTearOff(
     if (!boundReceiver) return functionType;
     final host = memberHost;
     return ctx.memberLookup.tearOffRuntimeSignature(
-      host is Declaration
-          ? ctx.visibleTypes[offset.file ?? ctx.library]![declarationName(host)]
-          : null,
+      runtimeSignatureReceiver ??
+          (host is Declaration
+              ? ctx.visibleTypes[offset.file ?? ctx.library]![declarationName(
+                  host,
+                )]
+              : null),
       offset.name ?? '',
       MemberKind.method,
       functionType,
@@ -345,6 +349,7 @@ Variable _bridgeTearOff(
   final functionDef = switch (declared.bridge!) {
     BridgeFunctionDeclaration(:final function) => function,
     BridgeMethodDef(:final functionDescriptor) => functionDescriptor,
+    BridgeConstructorDef(:final functionDescriptor) => functionDescriptor,
     _ => throw CompileError('Cannot tear off bridged member ${offset.name}'),
   };
   final file = offset.file ?? ctx.library;

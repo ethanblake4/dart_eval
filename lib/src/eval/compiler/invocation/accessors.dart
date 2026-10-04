@@ -59,11 +59,16 @@ Variable _superOwner(
     kind: kind,
   );
   if (target.hops.isEmpty && target.owner != self.type) {
+    final thisType = TypeRef.$this(ctx);
+    final isFoldedHost =
+        thisType?.file == target.owner.file &&
+        thisType?.name == target.owner.name;
+    final receiver = isFoldedHost ? ctx.lookupLocal('#this')! : self;
     return Variable.of(
       ctx,
-      self.ssa,
+      receiver.ssa,
       target.owner,
-      rep: self.rep,
+      rep: receiver.rep,
       facts: ValueFacts(possibleClasses: [target.owner]),
     );
   }
@@ -155,6 +160,7 @@ sealed class GetTarget {
           memberTypeParameters: ctx.memberLookup.lexicalSuperTypeParameters(
             foldedMethod,
           ),
+          runtimeSignatureReceiver: self.type,
         );
       }
     }
@@ -207,6 +213,25 @@ sealed class GetTarget {
     final member = ctx.types
         .find(owner.type.file, owner.type.name)
         ?.declaredMember(MemberName.method(name));
+    if (member is SourceMember &&
+        member.variable != null &&
+        member.node is FieldDeclaration) {
+      final slot = ctx.memberLookup.accessorSlot(
+        owner.type,
+        name,
+        MemberKind.getter,
+      );
+      if (slot case (_, final index?, final hops)) {
+        return FieldSlotGet(
+          owner,
+          name,
+          hops: hops,
+          index: index,
+          isLate: (member.node as FieldDeclaration).fields.isLate,
+          fieldType: fieldType(),
+        ).emit(ctx);
+      }
+    }
     if (member case SourceMember(
       node: MethodDeclaration(isGetter: false, isSetter: false),
     )) {
@@ -220,6 +245,7 @@ sealed class GetTarget {
         implicitReceiver: owner,
         boundContext: boundContext,
         typeArguments: typeArguments,
+        runtimeSignatureReceiver: self.type,
       );
     }
     if (ctx
@@ -558,15 +584,13 @@ sealed class GetTarget {
               MemberName(name, MemberKind.getter),
             );
         final hops = needsLink ? linkHops : const <TypeRef>[];
-        if (fieldIndex != null) {
-          final isLate =
-              fieldDecl is FieldDeclaration && fieldDecl.fields.isLate;
+        if (fieldIndex != null && fieldDecl is FieldDeclaration) {
           return FieldSlotGet(
             receiver,
             name,
             hops: hops,
             index: fieldIndex,
-            isLate: isLate,
+            isLate: fieldDecl.fields.isLate,
             fieldType: fieldType,
           );
         }
@@ -585,9 +609,7 @@ sealed class GetTarget {
           hops: hops,
           file: link.file,
           className: link.name,
-          nameKey: ctx.memberLookup
-              .linkName(MemberName(name, MemberKind.method), link)
-              .nameKey,
+          nameKey: ctx.memberNameOf(name, MemberKind.method).nameKey,
           fieldType: fieldType,
         );
       }

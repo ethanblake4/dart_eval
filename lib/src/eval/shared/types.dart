@@ -10,6 +10,9 @@ class CoreTypes {
   /// Bridge spec for [AssertionError].
   static const assertionError = BridgeTypeSpec('dart:core', 'AssertionError');
 
+  /// Bridge spec for [BigInt].
+  static const bigInt = BridgeTypeSpec('dart:core', 'BigInt');
+
   /// Bridge spec for [bool].
   static const bool = BridgeTypeSpec('dart:core', 'bool');
 
@@ -399,6 +402,9 @@ class IoTypes {
 
   /// Bridge spec for [OSError].
   static const osError = BridgeTypeSpec('dart:io', 'OSError');
+
+  /// Bridge spec for [Platform].
+  static const platform = BridgeTypeSpec('dart:io', 'Platform');
 
   /// Bridge spec for [Process].
   static const process = BridgeTypeSpec('dart:io', 'Process');

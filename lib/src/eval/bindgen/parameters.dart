@@ -193,12 +193,14 @@ String argumentAccessor(
       paramBuffer.write('($primitiveSource as \$$primitiveName).\$value');
       return paramBuffer.toString();
     }
-    if (exportValues &&
-        (type.isDartCoreIterable ||
-            _isDartCoreIterator(type) ||
-            type.isDartCoreObject ||
-            type is DynamicType ||
-            type is TypeParameterType)) {
+    // Erased generic arguments can contain guest objects without a host value.
+    // Iterable arguments need a typed element view at the SDK boundary.
+    if (type is TypeParameterType ||
+        type.isDartCoreIterable ||
+        exportValues &&
+            (_isDartCoreIterator(type) ||
+                type.isDartCoreObject ||
+                type is DynamicType)) {
       paramBuffer.write(_exportValue(ctx, type, source));
       return paramBuffer.toString();
     }
@@ -298,7 +300,10 @@ String _exportValue(BindgenContext ctx, DartType type, String source) {
     return 'TypedInterop.exportIterator($source, runtime)';
   }
   if (type.isDartCoreIterable) {
-    return 'TypedInterop.exportIterable($source, runtime)';
+    final exported = 'TypedInterop.exportIterable($source, runtime)';
+    return type.nullabilitySuffix == NullabilitySuffix.question
+        ? '$source == null || $source is \$null ? null : $exported'
+        : exported;
   }
   return 'TypedInterop.exportExternal($source, runtime: runtime) '
       'as ${dartTypeErased(type)}';

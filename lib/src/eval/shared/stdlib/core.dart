@@ -5,6 +5,7 @@ import 'package:dart_eval/src/eval/runtime/runtime.dart'
     show TypedRuntimeInterop;
 import 'package:dart_eval/src/eval/shared/stdlib/async/stream.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/base.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/core/big_int.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/collection.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/comparable.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/core/date_time.dart';
@@ -71,6 +72,7 @@ class DartCorePlugin implements EvalPlugin {
     registry.defineBridgeClass($Invocation.$declaration);
     registry.defineBridgeClass($num.$declaration);
     registry.defineBridgeClass($int.$declaration);
+    registry.defineBridgeClass($BigInt.$declaration);
     registry.defineBridgeClass($double.$declaration);
     registry.defineBridgeClass($String.$declaration);
     registry.defineBridgeClass($Iterable$bridge.$declaration);
@@ -110,6 +112,7 @@ class DartCorePlugin implements EvalPlugin {
 
   @override
   void configureForRuntime(Runtime runtime) {
+    $BigInt.configureForRuntime(runtime);
     $Enum.configureForRuntime(runtime);
     configurePrintForRuntime(runtime);
     configureIdenticalForRuntime(runtime);

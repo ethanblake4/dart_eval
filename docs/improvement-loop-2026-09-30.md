@@ -4563,3 +4563,20 @@ combined extension-owner regression covers static-first declarations, instance
 substitution and method parameter shadowing. Fourteen focused tests pass and
 the changed compiler and test files have clean analysis. No extra bytecode or
 runtime path is introduced.
+
+### Cycle 28 correctness pass 2
+
+Bridge constructor tear-offs reuse the existing external-call adapter. BigInt
+and Platform bindings are generated from SDK sources. The binding generator
+preserves guest generic arguments at MapEntry boundaries and supplies typed
+Iterable views to Uri SDK calls. Nullable super equality skips operator dispatch
+for null, while non-null arguments retain normal checks. Super tear-offs use
+the receiver's override signature and the superclass implementation body.
+Folded mixin super access now selects actual field storage and the correct
+private member key instead of recursively invoking an inherited getter.
+
+Five original fixtures pass fresh and serialized execution, including the Uri
+null-safety fixture and mixin syntax fixture; their expect_fail entries are
+removed. The bridge and bindgen bundle passes twelve focused tests. A combined
+mixin control passes both execution modes, and scoped analysis is clean. These
+changes leave the interpreter loop unchanged.

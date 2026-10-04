@@ -26,3 +26,4 @@ export '../src/eval/shared/stdlib/core/map_entry.dart';
 export '../src/eval/shared/stdlib/core/stopwatch.dart';
 export '../src/eval/shared/stdlib/core/string_sink.dart';
 export '../src/eval/shared/stdlib/core/type.dart';
+export '../src/eval/shared/stdlib/core/big_int.dart';

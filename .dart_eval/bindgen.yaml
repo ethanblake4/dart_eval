@@ -27,6 +27,8 @@ libraries:
       # Generated wrappers.
       Duration:
         file: duration.dart
+      BigInt:
+        file: big_int.dart
       DateTime:
         file: date_time.dart
       Iterator:
@@ -323,6 +325,8 @@ libraries:
       file: lib/src/eval/shared/types.dart
       class: IoTypes
     classes:
+      Platform:
+        file: platform.dart
       File:
         handMaintained: true
       Directory:

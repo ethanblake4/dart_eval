@@ -2,6 +2,7 @@
 library;
 
 export '../src/eval/shared/stdlib/io/directory.dart';
+export '../src/eval/shared/stdlib/io/platform.dart';
 export '../src/eval/shared/stdlib/io/file_system_entity.dart';
 export '../src/eval/shared/stdlib/io/file.dart';
 export '../src/eval/shared/stdlib/io/http.dart';

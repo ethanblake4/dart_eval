@@ -15,19 +15,24 @@
 import 'package:dart_eval/dart_eval.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -36,7 +41,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -44,13 +48,12 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
-import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 
 /// dart_eval wrapper binding for [MapEntry]
 class $MapEntry<K, V> implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
@@ -122,7 +125,12 @@ class $MapEntry<K, V> implements $Instance {
   /// Wrapper for the [MapEntry.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $MapEntry.wrap(
-      MapEntry((r as $Value?)!.$value, (s as $Value?)!.$value),
+      MapEntry(
+        TypedInterop.exportExternal((r as $Value?), runtime: runtime)
+            as dynamic,
+        TypedInterop.exportExternal((s as $Value?), runtime: runtime)
+            as dynamic,
+      ),
     );
   }
 
@@ -132,7 +140,7 @@ class $MapEntry<K, V> implements $Instance {
   final MapEntry<K, V> $value;
 
   @override
-  MapEntry get $reified => $value;
+  MapEntry<K, V> get $reified => $value;
 
   /// Wrap a [MapEntry] in a [$MapEntry]
   $MapEntry.wrap(this.$value) : _superclass = $Object($value);

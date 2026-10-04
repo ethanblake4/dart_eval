@@ -176,14 +176,58 @@ Variable compileBinaryExpression(
             rep: ValueRep.bool,
           );
   }
-  final result = CallResolver(ctx).invokeOperator(L, method, [
-    R,
-  ], lexicalSuper: e.leftOperand is SuperExpression).result;
+  final result =
+      e.leftOperand is SuperExpression &&
+          (method == '==' || method == '!=') &&
+          R.type.hasNullableRepresentation
+      ? _compileNullableSuperEquality(ctx, L, R, method)
+      : CallResolver(ctx).invokeOperator(L, method, [
+          R,
+        ], lexicalSuper: e.leftOperand is SuperExpression).result;
   if (!e.inConstantContext && !(leftConst && R.isConst)) return result;
   // Operators on const operands produce compile-time constants that must
   // canonicalize: `identical("ab", "a" + "b")` holds in the host VM.
   final boxed = result.boxIfNeeded(ctx);
   return internConst(ctx, boxed, boxed.type);
+}
+
+Variable _compileNullableSuperEquality(
+  CompilerContext ctx,
+  Variable receiver,
+  Variable argument,
+  String method,
+) {
+  final output = ctx.svar('super_equality');
+  final boolType = CoreTypes.bool.ref(ctx);
+  // Equality skips the operator for null even when its parameter is covariant.
+  // Bind the non-null path normally so dynamic arguments retain their checks.
+  macroBranch(
+    ctx,
+    null,
+    condition: (ctx) => compileNullCondition(ctx, argument),
+    thenBranch: (ctx, _) {
+      final value = BuiltinValue(boolval: method == '!=').push(ctx);
+      ctx.pushOp(Assign(output, value.ssa));
+      return StatementInfo();
+    },
+    elseBranch: (ctx, _) {
+      final value = CallResolver(ctx)
+          .invokeOperator(receiver, method, [
+            Variable.of(
+              ctx,
+              argument.ssa,
+              argument.type.withNullable(false),
+              rep: argument.rep,
+              facts: argument.facts,
+            ),
+          ], lexicalSuper: true)
+          .result
+          .unboxIfNeeded(ctx);
+      ctx.pushOp(Assign(output, value.ssa));
+      return StatementInfo();
+    },
+  );
+  return Variable.of(ctx, output, boolType, rep: ValueRep.bool);
 }
 
 Variable? _compileObjectSuperEquality(

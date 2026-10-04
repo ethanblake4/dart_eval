@@ -17,19 +17,24 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 
 import 'dart:convert';
 
+import 'package:dart_eval/src/eval/runtime/typed/typed_interop.dart';
 import 'package:dart_eval/stdlib/core.dart'
     hide
         $Duration,
+        $BigInt,
         $DateTime,
         $Iterator,
         $Comparable,
         $Sink,
         $StackTrace,
         $StringBuffer,
+        $Expando,
         $Symbol,
         $MapEntry,
         $Stopwatch,
         $Error,
+        $StackOverflowError,
+        $OutOfMemoryError,
         $TypeError,
         $NoSuchMethodError,
         $RangeError,
@@ -38,7 +43,6 @@ import 'package:dart_eval/stdlib/core.dart'
         $StateError,
         $UnsupportedError,
         $UnimplementedError,
-        $Invocation,
         $Exception,
         $FormatException,
         $Uri,
@@ -46,13 +50,13 @@ import 'package:dart_eval/stdlib/core.dart'
         $Match,
         $RegExp,
         $RegExpMatch,
-        $StringSink;
+        $StringSink,
+        $Enum;
 import 'package:dart_eval/src/eval/utils/wrap_helper.dart';
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
 
 /// dart_eval wrapper binding for [Uri]
 class $Uri implements $Instance {
-  /// Configure this class for use in a [Runtime]
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters('dart:core', 'Uri.', $Uri.$new);
@@ -408,6 +412,7 @@ class $Uri implements $Instance {
               'base64',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
           ],
           params: [
@@ -429,6 +434,7 @@ class $Uri implements $Instance {
               'mimeType',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
               true,
+              defaultValueSource: "\"application/octet-stream\"",
             ),
 
             BridgeParameter(
@@ -447,6 +453,7 @@ class $Uri implements $Instance {
               'percentEncoded',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.bool, [])),
               true,
+              defaultValueSource: "false",
             ),
           ],
           params: [
@@ -478,6 +485,8 @@ class $Uri implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'toFilePath': BridgeMethodDef(
@@ -495,6 +504,8 @@ class $Uri implements $Instance {
           ],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'replace': BridgeMethodDef(
@@ -589,6 +600,8 @@ class $Uri implements $Instance {
           ],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'removeFragment': BridgeMethodDef(
@@ -597,6 +610,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'resolve': BridgeMethodDef(
@@ -611,6 +626,8 @@ class $Uri implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'resolveUri': BridgeMethodDef(
@@ -625,6 +642,8 @@ class $Uri implements $Instance {
             ),
           ],
         ),
+
+        isAbstract: true,
       ),
 
       'normalizePath': BridgeMethodDef(
@@ -633,6 +652,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'parse': BridgeMethodDef(
@@ -650,6 +671,7 @@ class $Uri implements $Instance {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
@@ -684,6 +706,7 @@ class $Uri implements $Instance {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
@@ -724,6 +747,7 @@ class $Uri implements $Instance {
               'encoding',
               BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding, [])),
               true,
+              defaultValueSource: "utf8",
             ),
           ],
           params: [
@@ -762,6 +786,7 @@ class $Uri implements $Instance {
               'encoding',
               BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding, [])),
               true,
+              defaultValueSource: "utf8",
             ),
           ],
           params: [
@@ -821,6 +846,7 @@ class $Uri implements $Instance {
               'encoding',
               BridgeTypeAnnotation(BridgeTypeRef(ConvertTypes.encoding, [])),
               true,
+              defaultValueSource: "utf8",
             ),
           ],
           params: [
@@ -854,6 +880,7 @@ class $Uri implements $Instance {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
@@ -889,6 +916,7 @@ class $Uri implements $Instance {
               'start',
               BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
               true,
+              defaultValueSource: "0",
             ),
 
             BridgeParameter(
@@ -922,6 +950,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'authority': BridgeMethodDef(
@@ -930,6 +960,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'userInfo': BridgeMethodDef(
@@ -938,6 +970,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'host': BridgeMethodDef(
@@ -946,6 +980,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'port': BridgeMethodDef(
@@ -954,6 +990,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'path': BridgeMethodDef(
@@ -962,6 +1000,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'query': BridgeMethodDef(
@@ -970,6 +1010,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'fragment': BridgeMethodDef(
@@ -978,6 +1020,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'pathSegments': BridgeMethodDef(
@@ -990,6 +1034,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'queryParameters': BridgeMethodDef(
@@ -1003,6 +1049,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'queryParametersAll': BridgeMethodDef(
@@ -1020,6 +1068,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'isAbsolute': BridgeMethodDef(
@@ -1028,6 +1078,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'hasScheme': BridgeMethodDef(
@@ -1044,6 +1096,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'hasPort': BridgeMethodDef(
@@ -1052,6 +1106,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'hasQuery': BridgeMethodDef(
@@ -1060,6 +1116,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'hasFragment': BridgeMethodDef(
@@ -1068,6 +1126,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'hasEmptyPath': BridgeMethodDef(
@@ -1076,6 +1136,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'hasAbsolutePath': BridgeMethodDef(
@@ -1084,6 +1146,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'origin': BridgeMethodDef(
@@ -1092,6 +1156,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
 
       'data': BridgeMethodDef(
@@ -1103,6 +1169,8 @@ class $Uri implements $Instance {
           namedParams: [],
           params: [],
         ),
+
+        isAbstract: true,
       ),
     },
     setters: {},
@@ -1128,7 +1196,9 @@ class $Uri implements $Instance {
         host: _arg2OrNull?.$value,
         port: _arg3OrNull?.$value,
         path: _arg4OrNull?.$value,
-        pathSegments: _arg5OrNull?.$value,
+        pathSegments: _arg5OrNull == null || _arg5OrNull is $null
+            ? null
+            : TypedInterop.exportIterable(_arg5OrNull, runtime),
         query: _arg6OrNull?.$value,
         queryParameters: (_arg7OrNull?.$reified as Map?)
             ?.cast<String, dynamic>(),
@@ -1267,7 +1337,7 @@ class $Uri implements $Instance {
       (r as $String).$value,
       encoding: (s is $Value ? s : null) == null
           ? utf8
-          : (s is $Value ? s : null)?.$value,
+          : (s is $Value ? s : null)!.$value,
     );
     return $String(value);
   }
@@ -1294,7 +1364,7 @@ class $Uri implements $Instance {
       (r as $String).$value,
       encoding: (s is $Value ? s : null) == null
           ? utf8
-          : (s is $Value ? s : null)?.$value,
+          : (s is $Value ? s : null)!.$value,
     );
     return $String(value);
   }
@@ -1322,7 +1392,7 @@ class $Uri implements $Instance {
       (r as $String).$value,
       encoding: (s is $Value ? s : null) == null
           ? utf8
-          : (s is $Value ? s : null)?.$value,
+          : (s is $Value ? s : null)!.$value,
     );
     return wrapMap(
       value,
@@ -1564,9 +1634,20 @@ class $Uri implements $Instance {
               ?.$value,
       pathSegments:
           (c is List && (c as List).length > 3
+                      ? (c as List)[3] as $Value?
+                      : null) ==
+                  null ||
+              (c is List && (c as List).length > 3
+                      ? (c as List)[3] as $Value?
+                      : null)
+                  is $null
+          ? null
+          : TypedInterop.exportIterable(
+              (c is List && (c as List).length > 3
                   ? (c as List)[3] as $Value?
-                  : null)
-              ?.$value,
+                  : null),
+              runtime,
+            ),
       query:
           (c is List && (c as List).length > 4
                   ? (c as List)[4] as $Value?
