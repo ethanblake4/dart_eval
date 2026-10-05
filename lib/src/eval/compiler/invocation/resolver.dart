@@ -896,61 +896,6 @@ final class CallResolver {
           }
         }
       }
-      final explicitArguments = e.typeArguments?.arguments;
-      if (explicitArguments != null && fd.generics.isNotEmpty) {
-        if (explicitArguments.length != fd.generics.length) {
-          throw CompileError(
-            'Expected ${fd.generics.length} type arguments for $methodName',
-            e,
-          );
-        }
-        final names = fd.generics.keys.toList();
-        for (var index = 0; index < names.length; index++) {
-          bridgeTypeParameters[names[index]] = TypeRef.fromAnnotation(
-            ctx,
-            ctx.library,
-            explicitArguments[index],
-          );
-        }
-      } else if (fd.generics.isNotEmpty) {
-        final names = fd.generics.keys.toList();
-        final placeholders = <String, TypeParameterTypeRef>{
-          for (var index = 0; index < names.length; index++)
-            names[index]: TypeParameterTypeRef(
-              ctx.typeParameterDefs.key(
-                TypeParameterOwner(
-                  TypeParameterOwnerKind.callSite,
-                  ctx.library,
-                  methodName,
-                  e.offset,
-                ),
-                index,
-                names[index],
-              ),
-            ),
-        };
-        // Every unresolved method generic is a call-site inference
-        // placeholder — arguments constrain it during binding even when the
-        // return context (`bound`) contributes nothing.
-        for (final entry in placeholders.entries) {
-          bridgeTypeParameters.putIfAbsent(entry.key, () => entry.value);
-        }
-        if (bound != null) {
-          final returnPattern = TypeRef.fromBridgeAnnotation(
-            ctx,
-            fd.returns,
-            specifiedType: ownerType,
-            typeParameters: {...receiverTypeParameters, ...placeholders},
-          );
-          final inferred = <TypeParameterDef, TypeRef>{};
-          ctx.typeSystem.unify(returnPattern, bound, inferred);
-          for (final entry in placeholders.entries) {
-            if (inferred[entry.value.parameter] case final argument?) {
-              bridgeTypeParameters[entry.key] = argument;
-            }
-          }
-        }
-      }
       final signature = CallSignature.bridge(
         ctx,
         fd,
@@ -1021,6 +966,8 @@ final class CallResolver {
         target,
         e.argumentList,
         positionalContexts: numericContexts,
+        typeArguments: e.typeArguments,
+        returnContext: bound,
       );
       // Static calls on generic bridge classes (e.g. `Stream.fromIterable`)
       // infer the class's own type parameters — `T` in `Iterable<T>` — from
@@ -1044,13 +991,17 @@ final class CallResolver {
                 ...bridgeTypeParameters,
               },
             );
-      mReturnType = resolveCallResultType(
-        ctx,
-        signature: resultSignature,
-        targetType: isStatic ? staticType : L.type,
-        argTypes: argsPair.positional.map((a) => a.type).toList(),
-        namedArgTypes: argsPair.namedValues.map((k, v) => MapEntry(k, v.type)),
-      );
+      mReturnType =
+          argsPair.declaredReturn ??
+          resolveCallResultType(
+            ctx,
+            signature: resultSignature,
+            targetType: isStatic ? staticType : L.type,
+            argTypes: argsPair.positional.map((a) => a.type).toList(),
+            namedArgTypes: argsPair.namedValues.map(
+              (k, v) => MapEntry(k, v.type),
+            ),
+          );
       if (!isStatic &&
           methodName == 'then' &&
           ownerType.isSpec(CoreTypes.future) &&
@@ -2430,9 +2381,14 @@ final class CallResolver {
     List<TypeRef>? inferredCtorArgs;
 
     if (bridgeDecl != null) {
-      final argsPair = ArgumentBinder(
-        ctx,
-      ).bindBridgeTarget(callTarget, e.argumentList);
+      final argsPair = ArgumentBinder(ctx).bindBridgeTarget(
+        callTarget,
+        e.argumentList,
+        typeArguments: callTarget is ConstructorCall ? null : e.typeArguments,
+        returnContext: bound,
+      );
+
+      mReturnType = argsPair.declaredReturn;
 
       args = argsPair.positional;
       namedArgs = argsPair.namedValues;

@@ -1066,6 +1066,8 @@ final class ArgumentBinder {
     Map<String, TypeRef> typeParameters = const {},
     CallSignature? targetSignature,
     List<TypeRef?> positionalContexts = const [],
+    TypeArgumentList? typeArguments,
+    TypeRef? returnContext,
   }) {
     final signature =
         targetSignature ??
@@ -1079,15 +1081,41 @@ final class ArgumentBinder {
     final namedParamByName = {
       for (final spec in signature.named) spec.name: spec,
     };
-    // Unresolved inference placeholders (`callSite` type parameters) in the
-    // bridge signature act like a generic call's own parameters: each
-    // argument can constrain them, and solved bindings flow into later
-    // argument contexts.
+    // Infer the function's own parameters and existing receiver placeholders.
+    // Caller lexical parameters are fixed identities, never inference holes.
     final bridgePlaceholders = {
+      if (typeArguments == null) ...signature.typeParameters,
       for (final spec in [...signature.positional, ...signature.named])
         ..._callSiteParameters(spec.type),
     };
-    var bridgeSubstitution = Substitution.empty;
+    final ownArguments = <TypeParameterDef, TypeRef>{};
+    if (signature.typeParameters.isNotEmpty) {
+      _resolveInvocationGenerics(
+        signature,
+        typeArguments?.arguments.toList(),
+        ownArguments,
+        argumentList,
+      );
+      if (typeArguments == null &&
+          returnContext != null &&
+          !returnContext.isSpec(CoreTypes.dynamic) &&
+          !returnContext.isSpec(CoreTypes.voidType)) {
+        final downward = <TypeParameterDef, TypeRef>{};
+        ctx.typeSystem.unify(
+          signature.returnType,
+          inferContextType(ctx, signature.returnType, returnContext),
+          downward,
+        );
+        bridgePlaceholders.removeAll(
+          _fixDownwardArguments(
+            signature.typeParameters,
+            downward,
+            ownArguments,
+          ),
+        );
+      }
+    }
+    var bridgeSubstitution = Substitution.of(ownArguments);
     final bridgeCandidates = <TypeParameterDef, _InferenceConstraints>{};
     final shape = argumentList == null
         ? CallShape.values(const [])
@@ -1119,15 +1147,15 @@ final class ArgumentBinder {
       final context = position != null && position < positionalContexts.length
           ? positionalContexts[position] ?? paramType
           : paramType;
-      final callbackContext = context is FunctionTypeRef
-          ? context.substituteTypeParameters(
-              Substitution.of({
-                for (final parameter in bridgePlaceholders)
-                  parameter: UnknownTypeRef.instance,
-              }),
-            )
-          : context;
-      var arg0 = _compileArg(ctx, argument, callbackContext).boxIfNeeded(ctx);
+      // Unresolved call parameters are schema holes in every argument
+      // context, including nested generic invocations, not lexical types.
+      final argumentContext = context.substituteTypeParameters(
+        Substitution.of({
+          for (final parameter in bridgePlaceholders)
+            parameter: UnknownTypeRef.instance,
+        }),
+      );
+      var arg0 = _compileArg(ctx, argument, argumentContext).boxIfNeeded(ctx);
       // Callable objects contribute their `.call` signature to inference,
       // just as an explicitly supplied tear-off does.
       if (context is FunctionTypeRef &&
@@ -1139,7 +1167,7 @@ final class ArgumentBinder {
           arg0,
           context,
           representation: MachineRepresentation.object,
-          boundContext: callbackContext,
+          boundContext: argumentContext,
           source: argumentList,
         );
       }
@@ -1150,13 +1178,14 @@ final class ArgumentBinder {
           bridgePlaceholders,
           bridgeCandidates,
           source: argumentList,
+          fixedArguments: ownArguments,
         );
         final solved = _solveArguments(bridgeCandidates);
         if (solved.isNotEmpty) {
-          bridgeSubstitution = Substitution.of(solved);
+          bridgeSubstitution = Substitution.of({...ownArguments, ...solved});
         }
       }
-      if (named) {
+      if (named && signature.typeParameters.isEmpty) {
         final nominalFunction =
             paramType.isSpec(CoreTypes.function) && arg0.type.isFunctionLike;
         if (!nominalFunction &&
@@ -1194,8 +1223,57 @@ final class ArgumentBinder {
         );
       }),
     );
+    if (signature.typeParameters.isNotEmpty) {
+      final resolved = ctx.typeSystem.instantiateToBounds(
+        signature.typeParameters,
+        knownTypes: {
+          for (final parameter in signature.typeParameters)
+            if (bridgeSubstitution.bindings[parameter] case final type?
+                when type is! TypeParameterTypeRef ||
+                    type.parameter != parameter)
+              parameter: type,
+        },
+      );
+      bridgeSubstitution = Substitution.of(resolved);
+      for (final parameter in signature.typeParameters) {
+        final type = resolved[parameter]!;
+        final bound = parameter.bound?.substituteTypeParameters(
+          bridgeSubstitution,
+        );
+        if (bound != null &&
+            !type.isSpec(CoreTypes.dynamic) &&
+            !ctx.typeSystem.isAssignable(
+              type,
+              bound,
+              forceAllowDynamic: false,
+              allowDynamicParameterDowncast: true,
+            )) {
+          throw CompileError(
+            'Type argument $type does not satisfy the bound $bound of ${parameter.name}',
+            argumentList,
+          );
+        }
+      }
+      Variable check(ParameterSpec spec, Variable value) =>
+          convertForAssignment(
+            ctx,
+            value,
+            spec.type.substituteTypeParameters(bridgeSubstitution),
+            representation: MachineRepresentation.object,
+            source: argumentList,
+          );
+      for (var i = 0; i < values.positional.length; i++) {
+        if (values.positional[i] case final value?) {
+          values.positional[i] = check(signature.positional[i], value);
+        }
+      }
+      for (var i = 0; i < values.named.length; i++) {
+        final (name, value) = values.named[i];
+        values.named[i] = (name, check(namedParamByName[name]!, value));
+      }
+    }
     Variable? padding;
-    return _finishArguments(
+    final arguments = _finishArguments(
       signature,
       values,
       before: before,
@@ -1205,6 +1283,25 @@ final class ArgumentBinder {
       omitted: (_) => padding ??= BuiltinValue().push(ctx),
       includeOmitted: false,
     );
+    if (signature.typeParameters.isEmpty) return arguments;
+    final overridden = signature.returnOverride?.call(
+      arguments.positional.map((value) => value.type).toList(),
+      arguments.namedValues.map((name, value) => MapEntry(name, value.type)),
+    );
+    final resultType = (overridden ?? signature.returnType)
+        .substituteTypeParameters(bridgeSubstitution)
+        .lowerTypeParameters(ctx, only: signature.typeParameters.toSet());
+    return BoundCall(
+      positional: arguments.positional,
+      named: arguments.named,
+      vectorOverride: arguments.vector(),
+      returnType: resultType,
+      declaredReturn: resultType,
+      typeArguments: {
+        for (final parameter in signature.typeParameters)
+          parameter.name: bridgeSubstitution.bindings[parameter]!,
+      },
+    );
   }
 
   BoundCall bindBridgeTarget(
@@ -1212,6 +1309,8 @@ final class ArgumentBinder {
     ArgumentList? argumentList, {
     SuperParams superParams = const (positional: [], named: {}),
     List<TypeRef?> positionalContexts = const [],
+    TypeArgumentList? typeArguments,
+    TypeRef? returnContext,
   }) {
     final function = switch (target) {
       StaticCall(:final bridgeFunction) ||
@@ -1263,6 +1362,8 @@ final class ArgumentBinder {
       superParams: superParams,
       targetSignature: target.signature,
       positionalContexts: contexts,
+      typeArguments: typeArguments,
+      returnContext: returnContext,
     );
   }
 
@@ -1545,7 +1646,7 @@ final class ArgumentBinder {
     CallSignature signature,
     List<TypeAnnotation>? explicitArguments,
     Map<TypeParameterDef, TypeRef> resolved,
-    AstNode source,
+    AstNode? source,
   ) {
     final parameters = signature.typeParameters;
     if (parameters.isEmpty) {

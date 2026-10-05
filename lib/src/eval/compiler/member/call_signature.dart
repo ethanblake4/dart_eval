@@ -387,14 +387,38 @@ final class CallSignature {
     TypeRef? owner,
     Map<String, TypeRef> typeParameters = const {},
   }) {
+    final ownerBridge = owner == null
+        ? null
+        : ctx.topLevelDeclarationsMap[owner.file]?[owner.name]?.bridge;
+    // Constructor descriptors may repeat class generics. Dart constructors
+    // have no own parameters; these names retain the applied class identities.
+    final isConstructor =
+        ownerBridge is BridgeClassDef &&
+        ownerBridge.constructors.values.any(
+          (constructor) => identical(constructor.functionDescriptor, def),
+        );
+    final ownDefs = isConstructor
+        ? const <TypeParameterDef>[]
+        : ctx.typeFactory.bridgeFunctionTypeParameters(
+            def,
+            typeParameters: typeParameters,
+            specifiedType: owner,
+          );
+    final scope = <String, TypeRef>{
+      ...typeParameters,
+      for (final parameter in ownDefs)
+        parameter.name: TypeParameterTypeRef(parameter),
+    };
     TypeRef resolve(BridgeTypeAnnotation t) => TypeRef.fromBridgeAnnotation(
       ctx,
       t,
       specifiedType: owner,
-      typeParameters: typeParameters,
+      typeParameters: scope,
     );
     final dependency = def.returnTypeDependency;
     return CallSignature(
+      typeParameters: ownDefs,
+      typeParameterRefs: scope,
       positional: [
         for (final param in def.params)
           ParameterSpec(

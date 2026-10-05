@@ -314,7 +314,11 @@ final class TypeFactory {
     final gft = typeReference.gft;
     if (gft != null) {
       return FunctionTypeRef(
-        signatureFromBridgeFunctionDef(gft, typeParameters: typeParameters),
+        signatureFromBridgeFunctionDef(
+          gft,
+          typeParameters: typeParameters,
+          specifiedType: specifiedType,
+        ),
         decl: _ctx.types.bySpec(CoreTypes.function),
       );
     }
@@ -538,32 +542,86 @@ final class TypeFactory {
   TypeRef widenedInferredType(TypeRef type) =>
       type.isSpec(CoreTypes.nullType) ? CoreTypes.dynamic.ref(_ctx) : type;
 
-  /// Builds a [FunctionSignature] from a bridge function definition. Bridge
-  /// generic names that are not in scope become [TypeParameterTypeRef]s
-  /// owned by the signature itself.
-  FunctionSignature signatureFromBridgeFunctionDef(
+  /// Shares a bridge function's own parameter identities across direct calls
+  /// and function types. Bounds resolve after all its names enter scope.
+  List<TypeParameterDef> bridgeFunctionTypeParameters(
     BridgeFunctionDef def, {
     Map<String, TypeRef> typeParameters = const {},
+    TypeRef? specifiedType,
   }) {
-    final owner = TypeParameterOwner(
+    final baseOwner = TypeParameterOwner(
       TypeParameterOwnerKind.functionTypeAnnotation,
       -1,
       '',
       _bridgeFunctionDefIds[def] ??= ++_bridgeFunctionDefSeq,
     );
+    final outer = <String, TypeRef>{
+      ...?nominalDeclOf(specifiedType)?.ownTypeParams,
+      ...typeParameters,
+    }..removeWhere((name, _) => def.generics.containsKey(name));
+    final owner = outer.isEmpty
+        ? baseOwner
+        : _signatureOwners.putIfAbsent((
+            baseOwner,
+            outer,
+          ), () => TypeParameterOwner.fresh(baseOwner));
     final genericEntries = def.generics.entries.toList();
     final ownDefs = _ctx.typeParameterDefs.intern(owner, [
       for (final (index, entry) in genericEntries.indexed)
         TypeParameterDef(owner, index, entry.key),
     ]);
+    final scope = <String, TypeRef>{
+      ...outer,
+      for (final parameter in ownDefs)
+        parameter.name: TypeParameterTypeRef(parameter),
+    };
     for (final (index, entry) in genericEntries.indexed) {
       final bound = entry.value.$extends;
       if (bound != null && !ownDefs[index].boundSet) {
-        ownDefs[index].bound = fromBridgeTypeRef(bound);
+        ownDefs[index].bound = fromBridgeTypeRef(
+          bound,
+          specifiedType: specifiedType,
+          typeParameters: scope,
+        );
       }
     }
-    final scope = <String, TypeRef>{
+    return ownDefs;
+  }
+
+  FunctionSignature signatureFromBridgeFunctionDef(
+    BridgeFunctionDef def, {
+    Map<String, TypeRef> typeParameters = const {},
+    TypeRef? specifiedType,
+  }) {
+    // Nested callback annotations share the enclosing bridge's applied
+    // receiver. Resolve its parameters before declaring the callback's own
+    // generics, which may shadow those names.
+    final outer = <String, TypeRef>{
+      for (final name
+          in nominalDeclOf(specifiedType)?.ownTypeParams.keys ??
+              const <String>[])
+        name: fromBridgeTypeRef(
+          BridgeTypeRef.ref(name),
+          specifiedType: specifiedType,
+          typeParameters: typeParameters,
+        ),
       ...typeParameters,
+    };
+    final ownDefs = bridgeFunctionTypeParameters(
+      def,
+      typeParameters: outer,
+      specifiedType: specifiedType,
+    );
+    final owner = ownDefs.isEmpty
+        ? TypeParameterOwner(
+            TypeParameterOwnerKind.functionTypeAnnotation,
+            -1,
+            '',
+            _bridgeFunctionDefIds[def] ??= ++_bridgeFunctionDefSeq,
+          )
+        : ownDefs.first.owner;
+    final scope = <String, TypeRef>{
+      ...outer,
       for (final def0 in ownDefs) def0.name: TypeParameterTypeRef(def0),
     };
     // Forward-referenced names outside the declared generics still need a
