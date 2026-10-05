@@ -8,10 +8,13 @@ class $Set<E> implements Set<E>, $Instance {
     int? runtimeTypeId,
     Runtime? runtime,
     this.isolateIdentity = false,
+    int? castSourceRuntimeTypeId,
   }) : _runtimeTypeId = runtimeTypeId,
+       _castSourceRuntimeTypeId = castSourceRuntimeTypeId,
        _runtime = runtime;
 
   final int? _runtimeTypeId;
+  final int? _castSourceRuntimeTypeId;
   final Runtime? _runtime;
   final bool isolateIdentity;
 
@@ -376,6 +379,17 @@ class $Set<E> implements Set<E>, $Instance {
         ),
         isStatic: false,
       ),
+      'cast': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.set, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('R')),
+            ]),
+          ),
+          generics: {'R': BridgeGenericParam()},
+        ),
+        isStatic: false,
+      ),
     },
     getters: {},
     setters: {},
@@ -428,7 +442,23 @@ class $Set<E> implements Set<E>, $Instance {
   @override
   final Set<E> $value;
 
-  late final $Instance _superclass = $Iterable.wrap($value);
+  late final $Instance _superclass = $Iterable.wrap(
+    $value,
+    runtime: _runtime,
+    runtimeTypeId: _iterableRuntimeTypeId(),
+  );
+
+  int? _iterableRuntimeTypeId() {
+    final runtime = _runtime;
+    if (runtime == null) return null;
+    final elementType = runtime.runtimeTypeArgumentAt(
+      $getRuntimeType(runtime),
+      0,
+    );
+    return elementType == null
+        ? null
+        : runtime.internParameterizedType(CoreTypes.iterable, [elementType]);
+  }
 
   @override
   $Value? $getProperty(Runtime runtime, String identifier) {
@@ -459,6 +489,8 @@ class $Set<E> implements Set<E>, $Instance {
         return $Closure(__union.func, this);
       case 'difference':
         return $Closure(__difference.func, this);
+      case 'cast':
+        return $Closure(__cast.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
   }
@@ -478,6 +510,38 @@ class $Set<E> implements Set<E>, $Instance {
     Object? c,
   ) {
     return collectionToString(runtime, (target as $Set).$value, '{', '}');
+  }
+
+  static const __cast = $Function(_cast);
+
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final wrapper = target as $Set;
+    final typeArguments = runtime.bridgeCallTypeArguments;
+    final elementType = typeArguments.isEmpty
+        ? runtime.lookupType(CoreTypes.dynamic)
+        : typeArguments.first;
+    final sourceRuntimeTypeId =
+        wrapper._castSourceRuntimeTypeId ?? wrapper.$getRuntimeType(runtime);
+    final sourceElementType = runtime.runtimeTypeArgumentAt(
+      sourceRuntimeTypeId,
+      0,
+    );
+    return $Set.wrap(
+      wrapper.$value.cast(),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.set, [
+        elementType,
+      ]),
+      castSourceRuntimeTypeId: sourceElementType == null
+          ? null
+          : sourceRuntimeTypeId,
+    );
   }
 
   static const $Function __add = $Function(_add);
@@ -682,6 +746,10 @@ class $Set<E> implements Set<E>, $Instance {
         _checkOwnerType = $getRuntimeType(runtime);
       }
       runtime.assertTypedTypeArgument(value, _checkOwnerType, 0);
+    }
+    final castSourceRuntimeTypeId = _castSourceRuntimeTypeId;
+    if (castSourceRuntimeTypeId != null) {
+      runtime.assertTypedTypeArgument(value, castSourceRuntimeTypeId, 0);
     }
   }
 

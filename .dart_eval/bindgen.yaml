@@ -131,7 +131,12 @@ libraries:
         implementsSdk: true
       FormatException:
         file: exceptions.dart
+        mode: both
         implementsSdk: true
+        nativeSuper: true
+        methods:
+          toString:
+            include: true
       Uri:
         file: uri.dart
         # Uri's `encoding` params default to `utf8` (dart:convert).
@@ -369,6 +374,7 @@ libraries:
         include: false
   - uri: dart:convert
     outDir: lib/src/eval/shared/stdlib/convert
+    hooks: json_hooks.dart
     typedefs: [ByteConversionSinkBase]
     registry:
       file: lib/src/eval/shared/types.dart
@@ -385,10 +391,25 @@ libraries:
         file: encoding.dart
       JsonEncoder:
         file: json.dart
+        constructors:
+          new:
+            nativeFactory: nativeJsonEncoder
+          withIndent:
+            nativeFactory: nativeIndentedJsonEncoder
+      JsonUtf8Encoder:
+        file: json.dart
+        constructors:
+          new:
+            nativeFactory: nativeJsonUtf8Encoder
       JsonDecoder:
         file: json.dart
       JsonCodec:
         file: json.dart
+        constructors:
+          new:
+            nativeFactory: nativeJsonCodec
+          withReviver:
+            nativeFactory: nativeJsonCodecWithReviver
       AsciiCodec:
         file: ascii.dart
       AsciiEncoder:
@@ -424,10 +445,11 @@ libraries:
       LineSplitter:
         file: line_splitter.dart
     functions:
-      - base64Decode
-      - base64Encode
-      - jsonEncode
-      - jsonDecode
+      base64Decode:
+      base64Encode:
+      jsonEncode:
+        hook: guestJsonEncode
+      jsonDecode:
   - uri: dart:developer
     outDir: lib/src/eval/shared/stdlib/developer
     registry:

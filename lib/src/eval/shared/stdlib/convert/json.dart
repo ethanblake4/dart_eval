@@ -23,6 +23,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Codec,
         $Encoding,
         $JsonEncoder,
+        $JsonUtf8Encoder,
         $JsonDecoder,
         $JsonCodec,
         $AsciiCodec,
@@ -49,6 +50,7 @@ import 'package:dart_eval/stdlib/async.dart'
         $Codec,
         $Encoding,
         $JsonEncoder,
+        $JsonUtf8Encoder,
         $JsonDecoder,
         $JsonCodec,
         $AsciiCodec,
@@ -72,6 +74,7 @@ import './converter.dart';
 import './chunked_conversion.dart';
 import './string_conversion_sink.dart';
 import './codec.dart';
+import 'json_hooks.dart' as hooks;
 
 /// dart_eval wrapper binding for [JsonEncoder]
 class $JsonEncoder implements $Instance {
@@ -335,7 +338,8 @@ class $JsonEncoder implements $Instance {
   /// Wrapper for the [JsonEncoder.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $JsonEncoder.wrap(
-      JsonEncoder(
+      hooks.nativeJsonEncoder(
+        runtime,
         (r is $Value ? r : null) == null || (r is $Value ? r : null) is $null
             ? null
             : (() {
@@ -369,7 +373,8 @@ class $JsonEncoder implements $Instance {
   /// Wrapper for the [JsonEncoder.withIndent] constructor
   static $Value? $withIndent(Runtime runtime, Object? r, Object? s, Object? c) {
     return $JsonEncoder.wrap(
-      JsonEncoder.withIndent(
+      hooks.nativeIndentedJsonEncoder(
+        runtime,
         (r as $Value?)!.$value,
         (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
             ? null
@@ -448,7 +453,27 @@ class $JsonEncoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $JsonEncoder;
-    final result = self.$value.bind((r as $Value?)!.$value);
+    final result = self.$value.bind(
+      (() {
+        final streamPayloadType = runtime.internParameterizedType(
+          CoreTypes.object,
+          [],
+          nullable: true,
+        );
+        return TypedInterop.stream((r as $Value?), runtime, exportErrors: true)
+            .map(
+              (value) => TypedInterop.exportStreamPayload<Object?>(
+                value,
+                runtime,
+                streamPayloadType,
+                (payload) =>
+                    TypedInterop.exportExternal(payload, runtime: runtime)
+                        as Object?,
+              ),
+            )
+            .cast<Object?>();
+      })(),
+    );
     return $Stream.wrap(
       result.map((e) => $String(e)),
       runtime: runtime,
@@ -516,6 +541,455 @@ class $JsonEncoder implements $Instance {
         runtime,
         runtime.internParameterizedType(CoreTypes.sink, [
           runtime.lookupType(CoreTypes.string),
+        ]),
+      ),
+    );
+    return $ChunkedConversionSink.wrap(result);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+}
+
+/// dart_eval wrapper binding for [JsonUtf8Encoder]
+class $JsonUtf8Encoder implements $Instance {
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:convert',
+      'JsonUtf8Encoder.',
+      $JsonUtf8Encoder.$new,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$JsonUtf8Encoder]
+  static const $spec = BridgeTypeSpec('dart:convert', 'JsonUtf8Encoder');
+
+  /// Compile-time type declaration of [$JsonUtf8Encoder]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$JsonUtf8Encoder]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+
+      $implements: [
+        BridgeTypeRef(ConvertTypes.converter, [
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object, []),
+            nullable: true,
+          ),
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+        ]),
+        BridgeTypeRef(AsyncTypes.streamTransformerBase, [
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object, []),
+            nullable: true,
+          ),
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+        ]),
+        BridgeTypeRef(AsyncTypes.streamTransformer, [
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.object, []),
+            nullable: true,
+          ),
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+        ]),
+      ],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'indent',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'toEncodable',
+              BridgeTypeAnnotation(
+                BridgeTypeRef.genericFunction(
+                  BridgeFunctionDef(
+                    returns: BridgeTypeAnnotation(
+                      BridgeTypeRef(CoreTypes.dynamic),
+                    ),
+                    params: [
+                      BridgeParameter(
+                        'object',
+                        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                        false,
+                      ),
+                    ],
+                    namedParams: [],
+                  ),
+                ),
+                nullable: true,
+              ),
+              true,
+            ),
+
+            BridgeParameter(
+              'bufferSize',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.int, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {
+      'bind': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.stream, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.list, [
+                  BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                ]),
+              ),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'stream',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.stream, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.object, []),
+                    nullable: true,
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'cast': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'RS': BridgeGenericParam(), 'RT': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(BridgeTypeRef.ref('RS')),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('RT')),
+            ]),
+          ),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+
+      'convert': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.list, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'object',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'fuse': BridgeMethodDef(
+        BridgeFunctionDef(
+          generics: {'TT': BridgeGenericParam()},
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.converter, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+              BridgeTypeAnnotation(BridgeTypeRef.ref('TT')),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'other',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(ConvertTypes.converter, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.list, [
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                    ]),
+                  ),
+                  BridgeTypeAnnotation(BridgeTypeRef.ref('TT')),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+
+      'startChunkedConversion': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(
+            BridgeTypeRef(ConvertTypes.chunkedConversionSink, [
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.object, []),
+                nullable: true,
+              ),
+            ]),
+          ),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'sink',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.sink, [
+                  BridgeTypeAnnotation(
+                    BridgeTypeRef(CoreTypes.list, [
+                      BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.int, [])),
+                    ]),
+                  ),
+                ]),
+              ),
+              false,
+            ),
+          ],
+        ),
+      ),
+    },
+    getters: {},
+    setters: {},
+    fields: {},
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [JsonUtf8Encoder.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $JsonUtf8Encoder.wrap(
+      hooks.nativeJsonUtf8Encoder(
+        runtime,
+        (r is $Value ? r : null)?.$value,
+        (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
+            ? null
+            : (() {
+                final _callbackType0 = runtime.lookupType(CoreTypes.dynamic);
+                return runtime.cachedCallback(
+                  (s is $Value ? s : null)! as EvalCallable,
+                  "dynamic Function(dynamic);export=false" +
+                      ";types=$_callbackType0",
+                  (_callable) => (dynamic object) {
+                    return TypedInterop.exportExternal(
+                      _callable.call(
+                        runtime,
+                        null,
+                        TypedInterop.boxExternal(
+                          object,
+                          runtime: runtime,
+                          runtimeTypeId: _callbackType0,
+                        ),
+                        null,
+                        1,
+                      ),
+                      runtime: runtime,
+                    ) as dynamic;
+                  },
+                );
+              })(),
+        (c is $Value ? c : null)?.$value,
+      ),
+    );
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final JsonUtf8Encoder $value;
+
+  @override
+  JsonUtf8Encoder get $reified => $value;
+
+  /// Wrap a [JsonUtf8Encoder] in a [$JsonUtf8Encoder]
+  $JsonUtf8Encoder.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'bind':
+        return $Closure(__bind.func, this);
+
+      case 'cast':
+        return $Closure(__cast.func, this);
+
+      case 'convert':
+        return $Closure(__convert.func, this);
+
+      case 'fuse':
+        return $Closure(__fuse.func, this);
+
+      case 'startChunkedConversion':
+        return $Closure(__startChunkedConversion.func, this);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __bind = $Function(_bind);
+  static $Value? _bind(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $JsonUtf8Encoder;
+    final result = self.$value.bind(
+      (() {
+        final streamPayloadType = runtime.internParameterizedType(
+          CoreTypes.object,
+          [],
+          nullable: true,
+        );
+        return TypedInterop.stream((r as $Value?), runtime, exportErrors: true)
+            .map(
+              (value) => TypedInterop.exportStreamPayload<Object?>(
+                value,
+                runtime,
+                streamPayloadType,
+                (payload) =>
+                    TypedInterop.exportExternal(payload, runtime: runtime)
+                        as Object?,
+              ),
+            )
+            .cast<Object?>();
+      })(),
+    );
+    return $Stream.wrap(
+      result.map(
+        (e) => $List.view(
+          e,
+          (e) => $int(e),
+          runtime: runtime,
+          runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
+        ),
+      ),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.stream, [
+        runtime.internParameterizedType(CoreTypes.list, [
+          runtime.lookupType(CoreTypes.int),
+        ]),
+      ]),
+    );
+  }
+
+  static const $Function __cast = $Function(_cast);
+  static $Value? _cast(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $JsonUtf8Encoder;
+    final result = self.$value.cast();
+    return $Converter.wrap(result);
+  }
+
+  static const $Function __convert = $Function(_convert);
+  static $Value? _convert(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $JsonUtf8Encoder;
+    final result = self.$value.convert(
+      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
+    );
+    return $List.view(
+      result,
+      (e) => $int(e),
+      runtime: runtime,
+      runtimeTypeId: runtime.internParameterizedType(CoreTypes.list, [
+        runtime.lookupType(CoreTypes.int),
+      ]),
+    );
+  }
+
+  static const $Function __fuse = $Function(_fuse);
+  static $Value? _fuse(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $JsonUtf8Encoder;
+    final result = self.$value.fuse((r as $Value?)!.$value);
+    return $Converter.wrap(result);
+  }
+
+  static const $Function __startChunkedConversion = $Function(
+    _startChunkedConversion,
+  );
+  static $Value? _startChunkedConversion(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $JsonUtf8Encoder;
+    final result = self.$value.startChunkedConversion(
+      TypedInterop.exportSink<List<int>>(
+        (r as $Value?),
+        runtime,
+        runtime.internParameterizedType(CoreTypes.sink, [
+          runtime.internParameterizedType(CoreTypes.list, [
+            runtime.lookupType(CoreTypes.int),
+          ]),
         ]),
       ),
     );
@@ -829,7 +1303,23 @@ class $JsonDecoder implements $Instance {
     Object? c,
   ) {
     final self = target! as $JsonDecoder;
-    final result = self.$value.bind((r as $Value?)!.$value);
+    final result = self.$value.bind(
+      (() {
+        final streamPayloadType = runtime.lookupType(CoreTypes.string);
+        return TypedInterop.stream((r as $Value?), runtime, exportErrors: true)
+            .map(
+              (value) => TypedInterop.exportStreamPayload<String>(
+                value,
+                runtime,
+                streamPayloadType,
+                (payload) =>
+                    TypedInterop.exportExternal(payload, runtime: runtime)
+                        as String,
+              ),
+            )
+            .cast<String>();
+      })(),
+    );
     return $Stream.wrap(
       result.map((e) => e == null ? const $null() : $Object(e)),
       runtime: runtime,
@@ -1230,7 +1720,8 @@ class $JsonCodec implements $Instance {
   /// Wrapper for the [JsonCodec.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
     return $JsonCodec.wrap(
-      JsonCodec(
+      hooks.nativeJsonCodec(
+        runtime,
         reviver:
             (r is $Value ? r : null) == null ||
                 (r is $Value ? r : null) is $null
@@ -1312,7 +1803,8 @@ class $JsonCodec implements $Instance {
     Object? c,
   ) {
     return $JsonCodec.wrap(
-      JsonCodec.withReviver(
+      hooks.nativeJsonCodecWithReviver(
+        runtime,
         (() {
           final _callbackType0 = runtime.internParameterizedType(
             CoreTypes.object,

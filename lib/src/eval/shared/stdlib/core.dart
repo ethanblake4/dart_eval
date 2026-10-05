@@ -112,7 +112,7 @@ class DartCorePlugin implements EvalPlugin {
     $StackOverflowError.configureForCompile(registry);
     $OutOfMemoryError.configureForCompile(registry);
     registry.defineBridgeClass($Exception.$declaration);
-    registry.defineBridgeClass($FormatException.$declaration);
+    $FormatException$bridge.configureForCompile(registry);
     registry.defineBridgeClass($ArgumentError.$declaration);
     registry.defineBridgeClass($StateError.$declaration);
     registry.defineBridgeClass($Set.$declaration);
@@ -166,7 +166,7 @@ class DartCorePlugin implements EvalPlugin {
     $RangeError.configureForRuntime(runtime);
     $Symbol.configureForRuntime(runtime);
     $Exception.configureForRuntime(runtime);
-    $FormatException.configureForRuntime(runtime);
+    $FormatException$bridge.configureForRuntime(runtime);
     $ArgumentError.configureForRuntime(runtime);
     $StateError.configureForRuntime(runtime);
     $TypeError.configureForRuntime(runtime);

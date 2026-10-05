@@ -140,14 +140,19 @@ class $Exception implements Exception, $Instance {
   }
 }
 
-/// dart_eval wrapper binding for [FormatException]
-class $FormatException implements FormatException, $Instance {
+/// dart_eval bridge binding for [FormatException]
+class $FormatException$bridge extends FormatException
+    with $Bridge<FormatException> {
+  /// Forwarded constructor for [FormatException.new]
+  $FormatException$bridge([super.message, super.source, super.offset]);
+
   /// Configure this class for use in a [Runtime]
   static void configureForRuntime(Runtime runtime) {
     runtime.registerBridgeFuncRegisters(
       'dart:core',
       'FormatException.',
-      $FormatException.$new,
+      $FormatException$bridge.$new,
+      isBridge: true,
     );
   }
 
@@ -156,10 +161,10 @@ class $FormatException implements FormatException, $Instance {
     registry.defineBridgeClass($declaration);
   }
 
-  /// Compile-time type specification of [$FormatException]
+  /// Compile-time type specification of [$FormatException$bridge]
   static const $spec = BridgeTypeSpec('dart:core', 'FormatException');
 
-  /// Compile-time type declaration of [$FormatException]
+  /// Compile-time type declaration of [$FormatException$bridge]
   static const $type = BridgeTypeRef($spec);
 
   /// Compile-time class declaration of [$FormatException]
@@ -202,7 +207,15 @@ class $FormatException implements FormatException, $Instance {
       ),
     },
 
-    methods: {},
+    methods: {
+      'toString': BridgeMethodDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          namedParams: [],
+          params: [],
+        ),
+      ),
+    },
     getters: {},
     setters: {},
     fields: {
@@ -221,21 +234,89 @@ class $FormatException implements FormatException, $Instance {
         isStatic: false,
       ),
     },
-    wrap: true,
-    bridge: false,
+    wrap: false,
+    bridge: true,
   );
 
-  /// Wrapper for the [FormatException.new] constructor
+  /// Proxy for the [FormatException.new] constructor
   static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
-    return $FormatException.wrap(
-      FormatException(
-        (r is $Value ? r : null) == null ? "" : (r as $String).$value,
-        TypedInterop.exportExternal((s is $Value ? s : null), runtime: runtime)
-            as dynamic,
-        (c is $Value ? c : null)?.$value,
-      ),
+    return $FormatException$bridge(
+      (r is $Value ? r : null) == null ? "" : (r as $String).$value,
+      TypedInterop.exportExternal((s is $Value ? s : null), runtime: runtime)
+          as dynamic,
+      (c is $Value ? c : null)?.$value,
     );
   }
+
+  @override
+  $Value? $bridgeGet(String identifier) {
+    final runtime = $runtime;
+    switch (identifier) {
+      case 'message':
+        final _message = super.message;
+        return $String(_message);
+
+      case 'source':
+        final _source = super.source;
+        return (_source is List || _source is Map || _source is Set
+            ? TypedInterop.boxExternal(_source, runtime: runtime)!
+            : runtime.wrapAlways(_source));
+
+      case 'offset':
+        final _offset = super.offset;
+        return _offset == null ? const $null() : $int(_offset);
+      case 'toString':
+        return $Function((runtime, target, r, s, c) {
+          final result = super.toString();
+          return $String(result);
+        });
+    }
+    return $bridgeGetObject(
+      identifier,
+      hashCode: () => super.hashCode,
+      equals: (other) => super == other,
+      toString: () => super.toString(),
+    );
+  }
+
+  @override
+  void $bridgeSet(String identifier, $Value value) {}
+
+  @override
+  String get message => Runtime.bridgeData[this]?.subclass == null
+      ? super.message
+      : $_get('message');
+
+  @override
+  dynamic get source => Runtime.bridgeData[this]?.subclass == null
+      ? super.source
+      : $_get('source');
+
+  @override
+  int? get offset => Runtime.bridgeData[this]?.subclass == null
+      ? super.offset
+      : $_get('offset');
+
+  @override
+  String toString() {
+    if (Runtime.bridgeData[this]?.subclass == null) {
+      return super.toString();
+    }
+    final runtime = $runtime;
+    return $_invoke('toString', []);
+  }
+}
+
+/// dart_eval lightweight wrapper binding for [FormatException]
+class $FormatException implements $Instance {
+  /// Compile-time declaration shared with the bridge binding.
+  static const $declaration = $FormatException$bridge.$declaration;
+
+  /// Compile-time type specification of [$FormatException]
+  static const $spec = BridgeTypeSpec('dart:core', 'FormatException');
+
+  /// Compile-time type declaration of [$FormatException]
+  static const $type = BridgeTypeRef($spec);
 
   final $Instance _superclass;
 
@@ -263,24 +344,27 @@ class $FormatException implements FormatException, $Instance {
       case 'offset':
         final _offset = $value.offset;
         return _offset == null ? const $null() : $int(_offset);
+      case 'toString':
+        return $Closure(__toString.func, this);
     }
     return _superclass.$getProperty(runtime, identifier);
+  }
+
+  static const $Function __toString = $Function(_toString);
+  static $Value? _toString(
+    Runtime runtime,
+    $Value? target,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    final self = target! as $FormatException;
+    final result = self.$value.toString();
+    return $String(result);
   }
 
   @override
   void $setProperty(Runtime runtime, String identifier, $Value value) {
     return _superclass.$setProperty(runtime, identifier, value);
   }
-
-  @override
-  String get message => $value.message;
-
-  @override
-  dynamic get source => $value.source;
-
-  @override
-  int? get offset => $value.offset;
-
-  @override
-  String toString() => $value.toString();
 }

@@ -24,6 +24,7 @@ import 'package:dart_eval/stdlib/core.dart'
         $Codec,
         $Encoding,
         $JsonEncoder,
+        $JsonUtf8Encoder,
         $JsonDecoder,
         $JsonCodec,
         $AsciiCodec,
@@ -46,6 +47,8 @@ import 'package:dart_eval/stdlib/core.dart'
 import '../typed_data/typed_data.dart';
 
 import 'package:dart_eval/src/eval/runtime/runtime.dart';
+
+import 'json_hooks.dart' as hooks;
 
 /// dart_eval function wrapper binding for [base64Encode]
 class $base64EncodeFn {
@@ -198,43 +201,7 @@ class $jsonEncodeFn {
     Object? s,
     Object? c,
   ) {
-    final result = jsonEncode(
-      TypedInterop.exportExternal((r as $Value?), runtime: runtime) as Object?,
-      toEncodable:
-          (s is $Value ? s : null) == null || (s is $Value ? s : null) is $null
-          ? null
-          : (() {
-              final _callbackType0 = runtime.internParameterizedType(
-                CoreTypes.object,
-                [],
-                nullable: true,
-              );
-              return runtime.cachedCallback(
-                (s is $Value ? s : null)! as EvalCallable,
-                "Object? Function(Object?);export=false" +
-                    ";types=$_callbackType0",
-                (_callable) => (Object? nonEncodable) {
-                  return TypedInterop.exportExternal(
-                    _callable.call(
-                      runtime,
-                      null,
-                      TypedInterop.annotateBridgeType(
-                        (nonEncodable == null
-                            ? const $null()
-                            : $Object(nonEncodable)),
-                        runtime,
-                        _callbackType0,
-                      ),
-                      null,
-                      1,
-                    ),
-                    runtime: runtime,
-                  ) as Object?;
-                },
-              );
-            })(),
-    );
-    return $String(result);
+    return hooks.guestJsonEncode(runtime, null, [r as $Value?, s as $Value?]);
   }
 }
 

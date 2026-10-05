@@ -388,6 +388,12 @@ class ConvertTypes {
   /// Bridge spec for [JsonEncoder].
   static const jsonEncoder = BridgeTypeSpec('dart:convert', 'JsonEncoder');
 
+  /// Bridge spec for [JsonUtf8Encoder].
+  static const jsonUtf8Encoder = BridgeTypeSpec(
+    'dart:convert',
+    'JsonUtf8Encoder',
+  );
+
   /// Bridge spec for [LineSplitter].
   static const lineSplitter = BridgeTypeSpec('dart:convert', 'LineSplitter');
 

@@ -48,6 +48,7 @@ class DartConvertPlugin implements EvalPlugin {
     $Base64Codec.configureForCompile(registry);
     $JsonDecoder.configureForCompile(registry);
     $JsonEncoder.configureForCompile(registry);
+    $JsonUtf8Encoder.configureForCompile(registry);
     $JsonCodec.configureForCompile(registry);
     $ChunkedConversionSink.configureForCompile(registry);
     $HtmlEscapeMode.configureForCompile(registry);
@@ -78,6 +79,7 @@ class DartConvertPlugin implements EvalPlugin {
     $Base64Codec.configureForRuntime(runtime);
     $JsonDecoder.configureForRuntime(runtime);
     $JsonEncoder.configureForRuntime(runtime);
+    $JsonUtf8Encoder.configureForRuntime(runtime);
     $JsonCodec.configureForRuntime(runtime);
     $jsonEncodeFn.configureForRuntime(runtime);
     $jsonDecodeFn.configureForRuntime(runtime);

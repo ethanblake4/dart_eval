@@ -79,6 +79,87 @@ void main() {
       );
     });
 
+    test('Set.cast returns a lazy typed set view', () {
+      for (final (mode, result) in runDynamicFixture(r'''
+        class Key {
+          Key(this.value);
+          final int value;
+
+          @override
+          bool operator ==(Object other) =>
+              other is Key && other.value == value;
+
+          @override
+          int get hashCode => value;
+        }
+
+        bool main() {
+          final first = Key(1);
+          final keys = <Object?>{first, Key(1), Key(2)};
+          final Set<Key> castKeys = keys.cast<Key>();
+          if (castKeys is! Set<Key> ||
+              castKeys.length != 2 ||
+              !identical(castKeys.first, first) ||
+              !castKeys.contains(Key(1))) {
+            return false;
+          }
+
+          final source = <Object?>{'before'};
+          final Set<String> strings = source.cast<String>();
+          source.add('after');
+          if (strings is! Set<String> || strings.join(',') != 'before,after') {
+            return false;
+          }
+
+          final sourceStrings = <String>{'only strings'};
+          final Set<Object?> widened = sourceStrings.cast<Object?>();
+          try {
+            widened.add(1);
+            return false;
+          } on TypeError {
+            // Set.cast keeps the backing set's element constraint on writes.
+          }
+
+          final recastBacking = <String>{'source'};
+          final Set<Object?> recastTwice =
+              recastBacking.cast<Object?>().cast<Object?>();
+          var preservedBackingType = false;
+          try {
+            recastTwice.add(1);
+          } on TypeError {
+            // Recasting keeps the original backing set's element constraint.
+            preservedBackingType = true;
+          }
+
+          final intermediateBacking = <Object?>{};
+          final Set<String> recastAfterNarrowing =
+              intermediateBacking.cast<num>().cast<String>();
+          var droppedIntermediateType = false;
+          try {
+            recastAfterNarrowing.add('accepted');
+            droppedIntermediateType = true;
+          } on TypeError {
+            // The final view doesn't retain an earlier cast's type argument.
+          }
+          if (!preservedBackingType ||
+              !droppedIntermediateType ||
+              intermediateBacking.single != 'accepted') {
+            return false;
+          }
+
+          final invalid = <Object?>{1, 'wrong'}.cast<int>();
+          try {
+            invalid.toList();
+          } on TypeError {
+            return true;
+          }
+          return false;
+        }
+      ''')) {
+        expect(result, const DynamicFixtureResult.value(true), reason: mode);
+      }
+    });
+
     test('Creating a set', () {
       final runtime = compiler.compileWriteAndLoad({
         'eval_test': {
