@@ -29,6 +29,11 @@ import 'package:path/path.dart';
 
 /// Adapted from code by Alex Wallen (@a-wallen)
 class Bindgen implements BridgeDeclarationRegistry {
+  /// Uses [sdkPath] for analysis when supplied, otherwise analyzer locates it.
+  Bindgen({this.sdkPath});
+
+  final String? sdkPath;
+
   static final resourceProvider = PhysicalResourceProvider.INSTANCE;
   final includedPaths = [resourceProvider.pathContext.current];
 
@@ -127,6 +132,7 @@ class Bindgen implements BridgeDeclarationRegistry {
       _contextCollection = AnalysisContextCollection(
         includedPaths: includedPaths,
         resourceProvider: PhysicalResourceProvider.INSTANCE,
+        sdkPath: sdkPath,
       );
       print('Analyzing project source...');
     }
@@ -445,6 +451,7 @@ class Bindgen implements BridgeDeclarationRegistry {
       _contextCollection = AnalysisContextCollection(
         includedPaths: includedPaths,
         resourceProvider: resourceProvider,
+        sdkPath: sdkPath,
       );
       print('Analyzing project source...');
     }
