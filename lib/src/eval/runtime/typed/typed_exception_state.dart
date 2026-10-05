@@ -179,7 +179,7 @@ final class TypedExceptionState {
 
   static $Value? _boxException(Object error, Runtime? runtime) {
     if (error is $Value) return error;
-    return switch (error) {
+    final specific = switch (error) {
       TypeError() => $TypeError.wrap(error),
       NoSuchMethodError() => $NoSuchMethodError.wrap(error),
       StateError() => $StateError.wrap(error),
@@ -191,9 +191,15 @@ final class TypedExceptionState {
       StackOverflowError() => $StackOverflowError.wrap(error),
       OutOfMemoryError() => $OutOfMemoryError.wrap(error),
       RemoteError() => $RemoteError.wrap(error),
-      Error() => $Error.wrap(error),
       FormatException() => $FormatException.wrap(error),
       TimeoutException() => $TimeoutException.wrap(error),
+      _ => null,
+    };
+    if (specific != null) return specific;
+    final registered = runtime?.wrapRegistered(error);
+    if (registered != null) return registered;
+    return switch (error) {
+      Error() => $Error.wrap(error),
       Exception() => $Exception.wrap(error),
       _ => TypedInterop.boxExternal(error, runtime: runtime),
     };

@@ -21,6 +21,24 @@ abstract final class TypedHostCollections {
   static $Value box(Object collection, Runtime? runtime, {int? runtimeTypeId}) {
     final native = wrapNativeTypedList(collection);
     if (native != null) return native;
+    // A dynamic element contract says nothing about a nested collection's
+    // actual type. Recover the same host String-key witness as Runtime.wrap,
+    // including empty maps, without inspecting or copying their entries.
+    if (runtime != null) {
+      if (runtimeTypeId != null &&
+          runtime.isTypedNominalTypeDescriptor(
+            runtimeTypeId,
+            CoreTypes.dynamic,
+          )) {
+        runtimeTypeId = null;
+      }
+      if (runtimeTypeId == null && collection is Map<String, dynamic>) {
+        runtimeTypeId = runtime.internParameterizedType(CoreTypes.map, [
+          runtime.lookupType(CoreTypes.string),
+          runtime.lookupType(CoreTypes.dynamic),
+        ]);
+      }
+    }
     final cache = _cacheFor(runtime);
     final existing = cache.boxed[collection];
     if (existing != null &&

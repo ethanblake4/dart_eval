@@ -1715,13 +1715,47 @@ final class ArgumentBinder {
     final library = selected.library;
     final declaration = selected.declaration;
     final seeds = <String, TypeRef>{...seedGenerics};
+    var signature = target.signature!;
     Set<String>? inferParameterNames;
     if (target is ConstructorCall) {
+      // A constructor can be called from its own generic class. Its inference
+      // variables must differ from the caller's lexical class parameters.
+      final originalParameters = [
+        for (final ref in signature.typeParameterRefs.values)
+          if (ref case TypeParameterTypeRef(
+            :final parameter,
+          ) when parameter.owner.kind == TypeParameterOwnerKind.classLike)
+            parameter,
+      ];
+      final freshOwners = <TypeParameterOwner, TypeParameterOwner>{};
+      final freshParameters = {
+        for (final parameter in originalParameters)
+          parameter: TypeParameterDef(
+            freshOwners.putIfAbsent(
+              parameter.owner,
+              () => TypeParameterOwner.fresh(parameter.owner),
+            ),
+            parameter.index,
+            parameter.name,
+            variance: parameter.variance,
+            hasExplicitVariance: parameter.hasExplicitVariance,
+          ),
+      };
+      final freshSubstitution = Substitution.of({
+        for (final entry in freshParameters.entries)
+          entry.key: TypeParameterTypeRef(entry.value),
+      });
+      for (final entry in freshParameters.entries) {
+        entry.value.bound = entry.key.bound?.substituteTypeParameters(
+          freshSubstitution,
+        );
+      }
+      signature = signature.substitute(freshSubstitution);
       final arguments = interfaceArgumentsOf(
         target.instantiatedType ?? target.staticType,
       );
       final classParameters = [
-        for (final entry in target.signature!.typeParameterRefs.entries)
+        for (final entry in signature.typeParameterRefs.entries)
           if (entry.value is TypeParameterTypeRef &&
               (entry.value as TypeParameterTypeRef).parameter.owner.kind ==
                   TypeParameterOwnerKind.classLike)
@@ -1730,16 +1764,27 @@ final class ArgumentBinder {
       for (var i = 0; i < arguments.length && i < classParameters.length; i++) {
         seeds.putIfAbsent(classParameters[i], () => arguments[i]);
       }
+      final contextual = constructorContextArguments(
+        ctx,
+        target.staticType,
+        returnContext,
+      );
       if (typeArguments == null) {
-        for (final entry in constructorContextArguments(
-          ctx,
-          target.staticType,
-          returnContext,
-        ).entries) {
+        for (final parameter in originalParameters) {
+          if (!contextual.containsKey(parameter) &&
+              seeds[parameter.name] == TypeParameterTypeRef(parameter)) {
+            seeds[parameter.name] = TypeParameterTypeRef(
+              freshParameters[parameter]!,
+            );
+          }
+        }
+      }
+      if (typeArguments == null) {
+        for (final entry in contextual.entries) {
           final previous = seeds[entry.key.name];
           if (previous == null ||
               previous is TypeParameterTypeRef &&
-                  previous.parameter == entry.key) {
+                  previous.parameter == freshParameters[entry.key]) {
             seeds[entry.key.name] = entry.value;
           }
         }
@@ -1749,14 +1794,13 @@ final class ArgumentBinder {
       inferParameterNames = {
         for (final name in classParameters)
           if (typeArguments == null &&
-                  (target.signature!.typeParameterRefs[name]
-                          as TypeParameterTypeRef)
+                  (signature.typeParameterRefs[name] as TypeParameterTypeRef)
                       .parameter
                       .hasExplicitVariance ||
               seeds[name] == null ||
               seeds[name] is TypeParameterTypeRef &&
                   (seeds[name] as TypeParameterTypeRef).parameter ==
-                      (target.signature!.typeParameterRefs[name]
+                      (signature.typeParameterRefs[name]
                               as TypeParameterTypeRef)
                           .parameter ||
               seeds[name]!.hasSchemaHoles ||
@@ -1776,7 +1820,7 @@ final class ArgumentBinder {
       returnContext: returnContext,
       argIndexOffset: argIndexOffset,
       fillOmitted: target.policy == BindingPolicy.callerFillsDefaults,
-      targetSignature: target.signature,
+      targetSignature: signature,
       // A devirtualized call binds against the interface signature but
       // fills omitted defaults from the implementation it dispatches to.
       defaultsSignature: target is StaticCall ? target.member?.signature : null,
@@ -1931,10 +1975,11 @@ final class ArgumentBinder {
       for (var i = 0; i < classParams.length; i++) {
         final parameter = classParams[i];
         if (explicitArgs != null && i < explicitArgs.length) {
-          resolveGenerics[parameter] = TypeRef.fromAnnotation(
-            ctx,
-            ctx.library,
-            explicitArgs[i],
+          // Forwarding constructors already seed the declaring superclass's
+          // transformed arguments, e.g. Alias<T> = Base<List<T>> with M.
+          resolveGenerics.putIfAbsent(
+            parameter,
+            () => TypeRef.fromAnnotation(ctx, ctx.library, explicitArgs[i]),
           );
         } else {
           resolveGenerics.putIfAbsent(

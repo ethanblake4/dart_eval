@@ -741,6 +741,7 @@ class BindgenPermissionConfig {
     required this.name,
     this.constData,
     this.paramData,
+    this.receiverData,
   });
 
   final String name;
@@ -749,11 +750,15 @@ class BindgenPermissionConfig {
   /// Parameter whose `$value` supplies the permission data.
   final String? paramData;
 
+  /// Property path on the host instance supplying permission data.
+  final String? receiverData;
+
   factory BindgenPermissionConfig.fromYaml(YamlMap yaml) =>
       BindgenPermissionConfig(
         name: _str(yaml['name']) ?? '',
         constData: _str(yaml['constData']),
         paramData: _str(yaml['paramData']),
+        receiverData: _str(yaml['receiverData']),
       );
 }
 

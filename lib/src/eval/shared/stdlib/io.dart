@@ -1,6 +1,9 @@
+import 'dart:io' show FileSystemException;
+
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/directory.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/exceptions.dart';
+import 'package:dart_eval/src/eval/shared/stdlib/io/link.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/http_headers.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/redirect_info.dart';
 import 'package:dart_eval/src/eval/shared/stdlib/io/socket_connection.dart';
@@ -31,6 +34,7 @@ class DartIoPlugin implements EvalPlugin {
     registry.defineBridgeClass($FileSystemEntity.$declaration);
     registry.defineBridgeClass($File.$declaration);
     registry.defineBridgeClass($Directory.$declaration);
+    $Link.configureForCompile(registry);
     registry.defineBridgeClass($Process.$declaration);
     registry.defineBridgeClass($ProcessInfo.$declaration);
     registry.defineBridgeClass($ProcessResult.$declaration);
@@ -41,6 +45,7 @@ class DartIoPlugin implements EvalPlugin {
     $SocketException.configureForCompile(registry);
     $HttpException.configureForCompile(registry);
     $OSError.configureForCompile(registry);
+    $FileSystemException.configureForCompile(registry);
     $HttpHeaders.configureForCompile(registry);
     $RedirectInfo.configureForCompile(registry);
     $Socket.configureForCompile(registry);
@@ -76,11 +81,18 @@ class DartIoPlugin implements EvalPlugin {
       'Directory.',
       $Directory.$new,
     );
+    $Link.configureForRuntime(runtime);
     $InternetAddress.configureForRuntime(runtime);
     $InternetAddressType.configureForRuntime(runtime);
     $SocketException.configureForRuntime(runtime);
     $HttpException.configureForRuntime(runtime);
     $OSError.configureForRuntime(runtime);
+    $FileSystemException.configureForRuntime(runtime);
+    runtime.addTypeAutowrapper(
+      (value) => value is FileSystemException
+          ? $FileSystemException.wrap(value)
+          : null,
+    );
     $HttpHeaders.configureForRuntime(runtime);
     $RedirectInfo.configureForRuntime(runtime);
     $Socket.configureForRuntime(runtime);

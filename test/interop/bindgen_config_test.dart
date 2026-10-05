@@ -209,6 +209,79 @@ void main() {
       }
     });
 
+    test('receiver permission reads the typed host instance', () async {
+      final directory = Directory(
+        'test',
+      ).absolute.createTempSync('bindgen_receiver_');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final source = File(p.join(directory.path, 'widget.dart'))
+        ..writeAsStringSync(_widgetSource);
+      final config = BindgenConfig.parse(
+        _widgetYaml.replaceFirst('paramData: factor', 'receiverData: count'),
+      )..resolveDefaults();
+      expect(
+        config
+            .libraries
+            .single
+            .classes['Widget']!
+            .methods['scale']!
+            .permissions
+            .single
+            .receiverData,
+        'count',
+      );
+      final generated = (await Bindgen().parse(
+        source,
+        'widget.dart',
+        'package:bindcfg/widget.dart',
+        false,
+        config: config,
+        libraryConfig: config.libraries.single,
+      ))!;
+      expect(
+        generated,
+        contains(
+          r"runtime.assertPermission('math.scale', (target! as $Widget).$value.count);",
+        ),
+      );
+    });
+
+    test('rejects malformed or unavailable receiver permission data', () async {
+      final directory = Directory(
+        'test',
+      ).absolute.createTempSync('bindgen_receiver_invalid_');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final source = File(p.join(directory.path, 'widget.dart'))
+        ..writeAsStringSync(_widgetSource);
+      final invalidConfigs = [
+        for (final path in ['', 'count..path', 'count()'])
+          _widgetYaml.replaceFirst(
+            'paramData: factor',
+            'receiverData: "$path"',
+          ),
+        _widgetYaml.replaceFirst('paramData: count', 'receiverData: count'),
+        _widgetYaml.replaceFirst('constData: static', 'receiverData: count'),
+        _widgetYaml.replaceFirst(
+          'paramData: factor',
+          'paramData: factor\n                receiverData: count',
+        ),
+      ];
+      for (final yaml in invalidConfigs) {
+        final config = BindgenConfig.parse(yaml)..resolveDefaults();
+        expect(
+          () => Bindgen().parse(
+            source,
+            'widget.dart',
+            'package:bindcfg/widget.dart',
+            false,
+            config: config,
+            libraryConfig: config.libraries.single,
+          ),
+          throwsA(isA<BindingGenerationError>()),
+        );
+      }
+    });
+
     test('unnamed constructor permission accepts the empty YAML key', () async {
       final directory = Directory(
         'test',

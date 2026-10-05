@@ -514,6 +514,9 @@ class IoTypes {
   /// Bridge spec for [IOSink].
   static const ioSink = BridgeTypeSpec('dart:io', 'IOSink');
 
+  /// Bridge spec for [Link].
+  static const link = BridgeTypeSpec('dart:io', 'Link');
+
   /// Bridge spec for [OSError].
   static const osError = BridgeTypeSpec('dart:io', 'OSError');
 

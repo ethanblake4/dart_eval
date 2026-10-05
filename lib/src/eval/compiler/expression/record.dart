@@ -23,6 +23,10 @@ Variable compileRecordLiteral(
 
   if (bound != null && !bound.isRecord) bound = null;
 
+  // A record literal is non-null even when its context admits null.
+  // Keep each field's context, including its own nullability.
+  bound = bound?.withNullable(false);
+
   if (!(bound?.isAssignableTo(ctx, CoreTypes.record.ref(ctx)) ?? true)) {
     throw CompileError('Incompatible record type', l);
   }

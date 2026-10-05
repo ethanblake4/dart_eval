@@ -29,7 +29,8 @@ import 'package:dart_eval/stdlib/core.dart'
         $ZLibCodec,
         $GZipCodec,
         $ZLibEncoder,
-        $ZLibDecoder;
+        $ZLibDecoder,
+        $FileSystemException;
 import 'package:dart_eval/stdlib/io.dart'
     hide
         $Platform,
@@ -42,7 +43,8 @@ import 'package:dart_eval/stdlib/io.dart'
         $ZLibCodec,
         $GZipCodec,
         $ZLibEncoder,
-        $ZLibDecoder;
+        $ZLibDecoder,
+        $FileSystemException;
 
 import '../core/uri.dart';
 import '../core/exceptions.dart';
@@ -515,6 +517,165 @@ class $OSError implements OSError, $Instance {
 
   @override
   int get errorCode => $value.errorCode;
+
+  @override
+  String toString() => $value.toString();
+}
+
+/// dart_eval wrapper binding for [FileSystemException]
+class $FileSystemException implements FileSystemException, $Instance {
+  /// Configure this class for use in a [Runtime]
+  static void configureForRuntime(Runtime runtime) {
+    runtime.registerBridgeFuncRegisters(
+      'dart:io',
+      'FileSystemException.',
+      $FileSystemException.$new,
+    );
+  }
+
+  /// Configure this class for use during compilation
+  static void configureForCompile(BridgeDeclarationRegistry registry) {
+    registry.defineBridgeClass($declaration);
+  }
+
+  /// Compile-time type specification of [$FileSystemException]
+  static const $spec = BridgeTypeSpec('dart:io', 'FileSystemException');
+
+  /// Compile-time type declaration of [$FileSystemException]
+  static const $type = BridgeTypeRef($spec);
+
+  /// Compile-time class declaration of [$FileSystemException]
+  static const $declaration = BridgeClassDef(
+    BridgeClassType(
+      $type,
+
+      $implements: [
+        BridgeTypeRef(CoreTypes.object, []),
+        BridgeTypeRef(CoreTypes.exception, []),
+      ],
+    ),
+    constructors: {
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(
+          returns: BridgeTypeAnnotation($type),
+          namedParams: [],
+          params: [
+            BridgeParameter(
+              'message',
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+              true,
+              defaultValueSource: "\"\"",
+            ),
+
+            BridgeParameter(
+              'path',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(CoreTypes.string, []),
+                nullable: true,
+              ),
+              true,
+              defaultValueSource: "\"\"",
+            ),
+
+            BridgeParameter(
+              'osError',
+              BridgeTypeAnnotation(
+                BridgeTypeRef(IoTypes.osError, []),
+                nullable: true,
+              ),
+              true,
+            ),
+          ],
+        ),
+        isFactory: false,
+      ),
+    },
+
+    methods: {},
+    getters: {},
+    setters: {},
+    fields: {
+      'message': BridgeFieldDef(
+        BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+        isStatic: false,
+      ),
+
+      'path': BridgeFieldDef(
+        BridgeTypeAnnotation(
+          BridgeTypeRef(CoreTypes.string, []),
+          nullable: true,
+        ),
+        isStatic: false,
+      ),
+
+      'osError': BridgeFieldDef(
+        BridgeTypeAnnotation(
+          BridgeTypeRef(IoTypes.osError, []),
+          nullable: true,
+        ),
+        isStatic: false,
+      ),
+    },
+    wrap: true,
+    bridge: false,
+  );
+
+  /// Wrapper for the [FileSystemException.new] constructor
+  static $Value? $new(Runtime runtime, Object? r, Object? s, Object? c) {
+    return $FileSystemException.wrap(
+      FileSystemException(
+        (r is $Value ? r : null) == null ? "" : (r as $String).$value,
+        (s is $Value ? s : null) == null
+            ? ""
+            : (s is $Value ? s : null)!.$value,
+        (c is $Value ? c : null)?.$value,
+      ),
+    );
+  }
+
+  final $Instance _superclass;
+
+  @override
+  final FileSystemException $value;
+
+  @override
+  FileSystemException get $reified => $value;
+
+  /// Wrap a [FileSystemException] in a [$FileSystemException]
+  $FileSystemException.wrap(this.$value) : _superclass = $Object($value);
+
+  @override
+  int $getRuntimeType(Runtime runtime) => runtime.lookupType($spec);
+
+  @override
+  $Value? $getProperty(Runtime runtime, String identifier) {
+    switch (identifier) {
+      case 'message':
+        final _message = $value.message;
+        return $String(_message);
+      case 'path':
+        final _path = $value.path;
+        return _path == null ? const $null() : $String(_path);
+      case 'osError':
+        final _osError = $value.osError;
+        return _osError == null ? const $null() : $OSError.wrap(_osError);
+    }
+    return _superclass.$getProperty(runtime, identifier);
+  }
+
+  @override
+  void $setProperty(Runtime runtime, String identifier, $Value value) {
+    return _superclass.$setProperty(runtime, identifier, value);
+  }
+
+  @override
+  String get message => $value.message;
+
+  @override
+  String? get path => $value.path;
+
+  @override
+  OSError? get osError => $value.osError;
 
   @override
   String toString() => $value.toString();

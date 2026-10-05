@@ -13,6 +13,7 @@ String assertConfigPermissions(
   List<FormalParameterElement> parameters, {
   bool callable = false,
   int paramCount = 0,
+  String? receiver,
 }) {
   if (member == null || member.permissions.isEmpty) return '';
   String output = '';
@@ -20,8 +21,33 @@ String assertConfigPermissions(
     if (permission.name.isEmpty) {
       throw const BindingGenerationError('Permission name cannot be empty');
     }
+    if ([
+          permission.constData,
+          permission.paramData,
+          permission.receiverData,
+        ].where((source) => source != null).length >
+        1) {
+      throw const BindingGenerationError(
+        'Permission must use only one data source',
+      );
+    }
     String data = '';
-    if (permission.constData != null) {
+    if (permission.receiverData != null) {
+      final path = permission.receiverData!.split('.');
+      if (path.any(
+        (segment) => !RegExp(r'^[A-Za-z_][A-Za-z_0-9]*$').hasMatch(segment),
+      )) {
+        throw BindingGenerationError(
+          'Invalid permission receiverData ${permission.receiverData}',
+        );
+      }
+      if (receiver == null) {
+        throw const BindingGenerationError(
+          'Permission receiverData requires an instance member',
+        );
+      }
+      data = ', $receiver.${path.join('.')}';
+    } else if (permission.constData != null) {
       data = ", '${_dartLiteral(permission.constData!)}'";
     } else if (permission.paramData != null) {
       final path = permission.paramData!.split('.');

@@ -329,7 +329,20 @@ class Runtime {
   /// }
   /// ```
   void addTypeAutowrapper(TypeAutowrapper wrapper) {
+    if (!_configuringPlugins) _customIsolateBootstrap = true;
     _typeAutowrappers.add(wrapper);
+  }
+
+  /// Try registered type autowrappers, returning null when none matches.
+  /// Exceptions thrown by a wrapper propagate to the caller.
+  $Value? wrapRegistered(Object? value) {
+    for (final wrapper in _typeAutowrappers) {
+      final wrapped = wrapper(value);
+      if (wrapped != null) {
+        return wrapped;
+      }
+    }
+    return null;
   }
 
   /// Attempt to wrap a Dart value into a [$Value], and throw if unsuccessful.
@@ -368,12 +381,8 @@ class Runtime {
             )
           : $Map.wrap(value);
     }
-    for (final wrapper in _typeAutowrappers) {
-      final wrapped = wrapper(value);
-      if (wrapped != null) {
-        return wrapped;
-      }
-    }
+    final registered = wrapRegistered(value);
+    if (registered != null) return registered;
     return wrapPrimitive(value) ??
         (throw Exception(
           'Cannot wrap $value (${value.runtimeType}).'
@@ -438,7 +447,7 @@ class Runtime {
   /// Native registrations cannot be serialized into another isolate.
   Uint8List guestIsolateProgram() {
     _setup();
-    if (_customIsolateBootstrap || _typeAutowrappers.isNotEmpty) {
+    if (_customIsolateBootstrap) {
       throw UnsupportedError(
         'Guest isolates require built-in runtime plugins; '
         'custom native registrations cannot be transferred',

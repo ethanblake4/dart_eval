@@ -530,6 +530,64 @@ libraries:
         handMaintained: true
       Directory:
         handMaintained: true
+      Link:
+        file: link.dart
+        constructors:
+          fromRawPath:
+            include: false
+        methods:
+          create:
+            permissions:
+              - name: filesystem:write
+                receiverData: path
+          createSync:
+            permissions:
+              - name: filesystem:write
+                receiverData: path
+          delete:
+            permissions:
+              - name: filesystem:write
+                receiverData: path
+          deleteSync:
+            permissions:
+              - name: filesystem:write
+                receiverData: path
+          rename:
+            permissions:
+              - name: filesystem:write
+                receiverData: path
+              - name: filesystem:write
+                paramData: newPath
+          renameSync:
+            permissions:
+              - name: filesystem:write
+                receiverData: path
+              - name: filesystem:write
+                paramData: newPath
+          resolveSymbolicLinks:
+            permissions:
+              - name: filesystem:read
+                receiverData: path
+          resolveSymbolicLinksSync:
+            permissions:
+              - name: filesystem:read
+                receiverData: path
+          target:
+            permissions:
+              - name: filesystem:read
+                receiverData: path
+          targetSync:
+            permissions:
+              - name: filesystem:read
+                receiverData: path
+          update:
+            permissions:
+              - name: filesystem:write
+                receiverData: path
+          updateSync:
+            permissions:
+              - name: filesystem:write
+                receiverData: path
       FileSystemEntity:
         handMaintained: true
       IOSink:
@@ -598,7 +656,8 @@ libraries:
       FileStat:
         include: false
       FileSystemException:
-        include: false
+        file: exceptions.dart
+        implementsSdk: true
       FileMode:
         include: false
       HttpStatus:

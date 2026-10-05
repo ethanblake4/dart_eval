@@ -90,6 +90,8 @@ Variable compileInstanceCreation(
     instantiatedType: instantiatedType,
     name: name,
     argumentList: e.argumentList,
+    typeArguments: isTypeAlias ? null : type.typeArguments,
+    returnContext: bound,
     isConst: e.isConst,
     source: e,
   );
@@ -105,6 +107,8 @@ Variable compileInstanceOf(
   required TypeRef instantiatedType,
   required String name,
   required ArgumentList argumentList,
+  TypeArgumentList? typeArguments,
+  TypeRef? returnContext,
   required bool isConst,
   required AstNode source,
 }) {
@@ -306,6 +310,8 @@ Variable compileInstanceOf(
       argumentList,
       source: source,
       seedGenerics: seedGenerics,
+      typeArguments: typeArguments,
+      returnContext: returnContext,
     );
   }
 

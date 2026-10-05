@@ -1,3 +1,4 @@
+import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'package:test/test.dart';
 
 import '../support/dynamic_fixtures.dart';
@@ -133,6 +134,45 @@ void main() {
     for (final (mode, result) in runDynamicFixture(source)) {
       expect(result, const DynamicFixtureResult.value(true), reason: mode);
     }
+  });
+
+  test('transformed forwarding constructors keep strict argument checks', () {
+    const declarations = '''
+      int calls = 0;
+      class Base<T> {
+        Base(T value) { calls++; }
+        Base.named(T value) { calls++; }
+      }
+      mixin Marker {}
+      class Alias<T> = Base<List<T>> with Marker;
+    ''';
+    const source =
+        '''
+      $declarations
+      bool rejects(dynamic value) {
+        final before = calls;
+        try { new Alias<String>(value); return false; }
+        on TypeError {}
+        try { new Alias<String>.named(value); return false; }
+        on TypeError {}
+        return calls == before;
+      }
+      bool main() {
+        new Alias<String>(<String>['new']);
+        new Alias<String>.named(<String>['named']);
+        return calls == 2 && rejects('wrong') && rejects(<int>[42]);
+      }
+    ''';
+    for (final (mode, result) in runDynamicFixture(source)) {
+      expect(result, const DynamicFixtureResult.value(true), reason: mode);
+    }
+    expect(
+      () => runDynamicFixture('''
+        $declarations
+        void main() { new Alias<String>('wrong'); }
+      '''),
+      throwsA(isA<CompileError>()),
+    );
   });
 
   test('raw mixin chains retain nested generic supertypes at runtime', () {
