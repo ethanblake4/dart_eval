@@ -527,6 +527,25 @@ void compileConstructorDeclaration(
     );
   }
 
+  final bridgeArgs = extendsDecl != null && extendsDecl.isBridge
+      ? _bridgeSuperArgs(
+          ctx,
+          extendsDecl,
+          constructorName,
+          superInitializer: $superInitializer,
+          superParams: superParams,
+        )
+      : const <SSA>[];
+  final result = _initializeBridgeSuperclass(
+    ctx,
+    $extends: $extends,
+    extendsDecl: extendsDecl,
+    constructorName: constructorName,
+    inst: inst.ssa,
+    $super: $super.ssa,
+    args: bridgeArgs,
+  );
+
   final body = d.body;
   if (d.factoryKeyword == null && body is! EmptyFunctionBody) {
     ctx.beginScope();
@@ -552,25 +571,7 @@ void compileConstructorDeclaration(
     ctx.endScope();
   }
 
-  var ssa = <SSA>[];
-  if ($extends != null && extendsDecl != null && extendsDecl.isBridge) {
-    ssa = _bridgeSuperArgs(
-      ctx,
-      extendsDecl,
-      constructorName,
-      superInitializer: $superInitializer,
-      superParams: superParams,
-    );
-  }
-  _emitConstructorReturn(
-    ctx,
-    $extends: $extends,
-    extendsDecl: extendsDecl,
-    constructorName: constructorName,
-    inst: inst.ssa,
-    $super: $super.ssa,
-    args: ssa,
-  );
+  ctx.pushOp(Return(result));
 
   ctx.endScope();
 }
@@ -698,7 +699,7 @@ void compileDefaultConstructor(
   final bridgeArgs = extendsDecl != null && extendsDecl.isBridge
       ? _bridgeSuperArgs(ctx, extendsDecl, constructorName)
       : const <SSA>[];
-  _emitConstructorReturn(
+  final result = _initializeBridgeSuperclass(
     ctx,
     $extends: $extends,
     extendsDecl: extendsDecl,
@@ -707,6 +708,7 @@ void compileDefaultConstructor(
     $super: $super.ssa,
     args: bridgeArgs,
   );
+  ctx.pushOp(Return(result));
 
   ctx.endScope();
 }
@@ -1091,11 +1093,11 @@ List<SSA> _bridgeSuperArgs(
       .vector();
 }
 
-/// Emits the constructor's return. For a bridged superclass this instantiates
-/// the runtime bridge object around the already-built child and installs its
-/// parent shim. Ordinary [ConstructorCall.emit] creates a standalone object;
-/// only argument binding is shared with that target.
-void _emitConstructorReturn(
+/// Allocates the native superclass and links its shim before the guest body.
+/// Returns the constructor result, retaining the native bridge's identity.
+/// Ordinary [ConstructorCall.emit] creates a standalone object; only argument
+/// binding is shared with that target.
+SSA _initializeBridgeSuperclass(
   CompilerContext ctx, {
   required NamedType? $extends,
   required DeclarationOrBridge? extendsDecl,
@@ -1105,8 +1107,7 @@ void _emitConstructorReturn(
   required List<SSA> args,
 }) {
   if (extendsDecl == null || !extendsDecl.isBridge) {
-    ctx.pushOp(Return(inst));
-    return;
+    return inst;
   }
 
   final bridge = extendsDecl.bridge! as BridgeClassDef;
@@ -1131,7 +1132,7 @@ void _emitConstructorReturn(
     ),
   );
   ctx.pushOp(ParentBridgeSuperShim($super, bridgeInst));
-  ctx.pushOp(Return(bridgeInst));
+  return bridgeInst;
 }
 
 /// Resolves `factory C.f(...) = T.g` to (instantiated target type, raw target

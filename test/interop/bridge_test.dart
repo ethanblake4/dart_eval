@@ -93,7 +93,7 @@ void main() {
 
             class MyTestClass extends TestClass {
               MyTestClass(int someNumber) : super(someNumber) {
-                someNumber = 4;
+                this.someNumber = 4;
               }
 
               @override
