@@ -624,13 +624,13 @@ final class MemberLookup {
   /// positions: an override may be recursive or declared later in the file.
   /// Its call offset is resolved after all bodies have been compiled.
   (TypeRef, Member)? _implementationAt(TypeRef type, MemberName name) {
-    if (hasBridgeSuperclass(ctx, type)) {
-      return null;
-    }
     for (final link in [type, ...ctx.typeSystem.superclassChain(type)]) {
       // A mixin's members exist only as copies folded into each applying
       // class — the mixin link itself hosts no compiled implementation.
       final decl = ctx.types.find(link.file, link.name);
+      // Guest implementations above a host bridge still satisfy interfaces.
+      // The bridge itself supplies native members, not compiled guest bodies.
+      if (decl?.isHostBridged == true) return null;
       if (decl is SourceTypeDecl && decl.kind == TypeDeclKind.mixin) continue;
       final member = concreteMemberOn(link, name);
       if (member != null) return (link, member);
@@ -663,6 +663,8 @@ final class MemberLookup {
       _directImplementationAt(type, name)?.$1;
 
   (TypeRef, Member)? _directImplementationAt(TypeRef type, MemberName name) {
+    // A bridged receiver is a native facade and must keep virtual dispatch.
+    if (hasBridgeSuperclass(ctx, type)) return null;
     if (overriddenBelow(type, name.name)) return null;
     return _implementationAt(type, name);
   }

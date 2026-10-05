@@ -1902,9 +1902,11 @@ final class ArgumentBinder {
       defaultsSignature: target is StaticCall ? target.member?.signature : null,
     );
     final resolvedGenerics = args.typeArguments;
+    // Receiver arguments can contain the caller's lexical parameters. Only
+    // unresolved parameters owned by the called method leave their scope.
     final returnType = signature.returnType
         .substituteTypeParameters(signature.substitutionFor(resolvedGenerics))
-        .lowerTypeParameters(ctx);
+        .lowerTypeParameters(ctx, only: signature.typeParameters.toSet());
     return BoundCall(
       positional: args.positional,
       named: args.named,
