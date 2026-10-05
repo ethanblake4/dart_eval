@@ -25,6 +25,9 @@ abstract final class TypedHostCollections {
     // actual type. Recover the same host String-key witness as Runtime.wrap,
     // including empty maps, without inspecting or copying their entries.
     if (runtime != null) {
+      if (runtimeTypeId != null) {
+        runtimeTypeId = runtime.nonNullableRuntimeType(runtimeTypeId);
+      }
       if (runtimeTypeId != null &&
           runtime.isTypedNominalTypeDescriptor(
             runtimeTypeId,

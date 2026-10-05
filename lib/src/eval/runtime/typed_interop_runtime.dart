@@ -518,6 +518,20 @@ extension TypedRuntimeInterop on Runtime {
     );
   }
 
+  /// The runtime type of a present value excludes top-level nullability.
+  int nonNullableRuntimeType(int type) {
+    final descriptor = _typeDescriptors[type];
+    if (descriptor[1] == 0) return type;
+    return _internResolvedType(
+      [descriptor[0], 0, ...descriptor.skip(2)],
+      type,
+      null,
+      const [],
+      _TypeResolution(null),
+      const {},
+    );
+  }
+
   @pragma('vm:never-inline')
   bool isTypedValueTypeInClassEnvironment(
     Object? value,
