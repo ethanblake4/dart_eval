@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'native_source.dart';
 
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -133,7 +134,7 @@ String argumentAccessor(
             : 'self'
       : 'static';
   final defaultExpr = useDefaultValue
-      ? paramConfig?.defaultValue ?? param.defaultValueCode
+      ? paramConfig?.defaultValue ?? nativeDefaultSource(ctx, param)
       : null;
   if (defaultExpr != null) {
     paramBuffer.write('$source == null ? $defaultExpr : ');
@@ -201,7 +202,7 @@ String argumentAccessor(
         paramBuffer.write(
           '<${type.typeParameters.map((p) {
             final bound = p.bound;
-            return bound == null || bound is DynamicType || (bound.isDartCoreObject && bound.nullabilitySuffix != NullabilitySuffix.none) ? p.name : '${p.name} extends ${bound.getDisplayString()}';
+            return bound == null || bound is DynamicType || (bound.isDartCoreObject && bound.nullabilitySuffix != NullabilitySuffix.none) ? p.name : '${p.name} extends ${dartTypeErased(bound, ctx: ctx, localTypeParameters: type.typeParameters)}';
           }).join(', ')}>',
         );
       }
@@ -209,6 +210,8 @@ String argumentAccessor(
       paramBuffer.write(
         parameterHeader(
           type.formalParameters,
+          ctx: ctx,
+          localTypeParameters: type.typeParameters,
           preserveTypes: type.typeParameters.isNotEmpty,
         ),
       );
@@ -372,7 +375,9 @@ String argumentAccessor(
       // Native bridge calls have their SDK type parameters in scope. Let
       // the receiving method infer them instead of forcing erased arguments.
       final typeArgs = !exportValues && type is ParameterizedType
-          ? type.typeArguments.map(dartTypeErased).join(', ')
+          ? type.typeArguments
+                .map((t) => dartTypeErased(t, ctx: ctx))
+                .join(', ')
           : '';
       paramBuffer.write(')$q.cast${typeArgs.isEmpty ? '()' : '<$typeArgs>()'}');
     }
@@ -455,7 +460,7 @@ String _exportValue(
   Iterable<TypeParameterElement> localTypeParameters = const [],
 }) {
   if (_isDartCoreScalar(type)) {
-    return '$source?.\$value as ${dartTypeErased(type)}';
+    return '$source?.\$value as ${dartTypeErased(type, ctx: ctx)}';
   }
   ctx.imports.add(
     'package:dart_eval/src/eval/runtime/typed/typed_interop.dart',
@@ -468,6 +473,7 @@ String _exportValue(
     final payload = sink.typeArguments.single;
     final nativeType = dartTypeErased(
       payload,
+      ctx: ctx,
       nativeOwner: nativeTypeParameters ? ctx.classElement : null,
       localTypeParameters: localTypeParameters,
     );
@@ -490,6 +496,7 @@ String _exportValue(
     final payloadType = stream.typeArguments.single;
     final payload = dartTypeErased(
       payloadType,
+      ctx: ctx,
       nativeOwner: nativeTypeParameters ? ctx.classElement : null,
       localTypeParameters: localTypeParameters,
     );
@@ -502,6 +509,7 @@ String _exportValue(
     final conversion = _streamPayloadConversion(
       payloadType,
       'payload',
+      ctx: ctx,
       nativeOwner: nativeTypeParameters ? ctx.classElement : null,
       localTypeParameters: localTypeParameters,
     );
@@ -530,17 +538,19 @@ String _exportValue(
         : exported;
   }
   return 'TypedInterop.exportExternal($source, runtime: runtime) '
-      'as ${dartTypeErased(type, nativeOwner: nativeTypeParameters ? ctx.classElement : null, localTypeParameters: localTypeParameters)}';
+      'as ${dartTypeErased(type, ctx: ctx, nativeOwner: nativeTypeParameters ? ctx.classElement : null, localTypeParameters: localTypeParameters)}';
 }
 
 String _streamPayloadConversion(
   DartType type,
   String source, {
+  BindgenContext? ctx,
   InterfaceElement? nativeOwner,
   Iterable<TypeParameterElement> localTypeParameters = const [],
 }) {
   String native(DartType value) => dartTypeErased(
     value,
+    ctx: ctx,
     nativeOwner: nativeOwner,
     localTypeParameters: localTypeParameters,
   );
@@ -550,6 +560,7 @@ String _streamPayloadConversion(
     final conversion = _streamPayloadConversion(
       element,
       'element',
+      ctx: ctx,
       nativeOwner: nativeOwner,
       localTypeParameters: localTypeParameters,
     );
@@ -589,6 +600,7 @@ String _nativeCallbackReturnType(
   importAsync(type);
   return dartTypeErased(
     type,
+    ctx: ctx,
     nativeOwner: owner == 'bridge' ? ctx.classElement : null,
     localTypeParameters: localTypeParameters,
   );

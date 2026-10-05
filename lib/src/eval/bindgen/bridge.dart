@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'native_source.dart';
 import 'package:dart_eval/src/eval/bindgen/bridge_declaration.dart'
     show objectGetterNames, objectMethodNames;
 import 'package:dart_eval/src/eval/bindgen/operator.dart';
@@ -247,6 +248,7 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
 /// are out of scope, and `$value` is always raw — erased types are correct.
 String dartTypeErased(
   DartType type, {
+  BindgenContext? ctx,
   InterfaceElement? nativeOwner,
   Iterable<TypeParameterElement> localTypeParameters = const [],
 }) {
@@ -267,37 +269,70 @@ String dartTypeErased(
     }
     return dartTypeErased(
       bound,
+      ctx: ctx,
       nativeOwner: nativeOwner,
       localTypeParameters: localTypeParameters,
     );
   }
   if (type is FunctionType) {
-    return '${dartTypeErased(type.returnType, nativeOwner: nativeOwner, localTypeParameters: localTypeParameters)} Function('
-        '${type.formalParameters.map((p) {
-          final t = dartTypeErased(p.type, nativeOwner: nativeOwner, localTypeParameters: localTypeParameters);
-          final prefix = p.isRequiredNamed ? 'required ' : '';
-          return p.isNamed ? '$prefix$t ${p.name ?? ''}' : t;
-        }).join(', ')})$suffix';
+    final locals = [...localTypeParameters, ...type.typeParameters];
+    String native(DartType t) => dartTypeErased(
+      t,
+      ctx: ctx,
+      nativeOwner: nativeOwner,
+      localTypeParameters: locals,
+    );
+    final generics = type.typeParameters.isEmpty
+        ? ''
+        : '<${type.typeParameters.map((p) {
+            final bound = p.bound;
+            return bound == null ? p.name : '${p.name} extends ${native(bound)}';
+          }).join(', ')}>';
+    final required = <String>[];
+    final optional = <String>[];
+    final named = <String>[];
+    for (final p in type.formalParameters) {
+      final t = native(p.type);
+      if (p.isNamed) {
+        named.add('${p.isRequiredNamed ? 'required ' : ''}$t ${p.name}');
+      } else if (p.isOptionalPositional) {
+        optional.add(t);
+      } else {
+        required.add(t);
+      }
+    }
+    final parameters = [
+      ...required,
+      if (optional.isNotEmpty) '[${optional.join(', ')}]',
+      if (named.isNotEmpty) '{${named.join(', ')}}',
+    ].join(', ');
+    return '${native(type.returnType)} Function$generics($parameters)$suffix';
   }
   if (type is ParameterizedType && type.typeArguments.isNotEmpty) {
     final args = type.typeArguments
         .map(
           (argument) => dartTypeErased(
             argument,
+            ctx: ctx,
             nativeOwner: nativeOwner,
             localTypeParameters: localTypeParameters,
           ),
         )
         .join(', ');
-    return '${type.element?.name}<$args>$suffix';
+    return '${ctx == null ? type.element?.name : ctx.nativeName(type.element!)}<$args>$suffix';
+  }
+  if (ctx != null && type.element != null) {
+    return '${ctx.nativeName(type.element!)}$suffix';
   }
   return type.getDisplayString();
 }
 
 String parameterHeader(
   List<FormalParameterElement> params, {
+  BindgenContext? ctx,
   bool forConstructor = false,
   bool preserveTypes = false,
+  Iterable<TypeParameterElement> localTypeParameters = const [],
 }) {
   final paramBuffer = StringBuffer();
   var inNonPositional = false;
@@ -314,9 +349,11 @@ String parameterHeader(
     }
     switch (param.type) {
       case FunctionType functionType when !forConstructor && !preserveTypes:
-        paramBuffer.write(dartTypeErased(functionType.returnType));
+        paramBuffer.write(dartTypeErased(functionType.returnType, ctx: ctx));
         paramBuffer.write(' Function(');
-        paramBuffer.write(parameterHeader(functionType.formalParameters));
+        paramBuffer.write(
+          parameterHeader(functionType.formalParameters, ctx: ctx),
+        );
         paramBuffer.write(')');
         if (functionType.nullabilitySuffix == NullabilitySuffix.question) {
           paramBuffer.write('?');
@@ -327,7 +364,7 @@ String parameterHeader(
           paramBuffer.write('super.');
         } else {
           paramBuffer.write(
-            '${preserveTypes ? param.type.getDisplayString() : dartTypeErased(param.type)} ',
+            '${preserveTypes && ctx == null ? param.type.getDisplayString() : dartTypeErased(param.type, ctx: ctx, localTypeParameters: localTypeParameters)} ',
           );
         }
     }
@@ -335,7 +372,9 @@ String parameterHeader(
       param.name == null || param.name!.isEmpty ? 'arg$i' : param.name,
     );
     if (!forConstructor && param.defaultValueCode != null) {
-      paramBuffer.write(' = ${param.defaultValueCode}');
+      paramBuffer.write(
+        ' = ${ctx == null ? param.defaultValueCode : nativeDefaultSource(ctx, param)}',
+      );
     } else if (!forConstructor &&
         param.isOptional &&
         param.type.isDartCoreBool &&

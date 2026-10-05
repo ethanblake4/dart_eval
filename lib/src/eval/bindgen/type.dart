@@ -892,9 +892,16 @@ String wrapFunctionType(
   String expr, {
   String? runtimeTypeOwner,
 }) {
+  // Returned callbacks capture this local. Recursive wrappers must not hide
+  // the callable they are about to invoke.
+  var resultName = 'funcResult';
+  var suffix = 0;
+  while (RegExp('\\b$resultName\\b').hasMatch(expr)) {
+    resultName = 'funcResult${++suffix}';
+  }
   var buffer = StringBuffer('\$Function((runtime, target, r, s, c) { ');
   if (type.returnType is! VoidType && !type.returnType.isDartCoreNull) {
-    buffer.write('final funcResult = ');
+    buffer.write('final $resultName = ');
   }
   buffer.write('$expr(');
   final parameters = type.formalParameters;
@@ -906,7 +913,7 @@ String wrapFunctionType(
   );
   buffer.write(accessors.join(', '));
   buffer.write(
-    '); return ${wrapVar(ctx, type.returnType, 'funcResult', func: true, runtimeTypeOwner: runtimeTypeOwner, captureMethodTypeArguments: false)}; })',
+    '); return ${wrapVar(ctx, type.returnType, resultName, func: true, runtimeTypeOwner: runtimeTypeOwner, captureMethodTypeArguments: false)}; })',
   );
   return buffer.toString();
 }

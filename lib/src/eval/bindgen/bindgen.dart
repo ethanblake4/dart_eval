@@ -21,6 +21,7 @@ import 'package:dart_eval/src/eval/bindgen/statics.dart';
 import 'package:dart_eval/src/eval/bindgen/static_constants.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
 import 'typedefs.dart';
+import 'native_source.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
 import 'dart:io' as io;
 
@@ -191,6 +192,7 @@ class Bindgen implements BridgeDeclarationRegistry {
     Future<void> process(Element element, String file) async {
       final ctx = contextFor(file);
       await _ensureCoreNamespace(ctx);
+      await prepareNativeDefaults(ctx, session, element);
       final code = switch (element) {
         ClassElement() => _$instance(ctx, element),
         MixinElement() => _$opaqueMixin(ctx, element),
@@ -239,7 +241,10 @@ class Bindgen implements BridgeDeclarationRegistry {
       final hooks = ctx.hooksImports.entries
           .map((e) => "import '${e.key}' as ${e.value};")
           .join('\n');
-      result[entry.key] = '$imports$hooks\n${entry.value}';
+      final nativeImports = ctx.nativeImports.entries
+          .map((e) => "import '${e.key}' as ${e.value};")
+          .join('\n');
+      result[entry.key] = '$imports\n$hooks\n$nativeImports\n${entry.value}';
     }
     if (libraryConfig.typedefs.isNotEmpty) {
       result['typedefs.dart'] = emitTypedefDartSource(
@@ -477,6 +482,7 @@ class Bindgen implements BridgeDeclarationRegistry {
     }
 
     if (analysisResult is ResolvedUnitResult) {
+      await prepareNativeDefaults(ctx, session, analysisResult.libraryElement);
       // Access the resolved unit and analyze it
 
       final evalOutput = filename.replaceAll('.dart', '.eval.dart');
@@ -489,6 +495,7 @@ class Bindgen implements BridgeDeclarationRegistry {
                 element.uri.stringValue == evalOutput,
           )) {
         partOf = true;
+        ctx.outputIsPart = true;
       } else {
         for (final directive in analysisResult.unit.directives) {
           if (directive is ImportDirective) {
@@ -537,7 +544,12 @@ class Bindgen implements BridgeDeclarationRegistry {
           .map((e) => "import '${e.key}' as ${e.value};")
           .join('\n');
 
-      return partOf ? "part of '$filename'" : "$imports$hooks\n$result";
+      final nativeImports = ctx.nativeImports.entries
+          .map((e) => "import '${e.key}' as ${e.value};")
+          .join("\n");
+      return partOf
+          ? "part of '$filename'"
+          : "$imports\n$hooks\n$nativeImports\n$result";
     }
 
     return null;

@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/config.dart';
 
@@ -6,6 +7,29 @@ class BindgenContext {
   final String filename;
   final String uri;
   final Set<String> imports = {};
+  bool outputIsPart = false;
+  final Map<String, String> nativeImports = {};
+  final Map<FormalParameterElement, Expression> nativeDefaults = {};
+
+  String nativeName(Element element) {
+    if (outputIsPart) return element.name!;
+    final library = element.library;
+    if (library == null ||
+        library.uri.toString() == 'dart:core' ||
+        library.uri.toString() == uri) {
+      return element.name!;
+    }
+    if (library.isInSdk) {
+      imports.add(library.uri.toString());
+      return element.name!;
+    }
+    final prefix = nativeImports.putIfAbsent(
+      library.uri.toString(),
+      () => 'bindgenNative${nativeImports.length}',
+    );
+    return '$prefix.${element.name}';
+  }
+
   final Set<String> knownTypes = {};
   final Set<String> unknownTypes = {};
   final bool all;
