@@ -134,3 +134,66 @@ class $logFn {
     return null;
   }
 }
+
+/// dart_eval function wrapper binding for [postEvent]
+class $postEventFn {
+  const $postEventFn();
+
+  static void configureForRuntime(Runtime runtime) {
+    return runtime.registerBridgeFuncRegisters(
+      'dart:developer',
+      'postEvent',
+      $postEventFn.callRegisters,
+    );
+  }
+
+  static const $declaration = BridgeFunctionDeclaration(
+    'dart:developer',
+    'postEvent',
+    BridgeFunctionDef(
+      returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
+      namedParams: [
+        BridgeParameter(
+          'stream',
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          true,
+          defaultValueSource: "'Extension'",
+        ),
+      ],
+      params: [
+        BridgeParameter(
+          'eventKind',
+          BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.string, [])),
+          false,
+        ),
+
+        BridgeParameter(
+          'eventData',
+          BridgeTypeAnnotation(
+            BridgeTypeRef(CoreTypes.map, [
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+              BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+            ]),
+          ),
+          false,
+        ),
+      ],
+    ),
+  );
+
+  static $Value? callRegisters(
+    Runtime runtime,
+    Object? r,
+    Object? s,
+    Object? c,
+  ) {
+    postEvent(
+      (r as $String).$value,
+      ((s as $Value?)!.$reified as Map).cast<dynamic, dynamic>(),
+      stream: (c is $Value ? c : null) == null
+          ? 'Extension'
+          : (c as $String).$value,
+    );
+    return null;
+  }
+}

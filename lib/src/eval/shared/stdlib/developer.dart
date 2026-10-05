@@ -10,6 +10,7 @@ class DartDeveloperPlugin implements EvalPlugin {
   @override
   void configureForCompile(BridgeDeclarationRegistry registry) {
     registry.defineBridgeTopLevelFunction($logFn.$declaration);
+    registry.defineBridgeTopLevelFunction($postEventFn.$declaration);
     $Flow.configureForCompile(registry);
     $Timeline.configureForCompile(registry);
   }
@@ -17,6 +18,7 @@ class DartDeveloperPlugin implements EvalPlugin {
   @override
   void configureForRuntime(Runtime runtime) {
     $logFn.configureForRuntime(runtime);
+    $postEventFn.configureForRuntime(runtime);
     $Flow.configureForRuntime(runtime);
     $Timeline.configureForRuntime(runtime);
   }

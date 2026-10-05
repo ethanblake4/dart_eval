@@ -446,6 +446,7 @@ libraries:
       - package:dart_eval/stdlib/core.dart
     functions:
       - log
+      - postEvent
   - uri: dart:isolate
     outDir: lib/src/eval/shared/stdlib/isolate
     registry:

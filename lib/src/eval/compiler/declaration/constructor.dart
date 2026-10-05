@@ -402,8 +402,9 @@ void compileConstructorDeclaration(
   final pendingFieldInits = <({int index, SSA ssa})>[];
   for (final init in otherInitializers) {
     if (init is ConstructorFieldInitializer) {
+      // Initializers run inside C<T>, so retain the class's own parameters.
       final fType = ctx.memberLookup.fieldType(
-        TypeRef.lookupDeclaration(ctx, ctx.library, parent),
+        TypeRef.$this(ctx)!,
         init.fieldName.name,
         source: init,
       );

@@ -129,6 +129,11 @@ class DartCorePlugin implements EvalPlugin {
 
   @override
   void configureForRuntime(Runtime runtime) {
+    runtime.addTypeAutowrapper((value) {
+      if (value is RegExpMatch) return $RegExpMatch.wrap(value);
+      if (value is Match) return $Match.wrap(value);
+      return null;
+    });
     $BigInt.configureForRuntime(runtime);
     $Enum.configureForRuntime(runtime);
     configurePrintForRuntime(runtime);
