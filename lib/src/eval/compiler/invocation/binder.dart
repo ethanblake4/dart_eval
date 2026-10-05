@@ -693,10 +693,11 @@ final class ArgumentBinder {
           parameterDefs,
         );
       }
-      if (argBound is InterfaceTypeRef) {
-        // A nested call sees a schema, not the outer invocation's unresolved
-        // parameter as a fixed lexical type. Its arguments can then infer the
-        // hole (`choose(items)` under `Box<S>`, where S is still unknown).
+      if (inferGenerics &&
+          (argBound is InterfaceTypeRef || argBound is FunctionTypeRef)) {
+        // A nested call or callback sees the unresolved callee parameter as a
+        // schema hole. Arguments then infer it, as in `choose(items)` under
+        // `Box<S>` where S is still unknown.
         argBound = argBound.substituteTypeParameters(
           Substitution.of({
             for (final parameter in parameterDefs)
@@ -765,7 +766,12 @@ final class ArgumentBinder {
         param,
         parameterHost,
         genericParameter: spec.erased,
-        boundContext: coercionContext,
+        // A compiled function must satisfy the inferred boundary. Reusing
+        // the hole context here could let its implicit .call tear-off bypass
+        // a rejected return constraint, including a declared generic bound.
+        boundContext: originalType is FunctionTypeRef
+            ? coercionType
+            : coercionContext,
         source: source,
       );
       // Only implicit callable coercion adds evidence after boundary conversion.
