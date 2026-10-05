@@ -168,17 +168,24 @@ class BridgeTypeSpec {
 }
 
 class BridgeGenericParam {
-  const BridgeGenericParam({this.$extends});
+  const BridgeGenericParam({this.$extends, this.boundNullable = false});
 
   factory BridgeGenericParam.fromJson(Map<String, dynamic> json) {
     return BridgeGenericParam(
       $extends: json.containsKey('extends')
           ? BridgeTypeRef.fromJson(json['extends'])
           : null,
+      boundNullable: json['boundNullable'] as bool? ?? false,
     );
   }
 
   final BridgeTypeRef? $extends;
 
-  Map<String, dynamic> toJson() => {'extends': ?$extends?.toJson()};
+  /// Whether the explicit upper bound includes null.
+  final bool boundNullable;
+
+  Map<String, dynamic> toJson() => {
+    'extends': ?$extends?.toJson(),
+    if (boundNullable) 'boundNullable': true,
+  };
 }

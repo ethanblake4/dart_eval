@@ -788,7 +788,7 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
     final typeParams = _typeParams(ctx, element);
     final generics = element.typeParameters.isEmpty
         ? ''
-        : 'generics: {${element.typeParameters.map((p) => "'${p.name}': BridgeGenericParam(${p.bound == null ? '' : '\$extends: ${bridgeTypeRefFromType(ctx, p.bound!)}'})").join(', ')}},';
+        : 'generics: {${element.typeParameters.map((p) => "'${p.name}': BridgeGenericParam(${p.bound == null ? '' : '\$extends: ${bridgeTypeRefFromType(ctx, p.bound!)}'}${p.bound?.nullabilitySuffix == NullabilitySuffix.question ? ', boundNullable: true' : ''})").join(', ')}},';
     final supertypes = element.allSupertypes
         .where(
           (type) =>

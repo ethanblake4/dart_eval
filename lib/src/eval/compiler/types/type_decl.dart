@@ -491,7 +491,10 @@ final class BridgeTypeDecl extends TypeDecl {
           final def = TypeParameterDef(owner, index++, g.key);
           final extends_ = g.value.$extends;
           if (extends_ != null) {
-            def.bound = TypeRef.fromBridgeTypeRef(ctx, extends_);
+            final resolved = TypeRef.fromBridgeTypeRef(ctx, extends_);
+            def.bound = g.value.boundNullable
+                ? resolved.withNullable(true)
+                : resolved;
           }
           return def;
         }(),

@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/operator.dart';
@@ -71,7 +72,8 @@ String? bindBridgeDeclaration(
               : e.bound != null && !ctx.implicitSupers
               ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}'
               : '';
-          return '\'${e.name}\': BridgeGenericParam($boundStr)';
+          final nullable = hasOverride ? override?.trim().endsWith('?') == true : e.bound?.nullabilitySuffix == NullabilitySuffix.question;
+          return '\'${e.name}\': BridgeGenericParam($boundStr${nullable && boundStr.isNotEmpty ? ', boundNullable: true' : ''})';
         }).join(',')}
     },''';
   }
@@ -361,7 +363,8 @@ String bridgeFunctionDef(
         '''\ngenerics: {
       ${typeParams.map((e) {
           final boundStr = e.bound != null ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}' : '';
-          return '\'${e.name}\': BridgeGenericParam($boundStr)';
+          final nullable = e.bound?.nullabilitySuffix == NullabilitySuffix.question;
+          return '\'${e.name}\': BridgeGenericParam($boundStr${nullable ? ', boundNullable: true' : ''})';
         }).join(',')}
     },''';
   }

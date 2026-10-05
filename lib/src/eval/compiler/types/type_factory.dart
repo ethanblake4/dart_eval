@@ -281,9 +281,12 @@ final class TypeFactory {
       final generic = dec.type.generics[ref];
       if (generic == null) return CoreTypes.dynamic.ref(_ctx);
       final $extends = generic.$extends;
-      final boundType = $extends == null
+      var boundType = $extends == null
           ? CoreTypes.dynamic.ref(_ctx)
           : fromBridgeTypeRef($extends);
+      if ($extends != null && generic.boundNullable) {
+        boundType = boundType.withNullable(true);
+      }
 
       if (specifyingType != null && genericIndex >= 0) {
         final instantiatedType =
@@ -578,11 +581,14 @@ final class TypeFactory {
     for (final (index, entry) in genericEntries.indexed) {
       final bound = entry.value.$extends;
       if (bound != null && !ownDefs[index].boundSet) {
-        ownDefs[index].bound = fromBridgeTypeRef(
+        final resolved = fromBridgeTypeRef(
           bound,
           specifiedType: specifiedType,
           typeParameters: scope,
         );
+        ownDefs[index].bound = entry.value.boundNullable
+            ? resolved.withNullable(true)
+            : resolved;
       }
     }
     return ownDefs;

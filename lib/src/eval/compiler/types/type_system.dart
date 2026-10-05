@@ -786,10 +786,11 @@ final class TypeSystem {
         if (index < interfaceArgumentsOf(current).length) {
           return interfaceArgumentsOf(current)[index];
         }
-        final bound = classDef.type.generics[paramName]!.$extends;
-        return bound == null
-            ? CoreTypes.dynamic.ref(_ctx)
-            : TypeRef.fromBridgeTypeRef(_ctx, bound);
+        final generic = classDef.type.generics[paramName]!;
+        final bound = generic.$extends;
+        if (bound == null) return CoreTypes.dynamic.ref(_ctx);
+        final resolved = TypeRef.fromBridgeTypeRef(_ctx, bound);
+        return generic.boundNullable ? resolved.withNullable(true) : resolved;
       }
       worklist.addAll(directSupertypes(current));
     }
