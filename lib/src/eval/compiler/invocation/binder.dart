@@ -1065,6 +1065,7 @@ final class ArgumentBinder {
     SuperParams superParams = const (positional: [], named: {}),
     Map<String, TypeRef> typeParameters = const {},
     CallSignature? targetSignature,
+    bool checkPositionalTypes = true,
     List<TypeRef?> positionalContexts = const [],
     TypeArgumentList? typeArguments,
     TypeRef? returnContext,
@@ -1135,8 +1136,9 @@ final class ArgumentBinder {
     );
 
     // Resolve the receiver's type arguments for every parameter annotation.
-    // Bridge positional arguments defer assignment checks to the runtime;
-    // named arguments retain the existing static conversion rule.
+    // Static functions check nominal positional assignments here. Constructors,
+    // instance calls and structural callback arguments retain the existing bridge
+    // ABI conversion policy; named checks are shared.
     Variable compileMatchedBridge(
       ParameterSpec param,
       ArgSource argument, {
@@ -1185,24 +1187,24 @@ final class ArgumentBinder {
           bridgeSubstitution = Substitution.of({...ownArguments, ...solved});
         }
       }
-      if (named && signature.typeParameters.isEmpty) {
+      final checkedParamType = param.type.substituteTypeParameters(
+        bridgeSubstitution,
+      );
+      if ((named ||
+              (checkPositionalTypes && checkedParamType is! FunctionTypeRef)) &&
+          signature.typeParameters.isEmpty) {
         final nominalFunction =
-            paramType.isSpec(CoreTypes.function) && arg0.type.isFunctionLike;
-        if (!nominalFunction &&
-            arg0.type.assignmentConversionTo(ctx, paramType) ==
-                AssignmentConversion.invalid) {
-          throw CompileError(
-            'Cannot assign argument of type ${arg0.type} to parameter of type $paramType',
-            argumentList,
-          );
-        }
+            checkedParamType.isSpec(CoreTypes.function) &&
+            arg0.type.isFunctionLike;
         if (!nominalFunction) {
           arg0 = convertForAssignment(
             ctx,
             arg0,
-            paramType,
+            checkedParamType,
             representation: MachineRepresentation.object,
             source: argumentList,
+            description:
+                'Cannot assign argument of type ${arg0.type} to parameter of type $checkedParamType',
           );
         }
       }
@@ -1361,6 +1363,7 @@ final class ArgumentBinder {
       function,
       superParams: superParams,
       targetSignature: target.signature,
+      checkPositionalTypes: target is StaticCall,
       positionalContexts: contexts,
       typeArguments: typeArguments,
       returnContext: returnContext,

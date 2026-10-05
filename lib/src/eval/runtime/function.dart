@@ -141,6 +141,7 @@ class $Function extends EvalFunction {
                 BridgeTypeRef(CoreTypes.list, [
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
                 ]),
+                nullable: true,
               ),
               false,
             ),
@@ -151,6 +152,7 @@ class $Function extends EvalFunction {
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.symbol)),
                   BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
                 ]),
+                nullable: true,
               ),
               true,
             ),
@@ -167,8 +169,8 @@ class $Function extends EvalFunction {
   /// `Function.apply(function, positionalArguments, [namedArguments])`.
   static $Value? $apply(Runtime runtime, Object? r, Object? s, Object? c) {
     final positional = switch (s) {
-      $Value v => (v.$value as List).cast<Object?>(),
-      _ => (s as List).cast<Object?>(),
+      $Value v => (v.$value as List?)?.cast<Object?>() ?? const <Object?>[],
+      _ => (s as List?)?.cast<Object?>() ?? const <Object?>[],
     };
     // `c` is the argument-count integer when fewer than three arguments were
     // supplied (the namedArguments parameter omitted).
