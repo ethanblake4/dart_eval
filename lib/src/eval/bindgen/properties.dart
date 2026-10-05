@@ -17,7 +17,7 @@ String $getProperty(BindgenContext ctx, InterfaceElement element) {
 ''';
 }
 
-String $bridgeGet(BindgenContext ctx, ClassElement element) {
+String $bridgeGet(BindgenContext ctx, InterfaceElement element) {
   return '''
   @override
   \$Value? \$bridgeGet(String identifier) {
@@ -152,7 +152,7 @@ String $setProperty(BindgenContext ctx, InterfaceElement element) {
 ''';
 }
 
-String $bridgeSet(BindgenContext ctx, ClassElement element) {
+String $bridgeSet(BindgenContext ctx, InterfaceElement element) {
   return '''
   @override
   void \$bridgeSet(String identifier, \$Value value) {

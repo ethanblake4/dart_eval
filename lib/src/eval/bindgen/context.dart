@@ -91,8 +91,11 @@ class BindgenContext {
   bool memberIncluded(String name, String kind, {bool isObjectMember = false}) {
     if (configMode) {
       final cc = classConfig;
-      if (cc?.opaque == true) return false;
       final mc = cc?.memberConfig(kind, name);
+      if (cc?.opaque == true) {
+        // Genuine opaque mixins have no adapter or member bodies.
+        return classElement is ClassElement && mc?.include == true;
+      }
       if (mc != null) return mc.include;
       final excluded = {
         ...libraryConfig?.defaults.excludeMembers ?? const <String>[],

@@ -53,6 +53,7 @@ String? bindBridgeDeclaration(
   bool isBridge = false,
 }) {
   final cc = ctx.classConfig;
+  final isClass = element is ClassElement || element is MixinElement;
   if (element is ClassElement &&
       element.constructors.isEmpty &&
       cc?.opaque != true) {
@@ -61,7 +62,7 @@ String? bindBridgeDeclaration(
 
   var genericsStr = '';
   final typeParams = element.typeParameters;
-  if (typeParams.isNotEmpty && element is ClassElement) {
+  if (typeParams.isNotEmpty && isClass) {
     genericsStr =
         '''\ngenerics: {
       ${typeParams.map((e) {
@@ -123,21 +124,23 @@ String? bindBridgeDeclaration(
   }
 
   final isAbstract =
-      cc?.isAbstract ?? (element is ClassElement && element.isAbstract);
+      cc?.isAbstract ??
+      (element is MixinElement ||
+          element is ClassElement && element.isAbstract);
 
   return '''
-  static const \$declaration = ${element is ClassElement ? 'BridgeClassDef(BridgeClassType(' : 'BridgeEnumDef('}
+  static const \$declaration = ${isClass ? 'BridgeClassDef(BridgeClassType(' : 'BridgeEnumDef('}
       \$type,
-      ${element is ClassElement && isAbstract ? 'isAbstract: true,' : ''}
-      ${element is ClassElement && element.isMixinClass ? 'isMixinClass: true,' : ''}
+      ${isClass && isAbstract ? 'isAbstract: true,' : ''}
+      ${element is MixinElement || element is ClassElement && element.isMixinClass ? 'isMixinClass: true,' : ''}
       $enumValuesStr
       $genericsStr
       $extendsStr
       $implementsStr
-    ${element is ClassElement ? '),' : ''}
-    ${element is ClassElement ? '''
+    ${isClass ? '),' : ''}
+    ${isClass ? '''
     constructors: {
-${constructors(ctx, element)}
+${element is MixinElement ? "'': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(\$type)))," : constructors(ctx, element)}
 ${syntheticDeclarations(ctx, 'constructor')}
     },
     ''' : ''}
@@ -158,7 +161,7 @@ ${fields(ctx, element)}
 ${compactStaticConstants(ctx, element)?.fieldDeclarations ?? ''}
 ${syntheticDeclarations(ctx, 'field')}
     },
-    ${element is ClassElement ? '''
+    ${isClass ? '''
     wrap: ${!isBridge},
     bridge: $isBridge,
     ''' : ''}

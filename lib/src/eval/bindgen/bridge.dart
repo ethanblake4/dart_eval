@@ -63,7 +63,7 @@ String _$forwardedConstructor(
 ''';
 }
 
-String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
+String bindDecoratorMethods(BindgenContext ctx, InterfaceElement element) {
   final methods = [
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes.reversed) ...s.methods,
@@ -84,7 +84,7 @@ String bindDecoratorMethods(BindgenContext ctx, ClassElement element) {
         final constructorCall =
             ctx.classConfig?.constructorCalls.contains(e.name) ?? false;
         final nativeSuper =
-            ctx.classConfig?.nativeSuper == true &&
+            (element is MixinElement || ctx.classConfig?.nativeSuper == true) &&
             !e.isAbstract &&
             !e.isOperator &&
             e.typeParameters.isEmpty;
@@ -153,7 +153,7 @@ String? _bridgeArgument(BindgenContext ctx, DartType type, String expression) {
   return 'TypedInterop.annotateBridgeType($wrapped, runtime, $typeId)';
 }
 
-String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
+String bindDecoratorProperties(BindgenContext ctx, InterfaceElement element) {
   final properties = {
     if (ctx.implicitSupers)
       for (var s in element.allSupertypes.reversed)
@@ -173,7 +173,8 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
           .map((e) {
             final type = e.type;
             final nativeSuper =
-                ctx.classConfig?.nativeSuper == true &&
+                (element is MixinElement ||
+                    ctx.classConfig?.nativeSuper == true) &&
                 e.getter?.isAbstract == false;
             final nativeGetter = nativeSuper
                 ? 'if (Runtime.bridgeData[this]?.subclass == null) return super.${e.displayName};'
@@ -231,7 +232,7 @@ String bindDecoratorProperties(BindgenContext ctx, ClassElement element) {
                 '''
             @override
             set ${e.displayName}(${e.type} value) {
-              ${ctx.classConfig?.nativeSuper == true && e.setter?.isAbstract == false ? '''if (Runtime.bridgeData[this]?.subclass == null) {
+              ${(element is MixinElement || ctx.classConfig?.nativeSuper == true) && e.setter?.isAbstract == false ? '''if (Runtime.bridgeData[this]?.subclass == null) {
                 super.${e.displayName} = value;
                 return;
               }''' : ''}

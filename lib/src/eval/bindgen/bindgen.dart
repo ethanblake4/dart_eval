@@ -3,6 +3,8 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/file_system/physical_file_system.dart';
@@ -195,7 +197,7 @@ class Bindgen implements BridgeDeclarationRegistry {
       await prepareNativeDefaults(ctx, session, element);
       final code = switch (element) {
         ClassElement() => _$instance(ctx, element),
-        MixinElement() => _$opaqueMixin(ctx, element),
+        MixinElement() => _$mixin(ctx, element),
         EnumElement() => _$enum(ctx, element),
         TopLevelFunctionElement() => _$function(ctx, element),
         _ => null,
@@ -213,7 +215,7 @@ class Bindgen implements BridgeDeclarationRegistry {
         await process(element, cc.file ?? '${entry.key}.dart');
       } else if (element is EnumElement) {
         await process(element, cc.file ?? '${entry.key}.dart');
-      } else if (element is MixinElement && cc.opaque) {
+      } else if (element is MixinElement) {
         await process(element, cc.file ?? '${entry.key}.dart');
       } else {
         throw CompileError(
@@ -413,7 +415,7 @@ class Bindgen implements BridgeDeclarationRegistry {
       for (final classConfig in libraryConfig.classes.values) {
         if (!classConfig.include ||
             classConfig.handMaintained ||
-            classConfig.opaque) {
+            classConfig.opaque && !classConfig.hasExplicitMembers) {
           continue;
         }
         final element = library.exportNamespace.get2(classConfig.name);
@@ -517,6 +519,8 @@ class Bindgen implements BridgeDeclarationRegistry {
             .map((declaration) {
               if (declaration is ClassDeclaration) {
                 return _$instance(ctx, declaration.declaredFragment!.element);
+              } else if (declaration is MixinDeclaration) {
+                return _$mixin(ctx, declaration.declaredFragment!.element);
               } else if (declaration is EnumDeclaration) {
                 return _$enum(ctx, declaration.declaredFragment!.element);
               } else if (declaration is FunctionDeclaration) {
@@ -671,6 +675,11 @@ class Bindgen implements BridgeDeclarationRegistry {
       return null;
     }
 
+    if (ctx.classConfig?.mixinAdapter == true) {
+      throw CompileError(
+        'mixinAdapter requires a genuine mixin: ${element.name}',
+      );
+    }
     if (isBridge && element.isSealed) {
       throw CompileError(
         'Cannot bind sealed class ${element.name} as a bridge type. '
@@ -774,6 +783,113 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
 ''';
   }
 
+  String? _$mixin(BindgenContext ctx, MixinElement element) {
+    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
+    if (!process) return null;
+    if (ctx.classConfig?.mixinAdapter != true) {
+      return _$opaqueMixin(ctx, element);
+    }
+    Never unsupported(String reason) => throw CompileError(
+      'Cannot generate mixin adapter for ${element.name}: $reason',
+    );
+    if (!isBridge || ctx.classConfig?.opaque == true) {
+      unsupported('mixinAdapter requires non-opaque bridge or both mode');
+    }
+    if (element.superclassConstraints.any((type) => !type.isDartCoreObject)) {
+      unsupported('on constraints are unsupported');
+    }
+    if (element.fields.any(
+      (field) => !field.isStatic && field.isOriginDeclaration,
+    )) {
+      unsupported('instance fields are unsupported');
+    }
+    if (element.isBase ||
+        element.interfaces.isNotEmpty ||
+        element.typeParameters.isNotEmpty) {
+      unsupported(
+        'base, interface requirements, and generic mixins are unsupported',
+      );
+    }
+    if (element.methods.any((member) => member.isStatic) ||
+        element.fields.any((member) => member.isStatic)) {
+      unsupported('static members are unsupported');
+    }
+    if (element.methods.any(
+      (member) => member.isOperator || member.typeParameters.isNotEmpty,
+    )) {
+      unsupported('operators and generic methods are unsupported');
+    }
+    if ([
+      ...element.methods,
+      ...element.getters,
+      ...element.setters,
+    ].any((member) => member.isAbstract && member.isPrivate)) {
+      unsupported('private abstract requirements are unsupported');
+    }
+    final source = element.firstFragment.libraryFragment.source;
+    final unit = parseString(
+      content: io.File(source.fullName).readAsStringSync(),
+    ).unit;
+    final declaration = unit.declarations
+        .whereType<MixinDeclaration>()
+        .firstWhereOrNull((node) => node.name.lexeme == element.name);
+    if (declaration == null) {
+      unsupported('cannot inspect native mixin declaration');
+    }
+    if (declaration.onClause != null) {
+      unsupported('on constraints are unsupported');
+    }
+    final requirements = _MixinSuperRequirements();
+    declaration.accept(requirements);
+    if (requirements.found) unsupported('super requirements are unsupported');
+    final wrapperName = _wrapperName(ctx, element);
+    final registerName = wrapperName.startsWith(r'$')
+        ? wrapperName.substring(1)
+        : wrapperName;
+    final uri = ctx.libOverrides[element.name!] ?? ctx.uri;
+    registerClasses.add((
+      file: ctx.filename,
+      uri: uri,
+      name: '$registerName\$bridge',
+    ));
+    var code =
+        '''
+/// Native dart_eval mixin adapter for [${element.name}].
+class $wrapperName\$bridge with ${element.name}, \$Bridge<${element.name}> {
+  $wrapperName\$bridge();
+  static void configureForCompile(BridgeDeclarationRegistry registry) =>
+      registry.defineBridgeClass(\$declaration);
+  static void configureForRuntime(Runtime runtime) =>
+      runtime.registerBridgeFuncRegisters('$uri', '${element.name}.',
+        (runtime, r, s, c) => $wrapperName\$bridge(), isBridge: true);
+${bindTypeSpec(ctx, element)}
+${bindBridgeType(ctx, element)}
+${bindBridgeDeclaration(ctx, element, isBridge: true)}
+${$bridgeGet(ctx, element)}
+${$bridgeSet(ctx, element)}
+${bindDecoratorProperties(ctx, element)}
+${bindDecoratorMethods(ctx, element)}
+}
+''';
+    if (alsoWrap) {
+      code +=
+          '''
+/// Wrapper for existing native [${element.name}] values.
+class $wrapperName implements \$Instance {
+  static const \$declaration = $wrapperName\$bridge.\$declaration;
+${bindTypeSpec(ctx, element)}
+${bindBridgeType(ctx, element)}
+${$wrap(ctx, element)}
+${$getRuntimeType(ctx, element)}
+${$getProperty(ctx, element)}
+${$methods(ctx, element)}
+${$setProperty(ctx, element)}
+}
+''';
+    }
+    return code;
+  }
+
   String? _$opaqueMixin(BindgenContext ctx, MixinElement element) {
     final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
     if (!process) return null;
@@ -819,6 +935,8 @@ class $wrapperName$typeParams implements \$Instance {
   ${$getProperty(ctx, element)}
   ${$setProperty(ctx, element)}
 }
+
+
 ''';
   }
 
@@ -1135,5 +1253,14 @@ class \$${element.name}Fn {
   /// Wrap a [${element.name}] in a [$wrapperName]
   $wrapperName(this.\$value) : _superclass = $superclassExpr;''' : ''}
     ''';
+  }
+}
+
+class _MixinSuperRequirements extends RecursiveAstVisitor<void> {
+  bool found = false;
+
+  @override
+  void visitSuperExpression(SuperExpression node) {
+    found = true;
   }
 }

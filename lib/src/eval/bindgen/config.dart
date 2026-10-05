@@ -363,6 +363,7 @@ class BindgenClassConfig {
     this.implementsSdk = false,
     this.compactStaticConstants = false,
     this.opaque = false,
+    this.mixinAdapter = false,
     this.superclass,
     this.reified,
     this.runtimeTypeOverride,
@@ -422,9 +423,13 @@ class BindgenClassConfig {
   /// Emit a compact static-constant table for large classes such as Icons.
   final bool compactStaticConstants;
 
-  /// Emit a typed wrapper and bridge class shape without binding members.
-  /// Useful for signature types outside the selected API surface.
+  /// Emit a typed wrapper and class shape with members excluded by default.
+  /// Explicit class member selections still bind those members.
   final bool opaque;
+
+  /// Opt into a native adapter for a fieldless, unconstrained genuine mixin.
+  /// Requires bridge or both mode; opaque wrapping remains the default.
+  final bool mixinAdapter;
 
   /// `_superclass` initializer override.
   final BindgenSuperclassConfig? superclass;
@@ -450,6 +455,16 @@ class BindgenClassConfig {
   final Map<String, BindgenMemberConfig> getters;
   final Map<String, BindgenMemberConfig> setters;
   final Map<String, BindgenMemberConfig> fields;
+
+  /// Whether an opaque class has explicitly selected native members.
+  bool get hasExplicitMembers => [
+    ...constructors.values,
+    ...statics.values,
+    ...methods.values,
+    ...getters.values,
+    ...setters.values,
+    ...fields.values,
+  ].any((member) => member.include);
 
   /// Members absent from the SDK element.
   final List<BindgenSyntheticMember> synthetic;
@@ -506,6 +521,7 @@ class BindgenClassConfig {
         implementsSdk: _bool(yaml['implementsSdk']) ?? false,
         compactStaticConstants: _bool(yaml['compactStaticConstants']) ?? false,
         opaque: _bool(yaml['opaque']) ?? false,
+        mixinAdapter: _bool(yaml['mixinAdapter']) ?? false,
         superclass: yaml['superclass'] is YamlMap
             ? BindgenSuperclassConfig.fromYaml(yaml['superclass'] as YamlMap)
             : null,
