@@ -1,3 +1,7 @@
+## Unreleased
+- Fix apps that link dart_eval trapping at runtime when compiled to WebAssembly:
+  `$Type` no longer implements `dart:core` `Type`.
+
 ## 0.8.5
 - Support for local function declarations (thanks @khoadng)
 - Support for using a Type as a value, eg `var t = List<int>` (thanks @khoadng)

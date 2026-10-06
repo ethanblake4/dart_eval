@@ -2,7 +2,11 @@ import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/stdlib/core.dart';
 
 /// dart_eval [$Value] representation of [Type]
-class $Type implements $Instance, Type {
+///
+/// Does not implement `dart:core` [Type]: instantiating any class that
+/// implements [Type] breaks dynamic closure calls when compiled to
+/// WebAssembly with dart2wasm.
+class $Type implements $Instance {
   $Type(this.$value) : _superclass = $Object($value);
 
   static const $declaration = BridgeClassDef(
