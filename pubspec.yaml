@@ -39,7 +39,7 @@ dependencies:
   control_flow_graph:
     git:
       url: https://github.com/ethanblake4/control_flow_graph.git
-      ref: 39366e31996cd2383080f848e274311fff0d5b5e
+      ref: a40edb66df39d61e2657690f3779858cfab8c145
 
 dev_dependencies:
   test: ^1.25.0
