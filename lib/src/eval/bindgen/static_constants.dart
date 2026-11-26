@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/config.dart';
@@ -12,16 +14,19 @@ class CompactStaticConstants {
   const CompactStaticConstants({
     required this.fieldNames,
     required this.typeDeclarations,
-    required this.fieldDeclarations,
     required this.runtimeRegistrations,
     required this.wrapperMembers,
+    required this.annotationAliases,
   });
 
   final Set<String> fieldNames;
   final String typeDeclarations;
-  final String fieldDeclarations;
   final String runtimeRegistrations;
   final String wrapperMembers;
+  final Map<String, String> annotationAliases;
+
+  String? annotationAlias(BridgeTypeAnnotation annotation) =>
+      annotationAliases[jsonEncode(annotation.toJson())];
 }
 
 final _cache = Expando<Map<InterfaceElement, CompactStaticConstants?>>();
@@ -74,22 +79,23 @@ CompactStaticConstants? _build(BindgenContext ctx, InterfaceElement element) {
   if (groups.isEmpty) return null;
 
   final types = StringBuffer();
-  final fields = StringBuffer();
   final registrations = StringBuffer();
   final members = StringBuffer();
+  final aliases = <String, String>{};
   final uri = ctx.libOverrides[element.name] ?? ctx.uri;
   for (final group in groups.values) {
     final index = group.index;
     final typeName = '_compactConstantType$index';
     final mapName = '_compactConstants$index';
     types.writeln('  static const $typeName = ${group.annotation};');
+    aliases[jsonEncode(
+          buildTypeAnnotation(ctx, group.fields.first.type).toJson(),
+        )] =
+        typeName;
     members.writeln('  static const $mapName = <String, ${group.typeSource}>{');
     for (final field in group.fields) {
       final name = field.name!;
       members.writeln("    '$name': ${element.name}.$name,");
-      fields.writeln(
-        "      '$name': BridgeFieldDef($typeName, isStatic: true),",
-      );
     }
     members.writeln('  };');
     registrations.writeln('''
@@ -105,9 +111,9 @@ CompactStaticConstants? _build(BindgenContext ctx, InterfaceElement element) {
   return CompactStaticConstants(
     fieldNames: names,
     typeDeclarations: types.toString(),
-    fieldDeclarations: fields.toString(),
     runtimeRegistrations: registrations.toString(),
     wrapperMembers: members.toString(),
+    annotationAliases: aliases,
   );
 }
 

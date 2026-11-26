@@ -38,24 +38,43 @@ const registryImports = '''
 import 'package:dart_eval/dart_eval_bridge.dart';
 ''';
 
-void cliBind({
+Future<void> cliBind({
   bool singleFile = false,
   bool all = false,
   bool generatePlugin = true,
+  String format = 'dart',
+  String? out,
 }) async {
+  if (!_validateBindOutput(format, out, singleFile)) return;
+
   print('Loading files...');
   final commandRoot = Directory(current);
   final projectRoot = findProjectRoot(commandRoot);
 
   final bindgen = Bindgen();
 
-  _loadBindingJsons(bindgen, projectRoot);
-
   final packageConfig = getPackageConfig(projectRoot);
 
   final pubspecFile = File(join(projectRoot.path, 'pubspec.yaml'));
   final pubspec = Pubspec.parse(pubspecFile.readAsStringSync());
   final packageName = pubspec.name;
+
+  final isJson = format == 'json';
+  final outputPath = isJson
+      ? _bindingOutputPath(projectRoot, packageName, out)
+      : null;
+  final serializer = isJson ? BridgeSerializer() : null;
+  final declarations = serializer == null
+      ? null
+      : _JsonDeclarationRegistry(
+          serializer,
+          const {},
+          () => bindgen.registerClasses.isEmpty
+              ? null
+              : bindgen.registerClasses.last.name,
+        );
+
+  _loadBindingJsons(bindgen, projectRoot, excludeFile: outputPath);
 
   final version = Version.parse(Platform.version.split(' ').first);
   final formatter = DartFormatter(languageVersion: version);
@@ -68,6 +87,7 @@ void cliBind({
 
   var singleResult = '';
   var numBound = 0;
+  var processedFiles = 0;
 
   final analyzePath = join(projectRoot.path, 'analysis_options.yaml');
   final excludes = readAnalyzerExcludes(File(analyzePath));
@@ -82,7 +102,15 @@ void cliBind({
         final p = relative(file.path, from: root).replaceAll('\\', '/');
         if (excludes.any((e) => e.matches(p))) continue;
         final uri = 'package:${posix.join(packageName, p)}';
-        final output = await bindgen.parse(file, filename, uri, all);
+        processedFiles++;
+        final output = await bindgen.parse(
+          file,
+          filename,
+          uri,
+          all,
+          generateDart: !isJson,
+          declarations: declarations,
+        );
         if (output != null) {
           print('Bound ${file.path}');
           numBound++;
@@ -111,6 +139,13 @@ void cliBind({
     Directory(join(projectRoot.path, 'lib')),
     join(projectRoot.path, 'lib'),
   );
+
+  if (isJson) {
+    _writeBindingJson(outputPath!, serializer!);
+    print('Processed $processedFiles source files.');
+    print('Wrote JSON bindings: $outputPath');
+    return;
+  }
 
   if (singleFile) {
     final outPath = join(projectRoot.path, 'lib', 'dart_eval_bindings.dart');
@@ -174,7 +209,12 @@ class ${packageName.toPascalCase()}Plugin implements EvalPlugin {
 Future<void> cliBindFromConfig(
   String configPath, {
   Set<String>? outputFiles,
+  bool singleFile = false,
+  String format = 'dart',
+  String? out,
 }) async {
+  if (!_validateBindOutput(format, out, singleFile)) return;
+
   final commandRoot = Directory(current);
   final projectRoot = findProjectRoot(commandRoot);
   final configFile = File(
@@ -187,13 +227,32 @@ Future<void> cliBindFromConfig(
   final config = BindgenConfig.parse(configFile.readAsStringSync());
   config.resolveDefaults();
 
+  final isJson = format == 'json';
+  final packageName = Pubspec.parse(
+    File(join(projectRoot.path, 'pubspec.yaml')).readAsStringSync(),
+  ).name;
+  final outputPath = isJson
+      ? _bindingOutputPath(projectRoot, packageName, out)
+      : null;
+  final serializer = isJson ? BridgeSerializer() : null;
+  if (serializer != null) {
+    try {
+      _validateJsonPlugins(config);
+      _addConfiguredPluginSources(serializer, projectRoot, config.plugin);
+      for (final library in config.libraries) {
+        _addConfiguredPluginSources(serializer, projectRoot, library.plugin);
+      }
+    } on FormatException catch (error) {
+      stderr.writeln('Cannot write JSON bindings: ${error.message}');
+      exitCode = 64;
+      return;
+    }
+  }
+
   final bindgen = Bindgen();
-  _loadBindingJsons(bindgen, projectRoot);
+  _loadBindingJsons(bindgen, projectRoot, excludeFile: outputPath);
 
   final packageConfig = getPackageConfig(projectRoot);
-  final pubspecFile = File(join(projectRoot.path, 'pubspec.yaml'));
-  final pubspec = Pubspec.parse(pubspecFile.readAsStringSync());
-  final packageName = pubspec.name;
 
   final version = Version.parse(Platform.version.split(' ').first);
   final formatter = DartFormatter(languageVersion: version);
@@ -205,13 +264,23 @@ Future<void> cliBindFromConfig(
   }
 
   var numBound = 0;
+  var processedLibraries = 0;
   final aggregateRegistrations = <BindgenPluginRegistration>[];
 
   for (final library in config.libraries) {
+    final declarations = serializer == null
+        ? null
+        : _JsonDeclarationRegistry(
+            serializer,
+            _excludedDeclarationNames(config, library),
+            () => bindgen.registerClasses.isEmpty
+                ? null
+                : bindgen.registerClasses.last.name,
+          );
     final outDir = library.outDir != null
         ? Directory(join(projectRoot.path, library.outDir!))
         : commandRoot;
-    if (!outDir.existsSync()) {
+    if (!isJson && !outDir.existsSync()) {
       outDir.createSync(recursive: true);
     }
 
@@ -221,7 +290,14 @@ Future<void> cliBindFromConfig(
     Map<String, String> files;
     if (library.uri.startsWith('dart:') || library.uri.startsWith('package:')) {
       print('Binding ${library.uri}...');
-      files = await bindgen.parseLibrary(library.uri, config, library);
+      files = await bindgen.parseLibrary(
+        library.uri,
+        config,
+        library,
+        generateDart: !isJson,
+        declarations: declarations,
+      );
+      processedLibraries++;
     } else {
       // Relative file path source.
       final srcPath = join(projectRoot.path, library.uri);
@@ -244,10 +320,13 @@ Future<void> cliBindFromConfig(
         false,
         config: config,
         libraryConfig: library,
+        generateDart: !isJson,
+        declarations: declarations,
       );
-      files = {
-        basename(srcFile.path).replaceAll('.dart', '.eval.dart'): ?output,
-      };
+      processedLibraries++;
+      files = output == null
+          ? <String, String>{}
+          : {basename(srcFile.path).replaceAll('.dart', '.eval.dart'): output};
     }
 
     final registrations = <BindgenPluginRegistration>[
@@ -296,7 +375,7 @@ Future<void> cliBindFromConfig(
       numBound++;
     }
 
-    if (library.plugin != null) {
+    if (!isJson && library.plugin != null) {
       final plugin = library.plugin!;
       final pluginDir = Directory(join(outDir.path, dirname(plugin.out)));
       if (!pluginDir.existsSync()) pluginDir.createSync(recursive: true);
@@ -309,6 +388,13 @@ Future<void> cliBindFromConfig(
         'Generated plugin ${relative(pluginFile.path, from: projectRoot.path)}',
       );
     }
+  }
+
+  if (isJson) {
+    _writeBindingJson(outputPath!, serializer!);
+    print('Processed $processedLibraries configured libraries.');
+    print('Wrote JSON bindings: $outputPath');
+    return;
   }
 
   if (config.plugin case final plugin?) {
@@ -449,15 +535,165 @@ class ${plugin.className} implements EvalPlugin {
 ''';
 }
 
-void _loadBindingJsons(Bindgen bindgen, Directory projectRoot) {
-  if (FileSystemEntity.typeSync('./.dart_eval/bindings') ==
-      FileSystemEntityType.directory) {
-    final files = Directory('./.dart_eval/bindings')
+bool _validateBindOutput(String format, String? out, bool singleFile) {
+  if (format != 'dart' && format != 'json') {
+    stderr.writeln('Unsupported bind format "$format". Use dart or json.');
+    exitCode = 64;
+    return false;
+  }
+  if (format == 'json' && singleFile) {
+    stderr.writeln('--single-file cannot be used with --format json.');
+    exitCode = 64;
+    return false;
+  }
+  if (format == 'dart' && out != null) {
+    stderr.writeln('--out is only available with --format json.');
+    exitCode = 64;
+    return false;
+  }
+  return true;
+}
+
+String _bindingOutputPath(
+  Directory projectRoot,
+  String packageName,
+  String? out,
+) => out == null
+    ? join(projectRoot.path, '.dart_eval', 'bindings', '$packageName.json')
+    : isAbsolute(out)
+    ? normalize(out)
+    : absolute(join(projectRoot.path, out));
+
+void _writeBindingJson(String outputPath, BridgeSerializer serializer) {
+  final output = File(outputPath);
+  output.parent.createSync(recursive: true);
+  output.writeAsStringSync(
+    const JsonEncoder.withIndent('  ').convert(serializer.serialize()),
+  );
+}
+
+void _validateJsonPlugins(BindgenConfig config) {
+  final plugins = <BindgenPluginConfig>[
+    if (config.plugin case final plugin?) plugin,
+    for (final library in config.libraries)
+      if (library.plugin case final plugin?) plugin,
+  ];
+  for (final plugin in plugins) {
+    if (plugin.extraDeclarations.isNotEmpty) {
+      throw FormatException(
+        'JSON binding output cannot evaluate plugin extraDeclarations.',
+      );
+    }
+    for (final source in plugin.evalSources) {
+      if (source.expression != null) {
+        throw FormatException(
+          'JSON binding output cannot evaluate plugin evalSources expressions.',
+        );
+      }
+      if (source.uri == null || source.file == null) {
+        throw FormatException(
+          'JSON binding output requires each plugin evalSources entry to have '
+          'both uri and file.',
+        );
+      }
+    }
+    for (final source in plugin.extraSources) {
+      if (source.target == 'runtime' ||
+          (source.target != 'compile' && source.target != 'both')) {
+        continue;
+      }
+      if (source.expression == null) {
+        throw FormatException(
+          'JSON binding output cannot serialize a compile-time plugin '
+          'extraSources entry without an expression.',
+        );
+      }
+      throw FormatException(
+        'JSON binding output cannot evaluate compile-time plugin '
+        'extraSources expressions.',
+      );
+    }
+  }
+}
+
+void _addConfiguredPluginSources(
+  BridgeSerializer serializer,
+  Directory projectRoot,
+  BindgenPluginConfig? plugin,
+) {
+  if (plugin == null) return;
+  for (final source in plugin.evalSources) {
+    final sourceFile = File(join(projectRoot.path, source.file!));
+    final text = sourceFile.readAsStringSync();
+    serializer.addSource(DartSource(source.uri!, '\n$text\n'));
+  }
+}
+
+Set<String> _excludedDeclarationNames(
+  BindgenConfig config,
+  BindgenLibraryConfig library,
+) {
+  return {
+    ...config.plugin?.excludeDeclarations ?? const <String>[],
+    ...library.plugin?.excludeDeclarations ?? const <String>[],
+  };
+}
+
+class _JsonDeclarationRegistry implements BridgeDeclarationRegistry {
+  _JsonDeclarationRegistry(
+    this.delegate,
+    this.excludedRegistrationNames,
+    this.currentClassRegistrationName,
+  );
+
+  final BridgeSerializer delegate;
+  final Set<String> excludedRegistrationNames;
+  final String? Function() currentClassRegistrationName;
+
+  @override
+  void defineBridgeClass(BridgeClassDef classDef) {
+    final registrationName = currentClassRegistrationName();
+    if (registrationName == null ||
+        !excludedRegistrationNames.contains(registrationName)) {
+      delegate.defineBridgeClass(classDef);
+    }
+  }
+
+  @override
+  void defineBridgeEnum(BridgeEnumDef enumDef) =>
+      delegate.defineBridgeEnum(enumDef);
+
+  @override
+  void defineBridgeTopLevelFunction(BridgeFunctionDeclaration function) =>
+      delegate.defineBridgeTopLevelFunction(function);
+
+  @override
+  void addSource(DartSource source) => delegate.addSource(source);
+
+  @override
+  void addExportedLibraryMapping(String libraryUri, String exportUri) =>
+      delegate.addExportedLibraryMapping(libraryUri, exportUri);
+}
+
+void _loadBindingJsons(
+  Bindgen bindgen,
+  Directory projectRoot, {
+  String? excludeFile,
+}) {
+  final bindingDir = Directory(
+    join(projectRoot.path, '.dart_eval', 'bindings'),
+  );
+  if (bindingDir.existsSync()) {
+    final files = bindingDir
         .listSync()
         .where((entity) => entity is File && entity.path.endsWith('.json'))
         .cast<File>();
 
     for (final file in files) {
+      if (excludeFile != null &&
+          normalize(absolute(file.path)) == normalize(absolute(excludeFile))) {
+        continue;
+      }
       print(
         'Found binding file: ${relative(file.path, from: projectRoot.path)}',
       );

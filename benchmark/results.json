@@ -1,0 +1,378 @@
+[
+  {
+    "benchmark": "access_policy",
+    "unit": "request",
+    "dart_eval": {
+      "name": "access_policy",
+      "median_ms": 168.952,
+      "min_ms": 164.572,
+      "max_ms": 177.914,
+      "unit": "request",
+      "ns_per_unit": 844.76,
+      "raw_ms": [
+        167.057,
+        177.914,
+        168.952,
+        164.572,
+        173.68,
+        168.947,
+        169.691
+      ],
+      "checksum": "185138077682"
+    },
+    "python": {
+      "name": "access_policy",
+      "median_ms": 181.137,
+      "min_ms": 157.061,
+      "max_ms": 216.99,
+      "unit": "request",
+      "ns_per_unit": 905.69,
+      "raw_ms": [
+        216.99,
+        215.058,
+        192.152,
+        181.137,
+        166.201,
+        167.768,
+        157.061
+      ],
+      "checksum": "185138077682"
+    },
+    "checksum_match": true,
+    "speedup_vs_python": 1.07,
+    "diff_percent": 6.7
+  },
+  {
+    "benchmark": "event_bus",
+    "unit": "event",
+    "dart_eval": {
+      "name": "event_bus",
+      "median_ms": 102.722,
+      "min_ms": 98.869,
+      "max_ms": 125.039,
+      "unit": "event",
+      "ns_per_unit": 1712.03,
+      "raw_ms": [
+        108.313,
+        102.101,
+        100.997,
+        98.869,
+        102.722,
+        125.039,
+        106.678
+      ],
+      "checksum": "424657049586"
+    },
+    "python": {
+      "name": "event_bus",
+      "median_ms": 39.101,
+      "min_ms": 37.987,
+      "max_ms": 39.938,
+      "unit": "event",
+      "ns_per_unit": 651.69,
+      "raw_ms": [
+        39.101,
+        39.638,
+        38.071,
+        37.987,
+        38.059,
+        39.614,
+        39.938
+      ],
+      "checksum": "424657049586"
+    },
+    "checksum_match": true,
+    "speedup_vs_python": 0.38,
+    "diff_percent": -162.7
+  },
+  {
+    "benchmark": "http_headers",
+    "unit": "request",
+    "dart_eval": {
+      "name": "http_headers",
+      "median_ms": 78.331,
+      "min_ms": 74.698,
+      "max_ms": 81.132,
+      "unit": "request",
+      "ns_per_unit": 78331.0,
+      "raw_ms": [
+        80.046,
+        80.487,
+        76.8,
+        75.442,
+        81.132,
+        78.331,
+        74.698
+      ],
+      "checksum": "7489845416147"
+    },
+    "python": {
+      "name": "http_headers",
+      "median_ms": 137.669,
+      "min_ms": 128.445,
+      "max_ms": 144.029,
+      "unit": "request",
+      "ns_per_unit": 137669.2,
+      "raw_ms": [
+        132.586,
+        138.869,
+        140.471,
+        137.669,
+        133.147,
+        128.445,
+        144.029
+      ],
+      "checksum": "7489845416147"
+    },
+    "checksum_match": true,
+    "speedup_vs_python": 1.76,
+    "diff_percent": 43.1
+  },
+  {
+    "benchmark": "int_fields",
+    "unit": "batch",
+    "dart_eval": {
+      "name": "int_fields",
+      "median_ms": 62.893,
+      "min_ms": 61.697,
+      "max_ms": 65.067,
+      "unit": "batch",
+      "ns_per_unit": 12578.6,
+      "raw_ms": [
+        65.067,
+        62.748,
+        64.763,
+        63.128,
+        61.867,
+        63.915,
+        62.742,
+        64.825,
+        61.697,
+        62.512,
+        63.87,
+        62.352,
+        62.893,
+        64.492,
+        62.029
+      ],
+      "checksum": "598697387"
+    },
+    "python": {
+      "name": "int_fields",
+      "median_ms": 104.265,
+      "min_ms": 92.453,
+      "max_ms": 116.154,
+      "unit": "batch",
+      "ns_per_unit": 20853.04,
+      "raw_ms": [
+        92.496,
+        93.411,
+        92.453,
+        97.237,
+        109.464,
+        116.154,
+        108.375,
+        101.741,
+        104.249,
+        100.674,
+        104.265,
+        108.334,
+        106.651,
+        115.47,
+        110.878
+      ],
+      "checksum": "598697387"
+    },
+    "checksum_match": true,
+    "speedup_vs_python": 1.66,
+    "diff_percent": 39.7
+  },
+  {
+    "benchmark": "interval_overlap",
+    "unit": "appointment",
+    "dart_eval": {
+      "name": "interval_overlap",
+      "median_ms": 135.277,
+      "min_ms": 125.705,
+      "max_ms": 143.759,
+      "unit": "appointment",
+      "ns_per_unit": 1352.77,
+      "raw_ms": [
+        134.747,
+        137.151,
+        129.758,
+        135.277,
+        143.759,
+        139.946,
+        125.705
+      ],
+      "checksum": "2909290370"
+    },
+    "python": {
+      "name": "interval_overlap",
+      "median_ms": 87.072,
+      "min_ms": 85.971,
+      "max_ms": 95.085,
+      "unit": "appointment",
+      "ns_per_unit": 870.72,
+      "raw_ms": [
+        86.942,
+        87.072,
+        90.047,
+        95.085,
+        86.885,
+        85.971,
+        87.411
+      ],
+      "checksum": "2909290370"
+    },
+    "checksum_match": true,
+    "speedup_vs_python": 0.64,
+    "diff_percent": -55.4
+  },
+  {
+    "benchmark": "particles",
+    "unit": "tick",
+    "dart_eval": {
+      "name": "particles",
+      "median_ms": 109.606,
+      "min_ms": 107.853,
+      "max_ms": 134.712,
+      "unit": "tick",
+      "ns_per_unit": 10960.6,
+      "raw_ms": [
+        119.825,
+        107.853,
+        109.606,
+        108.324,
+        112.739,
+        116.293,
+        108.165,
+        113.136,
+        134.712,
+        116.588,
+        110.969,
+        108.013,
+        108.484,
+        108.705,
+        109.168
+      ],
+      "checksum": "12468123.056000791"
+    },
+    "python": {
+      "name": "particles",
+      "median_ms": 96.654,
+      "min_ms": 94.991,
+      "max_ms": 102.923,
+      "unit": "tick",
+      "ns_per_unit": 9665.37,
+      "raw_ms": [
+        98.564,
+        102.923,
+        99.102,
+        96.436,
+        95.175,
+        95.249,
+        94.991,
+        95.746,
+        96.281,
+        98.116,
+        95.812,
+        98.437,
+        97.229,
+        96.654,
+        96.693
+      ],
+      "checksum": "12468123.056000791"
+    },
+    "checksum_match": true,
+    "speedup_vs_python": 0.88,
+    "diff_percent": -13.4
+  },
+  {
+    "benchmark": "telemetry_window",
+    "unit": "event",
+    "dart_eval": {
+      "name": "telemetry_window",
+      "median_ms": 42.666,
+      "min_ms": 41.818,
+      "max_ms": 43.724,
+      "unit": "event",
+      "ns_per_unit": 426.66,
+      "raw_ms": [
+        42.153,
+        42.666,
+        42.278,
+        43.724,
+        43.396,
+        42.67,
+        41.818
+      ],
+      "checksum": "20159222"
+    },
+    "python": {
+      "name": "telemetry_window",
+      "median_ms": 44.886,
+      "min_ms": 43.525,
+      "max_ms": 45.242,
+      "unit": "event",
+      "ns_per_unit": 448.86,
+      "raw_ms": [
+        45.125,
+        45.242,
+        45.097,
+        43.525,
+        43.802,
+        44.886,
+        44.024
+      ],
+      "checksum": "20159222"
+    },
+    "checksum_match": true,
+    "speedup_vs_python": 1.05,
+    "diff_percent": 4.9
+  },
+  {
+    "benchmark": "template_render",
+    "unit": "document",
+    "dart_eval": {
+      "name": "template_render",
+      "median_ms": 167.379,
+      "min_ms": 163.746,
+      "max_ms": 177.081,
+      "unit": "document",
+      "ns_per_unit": 8368.95,
+      "raw_ms": [
+        168.895,
+        169.959,
+        167.379,
+        166.715,
+        177.081,
+        163.746,
+        164.404
+      ],
+      "checksum": "344015750"
+    },
+    "python": {
+      "name": "template_render",
+      "median_ms": 46.991,
+      "min_ms": 45.131,
+      "max_ms": 47.317,
+      "unit": "document",
+      "ns_per_unit": 2349.57,
+      "raw_ms": [
+        47.317,
+        46.991,
+        46.812,
+        46.255,
+        45.131,
+        47.15,
+        47.174
+      ],
+      "checksum": "344015750"
+    },
+    "checksum_match": true,
+    "speedup_vs_python": 0.28,
+    "diff_percent": -256.2
+  }
+]

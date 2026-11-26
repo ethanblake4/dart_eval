@@ -50,6 +50,12 @@ class BindgenContext {
   /// Class currently being emitted; used to inspect member annotations.
   InterfaceElement? classElement;
 
+  /// Resolved value of the current class's configured runtime type expression.
+  BridgeTypeSpec? runtimeTypeSpec;
+
+  /// Metadata for the element currently being emitted.
+  BridgeDeclaration? declaration;
+
   /// The resolved library element, used to resolve YAML type names.
   LibraryElement? libraryElement;
 

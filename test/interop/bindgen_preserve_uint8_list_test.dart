@@ -67,7 +67,7 @@ void main() {
     );
     expect(
       compact,
-      contains("BridgeTypeRef(BridgeTypeSpec('dart:core', 'int'), [])"),
+      contains("BridgeTypeRef(BridgeTypeSpec('dart:core', 'int'))"),
     );
   });
 

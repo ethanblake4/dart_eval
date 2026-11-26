@@ -1,71 +1,40 @@
 import 'dart:convert';
-import 'native_source.dart';
 
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:collection/collection.dart';
+import 'package:dart_eval/dart_eval_bridge.dart' show BridgeParameter;
 import 'package:dart_eval/src/eval/bindgen/bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/errors.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
+import 'native_source.dart';
 
-String namedParameters(
-  BindgenContext ctx, {
-  required ExecutableElement element,
-  BindgenMemberConfig? member,
-}) {
-  final params = element.formalParameters.where((e) => e.isNamed);
-  if (params.isEmpty) {
-    return '';
-  }
-
-  return parameters(ctx, params.toList(), member: member);
-}
-
-String positionalParameters(
-  BindgenContext ctx, {
-  required ExecutableElement element,
-  BindgenMemberConfig? member,
-}) {
-  final params = element.formalParameters.where((e) => e.isPositional);
-  if (params.isEmpty) {
-    return '';
-  }
-
-  return parameters(ctx, params.toList(), member: member);
-}
-
-String parameters(
+List<BridgeParameter> buildParameters(
   BindgenContext ctx,
   List<FormalParameterElement> params, {
   BindgenMemberConfig? member,
-}) {
-  return List.generate(
-    params.length,
-    (index) => _parameterFrom(
-      ctx,
-      params[index],
-      paramConfig: member?.params[params[index].name],
-    ),
-  ).join('\n');
-}
+}) => [
+  for (final parameter in params)
+    _parameterFrom(ctx, parameter, paramConfig: member?.params[parameter.name]),
+];
 
-String _parameterFrom(
+BridgeParameter _parameterFrom(
   BindgenContext ctx,
   FormalParameterElement parameter, {
   BindgenParamConfig? paramConfig,
-}) {
-  return '''
-    BridgeParameter(
-      '${parameter.isNamed ? parameter.name?.replaceFirst(RegExp('^_'), '') : parameter.name}',
-      ${paramConfig?.type != null ? bridgeTypeAnnotationFromName(ctx, paramConfig!.type!) : bridgeTypeAnnotationFrom(ctx, parameter.type)},
-      ${(paramConfig?.optional ?? parameter.isOptional) ? 'true' : 'false'},
-      ${parameter.defaultValueCode == null ? '' : 'defaultValueSource: ${jsonEncode(parameter.defaultValueCode)},'}
-    ),
-  ''';
-}
+}) => BridgeParameter(
+  parameter.isNamed
+      ? parameter.name?.replaceFirst(RegExp('^_'), '') ?? ''
+      : parameter.name ?? '',
+  paramConfig?.type != null
+      ? buildTypeAnnotationFromName(ctx, paramConfig!.type!)
+      : buildTypeAnnotation(ctx, parameter.type),
+  paramConfig?.optional ?? parameter.isOptional,
+  defaultValueSource: parameter.defaultValueCode,
+);
 
 /// SDK member names that would collide with members every wrapper class
 /// defines (`$value`, `$reified`, ...). Their generated wrapper statics are

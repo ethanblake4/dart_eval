@@ -29,6 +29,8 @@ Future<void> main(List<String> args) async {
   bindCmd.addFlag('all', abbr: 'a');
   bindCmd.addFlag('plugin', defaultsTo: true);
   bindCmd.addOption('config', abbr: 'c');
+  bindCmd.addOption('format', defaultsTo: 'dart', allowed: ['dart', 'json']);
+  bindCmd.addOption('out', abbr: 'o');
 
   // ignore: unused_local_variable
   final helpCmd = parser.addCommand('help');
@@ -143,18 +145,25 @@ Future<void> main(List<String> args) async {
       print('bind: Generate bindings for a Dart project');
       print('Usage:');
       print(
-        '   dart_eval bind [-h, --help] [-a, --all] [-s, --single-file] [--[no-]plugin] [-c, --config <yaml>]',
+        '   dart_eval bind [-h, --help] [-a, --all] [-s, --single-file] [--[no-]plugin] [-c, --config <yaml>] [--format dart|json] [-o, --out <file>]',
       );
       exit(0);
     }
 
     if (command['config'] != null) {
-      await cliBindFromConfig(command['config'] as String);
+      await cliBindFromConfig(
+        command['config'] as String,
+        singleFile: command['single-file'] as bool,
+        format: command['format'] as String,
+        out: command['out'] as String?,
+      );
     } else {
-      cliBind(
+      await cliBind(
         singleFile: command['single-file'],
         all: command['all'],
         generatePlugin: command['plugin'],
+        format: command['format'] as String,
+        out: command['out'] as String?,
       );
     }
   }

@@ -1,63 +1,47 @@
-## Unreleased (0.9.0)
+## 1.0.0
 
-**Fixes and features ported from the 0.8.x master line**
+Introducing dart_eval v1, built on [control_flow_graph](https://pub.dev/packages/control_flow_graph)
+and a typed-register bytecode runtime. Features and improvements:
+- Up to 20x performance uplift, now approximately matching Python 3.13
+  on most tests.
+- 100% pass rate on the Dart SDK language tests, with added support for
+  extension methods, mixins, typedefs, generic classes and functions,
+  enhanced enums, late initisalization, and full support for switch expressions,
+  records, and patterns, plus hundreds of targeted fixes.
+- Standard library bindings built directly from the Dart SDK sources
+  for fast updates and correctness.
+- Broad support for the Pub.dev ecosystem.
+- Conditional imports and deferred import access, plus `dart:isolate` bindings
+  for spawning evaluated functions and sending messages between isolates.
+- Simplified argument passing and callback API; Dart values and functions can
+  now be passed directly without manual wrapping.
+- Refactored source code to improve maintainability and performance, especially
+  around method dispatch.
 
-- Support for using a Type as a value, eg `var t = List<int>` (thanks @khoadng)
+Contributions:
+- Support for using a Type as a value, eg `var t = List<int>` (@khoadng)
 - `TypeError` and `NoSuchMethodError` bridge classes are registered for
   runtime construction, and missing-member dynamic access throws
-  `NoSuchMethodError` (thanks @marcov-dart)
-- Fix `is` tests boxing `Object`-typed variables (thanks @khoadng)
-- Fix indexed assignment to `Map` instance fields (thanks @khoadng)
+  `NoSuchMethodError` (@marcov-dart)
+- Fix `is` tests boxing `Object`-typed variables (@khoadng)
+- Fix indexed assignment to `Map` instance fields (@khoadng)
 - Permission objects use const domain lists so they compare by identity
-  (thanks @wrbl606)
+  (@wrbl606)
 - Migrated to `analyzer` ^13.0.0 and `directed_graph` ^0.5.5
-  (thanks @marcov-dart)
+  (@marcov-dart)
 
 **Breaking changes**
 
+- `eval()` and `Runtime.executeLib()` accept an `arguments` map keyed by
+  parameter name and return native Dart values.
 - All bridge and callable dispatch now uses register-style ABIs. The legacy
   `(runtime, target, List<$Value?> args)` ABI and its dual storage/dispatch are
   removed entirely: `EvalCallable.call` is now
   `(runtime, target, r, s, c)` where `r`/`s` carry arguments 0/1 and `c` carries
-  the argument count (`0`–`2`) or a tail list of arguments from index 2 onward;
-  named arguments ride the tail in callee declaration order. Registered
-  `EvalRegisterFunc` statics keep the `(runtime, r, s, c)` signature. Per-call
-  `List<$Value?>` allocation is eliminated for calls of up to two arguments.
-- Bumped `Runtime.versionCode` to 106; recompile serialized programs.
-- Removed the compiler-only `KnownMethod`/`KnownField` tables. Intrinsic member
-  semantics now live in real bridge declarations, and parameter-dependent return
-  types are expressed via `BridgeReturnTypeDependency` on `BridgeFunctionDef`.
-- Virtual instance calls now bind against the interface signature and reject
-  wrong arity at compile time (matching Dart semantics), instead of falling
-  through to a call the callee would never satisfy. Supplied arguments are
-  compiled with context types and implicit coercion (`int`→`double`, tear-offs,
-  dot shorthands); callee default values are no longer re-emitted at the call
-  site.
+  the argument count (`0`–`2`) or a tail list of arguments from index 2 onward.
+- Bumped `Runtime.versionCode` to 107; recompile serialized programs and
+  regenerate bindings for the new bridge ABI.
 
-**New features**
-
-- SDK-driven binding generation: `dart_eval bind --config <yaml>` reads a YAML
-  sidecar (`.dart_eval/bindgen.yaml`) describing libraries (including `dart:` URIs),
-  classes, members, hooks, permissions, synthetic members, and class shaping.
-- The binding generator now emits shared `*Types` registries (e.g. `CoreTypes`,
-  `AsyncTypes`) directly from the sidecar config.
-- Most `dart:` stdlib wrappers are now generated from SDK sources rather than
-  maintained by hand.
-
-**Testing**
-
-- `test/sdk_language` runs the real `dart-lang/sdk` `tests/language` suite
-  under dart_eval: the SDK checkout is fetched on demand into
-  `.dart_tool/sdk_language/` at a pinned commit (see `suite.yaml`), no mirror
-  repo required. A fast "core" subset runs under `dart test`; the full suite
-  is tagged `sdk-full` (`dart test -P sdk-full`). Known failures live in
-  `suite.yaml`'s `expect_fail` list — a test that starts passing fails loudly
-  so the list stays accurate.
-- Compiler fixes surfaced by that suite: `extends C<T>` resolves type
-  parameters of the declaring class; `receiver.field(...)`/`receiver.getter(...)`
-  invoke the member's value via implicit `.call`; labeled statements support
-  `break`/`continue`; typedefs resolve as type annotations; implicit default
-  constructors are callable; calling `null` throws `NoSuchMethodError`.
 
 ## 0.8.5
 - Fix variables not being updated from within closures.

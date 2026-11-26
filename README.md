@@ -18,16 +18,12 @@ classes created in 'real Dart' to be used inside the interpreter, and classes
 created in the interpreter to be used outside it.
 
 dart_eval's compiler is powered under the hood by the Dart 
-[analyzer](https://pub.dev/packages/analyzer), so it achieves 100% correct and 
-up-to-date parsing. While compilation and execution aren't quite there yet, dart_eval
-has over 300 tests that are run in CI to ensure correctness.
+[analyzer](https://pub.dev/packages/analyzer) for parsing with a custom compiler and
+interpreter that achieves a 100% pass rate on the Dart language test suite and compatibility
+with most Pub packages.
 
-Evaluated Dart source targets Dart 3.0 or later.
-
-Currently dart_eval implements a majority of the Dart spec, but there 
-are still missing features like extension methods.
-In addition, parts of the standard library haven't been implemented. See the
-[language feature support table](#language-feature-support-table) for details.
+However, a few edge-case semantics ([language feature support table](#language-feature-support-table))
+and standard library APIs may not have full support.
 
 If you use this project, please consider a small donation on [GitHub Sponsors](https://github.com/sponsors/ethanblake4) to help support its development.
 
@@ -62,9 +58,8 @@ void main() {
 ```
 
 ## Passing arguments
-Pass ordinary Dart values in an `arguments` map keyed by the function's declared
-parameter names. This works for positional and named parameters. The compiler's
-export metadata determines their types and register locations:
+Pass ordinary Dart values in an `arguments` map keyed by parameter names.
+This works for positional and named parameters:
 
 ```dart
 final program = '''
@@ -78,13 +73,11 @@ print(eval(program, function: 'main', arguments: {'count': 1, 'str': 'Hi!'})); /
 
 Omit optional parameters to use their defaults. An explicitly supplied `null`
 means null, and is rejected for a non-nullable parameter. Missing required names
-and unknown names produce argument errors. Scalar and null defaults are supported;
-non-scalar default constants currently produce a compile error.
+and unknown names produce argument errors. Defaults can include constant
+collections and objects.
 
 The same convention applies to `runtime.executeLib(library, name,
-arguments: {...})`. Results are normalized to Dart values. Bridged objects expose
-their host object, while evaluated classes remain `TypedInstance` handles.
-Collection views preserve mutation and identity across the boundary.
+arguments: {...})`. Results are normalized to Dart values.
 
 ## Passing callbacks
 You can pass native Dart callbacks in the argument map:
@@ -134,8 +127,8 @@ void main() {
   }});
   
   final runtime = Runtime.ofProgram(program);
-  print(runtime.executeLib(
-    'package:my_package/main.dart', 'main')); // prints '[6]'
+  runtime.executeLib(
+    'package:my_package/main.dart', 'main'); // prints '[6]'
 }
 ```
 
@@ -192,10 +185,7 @@ import 'package:dart_eval/dart_eval.dart';
 
 void main() {
   final file = File('program.evc');
-  final bytecode = file
-      .readAsBytesSync()
-      .buffer
-      .asByteData();
+  final bytecode = file.readAsBytesSync().buffer;
   
   final runtime = Runtime(bytecode);
   print(runtime.executeLib(
@@ -221,8 +211,8 @@ dart_eval compile -o program.evc
 ```
 
 This will generate an EVC file in the current directory called `program.evc`.
-dart_eval will attempt to compile Pub packages, but it's recommended to
-avoid them as they may use features that dart_eval doesn't support yet.
+dart_eval will attempt to compile Pub packages. Packages that depend on native
+code or unsupported libraries need bindings.
 
 The compiler also supports compiling with JSON-encoded bridge bindings. To add
 these, create a folder in your project root called `.dart_eval`, add a
@@ -252,13 +242,9 @@ You can dump the op codes of an EVC file using:
 
 ## Return values
 
-Like with arguments, dart_eval will return a `$Value` wrapper for most values
-except ints, doubles, bools, and Lists. If you don't like this inconsistency,
-specifying a function's return value as `dynamic` will force dart_eval to
-always box the return value in a `$Value` wrapper.
-
-> Note that this does not apply to the `eval()` method, which automatically
-unboxes all return values for convenience.
+Both `eval()` and `Runtime.executeLib()` return Dart values, as described in
+[Passing arguments](#passing-arguments). The declared return type does not
+change whether the result is wrapped.
 
 ## Security and permissions
 
@@ -302,8 +288,8 @@ interface.
 ## Interop and binding
 
 dart_eval contains a suite of interop features allowing it to work with native
-Dart values and vice versa. Core Dart types are all backed by a native Dart value,
-and you can access the backing value using the `$value` property of a `$Value`.
+Dart values and vice versa. Native bindings expose their backing value using
+the `$value` property of a `$Value`.
 
 To enable your own classes and functions to be used in dart_eval, you can use the 
 dart_eval CLI to generate *bindings*, which give the dart_eval compiler and runtime
@@ -349,7 +335,7 @@ final program = compiler.compile({'my_package': {
 final runtime = Runtime.ofProgram(program);
 runtime.addPlugin(MyAppPlugin()); // MyAppPlugin is the generated plugin
 
-final book = runtime.executeLib('package:my_package/main.dart', 'main').$value as Book;
+final book = runtime.executeLib('package:my_package/main.dart', 'main') as Book;
 print(book.getPage(0)); // prints 'Page 1'
 ```
 
@@ -357,7 +343,7 @@ This approach, known as wrapper interop, will allow you to use the `Book` class 
 pass it as an argument, and call its methods. It also exposes a `$Book` wrapper class that 
 can be used to wrap an existing `Book` instance, allowing it to be passed to dart_eval.
 
-However, if we instead want to to extend the class or use it as an interface, we'll need to 
+However, if we instead want to extend the class or use it as an interface, we'll need to
 use a different approach called *bridge interop*. To generate a bridge class, simply change
 the `@Bind` annotation to `@Bind(bridge: true)`. Note that using bridge interop will *not* 
 allow you to wrap an existing instance of `Book`.
@@ -379,7 +365,7 @@ final program = compiler.compile({'my_package': {
 
       @override
       String getPage(int index) {
-        return 'MyBook: ${super.getPage(index)}';
+        return 'MyBook: \${super.getPage(index)}';
       }
     }
 
@@ -405,13 +391,17 @@ The binding generator also supports binding classes that rely on an
 existing plugin by using JSON binding files. To add these, create a folder in your project 
 root called `.dart_eval`, add a `bindings` subfolder, and place JSON binding files there.
 
-Currently, the binding generator does not support directly creating JSON bindings, but
-they can be created by first generating Dart bindings and then making a script to convert them 
-to JSON with a `BridgeSerializer`.
+Generate JSON bindings directly with `dart_eval bind --format json`. This writes
+`.dart_eval/bindings/<package-name>.json` without generating Dart wrappers or a plugin.
+Use `--out path/to/bindings.json` to choose another output file. Annotation selection
+and `--all` work the same as for Dart output.
+
+JSON contains compiler declarations. The host runtime still needs a plugin or
+bindings that implement the declared API.
 
 ### Configuring generation with a YAML sidecar
 
-For larger binding surfaces — including SDK (`dart:`) and package (`package:`) libraries —
+For SDK (`dart:`) and package (`package:`) libraries,
 generation can be driven by a YAML sidecar instead of annotations. Create
 `.dart_eval/bindgen.yaml` in your project root:
 
@@ -431,9 +421,17 @@ libraries:
 Then run `dart_eval bind --config .dart_eval/bindgen.yaml`. The sidecar supports
 including/excluding/renaming members, synthetic members, permission checks, hooks,
 class shaping (extends/implements overrides), return-type overrides, and generating a
-shared `*Types` registry and plugin. Classes with genuinely unique runtime semantics
+shared `*Types` registry and plugin. Classes with custom runtime behavior
 can be marked `handMaintained: true` so the generator contributes their type
-declarations without emitting a wrapper.
+registry entries without emitting a wrapper.
+
+The same configuration can generate JSON directly:
+
+```sh
+dart_eval bind --config .dart_eval/bindgen.yaml --format json --out bindings.json
+```
+
+Set a class's `mode` to `both` to generate wrapper and bridge bindings together.
 
 For a package split across several Dart libraries, add a root-level `plugin:`
 block to generate one plugin for all configured wrappers. Its `out` path is
@@ -444,9 +442,8 @@ custom compile and runtime behavior. Generated wrappers can reference types
 configured in other libraries, with imports resolved from their output paths.
 
 For some specialized use cases, bindings may need to be manually adjusted or written from scratch.
-For information about this, refer to the 
-[wrapper interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Wrappers) and 
-[bridge interop wiki page](https://github.com/ethanblake4/dart_eval/wiki/Bridge-classes).
+For examples, refer to the [wrapper interop tests](test/interop/wrappers_test.dart)
+and [bridge interop tests](test/interop/bridge_test.dart).
 
 ## Runtime overrides
 
@@ -465,14 +462,14 @@ void main() {
 String myFunction() => 'Original version of string';
 ```
 
-Note that in some cases you may have to cast the return value of `runtimeOverride`
-as dart_eval is unable to specify generic parameters to the Dart type system.
+The return type of `runtimeOverride` is `Object?`, so you may need to cast its
+return value.
 
 Next, mark a function in the eval code with the @RuntimeOverride annotation:
 
 ```dart
 @RuntimeOverride('#myFunction')
-String myFunction() => 'Updated version of string'
+String myFunction() => 'Updated version of string';
 ```
 
 Finally, follow the normal instructions to compile and run the program, but
@@ -512,16 +509,15 @@ See [Contributing](https://github.com/ethanblake4/dart_eval/blob/master/CONTRIBU
 
 `dart_eval` is a fully Dart-based implementation of a bytecode compiler and runtime. 
 First, the Dart analyzer is used to parse the code into an AST (abstract syntax tree). 
-Then, the compiler looks at each of the declarations in turn, and recursively compiles
-to a linear bytecode format.
+Then, the compiler looks at each of the declarations in turn, builds control-flow
+graphs, and compiles them to typed register bytecode.
 
-For evaluation dart_eval uses Dart's optimized dynamic dispatch. This means each bytecode
-is actually a class implementing `EvcOp` and we call its `run()` method to execute it.
-Bytecodes can do things like push and pop values on the stack, add numbers, and jump to 
-other places in the program, as well as more complex Dart-specific operations like 
-create a class.
+For evaluation dart_eval decodes and executes packed bytecode instructions.
+Instructions can do things like read and write typed registers, add numbers, and
+jump to other places in the program, as well as more complex Dart-specific
+operations like creating a class.
 
-See the [in-depth overview wiki page](https://github.com/ethanblake4/dart_eval/wiki/In-depth-overview) for more information.
+See the [contributing guide](CONTRIBUTING.md#overview-of-how-it-works) for more information.
 
 ### Does it support Flutter?
 
@@ -529,13 +525,12 @@ Yes! Check out [flutter_eval](https://pub.dev/packages/flutter_eval).
 
 ### How fast is it?
 
-Preliminary testing shows that `dart_eval` running in AOT-compiled Dart 
-is 10-50x slower than standard AOT Dart and is approximately on par with a 
-language like Ruby.
-It's important to remember this only applies to code running directly in the 
-dart_eval VM, and not any code it interacts with. For example, most Flutter apps spend 
-the vast majority of their performance budget in the Flutter framework itself, so the
-speed impact of dart_eval is usually negligible.
+dart_eval's performance is roughly comparable to Python:
+
+![Execution latency of dart_eval and Python by benchmark](https://raw.githubusercontent.com/ethanblake4/dart_eval/master/benchmark/latency_chart.png)
+
+Performance depends on the workload. See [benchmark/](benchmark/) for execution
+benchmarks. Code called through native bindings runs as normal Dart code.
 
 ### Is this allowed in the App Store?
 
@@ -547,75 +542,79 @@ violations in updates, regardless of the technology used.
 
 ## Language feature support table
 
-The following table details the language features supported by dart_eval with native Dart code. Feature support
-may vary when bridging.
+The following table details the language features supported by dart_eval in evaluated Dart code. Feature support
+may vary when bridging. Static checks do not yet cover all Dart analyzer diagnostics.
+
+Deferred libraries are compiled into the same program; `loadLibrary()` controls
+access. Native mixin bindings support fewer mixin forms. Isolate bindings support
+`Isolate.spawn`, but not `Isolate.spawnUri`.
 
 | Feature | Support level | Tests |
 | ------- | ------------- | ----- |
-| Imports | ✅ | [3 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/libraries_test.dart#L14)  |
-| Exports | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/libraries_test.dart#L45) |
-| `part` / `part of` | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/libraries_test.dart#L76) |
-| `show` and `hide` | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/libraries_test.dart#L14) |
-| Conditional imports | ❌ | N/A |
-| Prefixed imports | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart#L568) |
-| Deferred imports | ❌ | N/A |
-| Functions | ✅ | [4 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/functions_test.dart#L36) |
-| Anonymous functions | ✅ | [7 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/functions_test.dart#L104) |
-| Arrow functions | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/functions_test.dart#L237) |
+| Imports | ✅ | [Tests](test/language/libraries_test.dart)  |
+| Exports | ✅ | [Tests](test/language/libraries_test.dart) |
+| `part` / `part of` | ✅ | [Tests](test/language/libraries_test.dart) |
+| `show` and `hide` | ✅ | [Tests](test/language/libraries_test.dart) |
+| Conditional imports | ✅ | [Tests](test/language/import_loading_test.dart) |
+| Prefixed imports | ✅ | [Tests](test/language/classes_test.dart) |
+| Deferred imports | Partial | [Tests](test/language/import_loading_test.dart) |
+| Functions | ✅ | [Tests](test/language/functions_test.dart) |
+| Anonymous functions | ✅ | [Tests](test/language/functions_test.dart) |
+| Arrow functions | ✅ | [Tests](test/language/functions_test.dart) |
 | Sync generators | ✅ | [Tests](test/language/sync_generator_test.dart) |
-| Async generators | ✅ | [10 tests](test/language/async_generator_test.dart) |
-| Tear-offs | ✅ | [3 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/tearoffs_test.dart#L12) |
-| For loops | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L13) |
-| While loops | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L69) |
-| Do-while loops | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L86) |
-| For-each loops | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L54) |
+| Async generators | ✅ | [Tests](test/language/async_generator_test.dart) |
+| Tear-offs | ✅ | [Tests](test/language/tearoffs_test.dart) |
+| For loops | ✅ | [Tests](test/sdk_language/core_test.dart) |
+| While loops | ✅ | [Tests](test/sdk_language/core_test.dart) |
+| Do-while loops | ✅ | [Tests](test/sdk_language/core_test.dart) |
+| For-each loops | ✅ | [Tests](test/sdk_language/core_test.dart) |
 | Async for-each | ✅ | [Tests](test/language/async_generator_test.dart) |
-| Switch statements | ✅ | [20 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/switch_test.dart) |
-| Switch expressions | ❌ | N/A |
-| Labels, `break` & `continue` | Partial | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L126), [+more](https://github.com/ethanblake4/dart_eval/blob/master/test/language/switch_test.dart) |
-| If statements | ✅ | [[1]](https://github.com/ethanblake4/dart_eval/blob/master/test/language/loops_test.dart#L28) |
-| Try-catch | ✅ | [5 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/exceptions_test.dart#L13)|
-| Try-catch-finally | ✅ | [5 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/exceptions_test.dart#L132) |
-| Lists | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/collections_test.dart#L44) |
-| Iterable | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/collections_test.dart#L14) |
-| Maps | ✅ | [9 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/collections_test.dart#L202) |
-| Sets | ✅ | [7 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/set_test.dart) |
-| Collection `for` | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/collections_test.dart#L14) |
-| Collection `if` | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/collections_test.dart#L14) |
-| Spreads | Partial | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/collections_test.dart#L137) |
-| Classes | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart) |
-| Class static methods | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart#L147) |
-| Getters and setters | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart#L253) |
-| Factory constructors | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart#L375) |
-| Redirecting constructors | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart#L474) |
-| `new` keyword | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart#L195) |
-| Class inheritance | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/regressions_test.dart) |
-| Abstract and `implements` | Partial | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/packages/hlc_test.dart#L8) |
-| `this` keyword | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart#L89) |
-| `super` keyword | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart#L319) |
-| Super constructor params | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/classes_test.dart#L277) |
-| Mixins | ❌ | N/A |
-| Futures | Partial | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/future_test.dart#L69) |
-| Async/await | ✅ | [3 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/future_test.dart#L13) |
-| Streams | Partial | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/core_test.dart#L172) |
-| String interpolation | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/stdlib/core_test.dart#L95) |
-| Enums | Partial | [4 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/enums_test.dart#L12) |
-| Generic function types | Partial | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/functions_test.dart#L302) |
-| Typedefs | ❌ | N/A |
-| Generic classes | Partial | ❌ |
-| Type tests (`is`) | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/expressions_test.dart#L12) |
-| Casting (`as`) | ✅ | [3 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/expressions_test.dart#L240) |
-| `assert` | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/exceptions_test.dart#L287) |
-| Null safety | Partial | ❌ |
-| Late initialization | ❌ | N/A |
-| Cascades | ✅ | [2 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/expressions_test.dart#L190) |
-| Ternary expressions | ✅ | [1 test](https://github.com/ethanblake4/dart_eval/blob/master/test/language/expressions_test.dart#L344) |
-| Null coalescing expressions | ✅ | [3 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/expressions_test.dart#L64) |
-| Extension methods | ❌ | N/A |
-| Const expressions | Partial | N/A |
-| Isolates | ❌ | N/A |
-| Record types | Partial | [4 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/records_test.dart#L12) |
-| Patterns | Partial | [8 tests](https://github.com/ethanblake4/dart_eval/blob/master/test/language/patterns_test.dart#L13) |
+| Switch statements | ✅ | [Tests](test/language/switch_test.dart) |
+| Switch expressions | ✅ | [Tests](test/language/map_pattern_test.dart) |
+| Labels, `break` & `continue` | ✅ | [Tests](test/compiler/labeled_exit_test.dart) |
+| If statements | ✅ | [Tests](test/sdk_language/core_test.dart) |
+| Try-catch | ✅ | [Tests](test/language/exceptions_test.dart)|
+| Try-catch-finally | ✅ | [Tests](test/language/exceptions_test.dart) |
+| Lists | ✅ | [Tests](test/stdlib/collections_test.dart) |
+| Iterable | ✅ | [Tests](test/stdlib/collections_test.dart) |
+| Maps | ✅ | [Tests](test/stdlib/collections_test.dart) |
+| Sets | ✅ | [Tests](test/stdlib/set_test.dart) |
+| Collection `for` | ✅ | [Tests](test/stdlib/collections_test.dart) |
+| Collection `if` | ✅ | [Tests](test/stdlib/collections_test.dart) |
+| Spreads | ✅ | [Tests](test/language/spread_inference_test.dart) |
+| Classes | ✅ | [Tests](test/language/classes_test.dart) |
+| Class static methods | ✅ | [Tests](test/language/classes_test.dart) |
+| Getters and setters | ✅ | [Tests](test/language/classes_test.dart) |
+| Factory constructors | ✅ | [Tests](test/language/classes_test.dart) |
+| Redirecting constructors | ✅ | [Tests](test/language/classes_test.dart) |
+| `new` keyword | ✅ | [Tests](test/language/classes_test.dart) |
+| Class inheritance | ✅ | [Tests](test/language/regressions_test.dart) |
+| Abstract and `implements` | ✅ | [Tests](test/language/inheritance_test.dart) |
+| `this` keyword | ✅ | [Tests](test/language/classes_test.dart) |
+| `super` keyword | ✅ | [Tests](test/language/classes_test.dart) |
+| Super constructor params | ✅ | [Tests](test/language/classes_test.dart) |
+| Mixins | ✅ | [Tests](test/language/mixin_generics_test.dart) |
+| Futures | Partial | [Tests](test/stdlib/future_test.dart) |
+| Async/await | ✅ | [Tests](test/stdlib/future_test.dart) |
+| Streams | Partial | [Tests](test/stdlib/core_test.dart) |
+| String interpolation | ✅ | [Tests](test/stdlib/core_test.dart) |
+| Enums | ✅ | [Tests](test/language/generic_enum_constants_test.dart) |
+| Generic function types | ✅ | [Tests](test/language/generic_function_top_type_subtyping_test.dart) |
+| Typedefs | ✅ | [Tests](test/language/generic_alias_variance_test.dart) |
+| Generic classes | ✅ | [Tests](test/language/nested_generic_environment_test.dart) |
+| Type tests (`is`) | ✅ | [Tests](test/language/expressions_test.dart) |
+| Casting (`as`) | ✅ | [Tests](test/language/expressions_test.dart) |
+| `assert` | ✅ | [Tests](test/language/exceptions_test.dart) |
+| Null safety | Partial | [Tests](test/language/sound_flow_version_test.dart) |
+| Late initialization | ✅ | [Tests](test/language/late_fields_test.dart) |
+| Cascades | ✅ | [Tests](test/language/expressions_test.dart) |
+| Ternary expressions | ✅ | [Tests](test/language/expressions_test.dart) |
+| Null coalescing expressions | ✅ | [Tests](test/language/expressions_test.dart) |
+| Extension methods | ✅ | [Tests](test/language/extension_call_test.dart) |
+| Const expressions | ✅ | [Tests](test/language/bridge_super_semantics_test.dart), [interning tests](test/runtime/const_intern_collision_test.dart) |
+| Isolates | Partial | [Tests](test/stdlib/isolate_test.dart) |
+| Record types | ✅ | [Tests](test/language/records_test.dart) |
+| Patterns | ✅ | [Tests](test/language/patterns_test.dart) |
 
 ## Features and bugs
 

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>dart_eval vs Python 3.12 Benchmark Latency</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg: #0b0f19;
+    --card-bg: #131b2e;
+    --card-border: #24324f;
+    --fg: #f8fafc;
+    --muted-fg: #94a3b8;
+    --dart: #00d2b4;
+    --py: #f59e0b;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    color: var(--fg);
+    background: #080c14;
+    padding: 30px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .chart-card {
+    width: 100%;
+    max-width: 900px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 14px;
+  }
+
+  .title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .main-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .sub-title {
+    font-size: 0.8rem;
+    color: var(--muted-fg);
+  }
+
+  .legend {
+    display: flex;
+    gap: 18px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .canvas-container {
+    position: relative;
+    width: 100%;
+    height: 500px;
+  }
+</style>
+</head>
+<body>
+<div class="chart-card">
+  <div class="chart-header">
+    <div class="title-group">
+      <div class="main-title">Execution Latency by Benchmark (Median ms)</div>
+      <div class="sub-title">Lower is better &bull; Dart 3.13.4 AOT vs Python 3.12.9</div>
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <span class="legend-swatch" style="background: var(--dart); box-shadow: 0 0 8px rgba(0, 210, 180, 0.4);"></span>
+        <span>dart_eval (AOT)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-swatch" style="background: var(--py); box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);"></span>
+        <span>Python 3.12</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-container">
+    <canvas id="latencyCanvas"></canvas>
+  </div>
+</div>
+
+<script>
+const labels = [
+  'http_headers',
+  'int_fields',
+  'telemetry_window',
+  'access_policy',
+  'particles',
+  'interval_overlap',
+  'event_bus',
+  'template_render'
+];
+
+const dartData = [78.33, 62.89, 42.67, 168.95, 109.61, 135.28, 102.72, 167.38];
+const pyData   = [137.67, 104.27, 44.89, 181.14, 96.65, 87.07, 39.10, 46.99];
+
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+const ctx = document.getElementById('latencyCanvas').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: labels,
+    datasets: [
+      {
+        label: 'dart_eval',
+        data: dartData,
+        backgroundColor: 'rgba(0, 210, 180, 0.85)',
+        borderColor: '#00d2b4',
+        borderWidth: 1.5,
+        borderRadius: 4,
+        barPercentage: 0.72,
+        categoryPercentage: 0.75
+      },
+      {
+        label: 'Python 3.12',
+        data: pyData,
+        backgroundColor: 'rgba(245, 158, 11, 0.85)',
+        borderColor: '#f59e0b',
+        borderWidth: 1.5,
+        borderRadius: 4,
+        barPercentage: 0.72,
+        categoryPercentage: 0.75
+      }
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    animation: false,
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        titleColor: '#f8fafc',
+        bodyColor: '#cbd5e1',
+        borderColor: '#334155',
+        borderWidth: 1,
+        padding: 10,
+        callbacks: {
+          label: (context) => ` ${context.dataset.label}: ${context.raw.toFixed(2)} ms`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(255, 255, 255, 0.06)' },
+        ticks: {
+          callback: (val) => val + ' ms',
+          font: { family: '"JetBrains Mono", Consolas, monospace', size: 11 },
+          color: '#94a3b8'
+        },
+        title: {
+          display: true,
+          text: 'Execution Time (ms, lower is better)',
+          color: '#64748b',
+          font: { size: 11, weight: '600' }
+        },
+        suggestedMax: 215
+      },
+      y: {
+        grid: { display: false },
+        ticks: {
+          font: { family: '"JetBrains Mono", Consolas, monospace', size: 12, weight: '600' },
+          color: '#e2e8f0'
+        }
+      }
+    }
+  },
+  plugins: [{
+    id: 'valueLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      chart.data.datasets.forEach((dataset, i) => {
+        const meta = chart.getDatasetMeta(i);
+        meta.data.forEach((bar, index) => {
+          const val = dataset.data[index];
+          ctx.fillStyle = i === 0 ? '#5eead4' : '#fcd34d';
+          ctx.font = '600 10px "JetBrains Mono", Consolas, monospace';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${val.toFixed(1)} ms`, bar.x + 6, bar.y);
+        });
+      });
+    }
+  }]
+});
+</script>
+</body>
+</html>

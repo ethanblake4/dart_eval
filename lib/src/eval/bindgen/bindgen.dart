@@ -22,6 +22,7 @@ import 'package:dart_eval/src/eval/bindgen/properties.dart';
 import 'package:dart_eval/src/eval/bindgen/statics.dart';
 import 'package:dart_eval/src/eval/bindgen/static_constants.dart';
 import 'package:dart_eval/src/eval/bindgen/type.dart';
+import 'package:dart_eval/src/eval/bindgen/runtime_type.dart';
 import 'typedefs.dart';
 import 'native_source.dart';
 import 'package:dart_eval/src/eval/compiler/errors.dart';
@@ -159,17 +160,24 @@ class Bindgen implements BridgeDeclarationRegistry {
   ///
   /// Returns a map from output file name (the `file:` class option or
   /// `<class>.dart`) to generated source.
+  ///
+  /// Registers the same metadata with [declarations] when supplied. Set
+  /// [generateDart] to false to collect metadata and embedded sources without
+  /// generating native bindings; the returned map is then empty.
   Future<Map<String, String>> parseLibrary(
     String uri,
     BindgenConfig config,
-    BindgenLibraryConfig libraryConfig,
-  ) async {
+    BindgenLibraryConfig libraryConfig, {
+    bool generateDart = true,
+    BridgeDeclarationRegistry? declarations,
+  }) async {
     final session = await _session();
     final libraryResult = await session.getLibraryByUri(uri);
     if (libraryResult is! LibraryElementResult) {
       throw CompileError('Could not resolve library $uri');
     }
     final library = libraryResult.element;
+    _forwardExportedMappings(declarations);
 
     // Group elements by output file.
     final files = <String, BindgenContext>{};
@@ -194,14 +202,13 @@ class Bindgen implements BridgeDeclarationRegistry {
     Future<void> process(Element element, String file) async {
       final ctx = contextFor(file);
       await _ensureCoreNamespace(ctx);
-      await prepareNativeDefaults(ctx, session, element);
-      final code = switch (element) {
-        ClassElement() => _$instance(ctx, element),
-        MixinElement() => _$mixin(ctx, element),
-        EnumElement() => _$enum(ctx, element),
-        TopLevelFunctionElement() => _$function(ctx, element),
-        _ => null,
-      };
+      final code = await _processElement(
+        ctx,
+        session,
+        element,
+        generateDart: generateDart,
+        declarations: declarations,
+      );
       if (code != null) {
         output.update(file, (v) => '$v\n$code', ifAbsent: () => code);
       }
@@ -249,22 +256,34 @@ class Bindgen implements BridgeDeclarationRegistry {
       result[entry.key] = '$imports\n$hooks\n$nativeImports\n${entry.value}';
     }
     if (libraryConfig.typedefs.isNotEmpty) {
-      result['typedefs.dart'] = emitTypedefDartSource(
-        uri,
-        sdkTypedefSourceForLibrary(library, libraryConfig.typedefs),
+      final source = sdkTypedefSourceForLibrary(
+        library,
+        libraryConfig.typedefs,
       );
+      declarations?.addSource(DartSource(uri, '\n$source\n'));
+      if (generateDart) {
+        result['typedefs.dart'] = emitTypedefDartSource(uri, source);
+      }
     }
     if (libraryConfig.sourceExtensions.isNotEmpty) {
-      result['extensions.dart'] = emitSdkExtensionsSource(
-        uri,
-        sdkExtensionSourceForLibrary(library, libraryConfig.sourceExtensions),
+      final source = sdkExtensionSourceForLibrary(
+        library,
+        libraryConfig.sourceExtensions,
       );
+      declarations?.addSource(DartSource(uri, '\n$source\n'));
+      if (generateDart) {
+        result['extensions.dart'] = emitSdkExtensionsSource(uri, source);
+      }
     }
     if (libraryConfig.sourceClasses.isNotEmpty) {
-      result['source_classes.dart'] = emitSdkSourceClassesSource(
-        uri,
-        sdkSourceClassesSourceForLibrary(library, libraryConfig.sourceClasses),
+      final source = sdkSourceClassesSourceForLibrary(
+        library,
+        libraryConfig.sourceClasses,
       );
+      declarations?.addSource(DartSource(uri, '\n$source\n'));
+      if (generateDart) {
+        result['source_classes.dart'] = emitSdkSourceClassesSource(uri, source);
+      }
     }
     return result;
   }
@@ -445,6 +464,9 @@ class Bindgen implements BridgeDeclarationRegistry {
     return result;
   }
 
+  /// Analyze a source file and generate its bindings. When [declarations] is
+  /// supplied, also register their compile-time metadata. Set [generateDart]
+  /// to false for metadata only; this returns null and skips wrapper generation.
   Future<String?> parse(
     io.File src,
     String filename,
@@ -452,6 +474,8 @@ class Bindgen implements BridgeDeclarationRegistry {
     bool all, {
     BindgenConfig? config,
     BindgenLibraryConfig? libraryConfig,
+    bool generateDart = true,
+    BridgeDeclarationRegistry? declarations,
   }) async {
     final resourceProvider = PhysicalResourceProvider.INSTANCE;
     if (_contextCollection == null) {
@@ -475,6 +499,7 @@ class Bindgen implements BridgeDeclarationRegistry {
       exportedLibMappings: _exportedLibMappings,
       config: config,
     );
+    _forwardExportedMappings(declarations);
     if (libraryConfig != null) {
       ctx.libraryConfig = libraryConfig;
       if (analysisResult is ResolvedUnitResult) {
@@ -484,7 +509,6 @@ class Bindgen implements BridgeDeclarationRegistry {
     }
 
     if (analysisResult is ResolvedUnitResult) {
-      await prepareNativeDefaults(ctx, session, analysisResult.libraryElement);
       // Access the resolved unit and analyze it
 
       final evalOutput = filename.replaceAll('.dart', '.eval.dart');
@@ -514,22 +538,20 @@ class Bindgen implements BridgeDeclarationRegistry {
 
       final Iterable<String> resolved;
       try {
-        resolved = units
-            .where((declaration) => declaration.declaredFragment != null)
-            .map((declaration) {
-              if (declaration is ClassDeclaration) {
-                return _$instance(ctx, declaration.declaredFragment!.element);
-              } else if (declaration is MixinDeclaration) {
-                return _$mixin(ctx, declaration.declaredFragment!.element);
-              } else if (declaration is EnumDeclaration) {
-                return _$enum(ctx, declaration.declaredFragment!.element);
-              } else if (declaration is FunctionDeclaration) {
-                return _$function(ctx, declaration.declaredFragment!.element);
-              }
-              return null;
-            })
-            .toList()
-            .nonNulls;
+        final code = <String>[];
+        for (final declaration in units) {
+          final element = declaration.declaredFragment?.element;
+          if (element == null) continue;
+          final output = await _processElement(
+            ctx,
+            session,
+            element,
+            generateDart: generateDart,
+            declarations: declarations,
+          );
+          if (output != null) code.add(output);
+        }
+        resolved = code;
       } on Error {
         print('Failed to resolve $filePath:');
         rethrow;
@@ -557,6 +579,125 @@ class Bindgen implements BridgeDeclarationRegistry {
     }
 
     return null;
+  }
+
+  void _forwardExportedMappings(BridgeDeclarationRegistry? declarations) {
+    if (declarations == null) return;
+    _exportedLibMappings.forEach(declarations.addExportedLibraryMapping);
+  }
+
+  Future<String?> _processElement(
+    BindgenContext ctx,
+    AnalysisSession session,
+    Element element, {
+    required bool generateDart,
+    BridgeDeclarationRegistry? declarations,
+  }) async {
+    if (element is! ClassElement &&
+        element is! MixinElement &&
+        element is! EnumElement &&
+        element is! TopLevelFunctionElement) {
+      return null;
+    }
+    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
+    if (!process) return null;
+    ctx.declaration = null;
+    ctx.runtimeTypeSpec = null;
+    _validateElement(ctx, element, isBridge: isBridge, alsoWrap: alsoWrap);
+    final runtimeType = ctx.classConfig?.runtimeTypeOverride;
+    if (runtimeType != null) {
+      ctx.runtimeTypeSpec = await resolveRuntimeTypeSpec(
+        session,
+        ctx,
+        runtimeType,
+      );
+    }
+    final declaration = element is InterfaceElement
+        ? buildBridgeDeclaration(ctx, element, isBridge: isBridge)
+        : buildFunctionDeclaration(ctx, element as TopLevelFunctionElement);
+    if (declaration == null) return null;
+    ctx.declaration = declaration;
+    _registerElement(ctx, element, isBridge: isBridge);
+    switch (declaration) {
+      case BridgeClassDef():
+        declarations?.defineBridgeClass(declaration);
+      case BridgeEnumDef():
+        declarations?.defineBridgeEnum(declaration);
+      case BridgeFunctionDeclaration():
+        declarations?.defineBridgeTopLevelFunction(declaration);
+    }
+    if (!generateDart) return null;
+    await prepareNativeDefaults(ctx, session, element);
+    return switch (element) {
+      ClassElement() => _$instance(
+        ctx,
+        element,
+        isBridge: isBridge,
+        alsoWrap: alsoWrap,
+      ),
+      MixinElement() => _$mixin(
+        ctx,
+        element,
+        isBridge: isBridge,
+        alsoWrap: alsoWrap,
+      ),
+      EnumElement() => _$enum(ctx, element),
+      TopLevelFunctionElement() => _$function(ctx, element),
+      _ => null,
+    };
+  }
+
+  void _registerElement(
+    BindgenContext ctx,
+    Element element, {
+    required bool isBridge,
+  }) {
+    final uri = ctx.libOverrides[element.name] ?? ctx.uri;
+    if (element is InterfaceElement) {
+      final wrapper = ctx.wrapperName(element).substring(1);
+      if (element is EnumElement) {
+        registerEnums.add((file: ctx.filename, uri: uri, name: wrapper));
+      } else {
+        registerClasses.add((
+          file: ctx.filename,
+          uri: uri,
+          name: '$wrapper${isBridge ? '\$bridge' : ''}',
+        ));
+      }
+    } else if (element is TopLevelFunctionElement) {
+      registerFunctions.add((
+        file: ctx.filename,
+        uri: uri,
+        name: element.name!,
+      ));
+    }
+  }
+
+  void _validateElement(
+    BindgenContext ctx,
+    Element element, {
+    required bool isBridge,
+    required bool alsoWrap,
+  }) {
+    if (element is ClassElement) {
+      if (ctx.classConfig?.mixinAdapter == true) {
+        throw CompileError(
+          'mixinAdapter requires a genuine mixin: ${element.name}',
+        );
+      }
+      if (isBridge && element.isSealed) {
+        throw CompileError(
+          'Cannot bind sealed class ${element.name} as a bridge type. '
+          'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.',
+        );
+      }
+    } else if (element is MixinElement) {
+      if (ctx.classConfig?.mixinAdapter == true) {
+        _validateMixinAdapter(ctx, element, isBridge: isBridge);
+      } else if (ctx.classConfig?.opaque != true || isBridge || alsoWrap) {
+        throw CompileError('Mixin ${element.name} requires opaque wrap mode');
+      }
+    }
   }
 
   /// Emit an `import` line for [uri]. stdlib umbrella imports hide the names
@@ -669,34 +810,13 @@ class Bindgen implements BridgeDeclarationRegistry {
   String _wrapperName(BindgenContext ctx, InterfaceElement element) =>
       ctx.wrapperName(element);
 
-  String? _$instance(BindgenContext ctx, ClassElement element) {
-    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
-    if (!process) {
-      return null;
-    }
-
-    if (ctx.classConfig?.mixinAdapter == true) {
-      throw CompileError(
-        'mixinAdapter requires a genuine mixin: ${element.name}',
-      );
-    }
-    if (isBridge && element.isSealed) {
-      throw CompileError(
-        'Cannot bind sealed class ${element.name} as a bridge type. '
-        'Please remove the @Bind annotation, use a wrapper, or make the class non-sealed.',
-      );
-    }
-
+  String? _$instance(
+    BindgenContext ctx,
+    ClassElement element, {
+    required bool isBridge,
+    required bool alsoWrap,
+  }) {
     final wrapperName = _wrapperName(ctx, element);
-    final registerName = wrapperName.startsWith(r'$')
-        ? wrapperName.substring(1)
-        : wrapperName;
-
-    registerClasses.add((
-      file: ctx.filename,
-      uri: ctx.libOverrides[element.name!] ?? ctx.uri,
-      name: '$registerName${isBridge ? '\$bridge' : ''}',
-    ));
 
     if (isBridge) {
       final bridgeType = '${element.name}${_typeArgs(element)}';
@@ -783,12 +903,11 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
 ''';
   }
 
-  String? _$mixin(BindgenContext ctx, MixinElement element) {
-    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
-    if (!process) return null;
-    if (ctx.classConfig?.mixinAdapter != true) {
-      return _$opaqueMixin(ctx, element);
-    }
+  void _validateMixinAdapter(
+    BindgenContext ctx,
+    MixinElement element, {
+    required bool isBridge,
+  }) {
     Never unsupported(String reason) => throw CompileError(
       'Cannot generate mixin adapter for ${element.name}: $reason',
     );
@@ -842,16 +961,19 @@ ${implementsSdk ? $sdkInterfaceMembers(ctx, element) : ''}
     final requirements = _MixinSuperRequirements();
     declaration.accept(requirements);
     if (requirements.found) unsupported('super requirements are unsupported');
+  }
+
+  String? _$mixin(
+    BindgenContext ctx,
+    MixinElement element, {
+    required bool isBridge,
+    required bool alsoWrap,
+  }) {
+    if (ctx.classConfig?.mixinAdapter != true) {
+      return _$opaqueMixin(ctx, element);
+    }
     final wrapperName = _wrapperName(ctx, element);
-    final registerName = wrapperName.startsWith(r'$')
-        ? wrapperName.substring(1)
-        : wrapperName;
     final uri = ctx.libOverrides[element.name!] ?? ctx.uri;
-    registerClasses.add((
-      file: ctx.filename,
-      uri: uri,
-      name: '$registerName\$bridge',
-    ));
     var code =
         '''
 /// Native dart_eval mixin adapter for [${element.name}].
@@ -891,42 +1013,14 @@ ${$setProperty(ctx, element)}
   }
 
   String? _$opaqueMixin(BindgenContext ctx, MixinElement element) {
-    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
-    if (!process) return null;
-    if (ctx.classConfig?.opaque != true || isBridge || alsoWrap) {
-      throw CompileError('Mixin ${element.name} requires opaque wrap mode');
-    }
     final wrapperName = _wrapperName(ctx, element);
-    final registerName = wrapperName.startsWith(r'$')
-        ? wrapperName.substring(1)
-        : wrapperName;
-    registerClasses.add((file: ctx.filename, uri: ctx.uri, name: registerName));
     final typeParams = _typeParams(ctx, element);
-    final generics = element.typeParameters.isEmpty
-        ? ''
-        : 'generics: {${element.typeParameters.map((p) => "'${p.name}': BridgeGenericParam(${p.bound == null ? '' : '\$extends: ${bridgeTypeRefFromType(ctx, p.bound!)}'}${p.bound?.nullabilitySuffix == NullabilitySuffix.question ? ', boundNullable: true' : ''})").join(', ')}},';
-    final supertypes = element.allSupertypes
-        .where(
-          (type) =>
-              !type.isDartCoreObject &&
-              !(type.element.name?.startsWith('_') ?? true),
-        )
-        .map((type) => bridgeTypeRefFromType(ctx, type))
-        .toSet();
     return '''
 /// Opaque dart_eval wrapper for [${element.name}].
 class $wrapperName$typeParams implements \$Instance {
-  static const \$spec = BridgeTypeSpec('${ctx.uri}', '${element.name}');
-  static const \$type = BridgeTypeRef(\$spec);
-  static const \$declaration = BridgeClassDef(
-    BridgeClassType(\$type, isAbstract: true,
-      $generics
-      ${supertypes.isEmpty ? '' : '\$implements: [${supertypes.join(', ')}],'}
-    ),
-    constructors: {},
-    wrap: true,
-    bridge: false,
-  );
+${bindTypeSpec(ctx, element)}
+${bindBridgeType(ctx, element)}
+${bindBridgeDeclaration(ctx, element)}
   static void configureForRuntime(Runtime runtime) {}
   static void configureForCompile(BridgeDeclarationRegistry registry) =>
       registry.defineBridgeClass(\$declaration);
@@ -1036,21 +1130,7 @@ class $wrapperName$typeParams implements \$Instance {
   }
 
   String? _$enum(BindgenContext ctx, EnumElement element) {
-    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
-    if (!process) {
-      return null;
-    }
-
     final wrapperName = _wrapperName(ctx, element);
-    final registerName = wrapperName.startsWith(r'$')
-        ? wrapperName.substring(1)
-        : wrapperName;
-
-    registerEnums.add((
-      file: ctx.filename,
-      uri: ctx.libOverrides[element.name!] ?? ctx.uri,
-      name: registerName,
-    ));
 
     return '''
 /// dart_eval enum wrapper binding for [${element.name}]
@@ -1077,19 +1157,7 @@ class $wrapperName implements \$Instance {
 ''';
   }
 
-  String? _$function(BindgenContext ctx, ExecutableElement element) {
-    if (element is! TopLevelFunctionElement) return null;
-    final (:process, :isBridge, :alsoWrap) = _shouldProcess(ctx, element);
-    if (!process) {
-      return null;
-    }
-
-    registerFunctions.add((
-      file: ctx.filename,
-      uri: ctx.libOverrides[element.name!] ?? ctx.uri,
-      name: element.name!,
-    ));
-
+  String? _$function(BindgenContext ctx, TopLevelFunctionElement element) {
     return '''
 /// dart_eval function wrapper binding for [${element.name}]
 class \$${element.name}Fn {

@@ -3,46 +3,68 @@ import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:change_case/change_case.dart';
 import 'package:collection/collection.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
+import 'package:dart_eval/src/eval/bindgen/declaration_source.dart';
 import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
 import 'package:dart_eval/src/eval/bindgen/errors.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:path/path.dart' as path;
 
-String bridgeTypeRefFromType(BindgenContext ctx, DartType type) {
+BridgeTypeRef buildTypeRef(BindgenContext ctx, DartType type) {
   if (type is TypeParameterType) {
-    return 'BridgeTypeRef.ref(\'${type.element.name}\')';
+    return BridgeTypeRef.ref(type.element.name!);
   } else if (type is FunctionType) {
-    return '''BridgeTypeRef.genericFunction(BridgeFunctionDef(
-      returns: ${bridgeTypeAnnotationFrom(ctx, type.returnType)},
-      params: [
-        ${parameters(ctx, type.formalParameters.where((p) => p.isPositional).toList())}
-      ],
-      namedParams: [
-        ${parameters(ctx, type.formalParameters.where((p) => p.isNamed).toList())}
-      ],
-    ))''';
+    return BridgeTypeRef.genericFunction(
+      BridgeFunctionDef(
+        returns: buildTypeAnnotation(ctx, type.returnType),
+        params: buildParameters(
+          ctx,
+          type.formalParameters.where((p) => p.isPositional).toList(),
+        ),
+        namedParams: buildParameters(
+          ctx,
+          type.formalParameters.where((p) => p.isNamed).toList(),
+        ),
+        generics: {
+          for (final parameter in type.typeParameters)
+            parameter.name!: BridgeGenericParam(
+              $extends: parameter.bound == null
+                  ? null
+                  : buildTypeRef(ctx, parameter.bound!),
+              boundNullable:
+                  parameter.bound?.nullabilitySuffix ==
+                  NullabilitySuffix.question,
+            ),
+        },
+      ),
+    );
   } else if (type is ParameterizedType) {
-    final typeArgs = type.typeArguments
-        .map((e) => bridgeTypeAnnotationFrom(ctx, e))
-        .join(', ');
-    return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)}, [$typeArgs])';
+    return BridgeTypeRef(buildTypeSpec(ctx, type), [
+      for (final argument in type.typeArguments)
+        buildTypeAnnotation(ctx, argument),
+    ]);
   }
-  return 'BridgeTypeRef(${bridgeTypeSpecFrom(ctx, type)})';
+  return BridgeTypeRef(buildTypeSpec(ctx, type));
 }
 
-String bridgeTypeAnnotationFrom(BindgenContext ctx, DartType type) {
-  final nullabilityString = type.nullabilitySuffix == NullabilitySuffix.question
-      ? ', nullable: true'
-      : '';
-  return 'BridgeTypeAnnotation(${bridgeTypeRefFromType(ctx, type)}$nullabilityString)';
-}
+BridgeTypeAnnotation buildTypeAnnotation(BindgenContext ctx, DartType type) =>
+    BridgeTypeAnnotation(
+      buildTypeRef(ctx, type),
+      nullable: type.nullabilitySuffix == NullabilitySuffix.question,
+    );
 
-String bridgeTypeSpecFrom(BindgenContext ctx, DartType type) {
-  final builtin = builtinTypeFrom(ctx, type);
-  if (builtin != null) {
-    return builtin;
+BridgeTypeSpec buildTypeSpec(BindgenContext ctx, DartType type) {
+  if (type.isDartAsyncFutureOr) {
+    return const BridgeTypeSpec('dart:async', 'FutureOr');
   }
+  if (type.isDartCoreNull) return CoreTypes.nullType;
+  if (type.isDartCoreEnum) return CoreTypes.enumType;
+  if (type is VoidType) return CoreTypes.voidType;
+  if (type is DynamicType) return CoreTypes.dynamic;
+  if (type is FunctionType) return CoreTypes.function;
+  if (type is RecordType) return CoreTypes.record;
+  if (type.element?.name == 'Never') return CoreTypes.never;
   final element = type.element;
   if (element == null || element.library == null || element.name == null) {
     print(
@@ -50,12 +72,57 @@ String bridgeTypeSpecFrom(BindgenContext ctx, DartType type) {
       '${element?.runtimeType} ${element?.name}) is not spec-able; '
       'falling back to dynamic spec',
     );
-    return 'CoreTypes.dynamic';
+    return CoreTypes.dynamic;
   }
-  final lib = element.library!;
-  final uri = ctx.libOverrides[element.name] ?? lib.uri.toString();
-  return 'BridgeTypeSpec(\'$uri\', \'${element.name!.replaceAll(r'$', r'\$')}\')';
+  final bound =
+      ctx.configMode && element.library!.isInSdk && element is InterfaceElement
+      ? _boundSdkClass(ctx, element)?.$1
+      : null;
+  return _elementSpec(ctx, bound ?? element);
 }
+
+BridgeTypeSpec _elementSpec(BindgenContext ctx, Element element) {
+  final library = element.library!.uri.toString();
+  final configured = ctx.config?.libraries
+      .firstWhereOrNull((l) => l.uri == library)
+      ?.classes[element.name];
+  return BridgeTypeSpec(
+    ctx.libOverrides[element.name] ?? configured?.libOverride ?? library,
+    element.name!,
+  );
+}
+
+/// Dart rendering policy stays separate from resolving bridge types.
+BridgeDeclarationSource typeSource(BindgenContext ctx) =>
+    BridgeDeclarationSource(
+      specSource: (spec) {
+        if (spec.library == 'dart:async' && spec.name == 'FutureOr') {
+          return 'AsyncTypes.futureOr';
+        }
+        if (spec.library == 'dart:core' &&
+            const {
+              'void',
+              'Null',
+              'Enum',
+              'dynamic',
+              'Function',
+              'Record',
+              'Never',
+            }.contains(spec.name)) {
+          return 'CoreTypes.${registryFieldName(spec.name)}';
+        }
+        return _registrySpec(ctx, spec.library, spec.name);
+      },
+    );
+
+String bridgeTypeRefFromType(BindgenContext ctx, DartType type) =>
+    typeSource(ctx).typeRef(buildTypeRef(ctx, type));
+
+String bridgeTypeAnnotationFrom(BindgenContext ctx, DartType type) =>
+    typeSource(ctx).typeAnnotation(buildTypeAnnotation(ctx, type));
+
+String bridgeTypeSpecFrom(BindgenContext ctx, DartType type) =>
+    typeSource(ctx).typeSpec(buildTypeSpec(ctx, type));
 
 /// Registry field names that diverge from the automatic camel-case
 /// conversion, either because the type has no class name (`void`) or because
@@ -113,52 +180,6 @@ String? _legacyRegistrySpec(String libUri, String name) {
     'dart:typed_data' => 'TypedDataTypes.$camel',
     _ => null,
   };
-}
-
-String? builtinTypeFrom(BindgenContext ctx, DartType type) {
-  if (type.isDartAsyncFutureOr) {
-    return 'AsyncTypes.futureOr';
-  }
-  if (type.isDartCoreNull) {
-    return 'CoreTypes.nullType';
-  }
-  if (type.isDartCoreEnum) {
-    return 'CoreTypes.enumType';
-  }
-  if (type is VoidType) {
-    return 'CoreTypes.voidType';
-  }
-  if (type is DynamicType) {
-    return 'CoreTypes.dynamic';
-  }
-  if (type is FunctionType) {
-    return 'CoreTypes.function';
-  }
-  if (type is RecordType) {
-    return 'CoreTypes.record';
-  }
-  if (type.element?.name == 'Never') {
-    return 'CoreTypes.never';
-  }
-
-  final element = type.element;
-  final lib = element?.library;
-  if (element == null || lib == null) return null;
-  final name = element.name ?? ' ';
-
-  if (!lib.isInSdk) {
-    return null;
-  }
-
-  if (ctx.configMode && element is InterfaceElement) {
-    // SDK-private types resolve to their nearest bound public supertype.
-    final bound = _boundSdkClass(ctx, element);
-    if (bound == null) return null;
-    final e = bound.$1;
-    return _registrySpec(ctx, e.library.uri.toString(), e.name!);
-  }
-
-  return _registrySpec(ctx, lib.uri.toString(), name);
 }
 
 String? wrapVar(
@@ -690,26 +711,38 @@ String? runtimeTypeIdFor(
 /// back to dart:core. Names matching an in-scope type parameter emit
 /// `BridgeTypeRef.ref`.
 String bridgeTypeAnnotationFromName(BindgenContext ctx, String typeName) {
-  final parsed = _TypeName.parse(typeName);
-  return 'BridgeTypeAnnotation(${_bridgeTypeRefFromName(ctx, parsed)}'
-      '${parsed.nullable ? ', nullable: true' : ''})';
+  return typeSource(
+    ctx,
+  ).typeAnnotation(buildTypeAnnotationFromName(ctx, typeName));
 }
+
+BridgeTypeAnnotation buildTypeAnnotationFromName(
+  BindgenContext ctx,
+  String typeName,
+) => _buildTypeAnnotationFromParsed(ctx, _TypeName.parse(typeName));
+
+BridgeTypeRef buildTypeRefFromName(BindgenContext ctx, String typeName) =>
+    _buildTypeRefFromName(ctx, _TypeName.parse(typeName));
 
 /// Emit a `BridgeTypeRef` for a YAML type name (no nullability).
 String bridgeTypeRefFromName(BindgenContext ctx, String typeName) =>
-    _bridgeTypeRefFromName(ctx, _TypeName.parse(typeName));
+    typeSource(ctx).typeRef(buildTypeRefFromName(ctx, typeName));
 
-String _bridgeTypeRefFromName(BindgenContext ctx, _TypeName name) {
+BridgeTypeRef _buildTypeRefFromName(BindgenContext ctx, _TypeName name) {
   if (ctx.typeParamNames.contains(name.name)) {
-    return 'BridgeTypeRef.ref(\'${name.name}\')';
+    return BridgeTypeRef.ref(name.name);
   }
-  if (name.name == 'void') return 'BridgeTypeRef(CoreTypes.voidType)';
-  if (name.name == 'dynamic') return 'BridgeTypeRef(CoreTypes.dynamic)';
-  if (name.name == 'Null') return 'BridgeTypeRef(CoreTypes.nullType)';
-  if (name.name == 'Never') return 'BridgeTypeRef(CoreTypes.never)';
-  if (name.name == 'Function') return 'BridgeTypeRef(CoreTypes.function)';
-  if (name.name == 'Record') return 'BridgeTypeRef(CoreTypes.record)';
-  if (name.name == 'Enum') return 'BridgeTypeRef(CoreTypes.enumType)';
+  final special = switch (name.name) {
+    'void' => CoreTypes.voidType,
+    'dynamic' => CoreTypes.dynamic,
+    'Null' => CoreTypes.nullType,
+    'Never' => CoreTypes.never,
+    'Function' => CoreTypes.function,
+    'Record' => CoreTypes.record,
+    'Enum' => CoreTypes.enumType,
+    _ => null,
+  };
+  if (special != null) return BridgeTypeRef(special);
 
   final element = _resolveTypeElement(ctx, name.name);
   if (element == null) {
@@ -717,25 +750,21 @@ String _bridgeTypeRefFromName(BindgenContext ctx, _TypeName name) {
       'Warning: could not resolve type name ${name.name}; '
       'falling back to dynamic',
     );
-    return 'BridgeTypeRef(CoreTypes.dynamic)';
+    return const BridgeTypeRef(CoreTypes.dynamic);
   }
-  final libUri = element.library!.uri.toString();
-  final spec =
-      builtinSpecFromName(ctx, libUri, element.name ?? name.name) ??
-      'BridgeTypeSpec(\'$libUri\', '
-          '\'${(element.name ?? name.name).replaceAll(r'$', r'\$')}\')';
-  if (name.args.isEmpty) {
-    return 'BridgeTypeRef($spec)';
-  }
-  final args = name.args
-      .map((e) => _bridgeTypeAnnotationFromParsed(ctx, e))
-      .join(', ');
-  return 'BridgeTypeRef($spec, [$args])';
+  return BridgeTypeRef(_elementSpec(ctx, element), [
+    for (final argument in name.args)
+      _buildTypeAnnotationFromParsed(ctx, argument),
+  ]);
 }
 
-String _bridgeTypeAnnotationFromParsed(BindgenContext ctx, _TypeName parsed) =>
-    'BridgeTypeAnnotation(${_bridgeTypeRefFromName(ctx, parsed)}'
-    '${parsed.nullable ? ', nullable: true' : ''})';
+BridgeTypeAnnotation _buildTypeAnnotationFromParsed(
+  BindgenContext ctx,
+  _TypeName parsed,
+) => BridgeTypeAnnotation(
+  _buildTypeRefFromName(ctx, parsed),
+  nullable: parsed.nullable,
+);
 
 /// Public accessor for [_boundSdkClass] — used by the declaration emitter to
 /// decide whether a supertype is expressible in the bound-type namespace.
@@ -799,13 +828,6 @@ DartType? _dartTypeFromName(BindgenContext ctx, String typeName) {
   }
   return null;
 }
-
-/// Name-based equivalent of [builtinTypeFrom] for YAML-declared types.
-/// Returns null for non-SDK libraries. `void`/`Null`/`Enum`/`Function`/
-/// `Record`/`dynamic`/`Never` are handled by the caller since their `*Types`
-/// constant names diverge from the camel-case convention.
-String? builtinSpecFromName(BindgenContext ctx, String libUri, String name) =>
-    _registrySpec(ctx, libUri, name);
 
 /// Emit the `*Types` registry class source for [lib], containing a
 /// `static const` spec per configured class resolving to this library's URI

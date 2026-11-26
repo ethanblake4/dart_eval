@@ -9,9 +9,8 @@ suite under dart_eval — no mirror repository to maintain.
 - `sdk_language.dart` — checkout management, test classification, source
   collection, and `registerSdkSuite` (shared by both entrypoints).
 - `shims.dart` — hand-written `package:expect`, `package:expect/async_helper`,
-  `package:expect/config`, and `package:meta` sources (the real SDK packages
-  rely on features dart_eval doesn't implement, so purpose-built shims are
-  compiled in their place).
+  `package:expect/config`, and `package:meta` sources compiled in place of the
+  SDK packages.
 - `core_test.dart` — the fast subset (runs under `dart test`).
 - `full_test.dart` — everything; tagged `sdk-full` and excluded from default
   runs.

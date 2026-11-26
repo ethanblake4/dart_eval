@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
+import 'package:dart_eval/dart_eval_bridge.dart';
 import 'package:dart_eval/src/eval/bindgen/config.dart';
 import 'package:dart_eval/src/eval/bindgen/context.dart';
+import 'package:dart_eval/src/eval/bindgen/declaration_source.dart';
 import 'package:dart_eval/src/eval/bindgen/operator.dart';
 import 'package:dart_eval/src/eval/bindgen/parameters.dart';
 import 'package:dart_eval/src/eval/bindgen/static_constants.dart';
@@ -11,552 +14,538 @@ import 'package:dart_eval/src/eval/bindgen/type.dart';
 const objectMethodNames = {'==', 'toString', 'noSuchMethod'};
 const objectGetterNames = {'hashCode', 'runtimeType'};
 
-String bindTypeSpec(BindgenContext ctx, InterfaceElement element) {
-  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
-  final runtimeType = ctx.classConfig?.runtimeTypeOverride;
-  if (runtimeType != null) {
-    return '''
-  static const \$spec = $runtimeType;
-''';
-  }
-  return '''
-  static const \$spec = BridgeTypeSpec(
-    '$uri',
-    '${element.name!.replaceAll(r'$', r'\$')}',
-  );
-''';
-}
+BridgeTypeRef buildClassTypeRef(BindgenContext ctx, InterfaceElement element) =>
+    BridgeTypeRef(
+      ctx.runtimeTypeSpec ??
+          BridgeTypeSpec(
+            ctx.libOverrides[element.name] ?? ctx.uri,
+            element.name!,
+          ),
+    );
 
-String bindBridgeType(BindgenContext ctx, InterfaceElement element) {
-  return '''
-  static const \$type = BridgeTypeRef(\$spec);
-''';
-}
+String bindTypeSpec(BindgenContext ctx, InterfaceElement element) =>
+    'static const \$spec = ${ctx.classConfig?.runtimeTypeOverride ?? bridgeTypeSpecSource(buildClassTypeRef(ctx, element).spec!)};';
+
+String bindBridgeType(BindgenContext ctx, InterfaceElement element) =>
+    r'static const $type = BridgeTypeRef($spec);';
 
 String bindFunctionDeclaration(
   BindgenContext ctx,
   TopLevelFunctionElement element,
-) {
-  final uri = ctx.libOverrides[element.name] ?? ctx.uri;
-  return '''
-  static const \$declaration = BridgeFunctionDeclaration(
-    '$uri',
-    '${element.name!.replaceAll(r'$', r'\$')}',
-    ${bridgeFunctionDef(ctx, function: element)}
-  );
-''';
-}
+) =>
+    'static const \$declaration = ${typeSource(ctx).declaration(ctx.declaration ?? buildFunctionDeclaration(ctx, element))};';
 
 String? bindBridgeDeclaration(
   BindgenContext ctx,
   InterfaceElement element, {
   bool isBridge = false,
 }) {
+  final declaration =
+      ctx.declaration ??
+      buildBridgeDeclaration(ctx, element, isBridge: isBridge);
+  if (declaration == null) return null;
+  final classType = buildClassTypeRef(ctx, element);
+  final base = typeSource(ctx);
+  final compact = compactStaticConstants(ctx, element);
+  final source = BridgeDeclarationSource(
+    specSource: base.typeSpec,
+    typeRefSource: (ref) =>
+        ref.spec?.library == classType.spec!.library &&
+            ref.spec?.name == classType.spec!.name &&
+            ref.typeArgs.isEmpty
+        ? r'$type'
+        : null,
+    annotationSource: (annotation) => compact?.annotationAlias(annotation),
+  );
+  return 'static const \$declaration = ${source.declaration(declaration)};';
+}
+
+BridgeFunctionDeclaration buildFunctionDeclaration(
+  BindgenContext ctx,
+  TopLevelFunctionElement element,
+) => BridgeFunctionDeclaration(
+  ctx.libOverrides[element.name] ?? ctx.uri,
+  element.name!,
+  buildFunctionDef(
+    ctx,
+    element,
+    member: ctx.libraryConfig?.functions[element.name],
+  ),
+);
+
+/// Construct compile-time metadata without generating any native wrapper code.
+BridgeDeclaration? buildBridgeDeclaration(
+  BindgenContext ctx,
+  InterfaceElement element, {
+  bool isBridge = false,
+}) {
   final cc = ctx.classConfig;
-  final isClass = element is ClassElement || element is MixinElement;
   if (element is ClassElement &&
       element.constructors.isEmpty &&
       cc?.opaque != true) {
     return null;
   }
-
-  var genericsStr = '';
-  final typeParams = element.typeParameters;
-  if (typeParams.isNotEmpty && isClass) {
-    genericsStr =
-        '''\ngenerics: {
-      ${typeParams.map((e) {
-          final override = cc?.generics[e.name];
-          final hasOverride = cc != null && cc.generics.containsKey(e.name);
-          final boundStr = hasOverride
-              ? (override == null ? '' : '\$extends: ${bridgeTypeRefFromName(ctx, override)}')
-              : e.bound != null && !ctx.implicitSupers
-              ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}'
-              : '';
-          final nullable = hasOverride ? override?.trim().endsWith('?') == true : e.bound?.nullabilitySuffix == NullabilitySuffix.question;
-          return '\'${e.name}\': BridgeGenericParam($boundStr${nullable && boundStr.isNotEmpty ? ', boundNullable: true' : ''})';
-        }).join(',')}
-    },''';
+  final type = buildClassTypeRef(ctx, element);
+  if (element is MixinElement && cc?.opaque == true) {
+    return BridgeClassDef(
+      BridgeClassType(
+        type,
+        isAbstract: true,
+        generics: _classGenerics(ctx, element, preserveBounds: true),
+        $implements: _uniqueTypes([
+          for (final supertype in element.allSupertypes)
+            if (!supertype.isDartCoreObject &&
+                !(supertype.element.name?.startsWith('_') ?? true))
+              buildTypeRef(ctx, supertype),
+        ]),
+      ),
+      constructors: const {},
+      wrap: true,
+    );
   }
-
-  var extendsStr = '';
-  if (cc?.extendsName != null) {
-    extendsStr =
-        '\n\$extends: ${bridgeTypeRefFromName(ctx, cc!.extendsName!)},';
-  } else if (element is ClassElement &&
-      element.supertype != null &&
-      !element.supertype!.isDartCoreObject &&
-      !(element.supertype!.element.name?.startsWith('_') ?? false) &&
-      !ctx.implicitSupers) {
-    extendsStr =
-        '\n\$extends: ${bridgeTypeRefFromType(ctx, element.supertype!)},';
-  }
-
-  var implementsStr = '';
-  if (cc != null && cc.implementsNames.isNotEmpty) {
-    implementsStr =
-        '\n\$implements: [${cc.implementsNames.map((e) => bridgeTypeRefFromName(ctx, e)).join(', ')}],';
-  } else if (element is ClassElement) {
-    // `element.interfaces` only lists directly-declared interfaces and may
-    // reference SDK-private types (e.g. `Uint8List implements _TypedIntList`).
-    // Emit every bound public supertype instead so assignability checks like
-    // `Uint8List is List<int>` resolve through the generated declaration.
-    final implRefs = <String>{};
-    for (final st in element.allSupertypes) {
-      if (st.isDartCoreObject) continue;
-      final el = st.element;
-      final elName = el.name;
-      if (elName == null || elName.startsWith('_')) continue;
-      if (boundSdkClassFor(ctx, el) == null) continue;
-      implRefs.add(bridgeTypeRefFromType(ctx, st));
-    }
-    if (implRefs.isNotEmpty) {
-      implementsStr = '\n\$implements: [${implRefs.join(', ')}],';
-    }
-  }
-
-  var enumValuesStr = '';
+  final methods = _buildMethods(ctx, element)
+    ..addAll(_syntheticMethods(ctx, 'method'));
+  final getters = _buildAccessors(ctx, element, setter: false)
+    ..addAll(_syntheticMethods(ctx, 'getter'));
+  final setters = _buildAccessors(ctx, element, setter: true)
+    ..addAll(_syntheticMethods(ctx, 'setter'));
+  final fields = _buildFields(ctx, element)..addAll(_syntheticFields(ctx));
   if (element is EnumElement) {
-    enumValuesStr =
-        '''
-    values: [${element.constants.map((e) => "'${e.name}'").join(', ')}],
-    ''';
+    return BridgeEnumDef(
+      type,
+      values: [for (final constant in element.constants) constant.name!],
+      methods: methods,
+      getters: getters,
+      setters: setters,
+      fields: fields,
+    );
   }
-
-  final isAbstract =
-      cc?.isAbstract ??
-      (element is MixinElement ||
-          element is ClassElement && element.isAbstract);
-
-  return '''
-  static const \$declaration = ${isClass ? 'BridgeClassDef(BridgeClassType(' : 'BridgeEnumDef('}
-      \$type,
-      ${isClass && isAbstract ? 'isAbstract: true,' : ''}
-      ${element is MixinElement || element is ClassElement && element.isMixinClass ? 'isMixinClass: true,' : ''}
-      $enumValuesStr
-      $genericsStr
-      $extendsStr
-      $implementsStr
-    ${isClass ? '),' : ''}
-    ${isClass ? '''
-    constructors: {
-${element is MixinElement ? "'': BridgeConstructorDef(BridgeFunctionDef(returns: BridgeTypeAnnotation(\$type)))," : constructors(ctx, element)}
-${syntheticDeclarations(ctx, 'constructor')}
-    },
-    ''' : ''}
-    methods: {
-${methods(ctx, element)}
-${syntheticDeclarations(ctx, 'method')}
-    },
-    getters: {
-${getters(ctx, element)}
-${syntheticDeclarations(ctx, 'getter')}
-    },
-    setters: {
-${setters(ctx, element)}
-${syntheticDeclarations(ctx, 'setter')}
-    },
-    fields: {
-${fields(ctx, element)}
-${compactStaticConstants(ctx, element)?.fieldDeclarations ?? ''}
-${syntheticDeclarations(ctx, 'field')}
-    },
-    ${isClass ? '''
-    wrap: ${!isBridge},
-    bridge: $isBridge,
-    ''' : ''}
-  );
-    ''';
-}
-
-String constructors(BindgenContext ctx, InterfaceElement element) {
-  return element.constructors
-      .where((e) => !e.isPrivate)
-      .where((e) => ctx.memberIncluded(e.name ?? '', 'constructor'))
-      .map(
-        (e) => bridgeConstructorDef(
-          ctx,
-          constructor: e,
-          member: ctx.memberConfig(e.name ?? '', 'constructor'),
+  final constructors = <String, BridgeConstructorDef>{
+    if (element is MixinElement)
+      '': BridgeConstructorDef(
+        BridgeFunctionDef(returns: BridgeTypeAnnotation(type)),
+      ),
+    if (element is ClassElement)
+      for (final constructor in element.constructors)
+        if (!constructor.isPrivate &&
+            ctx.memberIncluded(constructor.name ?? '', 'constructor'))
+          _constructorName(
+            ctx.memberConfig(constructor.name ?? '', 'constructor')?.rename ??
+                constructor.name ??
+                '',
+          ): BridgeConstructorDef(
+            BridgeFunctionDef(
+              returns: BridgeTypeAnnotation(type),
+              params: buildParameters(
+                ctx,
+                constructor.formalParameters
+                    .where((p) => p.isPositional)
+                    .toList(),
+                member: ctx.memberConfig(constructor.name ?? '', 'constructor'),
+              ),
+              namedParams: buildParameters(
+                ctx,
+                constructor.formalParameters.where((p) => p.isNamed).toList(),
+                member: ctx.memberConfig(constructor.name ?? '', 'constructor'),
+              ),
+            ),
+            isFactory: constructor.isFactory,
+          ),
+    for (final member in cc?.synthetic ?? const <BindgenSyntheticMember>[])
+      if (member.kind == 'constructor')
+        _constructorName(member.name): BridgeConstructorDef(
+          _syntheticFunction(ctx, member, returns: BridgeTypeAnnotation(type)),
+          isFactory: member.isStatic,
         ),
-      )
-      .join('\n');
+  };
+  final supertype = element is ClassElement ? element.supertype : null;
+  final extendsType = cc?.extendsName != null
+      ? buildTypeRefFromName(ctx, cc!.extendsName!)
+      : supertype != null &&
+            !supertype.isDartCoreObject &&
+            !(supertype.element.name?.startsWith('_') ?? false) &&
+            !ctx.implicitSupers
+      ? buildTypeRef(ctx, supertype)
+      : const BridgeTypeRef(CoreTypes.object);
+  final implementsTypes = cc != null && cc.implementsNames.isNotEmpty
+      ? [for (final name in cc.implementsNames) buildTypeRefFromName(ctx, name)]
+      : element is ClassElement
+      ? _uniqueTypes([
+          for (final supertype in element.allSupertypes)
+            if (!supertype.isDartCoreObject &&
+                !(supertype.element.name?.startsWith('_') ?? true) &&
+                boundSdkClassFor(ctx, supertype.element) != null)
+              buildTypeRef(ctx, supertype),
+        ])
+      : <BridgeTypeRef>[];
+  return BridgeClassDef(
+    BridgeClassType(
+      type,
+      isAbstract:
+          cc?.isAbstract ??
+          (element is MixinElement ||
+              element is ClassElement && element.isAbstract),
+      isMixinClass:
+          element is MixinElement ||
+          element is ClassElement && element.isMixinClass,
+      generics: _classGenerics(ctx, element),
+      $extends: extendsType,
+      $implements: implementsTypes,
+    ),
+    constructors: constructors,
+    methods: methods,
+    getters: getters,
+    setters: setters,
+    fields: fields,
+    wrap: !isBridge,
+    bridge: isBridge,
+  );
 }
 
-String methods(BindgenContext ctx, InterfaceElement element) {
-  final methods = [
+String _constructorName(String name) => name == 'new' ? '' : name;
+
+// Type refs deliberately have identity equality, so compare their contents.
+List<BridgeTypeRef> _uniqueTypes(List<BridgeTypeRef> types) {
+  final unique = <String, BridgeTypeRef>{};
+  for (final type in types) {
+    unique[jsonEncode(type.toJson())] = type;
+  }
+  return unique.values.toList();
+}
+
+Map<String, BridgeGenericParam> _classGenerics(
+  BindgenContext ctx,
+  InterfaceElement element, {
+  bool preserveBounds = false,
+}) => {
+  for (final parameter in element.typeParameters)
+    parameter.name!: _classGeneric(
+      ctx,
+      parameter,
+      preserveBounds: preserveBounds,
+    ),
+};
+
+BridgeGenericParam _classGeneric(
+  BindgenContext ctx,
+  TypeParameterElement parameter, {
+  required bool preserveBounds,
+}) {
+  final cc = ctx.classConfig;
+  final hasOverride =
+      !preserveBounds && cc?.generics.containsKey(parameter.name) == true;
+  final override = cc?.generics[parameter.name];
+  final bound = hasOverride
+      ? override == null
+            ? null
+            : buildTypeRefFromName(ctx, override)
+      : parameter.bound != null && (preserveBounds || !ctx.implicitSupers)
+      ? buildTypeRef(ctx, parameter.bound!)
+      : null;
+  return BridgeGenericParam(
+    $extends: bound,
+    boundNullable:
+        bound != null &&
+        (hasOverride
+            ? override?.trim().endsWith('?') == true
+            : parameter.bound?.nullabilitySuffix == NullabilitySuffix.question),
+  );
+}
+
+Map<String, BridgeMethodDef> _buildMethods(
+  BindgenContext ctx,
+  InterfaceElement element,
+) {
+  final candidates = [
     if (ctx.implicitSupers)
-      for (var s in element.allSupertypes.reversed)
-        // `InterfaceType.methods` includes statics, which are not inherited.
-        ...s.methods.where((m) => !m.isStatic),
+      for (final supertype in element.allSupertypes.reversed)
+        ...supertype.methods.where((m) => !m.isStatic),
     ...element.methods,
   ];
-  return dedupeMethods(methods)
-      .where(
-        (m) => ctx.memberIncluded(
-          m.name!,
-          m.isStatic ? 'static' : 'method',
-          isObjectMember: objectMethodNames.contains(m.name),
-        ),
-      )
-      .where((m) => !m.isPrivate)
-      .map(
-        (m) => bridgeMethodDef(
-          ctx,
-          method: m,
-          member: ctx.memberConfig(m.name!, m.isStatic ? 'static' : 'method'),
-        ),
-      )
-      .join('\n');
-}
-
-String getters(BindgenContext ctx, InterfaceElement element) {
-  final getters = {
-    if (ctx.implicitSupers)
-      for (var s in element.allSupertypes)
-        for (final a in s.getters.where((a) => !a.isStatic)) a.name: a,
-    for (final a in element.getters) a.name: a,
-  };
-
-  return getters.values
-      .where(
-        (m) => ctx.memberIncluded(
-          m.name!,
-          m.isStatic ? 'static' : 'getter',
-          isObjectMember: objectGetterNames.contains(m.name),
-        ),
-      )
-      .where((element) => !element.isPrivate)
-      .where(
-        (element) =>
-            !element.isOriginVariable ||
-            (element is EnumElement &&
-                element.nonSynthetic is FieldElement &&
-                !(element.nonSynthetic as FieldElement).isEnumConstant),
-      )
-      .map(
-        (e) => bridgeGetterDef(
-          ctx,
-          getter: e,
-          member: ctx.memberConfig(e.name!, e.isStatic ? 'static' : 'getter'),
-        ),
-      )
-      .join('\n');
-}
-
-String setters(BindgenContext ctx, InterfaceElement element) {
-  final setters = {
-    if (ctx.implicitSupers)
-      for (var s in element.allSupertypes)
-        for (final a in s.setters.where((a) => !a.isStatic)) a.name: a,
-    for (final a in element.setters) a.name: a,
-  };
-
-  return setters.values
-      .where((element) => !element.isOriginVariable && !element.isPrivate)
-      .where(
-        (m) => ctx.memberIncluded(m.name!, m.isStatic ? 'static' : 'setter'),
-      )
-      .map(
-        (e) => bridgeSetterDef(
-          ctx,
-          setter: e,
-          member: ctx.memberConfig(e.name!, e.isStatic ? 'static' : 'setter'),
-        ),
-      )
-      .join('\n');
-}
-
-String fields(BindgenContext ctx, InterfaceElement element) {
-  final compactNames = compactStaticConstants(ctx, element)?.fieldNames;
-  final allFields = {
-    if (ctx.implicitSupers)
-      for (var s in element.allSupertypes)
-        if (s.element is ClassElement)
-          for (final f in (s.element as ClassElement).fields.where(
-            (f) => !f.isStatic,
+  return {
+    for (final method in dedupeMethods(candidates))
+      if (!method.isPrivate &&
+          ctx.memberIncluded(
+            method.name!,
+            method.isStatic ? 'static' : 'method',
+            isObjectMember: objectMethodNames.contains(method.name),
           ))
-            f.name: f,
-    for (final f in element.fields) f.name: f,
-  };
-
-  final fields = allFields.values.where(
-    (field) =>
-        !field.isOriginGetterSetter &&
-        !field.isEnumConstant &&
-        !field.isPrivate &&
-        !(compactNames?.contains(field.name) ?? false) &&
-        ctx.memberIncluded(field.name!, 'field'),
-  );
-
-  return fields
-      .map(
-        (e) => bridgeFieldDef(
-          ctx,
-          field: e,
-          member: ctx.memberConfig(e.name!, 'field'),
-        ),
-      )
-      .join('\n');
-}
-
-String bridgeConstructorDef(
-  BindgenContext ctx, {
-  required ConstructorElement constructor,
-  BindgenMemberConfig? member,
-}) {
-  final name = member?.rename ?? constructor.name;
-  return '''
-      '${name == 'new' ? '' : name}': BridgeConstructorDef(
-          BridgeFunctionDef(
-            returns: BridgeTypeAnnotation(\$type),
-            namedParams: [${namedParameters(ctx, element: constructor, member: member)}],
-            params: [${positionalParameters(ctx, element: constructor, member: member)}],
-          ),
-          isFactory: ${constructor.isFactory},
-      ),
-      ''';
-}
-
-/// Emits the `returns:`/`returnTypeDependency:` arguments for a
-/// [BridgeFunctionDef], honoring member `returns` overrides.
-String functionReturnsSource(
-  BindgenContext ctx,
-  ExecutableElement function,
-  BindgenMemberConfig? member,
-) {
-  final returns = member?.returns;
-  if (returns == null) {
-    return 'returns: ${bridgeTypeAnnotationFrom(ctx, function.returnType)}';
-  }
-  final dep = returns.dependsOn;
-  final baseName = returns.type ?? dep?.fallback;
-  final baseExpr = baseName != null
-      ? bridgeTypeAnnotationFromName(ctx, baseName)
-      : bridgeTypeAnnotationFrom(ctx, function.returnType);
-  if (dep == null) {
-    return 'returns: $baseExpr';
-  }
-  final cases = dep.cases.entries
-      .map(
-        (e) =>
-            'BridgeReturnTypeCase(${bridgeTypeRefFromName(ctx, e.key)}, '
-            '${bridgeTypeAnnotationFromName(ctx, e.value)})',
-      )
-      .join(', ');
-  final selector = dep.index != null
-      ? 'paramIndex: ${dep.index}'
-      : "paramName: '${dep.param}'";
-  final fallback = dep.fallback != null
-      ? ', fallback: ${bridgeTypeAnnotationFromName(ctx, dep.fallback!)}'
-      : '';
-  return 'returns: $baseExpr, returnTypeDependency: '
-      'BridgeReturnTypeDependency($selector, cases: [$cases]$fallback)';
-}
-
-String bridgeFunctionDef(
-  BindgenContext ctx, {
-  required ExecutableElement function,
-  BindgenMemberConfig? member,
-}) {
-  var genericsStr = '';
-  final typeParams = function.typeParameters;
-  if (typeParams.isNotEmpty) {
-    genericsStr =
-        '''\ngenerics: {
-      ${typeParams.map((e) {
-          final boundStr = e.bound != null ? '\$extends: ${bridgeTypeRefFromType(ctx, e.bound!)}' : '';
-          final nullable = e.bound?.nullabilitySuffix == NullabilitySuffix.question;
-          return '\'${e.name}\': BridgeGenericParam($boundStr${nullable ? ', boundNullable: true' : ''})';
-        }).join(',')}
-    },''';
-  }
-
-  return '''
-        BridgeFunctionDef(
-          $genericsStr
-          ${functionReturnsSource(ctx, function, member)},
-          namedParams: [${namedParameters(ctx, element: function, member: member)}],
-          params: [${positionalParameters(ctx, element: function, member: member)}],
-        ),
-''';
-}
-
-String bridgeMethodDef(
-  BindgenContext ctx, {
-  required MethodElement method,
-  BindgenMemberConfig? member,
-}) {
-  final name = operatorMemberName(
-    member?.rename ?? method.name!,
-    method.formalParameters.length,
-  );
-  return '''
-      '$name': BridgeMethodDef(
-        ${bridgeFunctionDef(ctx, function: method, member: member)}
-        ${method.isStatic ? 'isStatic: true,' : ''}
-        ${method.isAbstract ? 'isAbstract: true,' : ''}
-      ),
-''';
-}
-
-String bridgeGetterDef(
-  BindgenContext ctx, {
-  required PropertyAccessorElement getter,
-  BindgenMemberConfig? member,
-}) {
-  return '''
-      '${member?.rename ?? getter.name}': BridgeMethodDef(
-        ${bridgeFunctionDef(ctx, function: getter, member: member)}
-        ${getter.isStatic ? 'isStatic: true,' : ''}
-        ${getter.isAbstract ? 'isAbstract: true,' : ''}
-      ),
-''';
-}
-
-String bridgeSetterDef(
-  BindgenContext ctx, {
-  required PropertyAccessorElement setter,
-  BindgenMemberConfig? member,
-}) {
-  return '''
-      '${member?.rename ?? setter.name}': BridgeMethodDef(
-        ${bridgeFunctionDef(ctx, function: setter, member: member)}
-        ${setter.isStatic ? 'isStatic: true,' : ''}
-        ${setter.isAbstract ? 'isAbstract: true,' : ''}
-      ),
-''';
-}
-
-String bridgeFieldDef(
-  BindgenContext ctx, {
-  required FieldElement field,
-  BindgenMemberConfig? member,
-}) {
-  final type = member?.type != null
-      ? bridgeTypeAnnotationFromName(ctx, member!.type!)
-      : bridgeTypeAnnotationFrom(ctx, field.type);
-  return '''
-      '${member?.rename ?? field.name}': BridgeFieldDef(
-        $type,
-        isStatic: ${member?.isStatic ?? field.isStatic},
-      ),
-''';
-}
-
-/// Emit `BridgeMethodDef`/`BridgeFieldDef`/`BridgeConstructorDef` entries for
-/// `synthetic:` config members of [kind] (`method`, `getter`, `setter`,
-/// `field`, `constructor`, `static`).
-String syntheticDeclarations(BindgenContext ctx, String kind) {
-  final synthetic = ctx.classConfig?.synthetic ?? const [];
-  return synthetic
-      .where((s) => _syntheticKindMatches(s, kind))
-      .map((s) => _syntheticDeclaration(ctx, s))
-      .join('\n');
-}
-
-bool _syntheticKindMatches(BindgenSyntheticMember s, String kind) =>
-    switch (s.kind) {
-      'method' => kind == 'method',
-      'static' => kind == 'method',
-      'getter' => kind == 'getter',
-      'setter' => kind == 'setter',
-      'field' => kind == 'field',
-      'constructor' => kind == 'constructor',
-      _ => false,
-    };
-
-String _syntheticParams(BindgenContext ctx, BindgenSyntheticMember s) {
-  String paramSource(BindgenSyntheticParam p) =>
-      '''
-        BridgeParameter(
-          '${p.name}',
-          ${bridgeTypeAnnotationFromName(ctx, p.type)},
-          ${p.optional || p.named},
-        ),
-  ''';
-  final positional = s.params.where((p) => !p.named).map(paramSource).join();
-  final named = s.params.where((p) => p.named).map(paramSource).join();
-  return 'params: [$positional], namedParams: [$named],';
-}
-
-String _syntheticReturns(BindgenContext ctx, BindgenSyntheticMember s) {
-  final returns = s.returns;
-  if (returns == null) {
-    return 'returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic))';
-  }
-  final dep = returns.dependsOn;
-  final baseName = returns.type ?? dep?.fallback ?? 'dynamic';
-  final baseExpr = bridgeTypeAnnotationFromName(ctx, baseName);
-  if (dep == null) {
-    return 'returns: $baseExpr';
-  }
-  final cases = dep.cases.entries
-      .map(
-        (e) =>
-            'BridgeReturnTypeCase(${bridgeTypeRefFromName(ctx, e.key)}, '
-            '${bridgeTypeAnnotationFromName(ctx, e.value)})',
-      )
-      .join(', ');
-  final selector = dep.index != null
-      ? 'paramIndex: ${dep.index}'
-      : "paramName: '${dep.param}'";
-  final fallback = dep.fallback != null
-      ? ', fallback: ${bridgeTypeAnnotationFromName(ctx, dep.fallback!)}'
-      : '';
-  return 'returns: $baseExpr, returnTypeDependency: '
-      'BridgeReturnTypeDependency($selector, cases: [$cases]$fallback)';
-}
-
-String _syntheticDeclaration(BindgenContext ctx, BindgenSyntheticMember s) {
-  final isStatic = s.isStatic || s.kind == 'static';
-  return switch (s.kind) {
-    'method' || 'static' =>
-      '''
-      '${operatorMemberName(s.name, s.params.length)}': BridgeMethodDef(
-        BridgeFunctionDef(
-          ${_syntheticReturns(ctx, s)},
-          ${_syntheticParams(ctx, s)}
-        ),
-        ${isStatic ? 'isStatic: true,' : ''}
-      ),''',
-    'getter' =>
-      '''
-      '${s.name}': BridgeMethodDef(
-        BridgeFunctionDef(
-          ${_syntheticReturns(ctx, s)},
-        ),
-        ${isStatic ? 'isStatic: true,' : ''}
-      ),''',
-    'setter' =>
-      '''
-      '${s.name}': BridgeMethodDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.voidType)),
-          params: [
-            BridgeParameter(
-              'value',
-              ${s.returns?.type != null ? bridgeTypeAnnotationFromName(ctx, s.returns!.type!) : 'BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic))'},
-              false,
+        operatorMemberName(
+          ctx
+                  .memberConfig(
+                    method.name!,
+                    method.isStatic ? 'static' : 'method',
+                  )
+                  ?.rename ??
+              method.name!,
+          method.formalParameters.length,
+        ): BridgeMethodDef(
+          buildFunctionDef(
+            ctx,
+            method,
+            member: ctx.memberConfig(
+              method.name!,
+              method.isStatic ? 'static' : 'method',
             ),
-          ],
+          ),
+          isStatic: method.isStatic,
+          isAbstract: method.isAbstract,
         ),
-      ),''',
-    'field' =>
-      '''
-      '${s.name}': BridgeFieldDef(
-        ${s.returns?.type != null ? bridgeTypeAnnotationFromName(ctx, s.returns!.type!) : 'BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic))'},
-        isStatic: $isStatic,
-      ),''',
-    'constructor' =>
-      '''
-      '${s.name}': BridgeConstructorDef(
-        BridgeFunctionDef(
-          returns: BridgeTypeAnnotation(\$type),
-          ${_syntheticParams(ctx, s)}
-        ),
-        isFactory: ${s.isStatic},
-      ),''',
-    _ => '',
   };
 }
+
+Map<String, BridgeMethodDef> _buildAccessors(
+  BindgenContext ctx,
+  InterfaceElement element, {
+  required bool setter,
+}) {
+  final candidates = <String?, PropertyAccessorElement>{
+    if (ctx.implicitSupers)
+      for (final supertype in element.allSupertypes)
+        for (final accessor in setter ? supertype.setters : supertype.getters)
+          if (!accessor.isStatic) accessor.name: accessor,
+    for (final accessor in setter ? element.setters : element.getters)
+      accessor.name: accessor,
+  };
+  return {
+    for (final accessor in candidates.values)
+      if (!accessor.isPrivate &&
+          !accessor.isOriginVariable &&
+          ctx.memberIncluded(
+            accessor.name!,
+            accessor.isStatic
+                ? 'static'
+                : setter
+                ? 'setter'
+                : 'getter',
+            isObjectMember:
+                !setter && objectGetterNames.contains(accessor.name),
+          ))
+        ctx
+                .memberConfig(
+                  accessor.name!,
+                  accessor.isStatic
+                      ? 'static'
+                      : setter
+                      ? 'setter'
+                      : 'getter',
+                )
+                ?.rename ??
+            accessor.name!: BridgeMethodDef(
+          buildFunctionDef(
+            ctx,
+            accessor,
+            member: ctx.memberConfig(
+              accessor.name!,
+              accessor.isStatic
+                  ? 'static'
+                  : setter
+                  ? 'setter'
+                  : 'getter',
+            ),
+          ),
+          isStatic: accessor.isStatic,
+          isAbstract: accessor.isAbstract,
+        ),
+  };
+}
+
+Map<String, BridgeFieldDef> _buildFields(
+  BindgenContext ctx,
+  InterfaceElement element,
+) {
+  final candidates = <String?, FieldElement>{
+    if (ctx.implicitSupers)
+      for (final supertype in element.allSupertypes)
+        if (supertype.element is ClassElement)
+          for (final field in (supertype.element as ClassElement).fields)
+            if (!field.isStatic) field.name: field,
+    for (final field in element.fields) field.name: field,
+  };
+  return {
+    for (final field in candidates.values)
+      if (!field.isOriginGetterSetter &&
+          !field.isEnumConstant &&
+          !field.isPrivate &&
+          ctx.memberIncluded(field.name!, 'field'))
+        ctx.memberConfig(field.name!, 'field')?.rename ??
+            field.name!: BridgeFieldDef(
+          _fieldType(ctx, field),
+          isStatic:
+              ctx.memberConfig(field.name!, 'field')?.isStatic ??
+              field.isStatic,
+        ),
+  };
+}
+
+BridgeTypeAnnotation _fieldType(BindgenContext ctx, FieldElement field) {
+  final override = ctx.memberConfig(field.name!, 'field')?.type;
+  return override == null
+      ? buildTypeAnnotation(ctx, field.type)
+      : buildTypeAnnotationFromName(ctx, override);
+}
+
+BridgeFunctionDef buildFunctionDef(
+  BindgenContext ctx,
+  ExecutableElement function, {
+  BindgenMemberConfig? member,
+}) {
+  final previous = ctx.typeParamNames;
+  ctx.typeParamNames = {
+    ...previous,
+    for (final parameter in function.typeParameters) parameter.name!,
+  };
+  try {
+    return BridgeFunctionDef(
+      returns: _returns(
+        ctx,
+        member?.returns,
+        buildTypeAnnotation(ctx, function.returnType),
+      ),
+      returnTypeDependency: _returnDependency(ctx, member?.returns),
+      generics: {
+        for (final parameter in function.typeParameters)
+          parameter.name!: BridgeGenericParam(
+            $extends: parameter.bound == null
+                ? null
+                : buildTypeRef(ctx, parameter.bound!),
+            boundNullable:
+                parameter.bound?.nullabilitySuffix ==
+                NullabilitySuffix.question,
+          ),
+      },
+      params: buildParameters(
+        ctx,
+        function.formalParameters.where((p) => p.isPositional).toList(),
+        member: member,
+      ),
+      namedParams: buildParameters(
+        ctx,
+        function.formalParameters.where((p) => p.isNamed).toList(),
+        member: member,
+      ),
+    );
+  } finally {
+    ctx.typeParamNames = previous;
+  }
+}
+
+BridgeTypeAnnotation _returns(
+  BindgenContext ctx,
+  BindgenReturnsConfig? returns,
+  BridgeTypeAnnotation fallback,
+) {
+  final name = returns?.type ?? returns?.dependsOn?.fallback;
+  return name == null ? fallback : buildTypeAnnotationFromName(ctx, name);
+}
+
+BridgeReturnTypeDependency? _returnDependency(
+  BindgenContext ctx,
+  BindgenReturnsConfig? returns,
+) {
+  final dependency = returns?.dependsOn;
+  if (dependency == null) return null;
+  return BridgeReturnTypeDependency(
+    paramIndex: dependency.index,
+    paramName: dependency.index == null ? dependency.param : null,
+    cases: [
+      for (final entry in dependency.cases.entries)
+        BridgeReturnTypeCase(
+          buildTypeRefFromName(ctx, entry.key),
+          buildTypeAnnotationFromName(ctx, entry.value),
+        ),
+    ],
+    fallback: dependency.fallback == null
+        ? null
+        : buildTypeAnnotationFromName(ctx, dependency.fallback!),
+  );
+}
+
+BridgeFunctionDef _syntheticFunction(
+  BindgenContext ctx,
+  BindgenSyntheticMember member, {
+  BridgeTypeAnnotation? returns,
+}) => BridgeFunctionDef(
+  returns:
+      returns ??
+      _returns(
+        ctx,
+        member.returns,
+        const BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+      ),
+  returnTypeDependency: _returnDependency(ctx, member.returns),
+  params: [
+    for (final parameter in member.params)
+      if (!parameter.named) _syntheticParameter(ctx, parameter),
+  ],
+  namedParams: [
+    for (final parameter in member.params)
+      if (parameter.named) _syntheticParameter(ctx, parameter),
+  ],
+);
+
+BridgeParameter _syntheticParameter(
+  BindgenContext ctx,
+  BindgenSyntheticParam parameter,
+) => BridgeParameter(
+  parameter.name,
+  buildTypeAnnotationFromName(ctx, parameter.type),
+  parameter.optional || parameter.named,
+);
+
+Map<String, BridgeMethodDef> _syntheticMethods(
+  BindgenContext ctx,
+  String kind,
+) => {
+  for (final member
+      in ctx.classConfig?.synthetic ?? const <BindgenSyntheticMember>[])
+    if (member.kind == kind || kind == 'method' && member.kind == 'static')
+      (kind == 'method'
+          ? operatorMemberName(member.name, member.params.length)
+          : member.name): BridgeMethodDef(
+        kind == 'setter'
+            ? BridgeFunctionDef(
+                returns: const BridgeTypeAnnotation(
+                  BridgeTypeRef(CoreTypes.voidType),
+                ),
+                params: [
+                  BridgeParameter(
+                    'value',
+                    member.returns?.type == null
+                        ? const BridgeTypeAnnotation(
+                            BridgeTypeRef(CoreTypes.dynamic),
+                          )
+                        : buildTypeAnnotationFromName(
+                            ctx,
+                            member.returns!.type!,
+                          ),
+                    false,
+                  ),
+                ],
+              )
+            : kind == 'getter'
+            ? BridgeFunctionDef(
+                returns: _returns(
+                  ctx,
+                  member.returns,
+                  const BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic)),
+                ),
+                returnTypeDependency: _returnDependency(ctx, member.returns),
+              )
+            : _syntheticFunction(ctx, member),
+        isStatic:
+            kind != 'setter' && (member.isStatic || member.kind == 'static'),
+      ),
+};
+
+Map<String, BridgeFieldDef> _syntheticFields(BindgenContext ctx) => {
+  for (final member
+      in ctx.classConfig?.synthetic ?? const <BindgenSyntheticMember>[])
+    if (member.kind == 'field')
+      member.name: BridgeFieldDef(
+        member.returns?.type == null
+            ? const BridgeTypeAnnotation(BridgeTypeRef(CoreTypes.dynamic))
+            : buildTypeAnnotationFromName(ctx, member.returns!.type!),
+        isStatic: member.isStatic,
+      ),
+};
